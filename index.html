@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="agente">
 <title>agente</title>
-<!-- agente-web v1 -->
+<!-- agente-web v1.1 -->
 <style>
   :root{
     --verde:#39ff14; --blanco:#e8e8e8; --gris:#666; --cian:#22d3ee;
@@ -234,7 +234,7 @@ function refrescarCabecera(e){
   e = refrescarCabecera.ult;
   if(!e) return;
   var t = ultTick ? (Date.now() - new Date(ultTick).getTime()) / 1000 : 99999;
-  var vivo = e.vivo && t < 90;
+  var vivo = e.vivo && t < 180;  // el tick tiene resolucion de minutos
   var partes = [];
   partes.push('<span class="' + (vivo ? "vivo" : "muerto") + '">' + (vivo ? "vivo" : "sin tick") +
               "</span> pid " + (e.pid || "?") + " · tick hace " + hace(ultTick));
