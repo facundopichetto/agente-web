@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
-<!-- agente-web v1.3 (it1: teclado, tipografia, expandir, manifest) -->
+<!-- agente-web v2.0 (it2: tick en vivo, paginado hacia atras, resaltado de estados y costos, boton cola) -->
 <style>
   :root{
     --verde:#39ff14; --blanco:#e8e8e8; --gris:#666; --cian:#22d3ee;
@@ -74,6 +74,13 @@
   }
   .msg.largo .toggle::before{content:"plegar"}
   .msg.largo.corto .toggle::before{content:"ver las " attr(data-lineas) " líneas"}
+  .cuerpo .ok{color:var(--verde)}
+  .cuerpo .fallo{color:var(--rojo)}
+  .cuerpo .pend{color:var(--amarillo)}
+  .cuerpo .corriendo{color:var(--cian)}
+  .cuerpo .costo{color:var(--magenta)}
+  .cuerpo .marca{color:var(--gris)}
+  #estado .frio{color:var(--rojo)}
   #mas{
     display:block;width:100%;margin:0 0 10px 0;background:#000;color:var(--gris);
     border:1px solid var(--linea);border-radius:4px;padding:6px;font:inherit;font-size:12px;cursor:pointer;
@@ -143,6 +150,7 @@ se guarda solo en este teléfono (localStorage), nunca viaja a otro lado.</p>
   <div id="rapidos">
     <button data-cmd="status">status</button>
     <button data-cmd="log">log</button>
+    <button data-cmd="cola">cola</button>
     <button data-cmd="pausa" id="btn-pausa">pausa</button>
     <button data-cmd="propuestas">propuestas</button>
     <button data-cmd="avisos">avisos</button>
@@ -171,7 +179,12 @@ var alfinal = $("alfinal"), envoltorio = $("envoltorio");
 
 var token = null;
 var vistos = {};        // id de comentario -> true
-var horas = 24;         // ventana de historial
+var horas = 24;         // ventana inicial de historial
+var PASO = 24;          // cuantas horas mas trae cada tap en "cargar mas viejo"
+var ultimoIso = null;   // created_at del comentario mas nuevo cargado (el poll pide desde ahi)
+var masViejoIso = null; // borde viejo ya cubierto: el paginado hacia atras arranca de aca
+var creadoIso = null;   // created_at del issue: mas atras que eso no hay nada
+var sinMasViejo = false;
 var etagCom = null, etagIssue = null;
 var enPausa = false;
 var timer = null;
@@ -179,12 +192,19 @@ var ultTick = null;
 
 // ---------- utilidades ----------
 function desde(iso){
-  var d = new Date(iso), h = d.getHours(), m = d.getMinutes();
+  var d = new Date(fecha(iso)), h = d.getHours(), m = d.getMinutes();
   return (h < 10 ? "0" : "") + h + ":" + (m < 10 ? "0" : "") + m;
+}
+function fecha(s){
+  // el daemon escribe "2026-09-08 04:55:12" en hora local; safari no parsea eso con new Date()
+  var m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/.exec(String(s || ""));
+  if(m) return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0)).getTime();
+  var d = new Date(s).getTime();
+  return isNaN(d) ? 0 : d;
 }
 function hace(iso){
   if(!iso) return "?";
-  var s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  var s = Math.floor((Date.now() - fecha(iso)) / 1000);
   if(s < 0) s = 0;
   if(s < 60) return s + "s";
   if(s < 3600) return Math.floor(s / 60) + "m";
@@ -216,7 +236,24 @@ if(vv){
   ajustarAlto();
 }
 
-function pintar(clase, quien, cuerpo, iso, id){
+function costos(l){
+  return l.replace(/\$\d+(?:[.,]\d+)?/g, '<span class="costo">$&</span>')
+          .replace(/\brc=(\d+)\b/g, function(m0, n){
+            return '<span class="' + (n === "0" ? "ok" : "fallo") + '">' + m0 + "</span>"; });
+}
+// lineas de ordenes.md: [x] hecha, [!] fallo, [ ] pendiente, [>] corriendo. mas los costos $ y rc=
+function resaltar(t){
+  return esc(t).split("\n").map(function(l){
+    var m = /^(\s*[-*]\s*)\[( |x|X|!|&gt;)\]/.exec(l);
+    var linea = costos(l);
+    if(!m) return linea;
+    var c = m[2].toLowerCase();
+    var clase = c === "x" ? "ok" : c === "!" ? "fallo" : c === " " ? "pend" : "corriendo";
+    return '<span class="' + clase + '">' + linea + "</span>";
+  }).join("\n");
+}
+
+function pintar(clase, quien, cuerpo, iso, id, arriba){
   var div = document.createElement("div");
   div.className = "msg " + clase;
   if(id) div.dataset.id = id;
@@ -226,7 +263,7 @@ function pintar(clase, quien, cuerpo, iso, id){
   cab.querySelector(".ts").textContent = iso ? desde(iso) : desde(new Date().toISOString());
   var b = document.createElement("div");
   b.className = "cuerpo";
-  b.textContent = cuerpo;
+  b.innerHTML = resaltar(cuerpo);
   div.appendChild(cab); div.appendChild(b);
   var lineas = cuerpo.split("\n").length;
   if(lineas > 8 || cuerpo.length > 500){
@@ -236,7 +273,7 @@ function pintar(clase, quien, cuerpo, iso, id){
     t.dataset.lineas = Math.max(lineas, Math.ceil(cuerpo.length / 60));
     div.appendChild(t);
   }
-  lista.appendChild(div);
+  if(arriba) lista.insertBefore(div, lista.firstChild); else lista.appendChild(div);
   return div;
 }
 function sistema(t, clase){ 
@@ -295,13 +332,16 @@ function refrescarCabecera(e){
   if(e) refrescarCabecera.ult = e;
   e = refrescarCabecera.ult;
   if(!e) return;
-  var t = ultTick ? (Date.now() - new Date(ultTick).getTime()) / 1000 : 99999;
-  // mientras corre una tarea el daemon no reescribe el tick: eso no es que este muerto
-  var vivo = e.vivo && (e.tarea || t < 180);
-  var etiq = e.tarea ? "trabajando" : (vivo ? "vivo" : "sin tick");
+  var t = ultTick ? (Date.now() - fecha(ultTick)) / 1000 : 99999;
+  // desde it2 el daemon toca el tick en cada vuelta del loop, tambien mientras corre una tarea:
+  // mas de 60 s sin tick = esta caido de verdad
+  var fresco = t < 60;
+  var vivo = e.vivo && fresco;
+  var etiq = !fresco ? "SIN TICK" : (e.tarea ? "trabajando" : "vivo");
   var partes = [];
   partes.push('<span class="' + (vivo ? "vivo" : "muerto") + '">' + etiq +
-              "</span> pid " + (e.pid || "?") + " · tick hace " + hace(ultTick));
+              "</span> pid " + (e.pid || "?") + ' · tick hace <span class="' + (fresco ? "" : "frio") +
+              '">' + hace(ultTick) + "</span>");
   if(e.pausa) partes.push('<span class="pausa">EN PAUSA</span>');
   partes.push('<span class="tarea">tarea: <b>' + (e.tarea ? esc(e.tarea) : "nada") + "</b>" +
               (e.tarea && e.desde ? " (" + hace(e.desde) + ", " + (e.modelo || "?") + ")" : "") + "</span>");
@@ -317,33 +357,62 @@ function cargarEstado(){
   return api("GET", "/repos/" + REPO + "/issues/" + ISSUE, null, etagIssue).then(function(r){
     if(r.status === 304) return;
     etagIssue = r.etag;
+    creadoIso = r.json.created_at || creadoIso;
     pintarEstado(r.json.body || "");
   });
 }
 
+function ruta(desdeIso){
+  return "/repos/" + REPO + "/issues/" + ISSUE + "/comments?per_page=100&since=" + desdeIso;
+}
+function agregar(c, arriba){
+  vistos[c.id] = true;
+  var b = c.body || "";
+  if(b.indexOf(MARCA) === 0) pintar("agente", "agente", b.slice(MARCA.length).replace(/^\n/, ""), c.created_at, c.id, arriba);
+  else pintar("yo", "facundo", b, c.created_at, c.id, arriba);
+}
+
+// poll: pide solo desde el ultimo comentario que ya tengo. la url se queda quieta mientras no
+// pasa nada, asi que el etag devuelve 304 y no gasta rate limit.
 function cargarComentarios(reemplazar){
-  var desdeIso = new Date(Date.now() - horas * 3600 * 1000).toISOString();
-  var ruta = "/repos/" + REPO + "/issues/" + ISSUE + "/comments?per_page=100&since=" + desdeIso;
-  return api("GET", ruta, null, reemplazar ? null : etagCom).then(function(r){
+  if(reemplazar){ ultimoIso = null; masViejoIso = null; sinMasViejo = false; }
+  var ventana = new Date(Date.now() - horas * 3600 * 1000).toISOString();
+  var desdeIso = (!reemplazar && ultimoIso) ? ultimoIso : ventana;
+  return api("GET", ruta(desdeIso), null, reemplazar ? null : etagCom).then(function(r){
     if(r.status === 304) return;
     if(!reemplazar) etagCom = r.etag;
     var cs = r.json || [];
-    if(reemplazar){ lista.innerHTML = ""; vistos = {}; }
+    if(reemplazar){ lista.innerHTML = ""; vistos = {}; masViejoIso = ventana; }
     var pego = pegadoAbajo() || reemplazar;
     var nuevos = 0;
-    cs.sort(function(a,b){ return a.id - b.id; }).forEach(function(c){
+    cs.sort(function(a, b){ return a.id - b.id; }).forEach(function(c){
       if(vistos[c.id]) return;
-      vistos[c.id] = true;
+      agregar(c, false);
+      ultimoIso = c.created_at;
       nuevos++;
-      var b = c.body || "";
-      if(b.indexOf(MARCA) === 0){
-        pintar("agente", "agente", b.slice(MARCA.length).replace(/^\n/, ""), c.created_at, c.id);
-      }else{
-        pintar("yo", "facundo", b, c.created_at, c.id);
-      }
     });
+    if(nuevos) etagCom = null;  // la url del proximo poll cambia (since nuevo)
     if(pego) abajo();
     else if(nuevos) alfinal.style.display = "block";
+  });
+}
+
+// paginado hacia atras: trae la ventana anterior y la mete arriba sin mover lo que estas leyendo
+function cargarViejos(){
+  if(sinMasViejo || !masViejoIso) return Promise.resolve();
+  var hasta = new Date(masViejoIso).getTime();
+  var nuevoDesde = new Date(hasta - PASO * 3600 * 1000).toISOString();
+  return api("GET", ruta(nuevoDesde), null, null).then(function(r){
+    var cs = (r.json || []).filter(function(c){
+      return !vistos[c.id] && new Date(c.created_at).getTime() < hasta;
+    }).sort(function(a, b){ return a.id - b.id; });
+    var alto = hist.scrollHeight - hist.scrollTop;
+    cs.slice().reverse().forEach(function(c){ agregar(c, true); });
+    hist.scrollTop = hist.scrollHeight - alto;  // la vista se queda donde estaba
+    masViejoIso = nuevoDesde;
+    horas += PASO;
+    if(creadoIso && new Date(nuevoDesde).getTime() <= new Date(creadoIso).getTime()) sinMasViejo = true;
+    return cs.length;
   });
 }
 
@@ -399,11 +468,18 @@ $("rapidos").addEventListener("click", function(e){
   if(b && b.dataset.cmd) mandar(b.dataset.cmd);
 });
 $("mas").addEventListener("click", function(){
-  horas = horas * 2;
-  $("mas").textContent = "cargando " + horas + " h...";
-  cargarComentarios(true).then(function(){
-    $("mas").textContent = "cargar más viejo (ahora " + horas + " h)";
-  }).catch(function(e){ sistema("error: " + e.message, "error"); });
+  if(sinMasViejo) return;
+  $("mas").disabled = true;
+  $("mas").textContent = "cargando " + PASO + " h más...";
+  cargarViejos().then(function(n){
+    $("mas").disabled = sinMasViejo;
+    $("mas").textContent = sinMasViejo ? "no hay nada más viejo (desde el principio)"
+      : "cargar más viejo (" + (n || 0) + " nuevos, van " + horas + " h)";
+  }).catch(function(e){
+    $("mas").disabled = false;
+    $("mas").textContent = "cargar más viejo";
+    sistema("error: " + e.message, "error");
+  });
 });
 
 // ---------- token ----------
@@ -426,6 +502,7 @@ function arrancar(t){
   pie.style.display = "";
   cabecera.style.display = "flex";
   lista.innerHTML = ""; vistos = {}; etagCom = null; etagIssue = null;
+  $("mas").disabled = false; $("mas").textContent = "cargar más viejo";
   Promise.all([cargarEstado(), cargarComentarios(true)])
     .then(function(){ abajo(); reprogramar(); })
     .catch(function(e){
