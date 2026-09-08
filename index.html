@@ -9,11 +9,12 @@
 <meta name="apple-mobile-web-app-title" content="agente">
 <title>agente</title>
 <meta http-equiv="cache-control" content="no-cache">
+<meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
-<!-- agente-web v2.0 (it2: tick en vivo, paginado hacia atras, resaltado de estados y costos, boton cola) -->
+<!-- agente-web v3.0 (it3: token nunca en la url, salir con confirmacion, 401 pide token, backoff de rate limit, errores en rojo) -->
 <style>
   :root{
     --verde:#39ff14; --blanco:#e8e8e8; --gris:#666; --cian:#22d3ee;
@@ -47,6 +48,7 @@
     flex:0 0 auto;background:#000;color:var(--gris);border:1px solid var(--linea);
     border-radius:4px;padding:4px 8px;font:inherit;font-size:11px;cursor:pointer;
   }
+  #salir.confirmar{color:var(--rojo);border-color:var(--rojo)}
   #hist{
     flex:1 1 auto;min-height:0;overflow-y:auto;padding:10px 12px;
     -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
@@ -178,9 +180,25 @@ var cabecera = $("cabecera"), estadoEl = $("estado"), txt = $("txt");
 var alfinal = $("alfinal"), envoltorio = $("envoltorio");
 
 var token = null;
-var vistos = {};        // id de comentario -> true
+var vistos = {};
+var urlSucia = null;    // el token llego por la url (mala idea): lo saco y aviso
+var frenoHasta = 0;     // rate limit: no toco la api hasta este timestamp
+var avisoFreno = 0;        // id de comentario -> true
 // ventana inicial de historial. `?h=<horas>` para probar el paginado con una ventana chica
-var horas = parseFloat(new URLSearchParams(location.search).get("h")) || 24;
+var qs = new URLSearchParams(location.search);
+var horas = parseFloat(qs.get("h")) || 24;
+// el token no viaja nunca por la url (queda en el historial, en los logs y en el share sheet).
+// si vino igual, lo uso una vez, lo guardo en localStorage y limpio la barra de direcciones.
+(function(){
+  var t = qs.get("token") || qs.get("t") ||
+          new URLSearchParams((location.hash || "").replace(/^#/, "")).get("token");
+  if(!t) return;
+  urlSucia = t.trim();
+  try{ localStorage.setItem("agente_token", urlSucia); }catch(x){}
+  qs.delete("token"); qs.delete("t");
+  var limpia = location.pathname + (qs.toString() ? "?" + qs.toString() : "");
+  try{ history.replaceState(null, "", limpia); }catch(x){ location.replace(limpia); }
+})();
 var PASO = 24;          // cuantas horas mas trae cada tap en "cargar mas viejo"
 var ultimoIso = null;   // created_at del comentario mas nuevo cargado (el poll pide desde ahi)
 var masViejoIso = null; // borde viejo ya cubierto: el paginado hacia atras arranca de aca
@@ -277,6 +295,10 @@ function pintar(clase, quien, cuerpo, iso, id, arriba){
   if(arriba) lista.insertBefore(div, lista.firstChild); else lista.appendChild(div);
   return div;
 }
+function ruidoso(e){  // 401 ya abrio el login y "freno" ya aviso: no repetir en rojo
+  var m = e && e.message;
+  return !!m && m !== "401" && m !== "freno";
+}
 function sistema(t, clase){ 
   var pego = pegadoAbajo();
   pintar(clase || "sistema", "web", t, null, null);
@@ -292,7 +314,20 @@ lista.addEventListener("click", function(e){
 });
 
 // ---------- api ----------
+function frenar(seg, motivo){
+  seg = Math.max(20, Math.min(Math.round(seg), 900));
+  frenoHasta = Date.now() + seg * 1000;
+  if(Date.now() - avisoFreno > 60000){
+    avisoFreno = Date.now();
+    sistema("github frenó (" + motivo + "). vuelvo a intentar en " + seg + " s.", "error");
+  }
+  reprogramar();
+}
 function api(metodo, ruta, cuerpo, etag){
+  if(!token) return Promise.reject(new Error("401"));
+  if(Date.now() < frenoHasta && metodo === "GET"){
+    return Promise.reject(new Error("freno"));   // el poll no insiste; mandar un mensaje si
+  }
   var h = {
     "authorization": "Bearer " + token,
     "accept": "application/vnd.github+json"
@@ -305,14 +340,31 @@ function api(metodo, ruta, cuerpo, etag){
     cache: "no-store"
   }).then(function(r){
     if(r.status === 304) return {status:304};
-    if(r.status === 401 || r.status === 403){
+    if(r.status === 401 || r.status === 403 || r.status === 429){
       return r.json().catch(function(){ return {}; }).then(function(j){
         var msg = (j && j.message) || ("http " + r.status);
-        if(r.status === 401){ pedirToken("token rechazado por github (401)"); throw new Error("401"); }
-        throw new Error(msg);
+        if(r.status === 401){
+          pedirToken("token rechazado por github (401): " + msg);
+          throw new Error("401");
+        }
+        // 403 puede ser rate limit (frena) o falta de permisos (el token no sirve para este repo)
+        var resta = r.headers.get("x-ratelimit-remaining");
+        var reset = parseInt(r.headers.get("x-ratelimit-reset"), 10);
+        var reint = parseInt(r.headers.get("retry-after"), 10);
+        if(r.status === 429 || resta === "0" || reint > 0 || /rate limit|abuse|secondary/i.test(msg)){
+          var seg = reint > 0 ? reint : (reset ? reset - Math.floor(Date.now() / 1000) : 60);
+          frenar(seg + 5, r.status + " " + (resta === "0" ? "sin cuota" : "rate limit"));
+          throw new Error("freno");
+        }
+        pedirToken("el token no tiene permiso sobre " + REPO + " (403): " + msg);
+        throw new Error("401");
       });
     }
-    if(!r.ok) throw new Error("http " + r.status);
+    if(!r.ok){
+      return r.json().catch(function(){ return {}; }).then(function(j){
+        throw new Error("http " + r.status + ((j && j.message) ? " " + j.message : ""));
+      });
+    }
     return r.json().then(function(j){ return {status:r.status, json:j, etag:r.headers.get("etag")}; });
   });
 }
@@ -419,12 +471,15 @@ function cargarViejos(){
 
 function tick(){
   Promise.all([cargarEstado(), cargarComentarios(false)])
-    .catch(function(e){ if(e && e.message !== "401") sistema("error: " + e.message, "error"); });
+    .catch(function(e){ if(ruidoso(e)) sistema("error: " + e.message, "error"); });
 }
 
 function reprogramar(){
   if(timer) clearInterval(timer);
-  timer = setInterval(tick, document.hidden ? 30000 : 5000);
+  if(!token) return;
+  var ms = document.hidden ? 30000 : 5000;
+  if(Date.now() < frenoHasta) ms = Math.min(Math.max(frenoHasta - Date.now() + 500, ms), 60000);
+  timer = setInterval(tick, ms);
 }
 document.addEventListener("visibilitychange", function(){
   reprogramar();
@@ -447,7 +502,7 @@ function mandar(texto){
       }
       etagCom = null;
     })
-    .catch(function(e){ if(e && e.message !== "401") sistema("no se pudo mandar: " + e.message, "error"); })
+    .catch(function(e){ if(ruidoso(e)) sistema("no se pudo mandar: " + e.message, "error"); })
     .then(function(){ $("mandar").disabled = false; });
 }
 
@@ -488,6 +543,7 @@ function pedirToken(msg){
   if(timer) clearInterval(timer);
   timer = null;
   token = null;
+  frenoHasta = 0; avisoFreno = 0;
   try{ localStorage.removeItem("agente_token"); }catch(x){}
   login.style.display = "flex";
   envoltorio.style.display = "none";
@@ -497,6 +553,7 @@ function pedirToken(msg){
 }
 function arrancar(t){
   token = t;
+  frenoHasta = 0; avisoFreno = 0;
   try{ localStorage.setItem("agente_token", t); }catch(x){}
   login.style.display = "none";
   envoltorio.style.display = "flex";
@@ -507,7 +564,8 @@ function arrancar(t){
   Promise.all([cargarEstado(), cargarComentarios(true)])
     .then(function(){ abajo(); reprogramar(); })
     .catch(function(e){
-      if(e && e.message !== "401"){ sistema("error: " + e.message, "error"); reprogramar(); }
+      if(ruidoso(e)) sistema("error: " + e.message, "error");
+      if(e && e.message !== "401") reprogramar();
     });
 }
 $("entrar").addEventListener("click", function(){
@@ -515,11 +573,22 @@ $("entrar").addEventListener("click", function(){
   if(t){ $("tok").value = ""; arrancar(t); }
 });
 $("tok").addEventListener("keydown", function(e){ if(e.key === "Enter") $("entrar").click(); });
-$("salir").addEventListener("click", function(){ pedirToken("token borrado de este teléfono."); });
+$("salir").addEventListener("click", function(){
+  var b = $("salir");
+  if(b.classList.contains("confirmar")){
+    b.classList.remove("confirmar"); b.textContent = "salir";
+    pedirToken("token borrado de este teléfono.");
+    return;
+  }
+  b.classList.add("confirmar"); b.textContent = "borrar token?";
+  clearTimeout(b.dataset.t);
+  b.dataset.t = setTimeout(function(){ b.classList.remove("confirmar"); b.textContent = "salir"; }, 4000);
+});
 
-var guardado = null;
-try{ guardado = localStorage.getItem("agente_token"); }catch(x){}
+var guardado = urlSucia;
+if(!guardado){ try{ guardado = localStorage.getItem("agente_token"); }catch(x){} }
 if(guardado) arrancar(guardado); else pedirToken();
+if(urlSucia) sistema("el token venía en la url: lo guardé acá y limpié la dirección. no compartas ese link.", "error");
 
 })();
 </script>
