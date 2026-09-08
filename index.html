@@ -179,7 +179,8 @@ var alfinal = $("alfinal"), envoltorio = $("envoltorio");
 
 var token = null;
 var vistos = {};        // id de comentario -> true
-var horas = 24;         // ventana inicial de historial
+// ventana inicial de historial. `?h=<horas>` para probar el paginado con una ventana chica
+var horas = parseFloat(new URLSearchParams(location.search).get("h")) || 24;
 var PASO = 24;          // cuantas horas mas trae cada tap en "cargar mas viejo"
 var ultimoIso = null;   // created_at del comentario mas nuevo cargado (el poll pide desde ahi)
 var masViejoIso = null; // borde viejo ya cubierto: el paginado hacia atras arranca de aca
