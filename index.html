@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="agente">
 <title>agente</title>
-<!-- agente-web v1.1 -->
+<!-- agente-web v1.2 -->
 <style>
   :root{
     --verde:#39ff14; --blanco:#e8e8e8; --gris:#666; --cian:#22d3ee;
@@ -234,9 +234,11 @@ function refrescarCabecera(e){
   e = refrescarCabecera.ult;
   if(!e) return;
   var t = ultTick ? (Date.now() - new Date(ultTick).getTime()) / 1000 : 99999;
-  var vivo = e.vivo && t < 180;  // el tick tiene resolucion de minutos
+  // mientras corre una tarea el daemon no reescribe el tick: eso no es que este muerto
+  var vivo = e.vivo && (e.tarea || t < 180);
+  var etiq = e.tarea ? "trabajando" : (vivo ? "vivo" : "sin tick");
   var partes = [];
-  partes.push('<span class="' + (vivo ? "vivo" : "muerto") + '">' + (vivo ? "vivo" : "sin tick") +
+  partes.push('<span class="' + (vivo ? "vivo" : "muerto") + '">' + etiq +
               "</span> pid " + (e.pid || "?") + " · tick hace " + hace(ultTick));
   if(e.pausa) partes.push('<span class="pausa">EN PAUSA</span>');
   partes.push("tarea: <b>" + (e.tarea ? esc(e.tarea).slice(0, 120) : "nada") + "</b>" +
