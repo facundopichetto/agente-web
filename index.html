@@ -191,9 +191,10 @@
 </div>
 
 <div id="login">
-  <p>pegá un token de github con acceso al repo <b>agente-buzon</b>.
-en la mac: <b>gh auth token</b>
-se guarda solo en este teléfono (localStorage), nunca viaja a otro lado.</p>
+  <p>entrá con la clave (se guarda solo en este teléfono).</p>
+  <input id="clave" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="clave">
+  <button id="entrar-clave" type="button">entrar con clave</button>
+  <p style="opacity:.6">o pegá el token:</p>
   <input id="tok" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="ghp_... / gho_...">
   <button id="entrar" type="button">entrar</button>
   <p id="login-err" style="color:var(--rojo)"></p>
@@ -901,6 +902,32 @@ $("entrar").addEventListener("click", function(){
   if(t){ $("tok").value = ""; arrancar(t); }
 });
 $("tok").addEventListener("keydown", function(e){ if(e.key === "Enter") $("entrar").click(); });
+// login por clave (provisorio): clave.json trae el token cifrado (PBKDF2 + AES-GCM, lo publica recetas/web_clave.sh)
+function b64a(s){ var b = atob(s), u = new Uint8Array(b.length); for(var i=0;i<b.length;i++) u[i]=b.charCodeAt(i); return u; }
+function entrarConClave(){
+  var c = $("clave").value;
+  if(!c) return;
+  $("login-err").textContent = "descifrando...";
+  fetch("clave.json?v=" + Date.now(), {cache:"no-store"}).then(function(r){
+    if(!r.ok) throw new Error("no hay clave.json publicado (correr recetas/web_clave.sh)");
+    return r.json();
+  }).then(function(j){
+    var enc = new TextEncoder();
+    return crypto.subtle.importKey("raw", enc.encode(c), "PBKDF2", false, ["deriveKey"]).then(function(base){
+      return crypto.subtle.deriveKey({name:"PBKDF2", salt:b64a(j.salt), iterations:j.it||300000, hash:"SHA-256"}, base,
+                                     {name:"AES-GCM", length:256}, false, ["decrypt"]);
+    }).then(function(key){
+      return crypto.subtle.decrypt({name:"AES-GCM", iv:b64a(j.iv)}, key, b64a(j.ct));
+    });
+  }).then(function(buf){
+    $("clave").value = "";
+    arrancar(new TextDecoder().decode(buf).trim());
+  }).catch(function(e){
+    $("login-err").textContent = (e && /decrypt|operation/i.test(e.message)) ? "clave incorrecta" : ("error: " + e.message);
+  });
+}
+$("entrar-clave").addEventListener("click", entrarConClave);
+$("clave").addEventListener("keydown", function(e){ if(e.key === "Enter") entrarConClave(); });
 $("salir").addEventListener("click", function(){
   var b = $("salir");
   if(b.classList.contains("confirmar")){
