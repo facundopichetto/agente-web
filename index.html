@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.3">
-<link rel="manifest" href="manifest.json?v=4.3">
+<meta name="agente-web-version" content="4.4">
+<link rel="manifest" href="manifest.json?v=4.4">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -579,6 +579,9 @@ setInterval(function(){ refrescarCabecera(); }, 1000);
 // ---------- auto actualizacion ----------
 // el daemon reescribe version.json en cada publish (bump_web). la pagina lo mira cada 60 s y si
 // cambio se recarga sola con ?v=<version>, asi pages no puede devolver el html viejo del cache.
+// la referencia es la version EMBEBIDA en este html (meta agente-web-version), no el primer fetch:
+// si pages me sirvio un html viejo del cache, version.json ya viene nuevo y hay que recargar igual.
+var verEmbebida = (document.querySelector('meta[name="agente-web-version"]') || {}).content || null;
 var verWeb = null;
 function mirarVersion(){
   return fetch("version.json?_=" + Date.now(), {cache: "no-store"})
@@ -586,9 +589,11 @@ function mirarVersion(){
     .then(function(j){
       if(!j || !j.version) return;
       var v = j.version + "/" + (j.ts || "");
-      if(verWeb === null){ verWeb = v; return; }
-      if(v === verWeb) return;
+      var cambio = (verEmbebida && j.version !== verEmbebida) || (verWeb !== null && v !== verWeb);
       verWeb = v;
+      if(!cambio) return;
+      // ya recargue por esta version (?v= en la url) y el html sigue viniendo viejo: no entro en loop
+      if(new URLSearchParams(location.search).get("v") === j.version){ verEmbebida = j.version; return; }
       if(txt.value.trim()){ return; }   // estas escribiendo: la recarga espera al proximo chequeo
       sistema("version " + j.version + " publicada, recargando...");
       var q = new URLSearchParams(location.search);
