@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.5">
-<link rel="manifest" href="manifest.json?v=4.5">
+<meta name="agente-web-version" content="4.6">
+<link rel="manifest" href="manifest.json?v=4.6">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -149,6 +149,8 @@
   .caja .cuerpo{white-space:pre-wrap;word-break:break-word;font-size:11px;line-height:1.5}
   .caja .cuerpo.tabla{white-space:pre;overflow-x:auto;-webkit-overflow-scrolling:touch}
   .caja .vacio{color:var(--gris)}
+  .caja .cuerpo a{color:var(--cian);text-decoration:none;border-bottom:1px dotted #1f3a44}
+  .caja .cuerpo a:active{color:var(--verde)}
   .bar .lleno{color:var(--verde)}
   .bar.med .lleno{color:var(--amarillo)}
   .bar.alto .lleno{color:var(--rojo)}
@@ -661,6 +663,7 @@ $("mas").addEventListener("click", function(){
 // misma estetica que la consola: verde ok, rojo fallo, amarillo pendiente, cian corriendo, magenta $.
 // el json lo arma `recetas/widgets_json.py` y lo sube el script `widgets_web` del daemon cada 60 s.
 var widgetsEl = $("widgets");
+var podAbierto = false;   // el desplegable de podcast, se conserva entre repintados
 
 function kilo(n){
   n = n || 0;
@@ -865,6 +868,26 @@ function cajaPropuestas(pr){
   }).join("\n"));
 }
 
+function link(url, texto){
+  return '<a href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(texto) + "</a>";
+}
+
+function cajaPodcast(p){
+  var eps = p.episodios || [];
+  var btn = '<button class="btn" type="button" data-pod="1">' + (podAbierto ? "cerrar" : "podcast") + "</button>";
+  var extra = eps.length ? '<span class="g">' + eps.length + " ep</span>" : "";
+  if(!podAbierto) return caja("podcast", extra, btn + '<span class="g">' + (eps.length ? "tocá para ver los links" : "sin episodios") + "</span>");
+  var filas = [btn + link(p.web || "#", "la web del podcast")];
+  if(!eps.length) filas.push(vacio("sin episodios"));
+  eps.forEach(function(e){
+    filas.push('<span class="g">' + esc((e.fecha || "").slice(5)) + "</span> " + esc(e.titulo));
+    filas.push("  " + (e.voces || []).map(function(v){
+      return link(v.url, v.voz + (v.min ? " " + v.min + "m" : ""));
+    }).join(" · "));
+  });
+  return caja("podcast", extra, filas.join("\n"));
+}
+
 function pintarWidgets(d, err){
   if(!d && !widDatos){
     widgetsEl.innerHTML = caja("widgets", "", err ? '<span class="r">' + esc(err) + "</span>" : vacio("cargando..."));
@@ -882,6 +905,7 @@ function pintarWidgets(d, err){
     cajaSombra(d.sombra || {}),
     cajaPropuestas(d.propuestas || []),
     cajaAvisos(d.avisos || []),
+    cajaPodcast(d.podcast || {}),
     '<div class="caja"><div class="cuerpo g">datos de hace ' + edad +
       (err ? ' · <span class="r">' + esc(err) + "</span>" : "") + "</div></div>"
   ];
@@ -901,6 +925,8 @@ function cargarWidgets(){
 }
 
 widgetsEl.addEventListener("click", function(e){
+  var pod = e.target.closest("button[data-pod]");
+  if(pod){ podAbierto = !podAbierto; pintarWidgets(null); return; }
   var b = e.target.closest("button[data-msg]");
   if(!b) return;
   b.disabled = true;
