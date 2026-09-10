@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
-<!-- agente-web v4.0 (web 2: dos paneles chat | widgets, todos los widgets de la consola desde widgets.json del buzon; en celu una vista a la vez con toggle) -->
+<!-- agente-web v4.1 (tipografia 2 pt mas chica; web 2: dos paneles chat | widgets, todos los widgets de la consola desde widgets.json del buzon; en celu una vista a la vez con toggle) -->
 <style>
   :root{
     --verde:#39ff14; --blanco:#e8e8e8; --gris:#666; --cian:#22d3ee;
@@ -27,7 +27,7 @@
   html,body{margin:0;padding:0;background:#000;color:var(--blanco)}
   body{
     font-family:"Fira Code",ui-monospace,SFMono-Regular,Menlo,Monaco,"Courier New",monospace;
-    font-size:14px;line-height:1.55;letter-spacing:.01em;
+    font-size:12px;line-height:1.55;letter-spacing:.01em;
     height:100dvh;height:var(--alto,100dvh);
     display:flex;flex-direction:column;overflow:hidden;
     -webkit-text-size-adjust:100%;
@@ -37,7 +37,7 @@
     padding-top:calc(8px + env(safe-area-inset-top));background:#000;
     display:flex;gap:8px;align-items:flex-start;
   }
-  #estado{flex:1;min-width:0;white-space:pre-wrap;word-break:break-word;font-size:12.5px;line-height:1.5;color:var(--gris)}
+  #estado{flex:1;min-width:0;white-space:pre-wrap;word-break:break-word;font-size:10.5px;line-height:1.5;color:var(--gris)}
   #estado b{color:var(--cian);font-weight:normal}
   #estado .tarea{
     display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
@@ -49,7 +49,7 @@
   .pausa{color:var(--amarillo)}
   #salir{
     flex:0 0 auto;background:#000;color:var(--gris);border:1px solid var(--linea);
-    border-radius:4px;padding:4px 8px;font:inherit;font-size:11px;cursor:pointer;
+    border-radius:4px;padding:4px 8px;font:inherit;font-size:9px;cursor:pointer;
   }
   #salir.confirmar{color:var(--rojo);border-color:var(--rojo)}
   #hist{
@@ -57,7 +57,7 @@
     -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
   }
   .msg{margin:0 0 14px 0;white-space:pre-wrap;word-break:break-word}
-  .msg .ts{color:var(--gris);font-size:11.5px}
+  .msg .ts{color:var(--gris);font-size:9.5px}
   .msg .quien,.msg .ts{user-select:none}
   .msg .quien{color:var(--magenta)}
   .agente .quien{color:var(--verde)}
@@ -74,7 +74,7 @@
   }
   .msg.largo{cursor:pointer}
   .msg.largo .toggle{
-    display:inline-block;margin-top:3px;color:var(--cian);font-size:11.5px;
+    display:inline-block;margin-top:3px;color:var(--cian);font-size:9.5px;
     border-bottom:1px dotted var(--linea);
   }
   .msg.largo .toggle::before{content:"plegar"}
@@ -88,7 +88,7 @@
   #estado .frio{color:var(--rojo)}
   #mas{
     display:block;width:100%;margin:0 0 10px 0;background:#000;color:var(--gris);
-    border:1px solid var(--linea);border-radius:4px;padding:6px;font:inherit;font-size:12px;cursor:pointer;
+    border:1px solid var(--linea);border-radius:4px;padding:6px;font:inherit;font-size:10px;cursor:pointer;
   }
   #pie{
     flex:0 0 auto;border-top:1px solid var(--linea);background:#000;
@@ -98,31 +98,31 @@
   #rapidos::-webkit-scrollbar{display:none}
   #rapidos button{
     flex:0 0 auto;background:#000;color:var(--cian);border:1px solid var(--linea);
-    border-radius:14px;padding:7px 12px;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap;
+    border-radius:14px;padding:7px 12px;font:inherit;font-size:11px;cursor:pointer;white-space:nowrap;
   }
   #rapidos button:active{background:#111}
   #fila{display:flex;gap:6px;align-items:flex-end}
   #prompt{color:var(--magenta);padding-bottom:11px;flex:0 0 auto;user-select:none}
   #txt{
     flex:1 1 auto;background:#000;color:var(--blanco);border:1px solid var(--linea);
-    border-radius:6px;padding:9px 10px;font:inherit;font-size:16px;line-height:1.4;
+    border-radius:6px;padding:9px 10px;font:inherit;font-size:14px;line-height:1.4;
     resize:none;max-height:28dvh;min-height:42px;
   }
   #txt:focus{outline:none;border-color:var(--verde)}
   #mandar{
     flex:0 0 auto;background:#000;color:var(--verde);border:1px solid var(--verde);
-    border-radius:6px;padding:11px 14px;font:inherit;font-size:15px;cursor:pointer;
+    border-radius:6px;padding:11px 14px;font:inherit;font-size:13px;cursor:pointer;
   }
   #mandar:active{background:#0a1a06}
   #mandar:disabled{color:var(--gris);border-color:var(--linea)}
   #alfinal{
     position:absolute;right:12px;bottom:8px;z-index:5;display:none;
     background:#001a00;color:var(--verde);border:1px solid var(--verde);
-    border-radius:14px;padding:6px 12px;font:inherit;font-size:12.5px;cursor:pointer;
+    border-radius:14px;padding:6px 12px;font:inherit;font-size:10.5px;cursor:pointer;
   }
   #envoltorio{position:relative;flex:1 1 auto;min-height:0;display:flex}
   #login{padding:16px;display:none;flex-direction:column;gap:10px}
-  #login p{color:var(--gris);font-size:12px;margin:0;white-space:pre-wrap}
+  #login p{color:var(--gris);font-size:10px;margin:0;white-space:pre-wrap}
   #login input{
     background:#000;color:var(--verde);border:1px solid var(--linea);border-radius:4px;
     padding:9px;font:inherit;
@@ -137,10 +137,10 @@
   }
   .caja{border:1px solid var(--linea);border-radius:6px;padding:7px 9px 8px 9px;margin:0 0 8px 0}
   .caja > .tit{
-    color:var(--gris);font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--gris);font-size:9px;letter-spacing:.06em;text-transform:uppercase;
     margin:0 0 5px 0;display:flex;justify-content:space-between;gap:8px;
   }
-  .caja .cuerpo{white-space:pre-wrap;word-break:break-word;font-size:12.5px;line-height:1.5}
+  .caja .cuerpo{white-space:pre-wrap;word-break:break-word;font-size:10.5px;line-height:1.5}
   .caja .cuerpo.tabla{white-space:pre;overflow-x:auto;-webkit-overflow-scrolling:touch}
   .caja .vacio{color:var(--gris)}
   .bar .lleno{color:var(--verde)}
@@ -154,7 +154,7 @@
   .b{font-weight:500}
   .btn{
     background:#000;color:var(--cian);border:1px solid var(--linea);border-radius:12px;
-    padding:2px 9px;font:inherit;font-size:11.5px;cursor:pointer;margin:2px 4px 2px 0;
+    padding:2px 9px;font:inherit;font-size:9.5px;cursor:pointer;margin:2px 4px 2px 0;
   }
   .btn:active{background:#111}
   .btn.voto{color:var(--verde);border-color:#1f3a14}
@@ -162,7 +162,7 @@
   #vistas{display:none;gap:6px;flex:0 0 auto}
   #vistas button{
     background:#000;color:var(--gris);border:1px solid var(--linea);border-radius:4px;
-    padding:4px 9px;font:inherit;font-size:11px;cursor:pointer;
+    padding:4px 9px;font:inherit;font-size:9px;cursor:pointer;
   }
   #vistas button.on{color:var(--verde);border-color:var(--verde)}
   body.sinlogin #cabecera,body.sinlogin #cuerpo{display:none}
@@ -172,6 +172,8 @@
     #panel-widgets{flex:1 1 auto;border-left:none;padding-bottom:calc(14px + env(safe-area-inset-bottom))}
     body:not(.ver-widgets) #panel-widgets{display:none}
     body.ver-widgets #panel-chat{display:none}
+    /* ios zoomea al enfocar un input de menos de 16px: solo este queda en 16 */
+    #txt,#login input,#clave,#tok{font-size:16px}
   }
   #login button{
     background:#000;color:var(--verde);border:1px solid var(--verde);border-radius:4px;
