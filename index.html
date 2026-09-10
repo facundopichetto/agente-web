@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
-<!-- agente-web v3.0 (it4: fuente 14px; token nunca en la url, salir con confirmacion, 401 pide token, backoff de rate limit, errores en rojo) -->
+<!-- agente-web v4.0 (web 2: dos paneles chat | widgets, todos los widgets de la consola desde widgets.json del buzon; en celu una vista a la vez con toggle) -->
 <style>
   :root{
     --verde:#39ff14; --blanco:#e8e8e8; --gris:#666; --cian:#22d3ee;
@@ -127,6 +127,52 @@
     background:#000;color:var(--verde);border:1px solid var(--linea);border-radius:4px;
     padding:9px;font:inherit;
   }
+  /* ---------- web 2: dos paneles (chat | widgets) ---------- */
+  #cuerpo{flex:1 1 auto;min-height:0;display:flex;flex-direction:row}
+  #panel-chat{flex:1 1 auto;min-width:0;display:flex;flex-direction:column}
+  #panel-widgets{
+    flex:0 0 420px;min-width:0;overflow-y:auto;border-left:1px solid var(--linea);
+    padding:8px 10px calc(8px + env(safe-area-inset-bottom)) 10px;
+    -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+  }
+  .caja{border:1px solid var(--linea);border-radius:6px;padding:7px 9px 8px 9px;margin:0 0 8px 0}
+  .caja > .tit{
+    color:var(--gris);font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+    margin:0 0 5px 0;display:flex;justify-content:space-between;gap:8px;
+  }
+  .caja .cuerpo{white-space:pre-wrap;word-break:break-word;font-size:12.5px;line-height:1.5}
+  .caja .cuerpo.tabla{white-space:pre;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .caja .vacio{color:var(--gris)}
+  .bar .lleno{color:var(--verde)}
+  .bar.med .lleno{color:var(--amarillo)}
+  .bar.alto .lleno{color:var(--rojo)}
+  .bar .hueco{color:#333}
+  .pct{font-weight:500}
+  .pct.ok{color:var(--verde)} .pct.med{color:var(--amarillo)} .pct.alto{color:var(--rojo)}
+  .v{color:var(--verde)} .r{color:var(--rojo)} .a{color:var(--amarillo)}
+  .c{color:var(--cian)} .m{color:var(--magenta)} .g{color:var(--gris)}
+  .b{font-weight:500}
+  .btn{
+    background:#000;color:var(--cian);border:1px solid var(--linea);border-radius:12px;
+    padding:2px 9px;font:inherit;font-size:11.5px;cursor:pointer;margin:2px 4px 2px 0;
+  }
+  .btn:active{background:#111}
+  .btn.voto{color:var(--verde);border-color:#1f3a14}
+  .btn.dale{color:var(--verde);border-color:var(--verde)}
+  #vistas{display:none;gap:6px;flex:0 0 auto}
+  #vistas button{
+    background:#000;color:var(--gris);border:1px solid var(--linea);border-radius:4px;
+    padding:4px 9px;font:inherit;font-size:11px;cursor:pointer;
+  }
+  #vistas button.on{color:var(--verde);border-color:var(--verde)}
+  body.sinlogin #cabecera,body.sinlogin #cuerpo{display:none}
+  /* angosto (celu): una vista a la vez, la elige la barra de arriba. puro css, sin js de layout */
+  @media (max-width:899px){
+    #vistas{display:flex}
+    #panel-widgets{flex:1 1 auto;border-left:none;padding-bottom:calc(14px + env(safe-area-inset-bottom))}
+    body:not(.ver-widgets) #panel-widgets{display:none}
+    body.ver-widgets #panel-chat{display:none}
+  }
   #login button{
     background:#000;color:var(--verde);border:1px solid var(--verde);border-radius:4px;
     padding:9px;font:inherit;cursor:pointer;
@@ -135,7 +181,14 @@
 </head>
 <body>
 
-<div id="cabecera"><div id="estado">conectando...</div><button id="salir" type="button">salir</button></div>
+<div id="cabecera">
+  <div id="estado">conectando...</div>
+  <div id="vistas">
+    <button id="ver-chat" class="on" type="button">chat</button>
+    <button id="ver-widgets" type="button">widgets</button>
+  </div>
+  <button id="salir" type="button">salir</button>
+</div>
 
 <div id="login">
   <p>pegá un token de github con acceso al repo <b>agente-buzon</b>.
@@ -146,6 +199,8 @@ se guarda solo en este teléfono (localStorage), nunca viaja a otro lado.</p>
   <p id="login-err" style="color:var(--rojo)"></p>
 </div>
 
+<div id="cuerpo">
+<div id="panel-chat">
 <div id="envoltorio">
   <div id="hist"><button id="mas" type="button">cargar más viejo</button><div id="lista"></div></div>
   <button id="alfinal" type="button">ir al final</button>
@@ -167,6 +222,9 @@ se guarda solo en este teléfono (localStorage), nunca viaja a otro lado.</p>
     <button id="mandar" type="button">mandar</button>
   </div>
 </div>
+</div><!-- /panel-chat -->
+<div id="panel-widgets"><div id="widgets"></div></div>
+</div><!-- /cuerpo -->
 
 <script>
 (function(){
@@ -207,7 +265,8 @@ var ultimoIso = null;   // created_at del comentario mas nuevo cargado (el poll 
 var masViejoIso = null; // borde viejo ya cubierto: el paginado hacia atras arranca de aca
 var creadoIso = null;   // created_at del issue: mas atras que eso no hay nada
 var sinMasViejo = false;
-var etagCom = null, etagIssue = null;
+var etagCom = null, etagIssue = null, etagWid = null;
+var widUlt = 0, widDatos = null;
 var enPausa = false;
 var timer = null;
 var ultTick = null;
@@ -326,14 +385,14 @@ function frenar(seg, motivo){
   }
   reprogramar();
 }
-function api(metodo, ruta, cuerpo, etag){
+function api(metodo, ruta, cuerpo, etag, accept){
   if(!token) return Promise.reject(new Error("401"));
   if(Date.now() < frenoHasta && metodo === "GET"){
     return Promise.reject(new Error("freno"));   // el poll no insiste; mandar un mensaje si
   }
   var h = {
     "authorization": "Bearer " + token,
-    "accept": "application/vnd.github+json"
+    "accept": accept || "application/vnd.github+json"
   };
   if(cuerpo) h["content-type"] = "application/json";
   if(etag) h["if-none-match"] = etag;
@@ -475,6 +534,11 @@ function cargarViejos(){
 function tick(){
   Promise.all([cargarEstado(), cargarComentarios(false)])
     .catch(function(e){ if(ruidoso(e)) sistema("error: " + e.message, "error"); });
+  // los widgets van mas lento que el chat: 30 s a la vista, 120 s en background
+  var cada = document.hidden ? 120000 : 30000;
+  if(Date.now() - widUlt > cada){
+    cargarWidgets().catch(function(e){ if(ruidoso(e)) pintarWidgets(null, e.message); });
+  }
 }
 
 function reprogramar(){
@@ -541,6 +605,270 @@ $("mas").addEventListener("click", function(){
   });
 });
 
+// ---------- widgets (web 2): widgets.json que publica el daemon en el buzon ----------
+// misma estetica que la consola: verde ok, rojo fallo, amarillo pendiente, cian corriendo, magenta $.
+// el json lo arma `recetas/widgets_json.py` y lo sube el script `widgets_web` del daemon cada 60 s.
+var widgetsEl = $("widgets");
+
+function kilo(n){
+  n = n || 0;
+  if(n >= 1e6) return (n / 1e6).toFixed(1) + "M";
+  if(n >= 1000) return Math.round(n / 1000) + "k";
+  return String(Math.round(n));
+}
+function clasePct(p){ return p >= 80 ? "alto" : p >= 50 ? "med" : "ok"; }
+function bar(p, ancho){
+  ancho = ancho || 10;
+  var v = (p === null || p === undefined) ? null : Math.max(0, Math.min(100, p));
+  var n = v === null ? 0 : Math.round(v * ancho / 100);
+  var cl = v === null ? "" : clasePct(v);
+  return '<span class="bar ' + cl + '"><span class="lleno">' + "█".repeat(n) + '</span>' +
+         '<span class="hueco">' + "░".repeat(ancho - n) + "</span></span> " +
+         '<span class="pct ' + (cl || "g") + '">' + (v === null ? "?" : Math.round(v)) + "%</span>";
+}
+function horaLocal(iso){
+  if(!iso) return "";
+  var t = fecha(iso);
+  if(!t) return "";
+  var d = new Date(t), hoy = new Date();
+  var dias = ["dom","lun","mar","mie","jue","vie","sab"];
+  var mismo = d.toDateString() === hoy.toDateString();
+  return (mismo ? "hoy " : dias[d.getDay()] + " ") + desde(iso);
+}
+function haceSeg(s){
+  if(s === null || s === undefined) return "?";
+  if(s < 60) return Math.round(s) + "s";
+  if(s < 3600) return Math.round(s / 60) + "m";
+  if(s < 86400) return Math.round(s / 3600) + "h";
+  return Math.round(s / 86400) + "d";
+}
+function pad(t, n, der){
+  t = String(t === null || t === undefined ? "" : t);
+  if(t.length > n) t = t.slice(0, n);
+  var h = " ".repeat(n - t.length);
+  return der ? h + t : t + h;
+}
+function boton(texto, msg, clase){
+  return '<button class="btn ' + (clase || "") + '" type="button" data-msg="' + esc(msg) + '">' + esc(texto) + "</button>";
+}
+function caja(tit, extra, cuerpo, tabla){
+  return '<div class="caja"><div class="tit"><span>' + esc(tit) + '</span><span>' + (extra || "") +
+         '</span></div><div class="cuerpo' + (tabla ? " tabla" : "") + '">' + cuerpo + "</div></div>";
+}
+function vacio(t){ return '<span class="vacio">' + esc(t) + "</span>"; }
+
+function cajaUsage(u){
+  var p = u.presupuesto || {}, c = u.costo || {}, filas = [];
+  (u.barras || []).forEach(function(b){
+    var marca = "";
+    if(b.clave === "seven_day" && p.linea !== undefined && p.linea !== null)
+      marca = p.pesadas ? '  <span class="v">ok</span>' : '  <span class="r">over</span>';
+    filas.push(pad(b.nombre, 4) + " " + bar(b.pct) + ' <span class="g">' + esc(horaLocal(b.resets_at)) + "</span>" + marca);
+  });
+  if(p.linea !== undefined && p.linea !== null){
+    filas.push(pad("line", 4) + " " + bar(p.linea) + ' <span class="g">budget</span>');
+    var cl = p.pesadas ? "v" : "r";
+    filas.push('<span class="' + cl + '">' + (p.pesadas ? "heavy ok" : "heavy wait") + "</span> use " +
+               '<span class="b">' + p.uso + "%</span> line <span class=\"b\">" + p.linea + "%</span> margin " +
+               '<span class="' + cl + '">' + (p.margen > 0 ? "+" : "") + p.margen + "%</span>" +
+               (p.esperan ? ' <span class="g">' + p.esperan + " esperan</span>" : ""));
+  }
+  var h = u.horario || {};
+  if(h.ahora !== undefined && h.ahora !== null){
+    filas.push(h.ahora
+      ? '<span class="a">work hours</span> <span class="g">' + esc(h.desde + "-" + h.hasta) + '</span> chrome <span class="a">off</span>' +
+        (h.espera ? ' <span class="g">' + h.espera + " esperan</span>" : "")
+      : '<span class="g">work hours ' + esc(h.desde + "-" + h.hasta) + '</span> chrome <span class="v">on</span>');
+  }
+  (u.limites || []).forEach(function(l){
+    filas.push(pad(l.modelo, 4) + " " + bar(l.pct) + ' <span class="g">week</span>');
+  });
+  [["today", "hoy "], ["week", "sem "]].forEach(function(x){
+    var a = c[x[0]] || {};
+    if(!a.tareas) return;
+    if(x[0] === "week" && a.tareas === ((c.today || {}).tareas)) return;
+    filas.push(x[1] + ' <span class="m b">$' + a.usd.toFixed(2) + '</span> <span class="g">' + a.tareas + " tareas" +
+               (a.fallos ? '</span> <span class="r">' + a.fallos + "!</span><span class=\"g\">" : "") +
+               " · " + kilo(a.tok_in) + " in/" + kilo(a.tok_out) + " out</span>");
+  });
+  return caja("usage", "", filas.join("\n") || vacio("sin datos"));
+}
+
+function cajaAgente(a){
+  var filas = [];
+  var est = a.pausa ? '<span class="r b">PAUSA</span>'
+          : (a.corriendo || []).length ? '<span class="a b">trabajando</span>' : '<span class="v">idle</span>';
+  filas.push('cola <span class="c b">' + a.pendientes + "</span> pendientes  " + est);
+  (a.corriendo || []).forEach(function(t){
+    filas.push('<span class="a">&gt;</span> <span class="m b">' + esc(t.modelo) + '</span> <span class="g">' +
+               (t.min === null ? "?" : t.min) + "m</span> " + esc(String(t.texto || "").slice(0, 120)));
+  });
+  filas.push(a.horas + "h  ok <span class=\"v b\">" + a.ok + '</span>  fallo <span class="r b">' + a.fallo +
+             '</span>  <span class="g">chat ' + a.chat + "</span>");
+  var ult = (a.hechas || []);
+  if(!ult.length) filas.push(vacio("nada terminado todavia"));
+  ult.forEach(function(t){
+    var hora = (t.fecha || "").slice(11, 16) || "--:--";
+    filas.push('<span class="g">' + esc(hora) + "</span> " +
+               (t.ok ? '<span class="v">ok</span>' : '<span class="r">!!</span>') + " " +
+               esc(String(t.texto || "").slice(0, 90)) +
+               (t.usd ? ' <span class="m">$' + t.usd.toFixed(2) + "</span>" : ""));
+  });
+  (a.cola || []).slice(0, 4).forEach(function(t){
+    filas.push('<span class="a">[ ]</span> <span class="g">' + esc(t.tema) + "</span> " + esc(String(t.texto).slice(0, 80)));
+  });
+  var pausa = boton(a.pausa ? "segui" : "pausa", a.pausa ? "segui" : "pausa");
+  filas.push(pausa + boton("cola", "cola") + boton("status", "status"));
+  return caja("agent", 'cuenta <span class="c b">' + esc(a.cuenta || "?") + "</span>", filas.join("\n"));
+}
+
+function cajaVerif(v){
+  if(v.verify === undefined) return caja("verification agent", "", vacio("sin cache de jira"));
+  var edad = v.edad_min > 30 ? ' <span class="g">(' + v.edad_min + "m)</span>" : "";
+  return caja("verification agent", "",
+    'verify <span class="c b">' + v.verify + '</span> · mine <span class="b">' + v.mine +
+    '</span> · unassigned <span class="b">' + v.unassigned + "</span>" + edad +
+    ' · running <span class="' + (v.running ? "a" : "v") + ' b">' + v.running + "</span>");
+}
+
+function cajaTickets(t){
+  if(t.sin_datos) return caja("my tickets", "", vacio("sin jira_mine.json"));
+  var filas = (t.mine || []).map(function(x){
+    return '<span class="c b">' + esc(x.key) + '</span> <span class="a">' + esc(x.estado) + '</span> ' +
+           '<span class="g">' + haceSeg(x.hace_s) + "</span> " + esc(x.titulo);
+  });
+  if(!filas.length) filas.push(vacio("nada asignado en curso"));
+  if(t.total > (t.mine || []).length) filas.push('<span class="g">+' + (t.total - t.mine.length) + " mas</span>");
+  if(t.ultimo) filas.push('<span class="g">ultimo</span> <span class="b">' + esc(t.ultimo.key) + '</span> <span class="g">hace ' + haceSeg(t.ultimo.hace_s) + "</span>");
+  if(t.cx_total) filas.push('<span class="g">cx sin asignar</span> <span class="m b">' + t.cx_total + '</span> <span class="g">' +
+                            esc((t.cx[0] || {}).key || "") + " " + haceSeg((t.cx[0] || {}).hace_s) + "</span>");
+  return caja("my tickets", t.cache_s > 1800 ? '<span class="g">cache ' + haceSeg(t.cache_s) + "</span>" : "", filas.join("\n"));
+}
+
+function cajaOportunidades(o){
+  if(o.error) return caja("opportunities", "", '<span class="r">' + esc(o.error) + "</span>");
+  if(!(o.items || []).length)
+    return caja("opportunities", "", vacio("nada pendiente · se rellena solo") +
+      (o.hechas ? ' <span class="g">' + o.hechas + " hechas</span>" : ""));
+  var filas = [];
+  o.items.forEach(function(i){
+    var sello = i.valor + "/" + i.esfuerzo + (i.dias ? " " + i.dias + "d" : "");
+    filas.push('<span class="' + (i.limbo ? "r" : "a") + ' b">' + i.id + '</span> <span class="g">' + sello + "</span> " + esc(i.titulo));
+    (i.opciones || []).forEach(function(op){
+      var voto = op.letra === i.voto;
+      filas.push("  " + boton(op.letra, "op " + i.id + " " + op.letra, voto ? "voto" : "") +
+                 (voto ? '<span class="v">' : '<span class="g">') + esc(op.texto) +
+                 (op.tiempo ? " (" + esc(op.tiempo) + ")" : "") + "</span>");
+    });
+  });
+  filas.push('<span class="g">toca una letra para elegir' + (o.hechas ? " · " + o.hechas + " hechas" : "") + "</span>" +
+             (o.refill_pausado ? ' <span class="r">refill en pausa</span>' : ""));
+  return caja("opportunities", "", filas.join("\n"));
+}
+
+function cajaSombra(sb){
+  if(sb.error) return caja("backup models", "", '<span class="r">' + esc(sb.error) + "</span>");
+  var cols = sb.cols || [], cortos = {principal:"prin", gemini:"gem", groq:"groq", openrouter:"orou", cerebras:"cere", mistral:"mist"};
+  var filas = ['<span class="g">' + pad("categoria", 11) + cols.map(function(c){ return pad(cortos[c] || c, 5, true); }).join(" ") +
+               " " + pad("veredicto", 9) + "</span>"];
+  (sb.cats || []).forEach(function(cat){
+    var f = (sb.tabla || {})[cat];
+    if(!f) return;
+    var celdas = cols.map(function(c){
+      var x = f[c];
+      if(!x) return '<span class="g">' + pad("-", 5, true) + "</span>";
+      if(x.acierto === null || x.acierto === undefined){
+        var t = x.sin_clave ? "-" : x.pendientes ? "wait" : "err";
+        return '<span class="g">' + pad(t, 5, true) + "</span>";
+      }
+      var cl = x.acierto >= 80 ? "v" : x.acierto >= 50 ? "a" : "r";
+      return '<span class="' + cl + ' b">' + pad(x.acierto + "%", 5, true) + "</span>";
+    });
+    var v = (sb.veredictos || {})[cat] || {};
+    var ver = v.veredicto === "apto" ? '<span class="v b">' + pad("ok " + (cortos[v.proveedor] || v.proveedor || ""), 9) + "</span>"
+            : v.veredicto === "no apto" ? '<span class="r b">' + pad("no", 9) + "</span>"
+            : '<span class="g">' + pad("pocos", 9) + "</span>";
+    filas.push(pad(cat, 11) + celdas.join(" ") + " " + ver);
+  });
+  if(filas.length === 1) filas.push(vacio("sin corridas todavia"));
+  filas.push('<span class="g">' + (sb.n || 0) + " corridas · apto = 85%+ &lt;5s 20+" +
+             ((sb.faltan || []).length ? " · sin clave: " + sb.faltan.length : "") + "</span>");
+  return caja("backup models", "", filas.join("\n"), true);
+}
+
+function cajaAvisos(av){
+  if(!(av || []).length) return caja("avisos", "", vacio("sin avisos"));
+  return caja("avisos", "", av.map(function(l){
+    var m = /^(\d{4}-\d\d-\d\d \d\d:\d\d)\s+([\s\S]*)$/.exec(l);
+    var t = m ? '<span class="g">' + esc(m[1].slice(5, 16)) + "</span> " + esc(m[2]) : esc(l);
+    return t.length > 400 ? t.slice(0, 400) + "…" : t;
+  }).join("\n"));
+}
+
+function cajaPropuestas(pr){
+  if(!(pr || []).length) return caja("propuestas", "", vacio("nada esperando un dale"));
+  return caja("propuestas", "", pr.map(function(p){
+    return '<span class="a b">' + p.n + '</span> <span class="g">' + esc(p.tema) + "</span> " +
+           esc(String(p.orden).slice(0, 220)) + "\n  " + boton("dale", "dale " + p.n, "dale");
+  }).join("\n"));
+}
+
+function pintarWidgets(d, err){
+  if(!d && !widDatos){
+    widgetsEl.innerHTML = caja("widgets", "", err ? '<span class="r">' + esc(err) + "</span>" : vacio("cargando..."));
+    return;
+  }
+  if(d) widDatos = d;
+  d = widDatos;
+  var edad = haceSeg((Date.now() - fecha(d.ts)) / 1000);
+  var partes = [
+    cajaUsage(d.usage || {}),
+    cajaAgente(d.agente || {}),
+    cajaVerif(d.verificaciones || {}),
+    cajaTickets(d.tickets || {}),
+    cajaOportunidades(d.oportunidades || {}),
+    cajaSombra(d.sombra || {}),
+    cajaPropuestas(d.propuestas || []),
+    cajaAvisos(d.avisos || []),
+    '<div class="caja"><div class="cuerpo g">datos de hace ' + edad +
+      (err ? ' · <span class="r">' + esc(err) + "</span>" : "") + "</div></div>"
+  ];
+  var y = $("panel-widgets").scrollTop;
+  widgetsEl.innerHTML = partes.join("");
+  $("panel-widgets").scrollTop = y;
+}
+
+function cargarWidgets(){
+  widUlt = Date.now();
+  return api("GET", "/repos/" + REPO + "/contents/widgets.json", null, etagWid,
+             "application/vnd.github.raw+json").then(function(r){
+    if(r.status === 304){ pintarWidgets(null); return; }
+    etagWid = r.etag;
+    pintarWidgets(r.json);
+  });
+}
+
+widgetsEl.addEventListener("click", function(e){
+  var b = e.target.closest("button[data-msg]");
+  if(!b) return;
+  b.disabled = true;
+  mandar(b.dataset.msg);
+  setTimeout(function(){ b.disabled = false; }, 1500);
+});
+
+// celu: una vista a la vez. en desktop (>= 900px) los dos paneles se ven juntos y esto no aparece.
+function verWidgets(si){
+  document.body.classList.toggle("ver-widgets", !!si);
+  $("ver-chat").classList.toggle("on", !si);
+  $("ver-widgets").classList.toggle("on", !!si);
+  if(si && Date.now() - widUlt > 15000) cargarWidgets().catch(function(){});
+  if(!si) abajo();
+}
+$("ver-chat").addEventListener("click", function(){ verWidgets(false); });
+$("ver-widgets").addEventListener("click", function(){ verWidgets(true); });
+
+pintarWidgets(null);
+
 // ---------- token ----------
 function pedirToken(msg){
   if(timer) clearInterval(timer);
@@ -549,9 +877,7 @@ function pedirToken(msg){
   frenoHasta = 0; avisoFreno = 0;
   try{ localStorage.removeItem("agente_token"); }catch(x){}
   login.style.display = "flex";
-  envoltorio.style.display = "none";
-  pie.style.display = "none";
-  cabecera.style.display = "none";
+  document.body.classList.add("sinlogin");
   $("login-err").textContent = msg || "";
 }
 function arrancar(t){
@@ -559,12 +885,11 @@ function arrancar(t){
   frenoHasta = 0; avisoFreno = 0;
   try{ localStorage.setItem("agente_token", t); }catch(x){}
   login.style.display = "none";
-  envoltorio.style.display = "flex";
-  pie.style.display = "";
-  cabecera.style.display = "flex";
+  document.body.classList.remove("sinlogin");
   lista.innerHTML = ""; vistos = {}; etagCom = null; etagIssue = null;
   $("mas").disabled = false; $("mas").textContent = "cargar más viejo";
-  Promise.all([cargarEstado(), cargarComentarios(true)])
+  etagWid = null; widUlt = 0;
+  Promise.all([cargarEstado(), cargarComentarios(true), cargarWidgets()])
     .then(function(){ abajo(); reprogramar(); })
     .catch(function(e){
       if(ruidoso(e)) sistema("error: " + e.message, "error");
