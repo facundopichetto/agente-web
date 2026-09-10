@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.6">
-<link rel="manifest" href="manifest.json?v=4.6">
+<meta name="agente-web-version" content="4.7">
+<link rel="manifest" href="manifest.json?v=4.7">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -324,6 +324,25 @@ hist.addEventListener("scroll", function(){
   marcarArriba();
   if(pegadoAbajo()) alfinal.style.display = "none";
 });
+
+// celu: si facundo scrollea hacia arriba para leer, el teclado se cierra solo (blur del input).
+// solo por gesto propio (dedo o rueda) y solo hacia arriba: los scrolls programados (abajo(),
+// cargarViejos(), el autoscroll al llegar una respuesta) no lo disparan, y el foco al mandar queda.
+var tocY = null;
+function cerrarTeclado(){ if(document.activeElement === txt) txt.blur(); }
+hist.addEventListener("touchstart", function(e){
+  tocY = e.touches.length === 1 ? e.touches[0].clientY : null;
+}, {passive:true});
+hist.addEventListener("touchmove", function(e){
+  if(tocY === null || e.touches.length !== 1) return;
+  var y = e.touches[0].clientY;
+  if(y - tocY > 12){ cerrarTeclado(); tocY = null; }   // dedo hacia abajo = mirar lo viejo
+  else if(tocY - y > 12) tocY = y;                     // hacia abajo en la charla: no molesta
+}, {passive:true});
+hist.addEventListener("touchend", function(){ tocY = null; }, {passive:true});
+hist.addEventListener("touchcancel", function(){ tocY = null; }, {passive:true});
+// emulador de chrome mobile y trackpad: rueda hacia arriba
+hist.addEventListener("wheel", function(e){ if(e.deltaY < 0) cerrarTeclado(); }, {passive:true});
 
 // el teclado del celu tapa el input: usamos el alto real del viewport visible
 var vv = window.visualViewport;
