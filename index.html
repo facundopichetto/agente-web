@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.16">
-<link rel="manifest" href="manifest.json?v=4.16">
+<meta name="agente-web-version" content="4.17">
+<link rel="manifest" href="manifest.json?v=4.17">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1543,7 +1543,7 @@ function cajaOportunidades(o){
 
 function cajaSombra(sb){
   if(sb.error) return caja("backup models", "", '<span class="r">' + esc(sb.error) + "</span>");
-  var cols = sb.cols || [], cortos = {principal:"prin", gemini:"gem", groq:"groq", openrouter:"orou", cerebras:"cere", mistral:"mist"};
+  var cols = sb.cols || [], cortos = {principal:"prin", gemini:"gem", groq:"groq", openrouter:"orou", mistral:"mist"};
   var filas = ['<span class="g">' + pad("categoria", 11) + cols.map(function(c){ return pad(cortos[c] || c, 5, true); }).join(" ") +
                " " + pad("veredicto", 9) + "</span>"];
   (sb.cats || []).forEach(function(cat){
@@ -1566,6 +1566,17 @@ function cajaSombra(sb){
     filas.push(pad(cat, 11) + celdas.join(" ") + " " + ver);
   });
   if(filas.length === 1) filas.push(vacio("sin corridas todavia"));
+  var hoy = sb.hoy || {}, est = hoy.estados || {};
+  if(Object.keys(est).length){
+    var clEst = {ok:"v", cuota:"a", pago:"r", roto:"r", "sin clave":"g"};
+    var chips = Object.keys(est).map(function(p){
+      var e = est[p], c = clEst[e.estado] || "g";
+      var lat = e.estado === "ok" && e.latencia !== null ? " " + e.latencia + "s" : "";
+      return '<span class="' + c + ' b">' + esc(cortos[p] || p) + "</span>" +
+             '<span class="' + c + '">' + esc(" " + e.estado + lat) + "</span>";
+    });
+    filas.push('<span class="g">' + pad("hoy", 11) + "</span>" + chips.join('<span class="g"> \u00b7 </span>'));
+  }
   filas.push('<span class="g">' + (sb.n || 0) + " corridas · apto = 85%+ &lt;5s 20+" +
              ((sb.faltan || []).length ? " · sin clave: " + sb.faltan.length : "") + "</span>");
   return caja("backup models", "", filas.join("\n"), true);
