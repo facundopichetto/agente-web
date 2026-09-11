@@ -1,4 +1,7 @@
-# agente-web
+# claudio board (repo `agente-web`)
+
+**claudio board** es el nombre de esta interfaz (facundo, 2026-09-11): la interfaz principal de
+claudio. el repo y la url siguen siendo `agente-web`.
 
 terminal web del agente de fondo de facundo. es un solo `index.html` (html + css + js inline,
 todo dentro de un iife), servido por github pages en
