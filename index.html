@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.26">
-<link rel="manifest" href="manifest.json?v=4.26">
+<meta name="agente-web-version" content="4.28">
+<link rel="manifest" href="manifest.json?v=4.28">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -364,7 +364,7 @@
   </div>
   <div id="fila">
     <span id="prompt">facundo&gt;</span>
-    <textarea id="txt" rows="1" placeholder="orden o comando" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
+    <textarea id="txt" rows="1" placeholder="orden o comando" enterkeyhint="enter" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
     <button id="mandar" type="button" title="mandar" aria-label="mandar">&gt;_</button>
   </div>
 </div>
@@ -630,9 +630,20 @@ function recibirBorradores(rem){
   if(cambio){ guardarCache(); refrescarCaja(); }
   return cambio;
 }
+// en pantalla tactil (celu, tablet) enter hace salto de linea y manda solo el boton: facundo escribe
+// parrafos y terminaba mandando sin querer (2026-09-11). en desktop sigue enter = mandar.
+function esTactil(){
+  try{ if(window.matchMedia && window.matchMedia("(pointer: coarse)").matches) return true; }catch(x){}
+  return window.innerWidth <= 899;
+}
+var TOPE_LINEAS = 6;   // la caja crece con los parrafos hasta 6 lineas y ahi scrollea
 function ajustarCaja(){
   txt.style.height = "auto";   // el min-height del css deja una linea
-  txt.style.height = Math.min(txt.scrollHeight, (vv ? vv.height : window.innerHeight) * 0.28) + "px";
+  var linea = parseFloat(getComputedStyle(txt).lineHeight) || 18;
+  var pad = txt.offsetHeight - txt.clientHeight + 10;   // bordes + padding vertical
+  var tope = Math.min(linea * TOPE_LINEAS + pad, (vv ? vv.height : window.innerHeight) * 0.28);
+  txt.style.height = Math.min(txt.scrollHeight, tope) + "px";
+  txt.style.overflowY = txt.scrollHeight > tope ? "auto" : "hidden";
 }
 // pone un texto en la caja y deja el cursor al final (donde quedo escribiendo en el otro dispositivo)
 function ponerCaja(t){
@@ -1647,7 +1658,9 @@ alfinal.addEventListener("click", abajo);
 $("mandar").addEventListener("click", function(){ enviarMensaje(txt.value); txt.focus(); });
 txt.addEventListener("focus", function(){ setTimeout(abajo, 250); });
 txt.addEventListener("keydown", function(e){
-  if(e.key === "Enter" && !e.shiftKey){ e.preventDefault(); enviarMensaje(txt.value); }
+  if(e.key !== "Enter" || e.shiftKey) return;
+  if(esTactil()) return;                 // celu: salto de linea, se manda con el boton
+  e.preventDefault(); enviarMensaje(txt.value);
 });
 txt.addEventListener("input", function(){
   var pego = pegadoAbajo();
@@ -2365,6 +2378,8 @@ if(urlSucia) sistema("el token venía en la url: lo guardé acá y limpié la di
 // el clasificador de la web da lo mismo que la receta de python y que cada mensaje cae en su pestaña.
 window.__agente = {
   clasificar: clasificar, partir: partir,
+  // enter en el celu hace salto de linea, no manda (prueba_web_tabs lo chequea)
+  esTactil: esTactil, ajustarCaja: ajustarCaja, topeLineas: TOPE_LINEAS,
   estado: function(){ return {tabs: tabs, paneles: paneles, foco: foco, ts: layoutTs,
                               sync: tabsSync, dispositivo: DISPOSITIVO}; },
   aplicarLayout: aplicarLayout, sanearLayout: sanearLayout, recibirTabs: recibirTabs,
