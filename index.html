@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.10">
-<link rel="manifest" href="manifest.json?v=4.10">
+<meta name="agente-web-version" content="4.11">
+<link rel="manifest" href="manifest.json?v=4.11">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -23,11 +23,15 @@
 <!-- agente-web: fuentes chicas, auto actualizacion por version.json cada 60 s, mensajes siempre
      enteros (sin plegado) y **pestañas por tema** (2026-09-11): una pestaña por tema sobre el borde
      de arriba del panel de chat, el tema lo detecta el clasificador sin tokens (copia generada de
-     recetas/clasificar_tema.py, bloque TEMAS-JS) y una pestaña se puede mandar al lado de los widgets. -->
+     recetas/clasificar_tema.py, bloque TEMAS-JS) y una pestaña se puede mandar al lado de los widgets.
+     el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
+     tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
+     lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
 <style>
   :root{
     --verde:#39ff14; --blanco:#e8e8e8; --gris:#666; --cian:#22d3ee;
     --magenta:#ff4fd8; --rojo:#ff4d4d; --amarillo:#ffd60a; --linea:#1c1c1c;
+    --verde-tenue:#1f7a12; --linea-clara:#3a3a3a; --yo:#9be88a;
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0;background:#000;color:var(--blanco)}
@@ -67,9 +71,9 @@
   .msg .quien,.msg .ts{user-select:none}
   .msg .quien{color:var(--magenta)}
   .agente .quien{color:var(--verde)}
-  .agente .cuerpo{color:var(--verde)}
-  .yo .quien{color:var(--blanco)}
-  .yo .cuerpo{color:var(--blanco)}
+  .agente .cuerpo{color:var(--blanco)}
+  .yo .quien{color:var(--cian)}
+  .yo .cuerpo{color:var(--yo)}
   .error .cuerpo{color:var(--rojo)}
   .sistema .cuerpo{color:var(--gris)}
   /* los mensajes se muestran siempre enteros: no hay plegado (facundo, 2026-09-10) */
@@ -79,6 +83,18 @@
   .cuerpo .corriendo{color:var(--cian)}
   .cuerpo .costo{color:var(--magenta)}
   .cuerpo .marca{color:var(--gris)}
+  /* ---------- color del texto (facundo, 2026-09-11: la paleta fluo tambien adentro del mensaje) ---------- */
+  .cuerpo .neg{color:var(--amarillo);font-weight:600}          /* **negrita** */
+  .cuerpo .cod{color:var(--cian);background:#07222a;border-radius:3px;padding:0 3px}  /* `code` */
+  .cuerpo .tit{color:var(--magenta);font-weight:600}           /* ## titulo */
+  .cuerpo .sep{color:var(--verde-tenue)}                       /* --- */
+  .cuerpo .orden{color:var(--amarillo)}                        /* ORDEN: / PROPUESTA: */
+  .cuerpo .tag{color:var(--verde)}                             /* [tema] / [openrouter/x] */
+  .cuerpo .vin{color:var(--verde-tenue)}                       /* el guion de cada bullet */
+  .cuerpo .tcab{color:var(--magenta);font-weight:600}          /* cabecera de tabla */
+  .cuerpo .tsep{color:var(--linea-clara)}                      /* |---|---| */
+  .cuerpo .tfila{color:var(--blanco)}
+  .cuerpo .tfila.par{color:#b9c2c8;background:#0b0b0b}         /* filas alternadas */
   #estado .frio{color:var(--rojo)}
   #mas{
     display:block;width:100%;margin:0 0 10px 0;background:#000;color:var(--gris);
@@ -611,15 +627,54 @@ function costos(l){
           .replace(/\brc=(\d+)\b/g, function(m0, n){
             return '<span class="' + (n === "0" ? "ok" : "fallo") + '">' + m0 + "</span>"; });
 }
-// lineas de ordenes.md: [x] hecha, [!] fallo, [ ] pendiente, [>] corriendo. mas los costos $ y rc=
+// markdown-lite en color (facundo, 2026-09-11: "mas color"): `code` cian, **negrita** amarilla,
+// ## titulos magenta, tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde,
+// ORDEN:/PROPUESTA: amarillo. el texto ya viene escapado: aca solo se agregan spans.
+function enCodigo(l, f){  // saca los `code` antes de tocar el resto y los devuelve al final
+  var trozos = [];
+  l = l.replace(/`([^`]+)`/g, function(m0, c){
+    trozos.push('<span class="cod">' + c + "</span>");
+    return "\u0001" + (trozos.length - 1) + "\u0001";
+  });
+  l = f(l);
+  return l.replace(/\u0001(\d+)\u0001/g, function(m0, i){ return trozos[+i]; });
+}
+function enLinea(l){
+  return enCodigo(l, function(x){
+    x = costos(x);
+    return x.replace(/\*\*([^*]+)\*\*/g, function(m0, c){ return '<span class="neg">' + c + "</span>"; });
+  });
+}
+function esFila(l){ return /^\s*\|.*\|\s*$/.test(l); }
+function esSepFila(l){ return esFila(l) && /^[\s|:-]+$/.test(l) && l.indexOf("-") >= 0; }
 function resaltar(t){
-  return esc(t).split("\n").map(function(l){
-    var m = /^(\s*[-*]\s*)\[( |x|X|!|&gt;)\]/.exec(l);
-    var linea = costos(l);
-    if(!m) return linea;
-    var c = m[2].toLowerCase();
-    var clase = c === "x" ? "ok" : c === "!" ? "fallo" : c === " " ? "pend" : "corriendo";
-    return '<span class="' + clase + '">' + linea + "</span>";
+  var lineas = esc(t).split("\n"), datos = 0;
+  return lineas.map(function(l, i){
+    var tarea = /^(\s*[-*]\s*)\[( |x|X|!|&gt;)\]/.exec(l);
+    if(tarea){
+      var c = tarea[2].toLowerCase();
+      var clase = c === "x" ? "ok" : c === "!" ? "fallo" : c === " " ? "pend" : "corriendo";
+      return '<span class="' + clase + '">' + enLinea(l) + "</span>";
+    }
+    if(esFila(l)){                                   // tabla: cabecera, separador, filas alternadas
+      var arranca = i === 0 || !esFila(lineas[i - 1]);
+      if(arranca){ datos = 0; return '<span class="tcab">' + enLinea(l) + "</span>"; }
+      if(esSepFila(l)) return '<span class="tsep">' + l + "</span>";
+      datos++;
+      return '<span class="tfila' + (datos % 2 === 0 ? " par" : "") + '">' + enLinea(l) + "</span>";
+    }
+    if(/^\s*#{1,6}\s+\S/.test(l)) return '<span class="tit">' + enLinea(l) + "</span>";
+    if(/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(l)) return '<span class="sep">' + l + "</span>";
+    if(/^\s*(ORDEN|PROPUESTA|AVISO|PREGUNTA):/.test(l)) return '<span class="orden">' + enLinea(l) + "</span>";
+    var linea = enLinea(l);
+    if(i === 0){                                     // [tema] / [openrouter/x] al inicio de la respuesta
+      linea = linea.replace(/^(\s*)\[([^\]\n]{1,40})\]/, function(m0, sp, dentro){
+        return sp + '<span class="tag">[' + dentro + "]</span>";
+      });
+    }
+    return linea.replace(/^(\s*)([-*])(\s)/, function(m0, sp, g, fin){
+      return sp + '<span class="vin">' + g + "</span>" + fin;
+    });
   }).join("\n");
 }
 
@@ -1450,6 +1505,7 @@ window.__agente = {
   estado: function(){ return {tabs: tabs, paneles: paneles, foco: foco}; },
   abrirTab: abrirTab, splitCon: splitCon, unPanel: unPanel, renombrarTab: renombrarTab,
   cuerpoMsg: cuerpoMsg, deEstaTab: deEstaTab,
+  resaltar: resaltar,
   cargar: function(coms){
     msgs = []; vistos = {};
     coms.forEach(function(c){ agregar(c, false); });

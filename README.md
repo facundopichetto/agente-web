@@ -44,3 +44,23 @@ no se pushea a mano: se edita el clon (`~/.claudio/tools/agente/web/`), se corre
 `python3 -m recetas.prueba_web` y `python3 -m recetas.prueba_autoupdate`, y se deja la marca
 `touch ~/.claudio/tools/agente/.pendiente-web`. el daemon la mira en cada vuelta del loop:
 bumpea, commitea, pushea y avisa "web publicada vX" una sola vez por lote.
+
+## color del texto del chat (2026-09-11)
+
+el cuerpo de cada mensaje pasa por `resaltar()`: escapa, y despues marca con un span cada cosa,
+que el css pinta con la paleta fluo de `:root`.
+
+| marca | clase | color |
+|---|---|---|
+| `**negrita**` | `neg` | amarillo `#ffd60a` |
+| `` `code` `` | `cod` | cian `#22d3ee` sobre `#07222a` |
+| `## titulo` | `tit` | magenta `#ff4fd8` |
+| `---` | `sep` | verde tenue `#1f7a12` |
+| `[tag]` del principio | `tag` | verde `#39ff14` |
+| `ORDEN:` / `PROPUESTA:` | `orden` | amarillo |
+| tabla | `tcab` / `tsep` / `tfila`(`.par`) | cabecera magenta, filas alternadas |
+| `- [ ]` / `[x]` / `[!]` / `[>]` | `pend` / `ok` / `fallo` / `corriendo` | ya estaban |
+
+el cuerpo del agente es `#e8e8e8` y el de facundo verde tenue `#9be88a`, para distinguir quien habla.
+se chequea con `python3 -m recetas.prueba_web_color` (colores computados del css real, chrome
+headless, cero tokens); corre solo dentro de `python3 -m recetas.prueba_web`.
