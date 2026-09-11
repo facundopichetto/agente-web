@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.13">
-<link rel="manifest" href="manifest.json?v=4.13">
+<meta name="agente-web-version" content="4.14">
+<link rel="manifest" href="manifest.json?v=4.14">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1264,12 +1264,29 @@ function vacio(t){ return '<span class="vacio">' + esc(t) + "</span>"; }
 
 function cajaUsage(u){
   var p = u.presupuesto || {}, c = u.costo || {}, filas = [];
-  (u.barras || []).forEach(function(b){
-    var marca = "";
-    if(b.clave === "seven_day" && p.linea !== undefined && p.linea !== null)
-      marca = p.pesadas ? '  <span class="v">ok</span>' : '  <span class="r">over</span>';
-    filas.push(pad(b.nombre, 4) + " " + bar(b.pct) + ' <span class="g">' + esc(horaLocal(b.resets_at)) + "</span>" + marca);
-  });
+  // facundo tiene dos cuentas de claude (facu = la principal, personal): se pinta un bloque por cuenta.
+  // la marca ok/over del presupuesto va solo en la semana de la cuenta activa, que es la que mide el daemon.
+  function barras(lista, activa){
+    (lista || []).forEach(function(b){
+      var marca = "";
+      if(activa && b.clave === "seven_day" && p.linea !== undefined && p.linea !== null)
+        marca = p.pesadas ? '  <span class="v">ok</span>' : '  <span class="r">over</span>';
+      filas.push(pad(b.nombre, 4) + " " + bar(b.pct) + ' <span class="g">' + esc(horaLocal(b.resets_at)) + "</span>" + marca);
+    });
+  }
+  var cuentas = u.cuentas || [];
+  if(cuentas.length){
+    cuentas.forEach(function(cu){
+      filas.push('<span class="c b">' + esc(cu.nombre) + "</span>" +
+                 (cu.activa ? ' <span class="v">activa</span>' : ""));
+      barras(cu.barras, cu.activa);
+      (cu.limites || []).forEach(function(l){
+        filas.push(pad(l.modelo, 4) + " " + bar(l.pct) + ' <span class="g">week</span>');
+      });
+    });
+  } else {
+    barras(u.barras, true);
+  }
   if(p.linea !== undefined && p.linea !== null){
     filas.push(pad("line", 4) + " " + bar(p.linea) + ' <span class="g">budget</span>');
     var cl = p.pesadas ? "v" : "r";
@@ -1285,7 +1302,7 @@ function cajaUsage(u){
         (h.espera ? ' <span class="g">' + h.espera + " esperan</span>" : "")
       : '<span class="g">work hours ' + esc(h.desde + "-" + h.hasta) + '</span> chrome <span class="v">on</span>');
   }
-  (u.limites || []).forEach(function(l){
+  if(!cuentas.length) (u.limites || []).forEach(function(l){
     filas.push(pad(l.modelo, 4) + " " + bar(l.pct) + ' <span class="g">week</span>');
   });
   [["today", "hoy "], ["week", "sem "]].forEach(function(x){
@@ -1647,7 +1664,7 @@ window.__agente = {
   estado: function(){ return {tabs: tabs, paneles: paneles, foco: foco}; },
   abrirTab: abrirTab, splitCon: splitCon, unPanel: unPanel, renombrarTab: renombrarTab,
   cuerpoMsg: cuerpoMsg, deEstaTab: deEstaTab, enviarMensaje: enviarMensaje,
-  resaltar: resaltar,
+  resaltar: resaltar, pintarWidgets: pintarWidgets,
   cargar: function(coms){
     msgs = []; vistos = {};
     coms.forEach(function(c){ agregar(c, false); });
