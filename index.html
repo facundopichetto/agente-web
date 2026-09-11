@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.11">
-<link rel="manifest" href="manifest.json?v=4.11">
+<meta name="agente-web-version" content="4.12">
+<link rel="manifest" href="manifest.json?v=4.12">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -95,6 +95,22 @@
   .cuerpo .tsep{color:var(--linea-clara)}                      /* |---|---| */
   .cuerpo .tfila{color:var(--blanco)}
   .cuerpo .tfila.par{color:#b9c2c8;background:#0b0b0b}         /* filas alternadas */
+  /* imagenes inline (facundo, 2026-09-11): el daemon publica el png en el repo del buzon y aca se
+     baja con el mismo token (blob). click = tamaño real en el visor. */
+  .cuerpo .img{display:block;margin:6px 0}
+  .cuerpo .img img{
+    display:block;max-width:100%;max-height:42vh;border:1px solid var(--linea-clara);
+    border-radius:4px;background:#000;cursor:zoom-in
+  }
+  .cuerpo .img .pie{display:block;color:var(--gris);font-size:10px;margin-top:2px}
+  .cuerpo .img .cargando{color:var(--cian)}
+  .cuerpo .img .rota{color:var(--rojo)}
+  #visor{
+    position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.92);overflow:auto;
+    display:flex;align-items:center;justify-content:center;cursor:zoom-out
+  }
+  #visor img{max-width:100%;height:auto}
+  #visor .cerrar{position:fixed;top:8px;right:12px;color:var(--verde);font-size:13px}
   #estado .frio{color:var(--rojo)}
   #mas{
     display:block;width:100%;margin:0 0 10px 0;background:#000;color:var(--gris);
@@ -645,11 +661,76 @@ function enLinea(l){
     return x.replace(/\*\*([^*]+)\*\*/g, function(m0, c){ return '<span class="neg">' + c + "</span>"; });
   });
 }
+// imagenes: `![alt](src)`. el daemon ya publico el archivo local en el repo del buzon
+// (recetas/mostrar_imagen.py), asi que `src` es una ruta del repo (`img/<hash>-<nombre>.png`) y se
+// baja con el mismo token, o una url http(s) que va directo.
+var RE_IMG = /!\[([^\]\n]*)\]\(\s*([^)\s]+)\s*\)/g;
+function att(s){ return String(s).replace(/"/g, "&quot;"); }   // el texto ya viene escapado
+function conImagenes(l){
+  RE_IMG.lastIndex = 0;
+  if(l.indexOf("![") < 0 || !RE_IMG.test(l)) return null;
+  RE_IMG.lastIndex = 0;
+  return l.replace(RE_IMG, function(m0, alt, src){
+    return '<span class="img" data-src="' + att(src) + '" data-alt="' + att(alt) + '">' +
+           '<span class="cargando">bajando imagen...</span></span>';
+  });
+}
+var imgUrls = {};        // src -> object url (una sola bajada por imagen)
+function bajarImagen(src){
+  if(/^(https?:|data:)/i.test(src)) return Promise.resolve(src);
+  if(imgUrls[src]) return Promise.resolve(imgUrls[src]);
+  if(!token) return Promise.reject(new Error("401"));
+  var ruta = API + "/repos/" + REPO + "/contents/" + src.split("/").map(encodeURIComponent).join("/");
+  return fetch(ruta, {headers: {"authorization": "Bearer " + token, "accept": "application/vnd.github.raw"}})
+    .then(function(r){
+      if(!r.ok) throw new Error("http " + r.status);
+      return r.blob();
+    }).then(function(b){
+      imgUrls[src] = URL.createObjectURL(b);
+      return imgUrls[src];
+    });
+}
+function cargarImagenes(nodo){
+  var spans = nodo.querySelectorAll ? nodo.querySelectorAll(".img[data-src]") : [];
+  Array.prototype.forEach.call(spans, function(sp){
+    var src = sp.dataset.src, alt = sp.dataset.alt || src;
+    bajarImagen(src).then(function(url){
+      var pego = pegadoAbajo();
+      sp.innerHTML = "";
+      var im = document.createElement("img");
+      im.src = url; im.alt = alt; im.title = alt;
+      im.addEventListener("click", function(){ verImagen(url, alt); });
+      im.addEventListener("load", function(){ if(pego) alFinal(); });
+      var pie = document.createElement("span");
+      pie.className = "pie"; pie.textContent = alt;
+      sp.appendChild(im); sp.appendChild(pie);
+    }).catch(function(e){
+      sp.innerHTML = '<span class="rota"></span>';
+      sp.firstChild.textContent = "no pude bajar la imagen (" + (e && e.message) + "): " + alt;
+    });
+  });
+}
+function verImagen(url, alt){                      // tamaño real, click o esc para cerrar
+  var v = document.createElement("div");
+  v.id = "visor";
+  var im = document.createElement("img");
+  im.src = url; im.alt = alt || "";
+  var x = document.createElement("span");
+  x.className = "cerrar"; x.textContent = "cerrar";
+  v.appendChild(im); v.appendChild(x);
+  function cerrar(){ if(v.parentNode) v.parentNode.removeChild(v); document.removeEventListener("keydown", tecla); }
+  function tecla(e){ if(e.key === "Escape") cerrar(); }
+  v.addEventListener("click", cerrar);
+  document.addEventListener("keydown", tecla);
+  document.body.appendChild(v);
+}
 function esFila(l){ return /^\s*\|.*\|\s*$/.test(l); }
 function esSepFila(l){ return esFila(l) && /^[\s|:-]+$/.test(l) && l.indexOf("-") >= 0; }
 function resaltar(t){
   var lineas = esc(t).split("\n"), datos = 0;
   return lineas.map(function(l, i){
+    var img = conImagenes(l);
+    if(img !== null) return img;
     var tarea = /^(\s*[-*]\s*)\[( |x|X|!|&gt;)\]/.exec(l);
     if(tarea){
       var c = tarea[2].toLowerCase();
@@ -709,6 +790,7 @@ function nodoMsg(m){
   b.className = "cuerpo";
   b.innerHTML = resaltar(m.texto);
   div.appendChild(cab); div.appendChild(b);
+  cargarImagenes(b);
   return div;
 }
 function pintarMsg(m, arriba){
