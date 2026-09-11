@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.17">
-<link rel="manifest" href="manifest.json?v=4.17">
+<meta name="agente-web-version" content="4.18">
+<link rel="manifest" href="manifest.json?v=4.18">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -351,11 +351,12 @@ var alfinal = $("alfinal"), envoltorio = $("envoltorio");
 // una copia GENERADA de esa receta: se actualiza con `python3 -m recetas.clasificar_tema --sync-web`
 // y `recetas/prueba_web` falla si quedo vieja. no editarla a mano.
 /* TEMAS-JS: generado por `python3 -m recetas.clasificar_tema --sync-web`, no editar a mano */
-var TEMAS = ["tools", "awtomic", "awtomic-qa", "flabs", "fuzzer", "juegos", "plata", "personal"];
-var PRIORIDAD = ["awtomic-qa", "flabs", "juegos", "plata", "fuzzer", "awtomic", "tools"];
+var TEMAS = ["tools", "awtomic", "awtomic/qa", "flabs", "fuzzer", "juegos", "plata", "personal"];
+var PRIORIDAD = ["awtomic/qa", "flabs", "juegos", "plata", "fuzzer", "awtomic", "tools"];
+var ALIAS = {"awtomic-qa": "awtomic/qa"};
 var RE_CORTE_SRC = "(\\n+)|([.;!?]\\s+)|(^|[\\s,;:])(?:y\\s+otra\\s+cosa|otra\\s+cosa|aparte|adem[a\u00e1]s|tambi[e\u00e9]n)(?!\\w)";
 var PALABRAS = {
-  "awtomic-qa": ["verificador", "awtomic[- ]?qa", "qa", "tanda de tickets", "revisor de tanda", "loop verificador", "capturas del ticket"],
+  "awtomic/qa": ["verificador", "awtomic[- ]?qa", "qa", "tanda de tickets", "revisor de tanda", "loop verificador", "capturas del ticket"],
   "awtomic": ["jira", "ticket", "tickets", "cx", "shopify", "merchant", "merchants", "theme", "mvp-?\\d+", "cx-?\\d+", "subscription", "suscripci\\wn", "bundle", "brian", "emily", "verify", "selling plan", "app de awtomic", "awtomic"],
   "fuzzer": ["banda", "show", "shows", "fuzzer", "meta ads", "instagram", "spotify", "tema nuevo", "disco", "single", "ensayo", "fecha", "flyer", "prensa"],
   "juegos": ["retroid", "rom", "roms", "emulador", "emuladores", "ps2", "psp", "vita", "psvita", "gamecube", "dreamcast", "consolita", "emudeck", "retroarch", "juego", "juegos", "chd", "iso", "black_?5tb"],
@@ -367,7 +368,12 @@ var PALABRAS = {
 var AUTO = "auto";
 // la general: puerta de entrada sin tema fijo. en el layout se guarda como `auto`, se muestra `general`
 var ETIQUETA = {auto: "general"};
-var RE_TEMA = /^\s*tema\s+([\w-]+)\s*:\s*/i;
+var RE_TEMA = /^\s*tema\s+([\w\/-]+)\s*:\s*/i;
+// nombres (NOMBRES.md): un **motor** es `tema/motor` (`awtomic/qa`) y vive adentro de su tema padre:
+// comparte el log del padre y la pestaña del padre lo muestra. `awtomic-qa` es el alias viejo.
+function normTema(t){ t = (t || "").trim().toLowerCase(); return (ALIAS && ALIAS[t]) || t; }
+function padreTema(t){ return normTema(t).split("/")[0]; }
+function esTema(t){ return TEMAS.indexOf(normTema(t)) >= 0; }
 // lo que el daemon atiende por texto exacto (sin modelo): sale crudo, sin `tema x:` adelante
 var RE_CRUDO = /^(status|estado|pausa|segu[ií]|log|cola|[oó]rdenes|ordenes|propuestas|avisos|reinicia|reiniciar|cuenta(\s+\S+)?|op\s+\d+\s+[a-dA-D]|dale\s+\d+)$/i;
 
@@ -393,7 +399,7 @@ function porPalabras(txt){
 // {tema, fuente}: prefijo | palabras | default. el default lo pone la pestaña, no la ultima charla.
 function clasificar(txt){
   var m = RE_TEMA.exec(txt || "");
-  if(m && TEMAS.indexOf(m[1].toLowerCase()) >= 0) return {tema: m[1].toLowerCase(), fuente: "prefijo"};
+  if(m && esTema(m[1])) return {tema: normTema(m[1]), fuente: "prefijo"};
   var t = porPalabras(txt);
   if(t) return {tema: t, fuente: "palabras"};
   return {tema: null, fuente: "default"};
@@ -418,7 +424,7 @@ function partir(txt){
   txt = (txt || "").trim();
   if(!txt) return [];
   var m = RE_TEMA.exec(txt);
-  if(m && TEMAS.indexOf(m[1].toLowerCase()) >= 0)
+  if(m && esTema(m[1]))
     return [{tema: m[1].toLowerCase(), texto: txt.slice(m[0].length).trim()}];
   var ps = cortes(txt), grupos = [];
   for(var i = 0; i < ps.length - 1; i++){
@@ -464,10 +470,12 @@ function sanearLayout(L){
   if(!L || !L.tabs || !L.tabs.length) return null;
   var ts = [];
   L.tabs.forEach(function(t){
-    if((TEMAS.indexOf(t) >= 0 || t === AUTO) && ts.indexOf(t) < 0) ts.push(t);
+    t = t === AUTO ? AUTO : normTema(t);                 // `awtomic-qa` viejo -> `awtomic/qa`
+    if((esTema(t) || t === AUTO) && ts.indexOf(t) < 0) ts.push(t);
   });
   if(!ts.length) return null;
-  var ps = (L.paneles || [ts[0]]).filter(function(t){ return ts.indexOf(t) >= 0; }).slice(0, 2);
+  var ps = (L.paneles || [ts[0]]).map(function(t){ return t === AUTO ? AUTO : normTema(t); })
+            .filter(function(t){ return ts.indexOf(t) >= 0; }).slice(0, 2);
   if(!ps.length) ps = [ts[0]];
   if(ps.length === 2 && ps[0] === ps[1]) ps = [ps[0]];
   return {tabs: ts, paneles: ps, foco: Math.min(Math.max(L.foco || 0, 0), ps.length - 1)};
@@ -604,7 +612,12 @@ function temaActivo(){ return paneles[foco] || paneles[0]; }
 // `auto` junta lo que no tiene pestaña propia: nada desaparece cuando el daemon clasifica a un tema
 // que facundo no abrio.
 // la general junta lo que mando ella (sin prefijo) y lo que no tiene pestaña propia
-function deEstaTab(tm, tab){ return tab === AUTO ? (tm === AUTO || tabs.indexOf(tm) < 0) : tm === tab; }
+// un motor (`awtomic/qa`) cae ademas en la pestaña de su tema padre (`awtomic`): comparten la charla.
+// al reves no: la pestaña del motor muestra solo lo suyo (es el filtro por motor).
+function deEstaTab(tm, tab){
+  if(tab === AUTO) return tm === AUTO || (tabs.indexOf(tm) < 0 && tabs.indexOf(padreTema(tm)) < 0);
+  return tm === tab || padreTema(tm) === tab;
+}
 
 // ---------- barra ----------
 function btnBarra(texto, accion){
@@ -649,7 +662,8 @@ function pintarTabs(){
 
 // ---------- acciones de pestañas ----------
 function abrirTab(tema){
-  if(TEMAS.indexOf(tema) < 0 && tema !== AUTO){ sistema("tema desconocido: " + tema, "error"); return; }
+  tema = tema === AUTO ? AUTO : normTema(tema);
+  if(!esTema(tema) && tema !== AUTO){ sistema("tema desconocido: " + tema, "error"); return; }
   if(tabs.indexOf(tema) < 0) tabs.push(tema);
   paneles[foco] = tema;
   pintarTabs(); render(); alFinal();
@@ -686,7 +700,8 @@ function split(){
 }
 // manda `tema` al panel de al lado de los widgets (lo abre si no estaba partido)
 function splitCon(tema){
-  if(TEMAS.indexOf(tema) < 0 && tema !== AUTO) return;
+  tema = tema === AUTO ? AUTO : normTema(tema);
+  if(!esTema(tema) && tema !== AUTO) return;
   if(tabs.indexOf(tema) < 0) tabs.push(tema);
   if(paneles.length < 2) paneles.push(tema); else paneles[1] = tema;
   foco = 1;
@@ -1118,12 +1133,12 @@ function agregar(c, arriba){
   vistos[c.id] = true;
   var b = c.body || "", m;
   if(b.indexOf(MARCA) === 0){
-    var cuerpo = b.slice(MARCA.length).replace(/^\n/, ""), mt = /^\[([\w-]+)\]\s*/.exec(cuerpo), tag = null;
-    if(mt && TEMAS.indexOf(mt[1].toLowerCase()) >= 0){ tag = mt[1].toLowerCase(); cuerpo = cuerpo.slice(mt[0].length); }
+    var cuerpo = b.slice(MARCA.length).replace(/^\n/, ""), mt = /^\[([\w\/-]+)\]\s*/.exec(cuerpo), tag = null;
+    if(mt && esTema(mt[1])){ tag = normTema(mt[1]); cuerpo = cuerpo.slice(mt[0].length); }
     m = {id: c.id, clase: "agente", quien: "agente", texto: cuerpo, iso: c.created_at, tag: tag};
   }else{
     var mp = RE_TEMA.exec(b), tg = null, texto = b;
-    if(mp && TEMAS.indexOf(mp[1].toLowerCase()) >= 0){ tg = mp[1].toLowerCase(); texto = b.slice(mp[0].length); }
+    if(mp && esTema(mp[1])){ tg = normTema(mp[1]); texto = b.slice(mp[0].length); }
     m = {id: c.id, clase: "yo", quien: "facundo", texto: texto, iso: c.created_at, tag: tg};
   }
   if(arriba) msgs.unshift(m); else msgs.push(m);
@@ -1834,6 +1849,7 @@ window.__agente = {
   },
   abrirTab: abrirTab, splitCon: splitCon, unPanel: unPanel, renombrarTab: renombrarTab,
   cuerpoMsg: cuerpoMsg, deEstaTab: deEstaTab, enviarMensaje: enviarMensaje,
+  normTema: normTema, padreTema: padreTema,
   resaltar: resaltar, pintarWidgets: pintarWidgets,
   cargar: function(coms){
     msgs = []; vistos = {};
