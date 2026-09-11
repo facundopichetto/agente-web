@@ -13,14 +13,17 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.8">
-<link rel="manifest" href="manifest.json?v=4.8">
+<meta name="agente-web-version" content="4.9">
+<link rel="manifest" href="manifest.json?v=4.9">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
-<!-- agente-web v4.3 (fuentes mas chicas; auto actualizacion por version.json cada 60 s; los mensajes se muestran siempre enteros, sin plegado) -->
+<!-- agente-web: fuentes chicas, auto actualizacion por version.json cada 60 s, mensajes siempre
+     enteros (sin plegado) y **pestañas por tema** (2026-09-11): una pestaña por tema sobre el borde
+     de arriba del panel de chat, el tema lo detecta el clasificador sin tokens (copia generada de
+     recetas/clasificar_tema.py, bloque TEMAS-JS) y una pestaña se puede mandar al lado de los widgets. -->
 <style>
   :root{
     --verde:#39ff14; --blanco:#e8e8e8; --gris:#666; --cian:#22d3ee;
@@ -163,8 +166,12 @@
   @media (max-width:899px){
     #vistas{display:flex}
     #panel-widgets{flex:1 1 auto;border-left:none;padding-bottom:calc(14px + env(safe-area-inset-bottom))}
+    #panel-lado{flex:1 1 auto;border-left:none}
+    /* una vista a la vez: la elige la barra de arriba (chat | widgets | la pestaña de al lado) */
     body:not(.ver-widgets) #panel-widgets{display:none}
     body.ver-widgets #panel-chat{display:none}
+    body:not(.ver-lado) #panel-lado{display:none}
+    body.ver-lado #panel-chat,body.ver-lado #panel-widgets{display:none}
     /* ios zoomea al enfocar un input de menos de 16px: solo este queda en 16 */
     #txt,#login input,#clave,#tok{font-size:16px}
   }
@@ -172,6 +179,66 @@
     background:#000;color:var(--verde);border:1px solid var(--verde);border-radius:4px;
     padding:9px;font:inherit;cursor:pointer;
   }
+  /* ---------- pestañas por tema (2026-09-11, las mismas que la consola) ---------- */
+  /* la barra es el borde de arriba del panel de chat (estilo vscode): la pestaña activa se
+     come el borde y se funde con la charla, sin renglon extra. */
+  #tabs{
+    flex:0 0 auto;display:flex;align-items:flex-end;gap:0;overflow-x:auto;
+    border-bottom:1px solid var(--linea);padding:0 6px;scrollbar-width:none;
+    -webkit-overflow-scrolling:touch;
+  }
+  #tabs::-webkit-scrollbar{display:none}
+  #tabs .tab{
+    flex:0 0 auto;background:#000;color:var(--gris);border:1px solid transparent;border-bottom:none;
+    border-radius:4px 4px 0 0;padding:4px 9px;font:inherit;font-size:10.5px;cursor:pointer;
+    white-space:nowrap;margin-bottom:-1px;
+  }
+  #tabs .tab.enpanel{color:var(--cian)}
+  #tabs .tab.activo{
+    color:var(--verde);border-color:var(--linea);border-bottom:1px solid #000;background:#060606;
+  }
+  #tabs .tab .x{color:#555;margin-left:7px}
+  #tabs .tab.arrastrando{opacity:.5}
+  #tabs .barrabtn{
+    flex:0 0 auto;background:#000;color:var(--gris);border:1px solid var(--linea);border-radius:4px;
+    padding:2px 7px;font:inherit;font-size:9.5px;cursor:pointer;white-space:nowrap;
+    margin:0 0 3px 5px;
+  }
+  #tabs .barrabtn:active{background:#111}
+  #tabs .relleno{flex:1 1 auto;min-width:8px}
+  #panel-widgets.soltar,#panel-lado.soltar{border-left:1px dashed var(--verde)}
+  /* segundo panel: la pestaña que se manda al lado de la fila de widgets */
+  #panel-lado{
+    flex:0 0 380px;min-width:0;display:flex;flex-direction:column;border-left:1px solid var(--linea);
+  }
+  #panel-lado.oculta{display:none}
+  #panel-lado .ladotit{
+    flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;gap:8px;
+    padding:4px 8px;border-bottom:1px solid var(--linea);color:var(--cian);font-size:10.5px;
+  }
+  #panel-lado .ladotit button{
+    background:#000;color:var(--gris);border:1px solid var(--linea);border-radius:4px;
+    padding:2px 7px;font:inherit;font-size:9.5px;cursor:pointer;
+  }
+  #panel-lado.foco .ladotit{color:var(--verde)}
+  #hist1{
+    flex:1 1 auto;min-height:0;overflow-y:auto;padding:10px 12px;
+    -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+  }
+  /* dropdown: pestaña nueva, a que panel va, y la pregunta de "esto parece de otro tema" */
+  #ddfondo{position:fixed;inset:0;z-index:19;background:rgba(0,0,0,.45)}
+  #ddfondo.oculta,#dd.oculta{display:none}
+  #dd{
+    position:fixed;left:8px;right:8px;bottom:calc(72px + env(safe-area-inset-bottom));z-index:20;
+    max-width:460px;margin:0 auto;background:#000;border:1px solid var(--verde);border-radius:6px;
+    padding:6px;display:flex;flex-direction:column;gap:4px;max-height:60dvh;overflow-y:auto;
+  }
+  #dd .ddtit{color:var(--gris);font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;padding:2px 4px}
+  #dd .ddop{
+    background:#000;color:var(--cian);border:1px solid var(--linea);border-radius:4px;
+    padding:8px 10px;font:inherit;font-size:11.5px;cursor:pointer;text-align:left;
+  }
+  #dd .ddop:active{background:#111}
 </style>
 </head>
 <body>
@@ -181,6 +248,7 @@
   <div id="vistas">
     <button id="ver-chat" class="on" type="button">chat</button>
     <button id="ver-widgets" type="button">widgets</button>
+    <button id="ver-lado" type="button" style="display:none">lado</button>
   </div>
   <button id="salir" type="button">salir</button>
 </div>
@@ -197,6 +265,7 @@
 
 <div id="cuerpo">
 <div id="panel-chat">
+<div id="tabs"></div>
 <div id="envoltorio">
   <div id="hist"><button id="mas" type="button">cargar más viejo</button><div id="lista"></div></div>
   <button id="alfinal" type="button">ir al final</button>
@@ -220,7 +289,14 @@
 </div>
 </div><!-- /panel-chat -->
 <div id="panel-widgets"><div id="widgets"></div></div>
+<div id="panel-lado" class="oculta">
+  <div class="ladotit"><span id="lado-tema"></span><button id="lado-cerrar" type="button">&#9634; 1 pane</button></div>
+  <div id="hist1"><div id="lista1"></div></div>
+</div>
 </div><!-- /cuerpo -->
+
+<div id="ddfondo" class="oculta"></div>
+<div id="dd" class="oculta"></div>
 
 <script>
 (function(){
@@ -235,6 +311,200 @@ var $ = function(id){ return document.getElementById(id); };
 var hist = $("hist"), lista = $("lista"), login = $("login"), pie = $("pie");
 var cabecera = $("cabecera"), estadoEl = $("estado"), txt = $("txt");
 var alfinal = $("alfinal"), envoltorio = $("envoltorio");
+
+// ---------- pestañas por tema (facundo, 2026-09-11: las mismas que la consola) ----------
+// una pestaña por tema, pintada sobre el borde de arriba del panel de chat (estilo vscode).
+// el tema de cada mensaje lo decide el mismo clasificador sin tokens que usa el daemon
+// (recetas/clasificar_tema.py): prefijo `tema x:` y si no palabras clave. la tabla de abajo es
+// una copia GENERADA de esa receta: se actualiza con `python3 -m recetas.clasificar_tema --sync-web`
+// y `recetas/prueba_web` falla si quedo vieja. no editarla a mano.
+/* TEMAS-JS: generado por `python3 -m recetas.clasificar_tema --sync-web`, no editar a mano */
+var TEMAS = ["tools", "awtomic", "awtomic-qa", "flabs", "fuzzer", "juegos", "plata", "personal"];
+var PRIORIDAD = ["awtomic-qa", "flabs", "juegos", "plata", "fuzzer", "awtomic", "tools"];
+var PALABRAS = {
+  "awtomic-qa": ["verificador", "awtomic[- ]?qa", "qa", "tanda de tickets", "revisor de tanda", "loop verificador", "capturas del ticket"],
+  "awtomic": ["jira", "ticket", "tickets", "cx", "shopify", "merchant", "merchants", "theme", "mvp-?\\d+", "cx-?\\d+", "subscription", "suscripci\\wn", "bundle", "brian", "emily", "verify", "selling plan", "app de awtomic", "awtomic"],
+  "fuzzer": ["banda", "show", "shows", "fuzzer", "meta ads", "instagram", "spotify", "tema nuevo", "disco", "single", "ensayo", "fecha", "flyer", "prensa"],
+  "juegos": ["retroid", "rom", "roms", "emulador", "emuladores", "ps2", "psp", "vita", "psvita", "gamecube", "dreamcast", "consolita", "emudeck", "retroarch", "juego", "juegos", "chd", "iso", "black_?5tb"],
+  "plata": ["plata", "ahorro", "ahorrar", "inversi\\wn", "invertir", "d\\wlar", "dolares", "cedear", "cedears", "plazo fijo", "banco", "gastos", "presupuesto personal"],
+  "flabs": ["flabs", "flabsdev"],
+  "tools": ["claude", "iterm", "fish", "chrome", "tui", "consola", "daemon", "agente", "receta", "recetas", "skill", "terminal", "tmux", "widget", "widgets", "web terminal", "mision", "modelo", "tokens", "cola", "launchd"],
+};
+/* /TEMAS-JS */
+var AUTO = "auto";
+var RE_TEMA = /^\s*tema\s+([\w-]+)\s*:\s*/i;
+// lo que el daemon atiende por texto exacto (sin modelo): sale crudo, sin `tema x:` adelante
+var RE_CRUDO = /^(status|estado|pausa|segu[ií]|log|cola|[oó]rdenes|ordenes|propuestas|avisos|reinicia|reiniciar|cuenta(\s+\S+)?|op\s+\d+\s+[a-dA-D]|dale\s+\d+)$/i;
+
+var _re = {};
+(function(){
+  // equivale al (?<!\w)p(?!\w) de la receta, sin lookbehind (safari viejo no lo tiene)
+  for(var t in PALABRAS) _re[t] = PALABRAS[t].map(function(p){
+    return new RegExp("(^|[^\\w])(?:" + p + ")($|[^\\w])", "i");
+  });
+})();
+function porPalabras(txt){
+  var puntajes = {}, mejor = 0;
+  for(var t in _re){
+    var n = 0;
+    _re[t].forEach(function(r){ if(r.test(txt || "")) n++; });
+    puntajes[t] = n;
+    if(n > mejor) mejor = n;
+  }
+  if(!mejor) return null;
+  for(var i = 0; i < PRIORIDAD.length; i++) if(puntajes[PRIORIDAD[i]] === mejor) return PRIORIDAD[i];
+  return null;
+}
+// {tema, fuente}: prefijo | palabras | default. el default lo pone la pestaña, no la ultima charla.
+function clasificar(txt){
+  var m = RE_TEMA.exec(txt || "");
+  if(m && TEMAS.indexOf(m[1].toLowerCase()) >= 0) return {tema: m[1].toLowerCase(), fuente: "prefijo"};
+  var t = porPalabras(txt);
+  if(t) return {tema: t, fuente: "palabras"};
+  return {tema: null, fuente: "default"};
+}
+
+// estado de las pestañas (sobrevive a cerrar la pwa; en la consola esto es tui_layout.json)
+var tabs = ["tools", AUTO], paneles = ["tools"], foco = 0;
+(function(){
+  try{
+    var L = JSON.parse(localStorage.getItem("agente_tabs") || "null");
+    if(L && L.tabs && L.tabs.length){
+      tabs = L.tabs.filter(function(t){ return TEMAS.indexOf(t) >= 0 || t === AUTO; });
+      if(!tabs.length) tabs = ["tools", AUTO];
+      paneles = (L.paneles || ["tools"]).filter(function(t){ return tabs.indexOf(t) >= 0; });
+      if(!paneles.length) paneles = [tabs[0]];
+      foco = Math.min(L.foco || 0, paneles.length - 1);
+    }
+  }catch(x){}
+})();
+function guardarLayout(){
+  try{ localStorage.setItem("agente_tabs", JSON.stringify({tabs: tabs, paneles: paneles, foco: foco})); }catch(x){}
+}
+function temaActivo(){ return paneles[foco] || paneles[0]; }
+// `auto` junta lo que no tiene pestaña propia: nada desaparece cuando el daemon clasifica a un tema
+// que facundo no abrio.
+function deEstaTab(tm, tab){ return tab === AUTO ? tabs.indexOf(tm) < 0 : tm === tab; }
+
+// ---------- barra ----------
+function btnBarra(texto, accion){
+  var b = document.createElement("button");
+  b.type = "button"; b.className = "barrabtn"; b.textContent = texto; b.dataset.accion = accion;
+  return b;
+}
+function pintarTabs(){
+  var barra = $("tabs");
+  if(!barra) return;
+  barra.innerHTML = "";
+  tabs.forEach(function(t){
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "tab" + (t === temaActivo() ? " activo" : (paneles.indexOf(t) >= 0 ? " enpanel" : ""));
+    b.dataset.tema = t;
+    b.draggable = true;
+    b.textContent = t;
+    if(t === temaActivo() && tabs.length > 1){
+      var x = document.createElement("span");
+      x.className = "x"; x.textContent = "×"; x.dataset.cerrar = t;
+      b.appendChild(x);
+    }
+    barra.appendChild(b);
+  });
+  barra.appendChild(btnBarra("+", "nueva_tab"));
+  barra.appendChild(btnBarra("⊞ split", "split"));
+  if(paneles.length === 2) barra.appendChild(btnBarra("⊟ 1 pane", "un_panel"));
+  var r = document.createElement("span"); r.className = "relleno";
+  barra.appendChild(r);
+  // panel de al lado: titulo, marca de donde se escribe, y el boton de vista del celu
+  var lado = $("panel-lado");
+  lado.classList.toggle("oculta", paneles.length < 2);
+  lado.classList.toggle("foco", paneles.length === 2 && foco === 1);
+  $("lado-tema").textContent = paneles.length === 2 ? (paneles[1] + (foco === 1 ? " ✎" : "")) : "";
+  $("ver-lado").style.display = paneles.length === 2 ? "" : "none";
+  $("ver-lado").textContent = paneles.length === 2 ? paneles[1] : "lado";
+  if(paneles.length < 2) document.body.classList.remove("ver-lado");
+  $("prompt").textContent = (paneles.length === 2 ? "facundo[" + temaActivo() + "]" : "facundo") + ">";
+  guardarLayout();
+}
+
+// ---------- acciones de pestañas ----------
+function abrirTab(tema){
+  if(TEMAS.indexOf(tema) < 0 && tema !== AUTO){ sistema("tema desconocido: " + tema, "error"); return; }
+  if(tabs.indexOf(tema) < 0) tabs.push(tema);
+  paneles[foco] = tema;
+  pintarTabs(); render(); alFinal();
+}
+// la pestaña `auto` se vuelve la del tema que detecto el clasificador (si ya habia una, no se duplica)
+function renombrarTab(viejo, nuevo){
+  if(viejo === nuevo || tabs.indexOf(viejo) < 0) return;
+  if(tabs.indexOf(nuevo) >= 0) tabs.splice(tabs.indexOf(viejo), 1);
+  else tabs[tabs.indexOf(viejo)] = nuevo;
+  paneles = paneles.map(function(t){ return t === viejo ? nuevo : t; });
+  pintarTabs(); render(); alFinal();
+}
+function cerrarTab(tema){
+  if(tabs.length < 2){ sistema("la última pestaña se queda abierta"); return; }
+  var j = tabs.indexOf(tema);
+  if(j < 0) return;
+  tabs.splice(j, 1);
+  var reemplazo = tabs[Math.min(j, tabs.length - 1)];
+  paneles = paneles.map(function(t){ return t === tema ? reemplazo : t; });
+  if(paneles.length === 2 && paneles[0] === paneles[1]) unPanel();
+  pintarTabs(); render(); alFinal();
+}
+function nuevaTab(){
+  var ops = [[AUTO + " (lo detecta solo)", AUTO]];
+  TEMAS.forEach(function(t){ if(tabs.indexOf(t) < 0) ops.push([t, t]); });
+  dd("pestaña nueva: qué tema?", ops, abrirTab);
+}
+function split(){
+  if(paneles.length === 2){ unPanel(); return; }
+  var otro = null;
+  for(var i = 0; i < tabs.length; i++) if(tabs[i] !== paneles[0]){ otro = tabs[i]; break; }
+  splitCon(otro || paneles[0]);
+}
+// manda `tema` al panel de al lado de los widgets (lo abre si no estaba partido)
+function splitCon(tema){
+  if(TEMAS.indexOf(tema) < 0 && tema !== AUTO) return;
+  if(tabs.indexOf(tema) < 0) tabs.push(tema);
+  if(paneles.length < 2) paneles.push(tema); else paneles[1] = tema;
+  foco = 1;
+  pintarTabs(); render(); alFinal();
+  if(window.innerWidth < 900) verPanel("lado");
+}
+function unPanel(){
+  paneles = [paneles[0]];
+  foco = 0;
+  document.body.classList.remove("ver-lado");
+  pintarTabs(); render(); alFinal();
+  if(window.innerWidth < 900) verPanel("chat");   // en el celu la vista vuelve al chat
+}
+function focoEn(j){
+  if(j >= paneles.length || foco === j) return;
+  foco = j; pintarTabs();
+}
+
+// ---------- dropdown (pestaña nueva / a que panel va / esto parece de otro tema) ----------
+function dd(titulo, opciones, alElegir){
+  var d = $("dd");
+  d.innerHTML = "";
+  var t = document.createElement("div");
+  t.className = "ddtit"; t.textContent = titulo;
+  d.appendChild(t);
+  opciones.forEach(function(o){
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "ddop"; b.textContent = o[0];
+    b.addEventListener("click", function(){ cerrarDd(); alElegir(o[1]); });
+    d.appendChild(b);
+  });
+  d.classList.remove("oculta");
+  $("ddfondo").classList.remove("oculta");
+}
+function cerrarDd(){
+  $("dd").classList.add("oculta"); $("dd").innerHTML = "";
+  $("ddfondo").classList.add("oculta");
+}
+
 
 var token = null;
 var vistos = {};
@@ -349,29 +619,65 @@ function resaltar(t){
   }).join("\n");
 }
 
-function pintar(clase, quien, cuerpo, iso, id, arriba){
+// ---------- mensajes: uno solo por comentario, repartido a la pestaña de su tema ----------
+// msgs es la charla entera en orden; cada panel pinta los que caen en su pestaña (deEstaTab).
+var msgs = [];
+function listaDe(j){ return j === 0 ? lista : $("lista1"); }
+function histDe(j){ return j === 0 ? hist : $("hist1"); }
+// el tema de un mensaje: el que ya trae explicito, el `[tema]` con el que contesto el daemon, el
+// `tema x:` que escribio facundo, las palabras clave, y si no hay nada, el del mensaje anterior
+// (lo mismo que hace el daemon con `.ultimo-tema`).
+function temaDe(m, prev){
+  if(m.explicito) return m.tema;
+  if(m.tag) return m.tag;
+  if(m.clase === "agente") return prev || "tools";
+  var c = clasificar(m.texto);
+  return c.tema || prev || "tools";
+}
+function recalcularTemas(){
+  var prev = null;
+  msgs.forEach(function(m){ m.tema = temaDe(m, prev); prev = m.tema; });
+}
+function nodoMsg(m){
   var div = document.createElement("div");
-  div.className = "msg " + clase;
-  if(id) div.dataset.id = id;
+  div.className = "msg " + m.clase;
+  if(m.id) div.dataset.id = m.id;
   var cab = document.createElement("div");
   cab.innerHTML = '<span class="quien"></span> <span class="ts"></span>';
-  cab.querySelector(".quien").textContent = quien + ">";
-  cab.querySelector(".ts").textContent = iso ? desde(iso) : desde(new Date().toISOString());
+  cab.querySelector(".quien").textContent = m.quien + ">";
+  cab.querySelector(".ts").textContent = desde(m.iso || new Date().toISOString());
   var b = document.createElement("div");
   b.className = "cuerpo";
-  b.innerHTML = resaltar(cuerpo);
+  b.innerHTML = resaltar(m.texto);
   div.appendChild(cab); div.appendChild(b);
-  if(arriba) lista.insertBefore(div, lista.firstChild); else lista.appendChild(div);
   return div;
+}
+function pintarMsg(m, arriba){
+  paneles.forEach(function(tab, j){
+    if(!deEstaTab(m.tema, tab)) return;
+    var l = listaDe(j);
+    if(!l) return;
+    if(arriba) l.insertBefore(nodoMsg(m), l.firstChild); else l.appendChild(nodoMsg(m));
+  });
+}
+function render(){
+  [0, 1].forEach(function(j){ var l = listaDe(j); if(l) l.innerHTML = ""; });
+  msgs.forEach(function(m){ pintarMsg(m, false); });
+}
+function alFinal(){
+  abajo();
+  var h1 = histDe(1);
+  if(h1) h1.scrollTop = h1.scrollHeight;
 }
 function ruidoso(e){  // 401 ya abrio el login y "freno" ya aviso: no repetir en rojo
   var m = e && e.message;
   return !!m && m !== "401" && m !== "freno";
 }
-function sistema(t, clase){ 
+function sistema(t, clase){
   var pego = pegadoAbajo();
-  pintar(clase || "sistema", "web", t, null, null);
-  if(pego) abajo();
+  var m = {clase: clase || "sistema", quien: "web", texto: t, iso: null, explicito: true, tema: temaActivo()};
+  msgs.push(m); pintarMsg(m, false);
+  if(pego) alFinal();
 }
 
 // ---------- api ----------
@@ -479,11 +785,23 @@ function cargarEstado(){
 function ruta(desdeIso){
   return "/repos/" + REPO + "/issues/" + ISSUE + "/comments?per_page=100&since=" + desdeIso;
 }
+// el daemon contesta con `[tema] ...` adelante (con_tag_tema): ese tag manda la respuesta a su
+// pestaña y no se muestra como texto (ya lo dice la pestaña). los comandos cortos (status, cola,
+// op N X) contestan sin tag: caen en la pestaña del mensaje anterior, que es desde donde salieron.
 function agregar(c, arriba){
   vistos[c.id] = true;
-  var b = c.body || "";
-  if(b.indexOf(MARCA) === 0) pintar("agente", "agente", b.slice(MARCA.length).replace(/^\n/, ""), c.created_at, c.id, arriba);
-  else pintar("yo", "facundo", b, c.created_at, c.id, arriba);
+  var b = c.body || "", m;
+  if(b.indexOf(MARCA) === 0){
+    var cuerpo = b.slice(MARCA.length).replace(/^\n/, ""), mt = /^\[([\w-]+)\]\s*/.exec(cuerpo), tag = null;
+    if(mt && TEMAS.indexOf(mt[1].toLowerCase()) >= 0){ tag = mt[1].toLowerCase(); cuerpo = cuerpo.slice(mt[0].length); }
+    m = {id: c.id, clase: "agente", quien: "agente", texto: cuerpo, iso: c.created_at, tag: tag};
+  }else{
+    var mp = RE_TEMA.exec(b), tg = null, texto = b;
+    if(mp && TEMAS.indexOf(mp[1].toLowerCase()) >= 0){ tg = mp[1].toLowerCase(); texto = b.slice(mp[0].length); }
+    m = {id: c.id, clase: "yo", quien: "facundo", texto: texto, iso: c.created_at, tag: tg};
+  }
+  if(arriba) msgs.unshift(m); else msgs.push(m);
+  return m;
 }
 
 // poll: pide solo desde el ultimo comentario que ya tengo. la url se queda quieta mientras no
@@ -496,7 +814,7 @@ function cargarComentarios(reemplazar){
     if(r.status === 304) return;
     if(!reemplazar) etagCom = r.etag;
     var cs = r.json || [];
-    if(reemplazar){ lista.innerHTML = ""; vistos = {}; masViejoIso = ventana; }
+    if(reemplazar){ msgs = []; vistos = {}; masViejoIso = ventana; }
     var pego = pegadoAbajo() || reemplazar;
     var nuevos = 0;
     cs.sort(function(a, b){ return a.id - b.id; }).forEach(function(c){
@@ -506,8 +824,11 @@ function cargarComentarios(reemplazar){
       nuevos++;
     });
     if(nuevos) etagCom = null;  // la url del proximo poll cambia (since nuevo)
+    // el tema de cada mensaje depende del anterior, asi que se recalcula la charla entera y se
+    // reparte de nuevo entre las pestañas (es una pasada por un par de cientos de mensajes)
+    if(nuevos || reemplazar){ recalcularTemas(); render(); }
     // un mensaje nuevo siempre se lee entero y al fondo, aunque estuvieras mirando mas arriba
-    if(pego || nuevos) abajo();
+    if(pego || nuevos) alFinal();
   });
 }
 
@@ -522,6 +843,7 @@ function cargarViejos(){
     }).sort(function(a, b){ return a.id - b.id; });
     var alto = hist.scrollHeight - hist.scrollTop;
     cs.slice().reverse().forEach(function(c){ agregar(c, true); });
+    recalcularTemas(); render();
     hist.scrollTop = hist.scrollHeight - alto;  // la vista se queda donde estaba
     masViejoIso = nuevoDesde;
     horas += PASO;
@@ -584,17 +906,24 @@ setInterval(mirarVersion, 60000);
 document.addEventListener("visibilitychange", function(){ if(!document.hidden) mirarVersion(); });
 
 // ---------- mandar ----------
-function mandar(texto){
+// cada mensaje sale con su `tema x:` explicito, asi que cae si o si en la pestaña desde donde se
+// escribio (y el daemon contesta con ese mismo tema). `crudo` es para lo que el daemon atiende por
+// texto exacto sin modelo (status, cola, op 2 B, dale 3): ahi el prefijo lo rompería.
+function mandar(texto, tema, crudo){
   texto = (texto || "").trim();
   if(!texto) return;
+  tema = tema || temaActivo();
+  var ya = RE_TEMA.test(texto);
+  var cuerpo = (crudo || ya || tema === AUTO) ? texto : "tema " + tema + ": " + texto;
   $("mandar").disabled = true;
-  api("POST", "/repos/" + REPO + "/issues/" + ISSUE + "/comments", {body: texto})
+  api("POST", "/repos/" + REPO + "/issues/" + ISSUE + "/comments", {body: cuerpo})
     .then(function(r){
       txt.value = ""; txt.style.height = "";
       if(r.json && !vistos[r.json.id]){
         vistos[r.json.id] = true;
-        pintar("yo", "facundo", texto, r.json.created_at, r.json.id);
-        abajo();
+        var m = {id: r.json.id, clase: "yo", quien: "facundo", texto: texto, iso: r.json.created_at,
+                 explicito: true, tema: tema};
+        msgs.push(m); pintarMsg(m, false); alFinal();
       }
       etagCom = null;
     })
@@ -602,12 +931,50 @@ function mandar(texto){
     .then(function(){ $("mandar").disabled = false; });
 }
 
+// el tema lo detecta el clasificador (cero tokens) y se cruza con el de la pestaña:
+// - `tema x:` escrito a mano: manda, y la charla se va a esa pestaña.
+// - pestaña `auto`: adopta el tema detectado y se renombra sola.
+// - pestaña X y el mensaje parece de Y: pregunta antes de mandar (3 opciones).
+// - si no hay pistas, se queda en la pestaña donde esta.
+function enviarMensaje(texto){
+  texto = (texto || "").trim();
+  if(!texto) return;
+  if(RE_CRUDO.test(texto)){ mandar(texto, temaActivo(), true); return; }
+  var activo = temaActivo(), c = clasificar(texto);
+  if(c.fuente === "prefijo"){
+    if(c.tema !== activo) abrirTab(c.tema);
+    mandar(texto, c.tema);
+    return;
+  }
+  if(activo === AUTO){
+    var destino = c.tema || "tools";
+    renombrarTab(AUTO, destino);
+    mandar(texto, destino);
+    return;
+  }
+  if(c.fuente === "palabras" && c.tema !== activo){ preguntarDestino(texto, activo, c.tema); return; }
+  mandar(texto, activo);
+}
+// el mensaje parece de otro tema: 3 opciones y no se manda hasta elegir (igual que la consola)
+function preguntarDestino(texto, activo, otro){
+  var existe = tabs.indexOf(otro) >= 0;
+  dd("esto parece de " + otro, [
+    ["mandalo a la pestaña " + otro + (existe ? "" : " (la abre)"), "ir"],
+    ["abrí " + otro + " al lado de los widgets y mandalo ahí", "lado"],
+    ["no, dejalo acá como `tema " + activo + ":`", "aqui"]
+  ], function(que){
+    if(que === "aqui"){ mandar(texto, activo); return; }
+    if(que === "lado") splitCon(otro); else abrirTab(otro);
+    mandar(texto, otro);
+  });
+}
+
 alfinal.addEventListener("click", abajo);
 estadoEl.addEventListener("click", function(){ cabecera.classList.toggle("abierta"); });
-$("mandar").addEventListener("click", function(){ mandar(txt.value); txt.focus(); });
+$("mandar").addEventListener("click", function(){ enviarMensaje(txt.value); txt.focus(); });
 txt.addEventListener("focus", function(){ setTimeout(abajo, 250); });
 txt.addEventListener("keydown", function(e){
-  if(e.key === "Enter" && !e.shiftKey){ e.preventDefault(); mandar(txt.value); }
+  if(e.key === "Enter" && !e.shiftKey){ e.preventDefault(); enviarMensaje(txt.value); }
 });
 txt.addEventListener("input", function(){
   var pego = pegadoAbajo();
@@ -617,7 +984,7 @@ txt.addEventListener("input", function(){
 });
 $("rapidos").addEventListener("click", function(e){
   var b = e.target.closest("button");
-  if(b && b.dataset.cmd) mandar(b.dataset.cmd);
+  if(b && b.dataset.cmd) mandar(b.dataset.cmd, temaActivo(), true);   // comandos del daemon: sin prefijo
 });
 $("mas").addEventListener("click", function(){
   if(sinMasViejo) return;
@@ -905,20 +1272,88 @@ widgetsEl.addEventListener("click", function(e){
   var b = e.target.closest("button[data-msg]");
   if(!b) return;
   b.disabled = true;
-  mandar(b.dataset.msg);
+  mandar(b.dataset.msg, temaActivo(), true);   // `op N X` / `dale N`: los resuelve el daemon sin modelo
   setTimeout(function(){ b.disabled = false; }, 1500);
 });
 
-// celu: una vista a la vez. en desktop (>= 900px) los dos paneles se ven juntos y esto no aparece.
-function verWidgets(si){
-  document.body.classList.toggle("ver-widgets", !!si);
-  $("ver-chat").classList.toggle("on", !si);
-  $("ver-widgets").classList.toggle("on", !!si);
-  if(si && Date.now() - widUlt > 15000) cargarWidgets().catch(function(){});
-  if(!si) abajo();
+// celu: una vista a la vez (chat | widgets | la pestaña de al lado, si esta partido).
+// en desktop (>= 900px) los paneles se ven juntos y esta barra no aparece.
+function verPanel(cual){
+  document.body.classList.toggle("ver-widgets", cual === "widgets");
+  document.body.classList.toggle("ver-lado", cual === "lado");
+  $("ver-chat").classList.toggle("on", cual === "chat");
+  $("ver-widgets").classList.toggle("on", cual === "widgets");
+  $("ver-lado").classList.toggle("on", cual === "lado");
+  if(cual === "widgets" && Date.now() - widUlt > 15000) cargarWidgets().catch(function(){});
+  if(cual === "chat"){ focoEn(0); abajo(); }
+  if(cual === "lado") focoEn(1);
 }
-$("ver-chat").addEventListener("click", function(){ verWidgets(false); });
-$("ver-widgets").addEventListener("click", function(){ verWidgets(true); });
+function verWidgets(si){ verPanel(si ? "widgets" : "chat"); }
+$("ver-chat").addEventListener("click", function(){ verPanel("chat"); });
+$("ver-widgets").addEventListener("click", function(){ verPanel("widgets"); });
+$("ver-lado").addEventListener("click", function(){ verPanel("lado"); });
+
+// ---------- barra de pestañas: click, arrastrar hasta los widgets, y el foco del input ----------
+$("tabs").addEventListener("click", function(e){
+  var x = e.target.closest("[data-cerrar]");
+  if(x){ cerrarTab(x.dataset.cerrar); return; }
+  var b = e.target.closest("[data-accion]");
+  if(b){
+    if(b.dataset.accion === "nueva_tab") nuevaTab();
+    else if(b.dataset.accion === "split"){
+      if(paneles.length === 2) unPanel();
+      else dd("al lado de los widgets:", tabs.map(function(t){ return [t, t]; }), splitCon);
+    }
+    else if(b.dataset.accion === "un_panel") unPanel();
+    return;
+  }
+  var t = e.target.closest("[data-tema]");
+  if(t){
+    focoEn(0); abrirTab(t.dataset.tema); txt.focus();
+    if(window.innerWidth < 900) verPanel("chat");   // la pestaña que se toca es la que se ve
+  }
+});
+// celu: si la vista es el chat, ahi se escribe (el foco no puede quedar en un panel que no se ve)
+window.addEventListener("resize", function(){
+  if(window.innerWidth < 900 && foco === 1 && !document.body.classList.contains("ver-lado")) focoEn(0);
+});
+(function(){
+  var arrastrada = null;
+  $("tabs").addEventListener("dragstart", function(e){
+    var t = e.target.closest("[data-tema]");
+    if(!t) return;
+    arrastrada = t.dataset.tema;
+    t.classList.add("arrastrando");
+    try{ e.dataTransfer.setData("text/plain", arrastrada); }catch(x){}
+  });
+  $("tabs").addEventListener("dragend", function(e){
+    var t = e.target.closest("[data-tema]");
+    if(t) t.classList.remove("arrastrando");
+    arrastrada = null;
+  });
+  // soltar una pestaña sobre la fila de widgets (o sobre el panel de al lado) = mandarla ahi
+  ["panel-widgets", "panel-lado"].forEach(function(id){
+    var el = $(id);
+    el.addEventListener("dragover", function(e){ e.preventDefault(); el.classList.add("soltar"); });
+    el.addEventListener("dragleave", function(){ el.classList.remove("soltar"); });
+    el.addEventListener("drop", function(e){
+      e.preventDefault(); el.classList.remove("soltar");
+      var t = arrastrada;
+      try{ t = e.dataTransfer.getData("text/plain") || arrastrada; }catch(x){}
+      if(t) splitCon(t);
+    });
+  });
+})();
+// donde se escribe: click en el panel de al lado lo enfoca, click en la charla grande vuelve
+$("panel-lado").addEventListener("click", function(e){
+  if(e.target.closest("#lado-cerrar")) return;
+  focoEn(1); txt.focus();
+});
+$("lado-cerrar").addEventListener("click", function(e){ e.stopPropagation(); unPanel(); });
+$("envoltorio").addEventListener("click", function(){ focoEn(0); });
+$("ddfondo").addEventListener("click", cerrarDd);
+document.addEventListener("keydown", function(e){ if(e.key === "Escape") cerrarDd(); });
+pintarTabs();
 
 pintarWidgets(null);
 
@@ -939,11 +1374,11 @@ function arrancar(t){
   try{ localStorage.setItem("agente_token", t); }catch(x){}
   login.style.display = "none";
   document.body.classList.remove("sinlogin");
-  lista.innerHTML = ""; vistos = {}; etagCom = null; etagIssue = null;
+  msgs = []; render(); vistos = {}; etagCom = null; etagIssue = null;
   $("mas").disabled = false; $("mas").textContent = "cargar más viejo";
   etagWid = null; widUlt = 0;
   Promise.all([cargarEstado(), cargarComentarios(true), cargarWidgets()])
-    .then(function(){ abajo(); reprogramar(); })
+    .then(function(){ alFinal(); reprogramar(); })
     .catch(function(e){
       if(ruidoso(e)) sistema("error: " + e.message, "error");
       if(e && e.message !== "401") reprogramar();
@@ -996,6 +1431,24 @@ var guardado = urlSucia;
 if(!guardado){ try{ guardado = localStorage.getItem("agente_token"); }catch(x){} }
 if(guardado) arrancar(guardado); else pedirToken();
 if(urlSucia) sistema("el token venía en la url: lo guardé acá y limpié la dirección. no compartas ese link.", "error");
+
+// gancho de prueba: `recetas/prueba_web` (chrome headless, cero tokens) usa esto para chequear que
+// el clasificador de la web da lo mismo que la receta de python y que cada mensaje cae en su pestaña.
+window.__agente = {
+  clasificar: clasificar,
+  estado: function(){ return {tabs: tabs, paneles: paneles, foco: foco}; },
+  abrirTab: abrirTab, splitCon: splitCon, unPanel: unPanel, renombrarTab: renombrarTab,
+  cargar: function(coms){
+    msgs = []; vistos = {};
+    coms.forEach(function(c){ agregar(c, false); });
+    recalcularTemas(); render();
+    return msgs.map(function(m){ return {id: m.id, tema: m.tema, texto: m.texto}; });
+  },
+  enPanel: function(j){
+    var l = listaDe(j);
+    return l ? l.querySelectorAll(".msg").length : -1;
+  }
+};
 
 })();
 </script>
