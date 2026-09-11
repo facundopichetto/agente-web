@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.25">
-<link rel="manifest" href="manifest.json?v=4.25">
+<meta name="agente-web-version" content="4.26">
+<link rel="manifest" href="manifest.json?v=4.26">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -232,6 +232,17 @@
   }
   #tabs .barrabtn:active{background:#111}
   #tabs .relleno{flex:1 1 auto;min-width:8px}
+  /* ---------- sincronizando (facundo, 2026-09-11) ----------
+     al abrir la web o al volver al foco, el cache de localStorage no se pinta como si fuera el
+     estado real: mientras baja el buzon se ve esta linea y lo cacheado queda apagado. */
+  #sync{
+    flex:0 0 auto;padding:2px 10px;font-size:10px;color:var(--cian);
+    border-bottom:1px solid var(--linea);background:#050505;
+  }
+  #sync.oculta{display:none}
+  #sync.off{color:var(--amarillo)}
+  body.sincronizando #lista,body.sincronizando #lista1,
+  body.sincronizando #widgets,body.sincronizando #tabs .tab{opacity:.45}
   #panel-widgets.soltar,#panel-lado.soltar{border-left:1px dashed var(--verde)}
   /* segundo panel: la pestaña que se manda al lado de la fila de widgets */
   #panel-lado{
@@ -335,6 +346,7 @@
 <div id="cuerpo">
 <div id="panel-chat">
 <div id="tabs"></div>
+<div id="sync" class="oculta">sincronizando…</div>
 <div id="envoltorio">
   <div id="hist"><button id="mas" type="button">cargar más viejo</button><div id="lista"></div></div>
   <button id="alfinal" type="button">ir al final</button>
@@ -510,6 +522,14 @@ var BORRA_VIDA = 172800000;       // 2 dias: un borrador vacio mas viejo que est
 var borradores = {};
 var temaCaja = null;              // de que pestaña es lo que hay ahora en la caja
 var enviando = 0;                 // hay un mensaje saliendo: ese texto ya no es borrador
+// donde estabas leyendo cada pestaña: `{tema: {ancla, abajo, ts}}`. viaja en el mismo `tabs.json` y se
+// resuelve como los borradores, por tema y por `ts` mas nuevo (facundo, 2026-09-11: "quiero abrir el
+// telefono o la compu y estar en el mismo lugar"). la posicion NO se guarda en pixeles: los alto de
+// pantalla no coinciden entre celu y desktop. se guarda el **id del comentario** que quedo arriba de
+// la vista, y al restaurar se scrollea hasta ese mensaje.
+var vistas = {};
+var VISTA_DEBOUNCE = 4000;        // leer scrollea todo el tiempo: no se le pega a la api por eso
+var VISTA_VIDA = 604800000;       // 7 dias: una vista mas vieja que esto ya no dice nada
 // id corto de este dispositivo: sirve para no re-aplicarme lo que acabo de publicar yo
 var DISPOSITIVO = (function(){
   try{
@@ -545,7 +565,7 @@ function aplicarLayout(L, ts){
   tabs = s.tabs; paneles = s.paneles; foco = s.foco;
   layoutTs = ts || Date.now();
   aplicando = true;
-  try{ pintarTabs(); if(!igual){ render(); alFinal(); } }finally{ aplicando = false; }
+  try{ pintarTabs(); if(!igual){ render(); irDonde(); } }finally{ aplicando = false; }
   guardarCache();
   return !igual;
 }
@@ -554,7 +574,7 @@ function guardarCache(){
   try{
     localStorage.setItem("agente_tabs", JSON.stringify(
       {tabs: tabs, paneles: paneles, foco: foco, ts: layoutTs, origen: DISPOSITIVO,
-       borradores: borradoresLimpios()}));
+       borradores: borradoresLimpios(), vistas: vistasLimpias()}));
   }catch(x){}
 }
 // cambio local: sube el reloj, guarda el cache y encola la publicacion. si el layout quedo igual
@@ -638,6 +658,83 @@ function cajaDeTema(tema, forzar){
   temaCaja = tema;
   ponerCaja(borradorDe(tema));
 }
+// ---------- donde quedaste leyendo cada pestaña (facundo, 2026-09-11) ----------
+// lo mismo que los borradores pero para el scroll: `{tema: {ancla, abajo, ts}}`. `abajo: true` es el
+// caso normal (estabas al final) y no necesita ancla; si estabas mirando mas arriba, `ancla` es el id
+// del comentario que quedo pegado al borde de arriba.
+function vistasLimpias(){
+  var out = {}, ahora = Date.now();
+  Object.keys(vistas).forEach(function(t){
+    var v = vistas[t];
+    if(!v) return;
+    if(ahora - (+v.ts || 0) > VISTA_VIDA) return;
+    out[t] = {ancla: v.ancla || null, abajo: !!v.abajo, ts: +v.ts || 0};
+  });
+  return out;
+}
+// que mensaje esta arriba de todo en el panel j (el ancla que se guarda)
+function anclaDe(j){
+  var h = histDe(j), l = listaDe(j);
+  if(!h || !l) return null;
+  var ns = l.querySelectorAll(".msg[data-id]");
+  for(var i = 0; i < ns.length; i++)
+    if(ns[i].offsetTop + ns[i].offsetHeight > h.scrollTop) return ns[i].dataset.id;
+  return null;
+}
+function cargado(id){
+  return !!document.querySelector('.msg[data-id="' + String(id).replace(/"/g, "") + '"]');
+}
+function alFondo(j){
+  var h = histDe(j);
+  return !h || h.scrollHeight - h.scrollTop - h.clientHeight < 80;
+}
+// anota donde quedo la vista de la pestaña de cada panel. `ya` publica sin esperar el debounce.
+function guardarVista(ya){
+  if(aplicandoVista) return;
+  var cambio = false;
+  paneles.forEach(function(tema, j){
+    if(!tema) return;
+    var abajo = alFondo(j), ancla = abajo ? null : anclaDe(j), v = vistas[tema] || {};
+    if(!!v.abajo === abajo && (v.ancla || null) === ancla) return;
+    // este dispositivo trae menos historial que el otro: el ancla del celu todavia no esta cargada.
+    // no se pisa con un "estoy al final" que en realidad es "no lo encontre" (perderia el lugar).
+    if(abajo && v.ancla && !cargado(v.ancla)) return;
+    vistas[tema] = {ancla: ancla, abajo: abajo, ts: Math.max(Date.now(), (+v.ts || 0) + 1)};
+    cambio = true;
+  });
+  if(!cambio) return;
+  guardarCache();
+  publicarTabs(ya, VISTA_DEBOUNCE);
+}
+var aplicandoVista = false;
+// deja el panel j donde lo dejaste (en este o en el otro dispositivo). si el ancla ya no esta cargada
+// -la otra punta tenia mas historial- se queda al final, que es lo de siempre.
+function aplicarVista(j){
+  var tema = paneles[j], h = histDe(j), l = listaDe(j);
+  if(!tema || !h || !l) return false;
+  var v = vistas[tema];
+  if(!v || v.abajo || !v.ancla) return false;
+  var n = l.querySelector('.msg[data-id="' + String(v.ancla).replace(/"/g, "") + '"]');
+  if(!n) return false;
+  aplicandoVista = true;
+  try{ h.scrollTop = n.offsetTop; }finally{ aplicandoVista = false; }
+  return true;
+}
+// llegaron las vistas del buzon (o del cache): gana el `ts` mas nuevo de cada tema
+function recibirVistas(rem){
+  var cambio = false;
+  Object.keys(rem || {}).forEach(function(t){
+    var r = rem[t];
+    if(!r || typeof r !== "object") return;
+    if((+r.ts || 0) > (+(vistas[t] || {}).ts || 0)){
+      vistas[t] = {ancla: r.ancla || null, abajo: !!r.abajo, ts: +r.ts || 0};
+      cambio = true;
+    }
+  });
+  if(cambio){ guardarCache(); [0, 1].forEach(aplicarVista); }
+  return cambio;
+}
+
 // el mensaje salio: el borrador de esa pestaña se borra en todos los dispositivos
 function borrarBorrador(tema){
   if(!tema) return;
@@ -650,6 +747,7 @@ function borrarBorrador(tema){
     var s = L && sanearLayout(L);
     if(s){ tabs = s.tabs; paneles = s.paneles; foco = s.foco; layoutTs = L.ts || 0; }
     if(L && L.borradores) recibirBorradores(L.borradores);
+    if(L && L.vistas) recibirVistas(L.vistas);
   }catch(x){}
   layoutFirma = firmaLayout(layoutActual());
   cajaDeTema(temaActivo(), true);        // la caja arranca con lo que quedaste escribiendo
@@ -700,9 +798,11 @@ function recibirTabs(L){
   var ts = +L.ts || 0;
   // los borradores no se resuelven por el `ts` del layout: uno por uno, el mas nuevo de cada tema
   var borr = recibirBorradores(L.borradores);
+  // idem el scroll: donde quedaste leyendo cada pestaña se resuelve por tema, no por layout
+  var vis = recibirVistas(L.vistas);
   if(ts > layoutTs){ aplicarLayout(L, ts); return "remoto"; }
   if(layoutTs > ts && L.origen !== DISPOSITIVO){ publicarTabs(true); return "mio"; }
-  if(borr) publicarTabs();   // mezcle borradores de los dos lados: que el otro vea el resultado
+  if(borr || vis) publicarTabs();   // mezcle los dos lados: que el otro vea el resultado
   return "igual";
 }
 // agrupa los cambios seguidos (abrir, split, foco) en una sola escritura
@@ -719,6 +819,7 @@ function ponerTabs(reintento){
   var L = layoutActual();
   L.v = 1; L.ts = layoutTs; L.origen = DISPOSITIVO;
   L.borradores = borradoresLimpios();
+  L.vistas = vistasLimpias();
   var cuerpo = {message: "tabs " + DISPOSITIVO, content: textoAb64(JSON.stringify(L))};
   if(shaTabs) cuerpo.sha = shaTabs;
   // fetch propio y no `api()`: un 403 de escritura NO tiene que desloguear a facundo del chat
@@ -807,7 +908,7 @@ function abrirTab(tema){
   if(!esTema(tema) && tema !== AUTO){ sistema("tema desconocido: " + tema, "error"); return; }
   if(tabs.indexOf(tema) < 0) tabs.push(tema);
   paneles[foco] = tema;
-  pintarTabs(); render(); alFinal();
+  pintarTabs(); render(); irDonde();
 }
 // renombrar una pestaña (si ya habia una de ese tema, no se duplica). la general ya no se renombra sola
 // (facundo, 2026-09-11); queda por si hace falta renombrar a mano.
@@ -816,7 +917,7 @@ function renombrarTab(viejo, nuevo){
   if(tabs.indexOf(nuevo) >= 0) tabs.splice(tabs.indexOf(viejo), 1);
   else tabs[tabs.indexOf(viejo)] = nuevo;
   paneles = paneles.map(function(t){ return t === viejo ? nuevo : t; });
-  pintarTabs(); render(); alFinal();
+  pintarTabs(); render(); irDonde();
 }
 function cerrarTab(tema){
   if(tabs.length < 2){ sistema("la última pestaña se queda abierta"); return; }
@@ -826,7 +927,7 @@ function cerrarTab(tema){
   var reemplazo = tabs[Math.min(j, tabs.length - 1)];
   paneles = paneles.map(function(t){ return t === tema ? reemplazo : t; });
   if(paneles.length === 2 && paneles[0] === paneles[1]) unPanel();
-  pintarTabs(); render(); alFinal();
+  pintarTabs(); render(); irDonde();
 }
 function nuevaTab(){
   var ops = [["general (sin tema, la puerta de entrada)", AUTO]];
@@ -846,14 +947,14 @@ function splitCon(tema){
   if(tabs.indexOf(tema) < 0) tabs.push(tema);
   if(paneles.length < 2) paneles.push(tema); else paneles[1] = tema;
   foco = 1;
-  pintarTabs(); render(); alFinal();
+  pintarTabs(); render(); irDonde();
   if(window.innerWidth < 900) verPanel("lado");
 }
 function unPanel(){
   paneles = [paneles[0]];
   foco = 0;
   document.body.classList.remove("ver-lado");
-  pintarTabs(); render(); alFinal();
+  pintarTabs(); render(); irDonde();
   if(window.innerWidth < 900) verPanel("chat");   // en el celu la vista vuelve al chat
 }
 function focoEn(j){
@@ -940,9 +1041,16 @@ function abajo(){
   alfinal.style.display = "none";
 }
 function pegadoAbajo(){ return hist.scrollHeight - hist.scrollTop - hist.clientHeight < 80; }
+var vistaTimer = null;
+function anotarVista(){
+  if(vistaTimer) clearTimeout(vistaTimer);
+  vistaTimer = setTimeout(function(){ vistaTimer = null; guardarVista(); }, 400);
+}
 hist.addEventListener("scroll", function(){
   if(pegadoAbajo()) alfinal.style.display = "none";
+  anotarVista();
 });
+$("hist1").addEventListener("scroll", anotarVista);
 
 // celu: si facundo scrollea hacia arriba para leer, el teclado se cierra solo (blur del input).
 // solo por gesto propio (dedo o rueda) y solo hacia arriba: los scrolls programados (abajo(),
@@ -1150,6 +1258,15 @@ function alFinal(){
   var h1 = histDe(1);
   if(h1) h1.scrollTop = h1.scrollHeight;
 }
+// abrir la web, volver al foco o cambiar de pestaña te deja **donde estabas**, no al final (facundo,
+// 2026-09-11). el fondo sigue siendo el default: `aplicarVista` solo mueve si habia algo guardado.
+function restaurarVistas(){
+  [0, 1].forEach(function(j){ aplicarVista(j); });
+}
+function irDonde(){
+  alFinal();
+  requestAnimationFrame(restaurarVistas);   // despues del layout: el alto recien existe aca
+}
 function ruidoso(e){  // 401 ya abrio el login y "freno" ya aviso: no repetir en rojo
   var m = e && e.message;
   return !!m && m !== "401" && m !== "freno";
@@ -1316,16 +1433,65 @@ function cargarViejos(){
 function tick(){
   Promise.all([cargarEstado(), cargarComentarios(false)])
     .catch(function(e){ if(ruidoso(e)) sistema("error: " + e.message, "error"); });
-  // los widgets van mas lento que el chat: 30 s a la vista, 120 s en background
-  var cada = document.hidden ? 120000 : 30000;
+  // los widgets y las pestañas van a 10 s a la vista (antes 30) y 120 s en background: abrir el
+  // celu y ver datos de hace medio minuto se sentia viejo (facundo, 2026-09-11)
+  var cada = document.hidden ? 120000 : 10000;
   if(Date.now() - widUlt > cada){
     cargarWidgets().catch(function(e){ if(ruidoso(e)) pintarWidgets(null, e.message); });
   }
-  // las pestañas van al mismo ritmo: si las cambiaste en el celu, el desktop las ve en <= 30 s
+  // las pestañas van al mismo ritmo: si las cambiaste en el celu, el desktop las ve en <= 10 s
   if(tabsSync && Date.now() - tabsUlt > cada){
     cargarTabs().catch(function(e){ if(ruidoso(e)) sistema("pestañas: " + e.message, "error"); });
   }
 }
+
+// ---------- sincronizacion al abrir y al volver al foco (facundo, 2026-09-11) ----------
+// "cuando vuelvo a la interfaz desde el telefono se ven cosas re viejas y va actualizando": el cache
+// de localStorage se pintaba como si fuera el estado real. ahora, al abrir la web o al recuperar el
+// foco, se baja **todo el buzon en paralelo** (chat, `widgets.json`, `tabs.json`) y hasta que llega se
+// ve `sincronizando…` con lo cacheado apagado. si github no contesta, el cartel lo dice y la cache
+// queda como lo que es: modo offline.
+var sincronizando = false, syncUlt = 0, syncEnVuelo = null;
+function pintarSync(estado, texto){
+  var n = $("sync");
+  if(!n) return;
+  sincronizando = estado === "sync";
+  document.body.classList.toggle("sincronizando", sincronizando);
+  n.classList.toggle("oculta", !estado);
+  n.classList.toggle("off", estado === "off");
+  if(estado) n.textContent = texto || "sincronizando…";
+}
+// una sola sincronizacion a la vez; las que llegan encima se cuelgan de la que ya esta en vuelo
+function sincronizar(primera){
+  if(!token) return Promise.resolve();
+  if(syncEnVuelo) return syncEnVuelo;
+  syncUlt = Date.now();
+  widUlt = 0; tabsUlt = 0;            // que el tick no las saltee por cadencia
+  var cartel = setTimeout(function(){ pintarSync("sync"); }, primera ? 0 : 250);
+  syncEnVuelo = Promise.all([
+    cargarEstado(),
+    cargarComentarios(!!primera),
+    cargarWidgets().catch(function(e){ if(ruidoso(e)) pintarWidgets(null, e.message); }),
+    cargarTabs()
+  ]).then(function(){
+    clearTimeout(cartel); pintarSync(null);
+    irDonde();                         // y te deja donde estabas leyendo esa pestaña
+  }).catch(function(e){
+    clearTimeout(cartel);
+    if(e && e.message === "401"){ pintarSync(null); throw e; }
+    pintarSync("off", "sin conexión con el buzón: esto es la copia local");
+    if(ruidoso(e)) throw e;
+  }).then(function(){ syncEnVuelo = null; }, function(e){ syncEnVuelo = null; throw e; });
+  return syncEnVuelo;
+}
+// volver al foco: sincroniza ya. con un piso corto para que alt-tab no dispare una bajada por segundo.
+function alVolver(){
+  if(document.hidden || !token) return;
+  if(Date.now() - syncUlt < 1200) return;
+  sincronizar(false).catch(function(e){ if(ruidoso(e)) sistema("error: " + e.message, "error"); });
+}
+window.addEventListener("focus", alVolver);
+window.addEventListener("pageshow", alVolver);
 
 function reprogramar(){
   if(timer) clearInterval(timer);
@@ -1337,12 +1503,13 @@ function reprogramar(){
 document.addEventListener("visibilitychange", function(){
   reprogramar();
   // el borrador viaja en los dos sentidos: al irme publico lo que escribi, al volver releo el del otro
-  if(document.hidden) soltarBorrador();
-  else { tabsUlt = 0; tick(); }
+  if(document.hidden) soltarBorrador();   // publica el borrador y la vista antes de irse
+  else alVolver();
 });
 // cerrar la pestaña / bloquear el telefono no puede perder lo escrito: el PUT va con `keepalive`
 function soltarBorrador(){
   guardarBorrador(temaCaja || temaActivo(), txt.value, true);
+  guardarVista(true);
   if(tabsPendiente){ clearTimeout(tabsPendiente); tabsPendiente = null; ponerTabs(false); }
 }
 window.addEventListener("pagehide", soltarBorrador);
@@ -2139,8 +2306,8 @@ function arrancar(t){
   $("mas").disabled = false; $("mas").textContent = "cargar más viejo";
   etagWid = null; widUlt = 0;
   etagTabs = null; shaTabs = null; tabsUlt = 0; tabsListo = false; tabsSync = true;
-  Promise.all([cargarEstado(), cargarComentarios(true), cargarWidgets(), cargarTabs()])
-    .then(function(){ alFinal(); reprogramar(); })
+  sincronizar(true)
+    .then(function(){ reprogramar(); })
     .catch(function(e){
       if(ruidoso(e)) sistema("error: " + e.message, "error");
       if(e && e.message !== "401") reprogramar();
@@ -2203,13 +2370,21 @@ window.__agente = {
   aplicarLayout: aplicarLayout, sanearLayout: sanearLayout, recibirTabs: recibirTabs,
   guardarLayout: guardarLayout, layoutRemoto: function(){
     var L = layoutActual(); L.v = 1; L.ts = layoutTs; L.origen = DISPOSITIVO;
-    L.borradores = borradoresLimpios(); return L;
+    L.borradores = borradoresLimpios(); L.vistas = vistasLimpias(); return L;
   },
   abrirTab: abrirTab, splitCon: splitCon, unPanel: unPanel, renombrarTab: renombrarTab,
   // borrador del input, continuable entre dispositivos
   borradores: function(){ return borradoresLimpios(); },
   borradorDe: borradorDe, guardarBorrador: guardarBorrador, recibirBorradores: recibirBorradores,
   cajaDeTema: cajaDeTema, soltarBorrador: soltarBorrador, borrarBorrador: borrarBorrador,
+  // donde quedaste leyendo cada pestaña, y el estado de sincronizacion al abrir / volver al foco
+  vistas: function(){ return vistasLimpias(); },
+  guardarVista: guardarVista, recibirVistas: recibirVistas, aplicarVista: aplicarVista,
+  restaurarVistas: restaurarVistas, anclaDe: anclaDe,
+  sync: function(){ return {sincronizando: sincronizando, texto: $("sync").textContent,
+                            visible: !$("sync").classList.contains("oculta"),
+                            off: $("sync").classList.contains("off")}; },
+  pintarSync: pintarSync, sincronizar: sincronizar, alVolver: alVolver,
   caja: function(){ return {tema: temaCaja, texto: txt.value, sel: txt.selectionStart}; },
   cuerpoMsg: cuerpoMsg, deEstaTab: deEstaTab, enviarMensaje: enviarMensaje,
   normTema: normTema, padreTema: padreTema,

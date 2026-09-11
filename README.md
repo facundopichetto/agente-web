@@ -58,7 +58,7 @@ mecanismo que `widgets.json`:
 - **pintar sin cambios no toca el `ts`**: abrir la pagina no pisa lo que dejo el otro dispositivo.
 - `localStorage` queda **solo como cache offline** (`agente_tabs`, mas `agente_dispositivo` con el id
   corto de este telefono/mac).
-- el poll va al mismo ritmo que los widgets: 30 s a la vista, 120 s en background.
+- el poll va al mismo ritmo que los widgets: **10 s a la vista**, 120 s en background.
 - **el token necesita `Contents: read and write`** sobre `agente-buzon`. si el PUT da 403/404, la web
   avisa una sola vez y sigue andando con las pestañas locales: **un 403 de escritura no desloguea**
   (por eso el PUT usa `fetch` propio y no `api()`).
@@ -89,6 +89,53 @@ desde el celu". lo que hay en la caja es un **borrador por pestaña** y viaja en
 - `localStorage` sigue siendo **solo cache offline**.
 
 probarlo: `python3 -m recetas.prueba_web_tabs` (bloque "borrador del input", cero tokens).
+
+## sincronizar al abrir y al volver al foco (2026-09-11)
+
+facundo: "cuando vuelvo a la interfaz desde el telefono se ven cosas re viejas y va actualizando.
+quiero abrir el telefono o la compu y estar en el mismo lugar".
+
+antes la web pintaba primero el `localStorage` (cache vieja) y recien despues traia el buzon, con
+polls de 30 s a la vista y 120 s en background. ahora:
+
+- **`sincronizar()`** baja **todo el buzon en paralelo** (el body del issue, los comentarios del chat,
+  `widgets.json` y `tabs.json`) y recien ahi renderiza. la usa `arrancar()` al abrir y cualquier
+  vuelta al foco.
+- **mientras baja** se ve la linea `sincronizando…` arriba del chat y lo que viene del cache queda
+  **apagado** (`body.sincronizando`, opacidad 45%): la cache ya no se muestra como si fuera el estado
+  real. si github no contesta, la linea pasa a amarillo con `sin conexión con el buzón: esto es la
+  copia local` (modo offline) y se sigue con lo cacheado.
+- **al volver al foco** (`visibilitychange`, `focus`, `pageshow`) se dispara una sincronizacion ya,
+  con un piso de 1,2 s para que un alt-tab no haga una bajada por segundo, y una sola en vuelo a la vez.
+- **poll a 10 s a la vista** para widgets y pestañas (antes 30 s); el chat sigue en 5 s. en background
+  quedan los 120 s de siempre.
+- los `chat-<tema>.jsonl` del daemon **no viven en el buzon**: la fuente del chat de la web son los
+  comentarios del issue, y `recalcularTemas()` los reparte por pestaña. el log por tema es lo que lee
+  el daemon para armar el contexto del modelo, no la web.
+
+## donde quedaste leyendo cada pestaña (2026-09-11)
+
+viaja en el mismo `tabs.json`, al lado de los borradores:
+
+    {"v":1, "ts":..., "tabs":[...], "paneles":[...], "foco":0,
+     "vistas": {"tools": {"ancla": "3512349", "abajo": false, "ts": 1757600000000}}}
+
+- **no se guardan pixeles**: el alto de pantalla del celu y el de la mac no coinciden. se guarda el
+  **id del comentario que quedo pegado al borde de arriba** (`ancla`) y al restaurar se scrollea hasta
+  ese mensaje (`aplicarVista`).
+- **`abajo: true`** es el caso normal (estabas al final) y no necesita ancla: es lo que ya hacia la web.
+- **se resuelve por tema y por `ts` mas nuevo**, igual que los borradores: un `tabs.json` viejo no se
+  lleva puesta la vista nueva del otro dispositivo.
+- **se anota** al scrollear (debounce de 400 ms en memoria, publicacion con debounce de 4 s) y al
+  esconder la pagina; **se restaura** al abrir, al terminar una sincronizacion y al cambiar de pestaña
+  (`irDonde()` = ir al final y despues, si habia vista guardada, al ancla).
+- si el ancla del otro dispositivo **todavia no esta cargada** (este lado tiene menos historial), no se
+  pisa con un "estoy al final" falso: la vista se respeta hasta que aparezca el mensaje.
+- el `foco` (que pestaña esta activa en cada panel) ya viajaba en `tabs.json` desde el dia 1: son
+  `paneles` (el tema de cada panel) y `foco` (cual de los dos tiene el cursor).
+- las vistas de mas de 7 dias se podan solas.
+
+probarlo: `python3 -m recetas.prueba_web_tabs` (bloques "sincronizando" y "la vista de cada pestaña").
 
 ## publicar
 
