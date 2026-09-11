@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.28">
-<link rel="manifest" href="manifest.json?v=4.28">
+<meta name="agente-web-version" content="4.29">
+<link rel="manifest" href="manifest.json?v=4.29">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -32,6 +32,7 @@
     --verde:#39ff14; --blanco:#e8e8e8; --gris:#666; --cian:#22d3ee;
     --magenta:#ff4fd8; --rojo:#ff4d4d; --amarillo:#ffd60a; --linea:#1c1c1c;
     --verde-tenue:#1f7a12; --linea-clara:#3a3a3a; --yo:#9be88a;
+    --naranja:#ff9f1a;
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0;background:#000;color:var(--blanco)}
@@ -171,6 +172,31 @@
   .bar .hueco{color:#333}
   .pct{font-weight:500}
   .pct.ok{color:var(--verde)} .pct.med{color:var(--amarillo)} .pct.alto{color:var(--rojo)}
+  /* ---------- widget usage: una barra grafica por limite, con el tick de la linea ---------- */
+  /* el color sale del ratio (pct usado / linea = fraccion de la ventana transcurrida), no del pct */
+  .usage{white-space:normal}
+  .usage .cta{display:flex;align-items:center;gap:6px;margin:0 0 4px 0}
+  .usage .cta + .ub{margin-top:0}
+  .usage .cta .nom{color:var(--cian);font-weight:600;letter-spacing:.04em}
+  .usage .bloque + .bloque{margin-top:9px;padding-top:8px;border-top:1px solid var(--linea)}
+  .ub{display:flex;align-items:center;gap:6px;margin:0 0 5px 0}
+  .ub-n{flex:0 0 34px;color:var(--gris);font-size:10px;letter-spacing:.04em}
+  .ub-pista{
+    flex:1 1 auto;min-width:0;position:relative;height:11px;background:#0d0d0d;
+    border:1px solid var(--linea);border-radius:2px;overflow:hidden;
+  }
+  .ub-lleno{position:absolute;left:0;top:0;bottom:0;background:#333;border-radius:1px}
+  .ub-tick{position:absolute;top:0;bottom:0;width:1px;background:var(--blanco);opacity:.8}
+  .ub-p{flex:0 0 34px;text-align:right;font-weight:600;color:var(--gris)}
+  .ub-r{flex:0 0 46px;text-align:right;color:var(--gris);font-size:10px}
+  .ub.n-ok .ub-lleno{background:var(--verde)}
+  .ub.n-ok .ub-p{color:var(--verde)}
+  .ub.n-cerca .ub-lleno{background:var(--amarillo)}
+  .ub.n-cerca .ub-p{color:var(--amarillo)}
+  .ub.n-sobre .ub-lleno{background:var(--naranja)}
+  .ub.n-sobre .ub-p{color:var(--naranja)}
+  .ub.n-mal .ub-lleno{background:var(--rojo);box-shadow:0 0 7px var(--rojo)}
+  .ub.n-mal .ub-p{color:var(--rojo);font-weight:700}
   .v{color:var(--verde)} .r{color:var(--rojo)} .a{color:var(--amarillo)}
   .c{color:var(--cian)} .m{color:var(--magenta)} .g{color:var(--gris)}
   .b{font-weight:500}
@@ -1750,59 +1776,44 @@ function it(o, html){
   return '<span class="it" data-it="' + id + '">' + html + "</span>";
 }
 
+// falta hasta el reset, corto: 4d23 / 1h55 / 12m. `s` viene calculado del daemon (falta_s).
+function faltaTxt(s){
+  if(s === null || s === undefined) return "";
+  if(s <= 0) return "ya";
+  var d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60);
+  if(d) return d + "d" + (h ? h : "");
+  if(h) return h + "h" + (m < 10 ? "0" : "") + m;
+  return m + "m";
+}
+// una barra: el ancho es el % usado, el tick blanco es la linea (la parte de la ventana que ya paso)
+// y el color sale del `nivel` que ya calculo widgets_json.py (ok / cerca / sobre / mal).
+function barraUso(b){
+  var pct = (b.pct === null || b.pct === undefined) ? null : Math.max(0, Math.min(100, b.pct));
+  var tick = (b.linea === null || b.linea === undefined) ? null : Math.max(0, Math.min(100, b.linea));
+  return '<div class="ub n-' + esc(b.nivel || "sin") + '" title="' +
+         esc(b.nombre + ": usado " + (pct === null ? "?" : Math.round(pct)) + "%, linea " +
+             (tick === null ? "?" : Math.round(tick)) + "%" +
+             (b.ratio ? ", ratio " + b.ratio : "")) + '">' +
+         '<span class="ub-n">' + esc(b.nombre) + "</span>" +
+         '<span class="ub-pista"><span class="ub-lleno" style="width:' + (pct === null ? 0 : pct) + '%"></span>' +
+         (tick === null ? "" : '<span class="ub-tick" style="left:' + tick + '%"></span>') + "</span>" +
+         '<span class="ub-p">' + (pct === null ? "?" : Math.round(pct)) + "%</span>" +
+         '<span class="ub-r">' + esc(faltaTxt(b.falta_s)) + "</span></div>";
+}
+// facundo (2026-09-11): el widget muestra SOLO las barras, tres por cuenta (5h, week, fable).
+// presupuesto, horario laboral y costo siguen en el json pero no se pintan aca.
 function cajaUsage(u){
-  var p = u.presupuesto || {}, c = u.costo || {}, filas = [];
-  // facundo tiene dos cuentas de claude (facu = la principal, orugote): se pinta un bloque por cuenta.
-  // la marca ok/over del presupuesto va solo en la semana de la cuenta activa, que es la que mide el daemon.
-  function barras(lista, activa){
-    (lista || []).forEach(function(b){
-      var marca = "";
-      if(activa && b.clave === "seven_day" && p.linea !== undefined && p.linea !== null)
-        marca = p.pesadas ? '  <span class="v">ok</span>' : '  <span class="r">over</span>';
-      filas.push(pad(b.nombre, 4) + " " + bar(b.pct) + ' <span class="g">' + esc(horaLocal(b.resets_at)) + "</span>" + marca);
-    });
-  }
-  var cuentas = u.cuentas || [];
-  if(cuentas.length){
-    cuentas.forEach(function(cu){
-      filas.push(it({tipo: "cuenta", tema: "tools", d: cu},
-                 '<span class="c b">' + esc(cu.nombre) + "</span>" +
-                 (cu.activa ? ' <span class="v">activa</span>' : "")));
-      barras(cu.barras, cu.activa);
-      (cu.limites || []).forEach(function(l){
-        filas.push(pad(l.modelo, 4) + " " + bar(l.pct) + ' <span class="g">week</span>');
-      });
-    });
-  } else {
-    barras(u.barras, true);
-  }
-  if(p.linea !== undefined && p.linea !== null){
-    filas.push(pad("line", 4) + " " + bar(p.linea) + ' <span class="g">budget</span>');
-    var cl = p.pesadas ? "v" : "r";
-    filas.push('<span class="' + cl + '">' + (p.pesadas ? "heavy ok" : "heavy wait") + "</span> use " +
-               '<span class="b">' + p.uso + "%</span> line <span class=\"b\">" + p.linea + "%</span> margin " +
-               '<span class="' + cl + '">' + (p.margen > 0 ? "+" : "") + p.margen + "%</span>" +
-               (p.esperan ? ' <span class="g">' + p.esperan + " esperan</span>" : ""));
-  }
-  var h = u.horario || {};
-  if(h.ahora !== undefined && h.ahora !== null){
-    filas.push(h.ahora
-      ? '<span class="a">work hours</span> <span class="g">' + esc(h.desde + "-" + h.hasta) + '</span> chrome <span class="a">off</span>' +
-        (h.espera ? ' <span class="g">' + h.espera + " esperan</span>" : "")
-      : '<span class="g">work hours ' + esc(h.desde + "-" + h.hasta) + '</span> chrome <span class="v">on</span>');
-  }
-  if(!cuentas.length) (u.limites || []).forEach(function(l){
-    filas.push(pad(l.modelo, 4) + " " + bar(l.pct) + ' <span class="g">week</span>');
+  var cuentas = u.cuentas || [], html = "";
+  if(!cuentas.length && (u.barras || []).length)
+    cuentas = [{nombre: "cuenta", activa: true, barras: u.barras}];
+  cuentas.forEach(function(cu){
+    html += '<div class="bloque">' +
+            it({tipo: "cuenta", tema: "tools", d: cu},
+               '<span class="cta"><span class="nom">' + esc(cu.nombre) + "</span>" +
+               (cu.activa ? '<span class="v">activa</span>' : "") + "</span>") +
+            (cu.barras || []).map(barraUso).join("") + "</div>";
   });
-  [["today", "hoy "], ["week", "sem "]].forEach(function(x){
-    var a = c[x[0]] || {};
-    if(!a.tareas) return;
-    if(x[0] === "week" && a.tareas === ((c.today || {}).tareas)) return;
-    filas.push(x[1] + ' <span class="m b">$' + a.usd.toFixed(2) + '</span> <span class="g">' + a.tareas + " tareas" +
-               (a.fallos ? '</span> <span class="r">' + a.fallos + "!</span><span class=\"g\">" : "") +
-               " · " + kilo(a.tok_in) + " in/" + kilo(a.tok_out) + " out</span>");
-  });
-  return caja("usage", "", filas.join("\n") || vacio("sin datos"));
+  return caja("usage", "", '<div class="usage">' + (html || vacio("sin datos")) + "</div>");
 }
 
 function cajaAgente(a){
@@ -2149,10 +2160,10 @@ function modalDe(o){
     m.cuerpo = (d.activa ? '<span class="v">es la cuenta que usa el agente ahora</span>'
                          : '<span class="g">no es la cuenta activa</span>') +
       (d.barras || []).map(function(b){
-        return "\n" + pad(b.nombre, 5) + (b.pct === null || b.pct === undefined ? "?" : b.pct + "%") +
-               (b.resets_at ? ' <span class="g">reset ' + esc(horaLocal(b.resets_at)) + "</span>" : "");
-      }).join("") +
-      (d.limites || []).map(function(l){ return "\n" + pad(l.modelo, 5) + l.pct + "% <span class=\"g\">week</span>"; }).join("");
+        return "\n" + pad(b.nombre, 6) + pad((b.pct === null || b.pct === undefined ? "?" : Math.round(b.pct) + "%"), 5, true) +
+               (b.linea === null || b.linea === undefined ? "" : ' <span class="g">linea ' + Math.round(b.linea) + "%</span>") +
+               (b.falta_s === null || b.falta_s === undefined ? "" : ' <span class="g">reset en ' + esc(faltaTxt(b.falta_s)) + "</span>");
+      }).join("");
     if(!d.activa)
       m.acciones.push(["pasar el agente a esta cuenta", function(){ actuar(tema, "cuenta " + d.nombre, true); }, true]);
     m.acciones.push(["ver el uso ahora", function(){ actuar(tema, "status", true); }]);

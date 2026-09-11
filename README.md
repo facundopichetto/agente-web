@@ -175,3 +175,31 @@ por algun icono de terminal".
   varias lineas hasta `28dvh`.
 - el boton dice `>_` (icono en texto plano, sin imagen), con el mismo id, el mismo handler y
   `title`/`aria-label` "mandar" para que se siga entendiendo.
+
+## enter en el celu no manda (facundo, 2026-09-11)
+
+en pantalla tactil (`esTactil()`: `pointer: coarse` o ancho <= 899) **enter hace salto de linea** y el
+mensaje sale solo con el boton `>_`; en desktop sigue enter = mandar, shift+enter = salto. el textarea
+lleva `enterkeyhint="enter"` para que el teclado del celu muestre "intro" y no "enviar", y `ajustarCaja()`
+crece con los parrafos hasta `TOPE_LINEAS` (6) o 28dvh, lo que sea menor, y ahi scrollea.
+lo chequea `recetas/prueba_web_tabs` (emula touch por cdp, cero tokens).
+
+## widget usage: barras contra la linea (facundo, 2026-09-11)
+
+"quiero ver cada uno de los parametros 5h week fable de cada cuenta como esta en relacion a la linea".
+El widget `usage` muestra **solo barras**: tres por cuenta (`facu` y `orugote`), `5h`, `week` y `fable`.
+Nada de presupuesto, horario laboral ni costo (los datos siguen en el json, no se pintan aca).
+
+- **la linea** es la fraccion de la ventana que ya transcurrio, sacada de `resets_at`:
+  `linea = (1 - falta / ventana) * 100`, ventana 5 h para `5h` y 7 dias para `week` y `fable`.
+  Se pinta como un **tick blanco** sobre la barra: ahi deberia estar el relleno.
+- **el color sale del ratio**, no del porcentaje: `ratio = pct / max(linea, 1)`.
+  `<= 0.8` verde, `<= 1.1` amarillo, `<= 1.5` naranja, arriba de eso **rojo fuerte** (con glow).
+  Renovo hace 20 min y ya gasto casi todo = rojo; renueva recien y uso poco = verde.
+- **lo calcula python, no el html**: `recetas/widgets_json.py` -> `barra()` deja `linea`, `ratio`,
+  `nivel` (`ok` / `cerca` / `sobre` / `mal`) y `falta_s` en cada barra. La web solo pinta
+  (`barraUso()` en `index.html`, clases `.ub`, `.ub-pista`, `.ub-lleno`, `.ub-tick`).
+  La barra de `fable` sale del `weekly_scoped` de **esa** cuenta, no del plan global.
+- tocar el nombre de una cuenta abre el modal de siempre, ahora con `linea` y `reset en ...`.
+- se prueba con `python3 -m recetas.prueba_web_tabs` (cero tokens): seis barras, el ancho es el `%`,
+  el tick esta en la linea, los tres colores, y que entre sin scroll horizontal.
