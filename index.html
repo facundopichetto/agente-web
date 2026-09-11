@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.34">
-<link rel="manifest" href="manifest.json?v=4.34">
+<meta name="agente-web-version" content="4.35">
+<link rel="manifest" href="manifest.json?v=4.35">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -106,10 +106,6 @@
   }
   #visor img{max-width:100%;height:auto}
   #visor .cerrar{position:fixed;top:8px;right:12px;color:var(--verde);font-size:13px}
-  #mas{
-    display:block;width:100%;margin:0 0 10px 0;background:#000;color:var(--gris);
-    border:1px solid var(--linea);border-radius:4px;padding:6px;font:inherit;font-size:10px;cursor:pointer;
-  }
   #pie{
     flex:0 0 auto;border-top:1px solid var(--linea);background:#000;
     padding:4px 10px calc(4px + env(safe-area-inset-bottom)) 10px;
@@ -426,7 +422,7 @@
 <div id="tabs"></div>
 <div id="sync" class="oculta">sincronizando…</div>
 <div id="envoltorio">
-  <div id="hist"><button id="mas" type="button">cargar más viejo</button><div id="lista"></div></div>
+  <div id="hist"><div id="lista"></div></div>
   <button id="alfinal" type="button">ir al final</button>
 </div>
 
@@ -1065,6 +1061,7 @@ function abrirTab(tema){
   if(tabs.indexOf(tema) < 0) tabs.push(tema);
   paneles[foco] = tema;
   pintarTabs(); render(); irDonde();
+  chatDeTab(tema);          // si nunca se bajo su charla, llega sola
 }
 // renombrar una pestaña (si ya habia una de ese tema, no se duplica). la general ya no se renombra sola
 // (facundo, 2026-09-11); queda por si hace falta renombrar a mano.
@@ -1098,6 +1095,7 @@ function splitCon(tema){
   if(paneles.length < 2) paneles.push(tema); else paneles[1] = tema;
   foco = 1;
   pintarTabs(); render(); irDonde();
+  chatDeTab(tema);
   if(window.innerWidth < 900) verPanel("lado");
 }
 function unPanel(){
@@ -1139,9 +1137,12 @@ var vistos = {};
 var urlSucia = null;    // el token llego por la url (mala idea): lo saco y aviso
 var frenoHasta = 0;     // rate limit: no toco la api hasta este timestamp
 var avisoFreno = 0;        // id de comentario -> true
-// ventana inicial de historial. `?h=<horas>` para probar el paginado con una ventana chica
+// el historial de cada pestaña ya no sale de los comentarios: lo publica el daemon entero por tema
+// (`chat/<tema>.json`). el poll de comentarios solo cubre la franja reciente -lo que todavia no se
+// publico y lo que el daemon contesta sin modelo (`status`, `cola`, `op N X`), que no va al log de
+// chat-. `?h=<horas>` para agrandarla a mano.
 var qs = new URLSearchParams(location.search);
-var horas = parseFloat(qs.get("h")) || 24;
+var horas = parseFloat(qs.get("h")) || 3;
 // el token no viaja nunca por la url (queda en el historial, en los logs y en el share sheet).
 // si vino igual, lo uso una vez, lo guardo en localStorage y limpio la barra de direcciones.
 (function(){
@@ -1154,11 +1155,7 @@ var horas = parseFloat(qs.get("h")) || 24;
   var limpia = location.pathname + (qs.toString() ? "?" + qs.toString() : "");
   try{ history.replaceState(null, "", limpia); }catch(x){ location.replace(limpia); }
 })();
-var PASO = 24;          // cuantas horas mas trae cada tap en "cargar mas viejo"
 var ultimoIso = null;   // created_at del comentario mas nuevo cargado (el poll pide desde ahi)
-var masViejoIso = null; // borde viejo ya cubierto: el paginado hacia atras arranca de aca
-var creadoIso = null;   // created_at del issue: mas atras que eso no hay nada
-var sinMasViejo = false;
 var etagCom = null, etagIssue = null, etagWid = null;
 var widUlt = 0, widDatos = null;
 var enPausa = false;
@@ -1204,7 +1201,7 @@ $("hist1").addEventListener("scroll", anotarVista);
 
 // celu: si facundo scrollea hacia arriba para leer, el teclado se cierra solo (blur del input).
 // solo por gesto propio (dedo o rueda) y solo hacia arriba: los scrolls programados (abajo(),
-// cargarViejos(), el autoscroll al llegar una respuesta) no lo disparan, y el foco al mandar queda.
+// el autoscroll al llegar una respuesta) no lo disparan, y el foco al mandar queda.
 var tocY = null;
 function cerrarTeclado(){ if(document.activeElement === txt) txt.blur(); }
 hist.addEventListener("touchstart", function(e){
@@ -1359,7 +1356,11 @@ function resaltar(t){
 
 // ---------- mensajes: uno solo por comentario, repartido a la pestaña de su tema ----------
 // msgs es la charla entera en orden; cada panel pinta los que caen en su pestaña (deEstaTab).
-var msgs = [];
+// se arma con dos fuentes: `msgsHist`, la charla COMPLETA de cada tema que publica el daemon en el
+// buzon (`chat/<tema>.json`), y `msgsCom`, lo que trae el poll de comentarios del issue (lo de recien
+// y las respuestas que el daemon contesta sin modelo, que no van al log de chat). `mezclar()` las une
+// por fecha y saca los repetidos: la franja mas nueva esta en las dos.
+var msgs = [], msgsHist = {}, msgsCom = [];
 function listaDe(j){ return j === 0 ? lista : $("lista1"); }
 function histDe(j){ return j === 0 ? hist : $("hist1"); }
 // el tema de un mensaje: el que ya trae explicito, el `[tema]` con el que contesto el daemon, el
@@ -1375,6 +1376,48 @@ function temaDe(m, prev){
 function recalcularTemas(){
   var prev = null;
   msgs.forEach(function(m){ m.tema = temaDe(m, prev); prev = m.tema; });
+}
+// el mismo mensaje puede venir por las dos fuentes (el daemon publica la charla despues de contestar,
+// el comentario ya estaba): se compara texto normalizado y fecha cercana, y gana el del historial.
+function claveMsg(m){
+  return m.clase + "|" + String(m.texto || "").replace(/\s+/g, " ").trim().slice(0, 120).toLowerCase();
+}
+var CERCA = 1800000;   // 30 min: un texto identico mas lejos que eso es otro mensaje, no el mismo
+// mezcla varias listas YA ordenadas en una sola, por fecha. cada lista conserva su orden interno:
+// el historial de un tema queda como lo escribio el log y los comentarios como fueron llegando
+// (dos comentarios del mismo segundo no se dan vuelta por el sort).
+function mezclarOrdenadas(listas){
+  var i = listas.map(function(){ return 0; }), out = [];
+  for(;;){
+    var mejor = -1, mejorT = 0;
+    for(var k = 0; k < listas.length; k++){
+      if(i[k] >= listas[k].length) continue;
+      var t = fecha(listas[k][i[k]].iso);
+      if(mejor < 0 || t < mejorT){ mejor = k; mejorT = t; }
+    }
+    if(mejor < 0) return out;
+    out.push(listas[mejor][i[mejor]++]);
+  }
+}
+function mezclar(){
+  var porClave = {}, listas = [];
+  Object.keys(msgsHist).sort().forEach(function(t){
+    var l = msgsHist[t] || [];
+    if(l.length) listas.push(l);
+    l.forEach(function(m){
+      var k = claveMsg(m);
+      (porClave[k] = porClave[k] || []).push(fecha(m.iso));
+    });
+  });
+  // lo que ya esta en el historial no se pinta de nuevo cuando vuelve por el poll de comentarios
+  var sueltos = msgsCom.filter(function(m){
+    var ts = fecha(m.iso), c = porClave[claveMsg(m)];
+    return !(c && c.some(function(t){ return Math.abs(t - ts) < CERCA; }));
+  });
+  if(sueltos.length) listas.push(sueltos);
+  msgs = mezclarOrdenadas(listas);
+  recalcularTemas();
+  return msgs.length;
 }
 function nodoMsg(m){
   var div = document.createElement("div");
@@ -1425,8 +1468,9 @@ function ruidoso(e){  // 401 ya abrio el login y "freno" ya aviso: no repetir en
 }
 function sistema(t, clase){
   var pego = pegadoAbajo();
-  var m = {clase: clase || "sistema", quien: "web", texto: t, iso: null, explicito: true, tema: temaActivo()};
-  msgs.push(m); pintarMsg(m, false);
+  var m = {clase: clase || "sistema", quien: "web", texto: t, iso: new Date().toISOString(),
+           explicito: true, tema: temaActivo()};
+  msgsCom.push(m); msgs.push(m); pintarMsg(m, false);
   if(pego) alFinal();
 }
 
@@ -1511,7 +1555,6 @@ function cargarEstado(){
   return api("GET", "/repos/" + REPO + "/issues/" + ISSUE, null, etagIssue).then(function(r){
     if(r.status === 304) return;
     etagIssue = r.etag;
-    creadoIso = r.json.created_at || creadoIso;
     pintarEstado(r.json.body || "");
   });
 }
@@ -1534,21 +1577,21 @@ function agregar(c, arriba){
     if(mp && esTema(mp[1])){ tg = normTema(mp[1]); texto = b.slice(mp[0].length); }
     m = {id: c.id, clase: "yo", quien: "facundo", texto: texto, iso: c.created_at, tag: tg};
   }
-  if(arriba) msgs.unshift(m); else msgs.push(m);
+  if(arriba) msgsCom.unshift(m); else msgsCom.push(m);
   return m;
 }
 
 // poll: pide solo desde el ultimo comentario que ya tengo. la url se queda quieta mientras no
 // pasa nada, asi que el etag devuelve 304 y no gasta rate limit.
 function cargarComentarios(reemplazar){
-  if(reemplazar){ ultimoIso = null; masViejoIso = null; sinMasViejo = false; }
+  if(reemplazar){ ultimoIso = null; }
   var ventana = new Date(Date.now() - horas * 3600 * 1000).toISOString();
   var desdeIso = (!reemplazar && ultimoIso) ? ultimoIso : ventana;
   return api("GET", ruta(desdeIso), null, reemplazar ? null : etagCom).then(function(r){
     if(r.status === 304) return;
     if(!reemplazar) etagCom = r.etag;
     var cs = r.json || [];
-    if(reemplazar){ msgs = []; vistos = {}; masViejoIso = ventana; }
+    if(reemplazar){ msgsCom = []; vistos = {}; }
     var pego = pegadoAbajo() || reemplazar;
     var nuevos = 0;
     cs.sort(function(a, b){ return a.id - b.id; }).forEach(function(c){
@@ -1560,30 +1603,98 @@ function cargarComentarios(reemplazar){
     if(nuevos) etagCom = null;  // la url del proximo poll cambia (since nuevo)
     // el tema de cada mensaje depende del anterior, asi que se recalcula la charla entera y se
     // reparte de nuevo entre las pestañas (es una pasada por un par de cientos de mensajes)
-    if(nuevos || reemplazar){ recalcularTemas(); render(); }
+    if(nuevos || reemplazar){ mezclar(); render(); }
     // un mensaje nuevo siempre se lee entero y al fondo, aunque estuvieras mirando mas arriba
     if(pego || nuevos) alFinal();
   });
 }
 
-// paginado hacia atras: trae la ventana anterior y la mete arriba sin mover lo que estas leyendo
-function cargarViejos(){
-  if(sinMasViejo || !masViejoIso) return Promise.resolve();
-  var hasta = new Date(masViejoIso).getTime();
-  var nuevoDesde = new Date(hasta - PASO * 3600 * 1000).toISOString();
-  return api("GET", ruta(nuevoDesde), null, null).then(function(r){
-    var cs = (r.json || []).filter(function(c){
-      return !vistos[c.id] && new Date(c.created_at).getTime() < hasta;
-    }).sort(function(a, b){ return a.id - b.id; });
-    var alto = hist.scrollHeight - hist.scrollTop;
-    cs.slice().reverse().forEach(function(c){ agregar(c, true); });
-    recalcularTemas(); render();
-    hist.scrollTop = hist.scrollHeight - alto;  // la vista se queda donde estaba
-    masViejoIso = nuevoDesde;
-    horas += PASO;
-    if(creadoIso && new Date(nuevoDesde).getTime() <= new Date(creadoIso).getTime()) sinMasViejo = true;
-    return cs.length;
+
+// ---------- historial por tema, completo, desde el buzon (facundo, 2026-09-11) ----------
+// "cada vez que prendo el celu lo primero que veo es una conversacion re vieja": la web armaba el
+// historial con los comentarios de las ultimas N horas y despues los repartia entre pestañas, asi que
+// una pestaña con poca actividad reciente (`server`) abria vacia. ahora el daemon publica en el buzon
+// `chat/<tema>.json` con TODA la charla de ese tema (`logs/chat-<tema>.jsonl`) y `chat/index.json`
+// con `{tema: {ts, n}}`; cada pestaña baja la suya de una sola pasada, sin "cargar mas viejo".
+var CHAT_INDEX = "chat/index.json";
+var chatIndex = null;      // {tema: {ts, n}}
+var etagChat = {};         // etag por archivo del buzon
+function archivoChat(tema){ return "chat/" + normTema(tema).replace(/\//g, "-") + ".json"; }
+function crudo(ruta, etag){
+  return api("GET", "/repos/" + REPO + "/contents/" + ruta, null, etag,
+             "application/vnd.github.raw+json");
+}
+// el archivo de un tema convertido en mensajes: cada fila del log es pregunta + respuesta completa.
+function recibirChat(tema, d){
+  var t = normTema(tema), filas = (d && d.filas) || [], out = [], resp = {};
+  filas.forEach(function(f, i){
+    var base = t + "-" + i;
+    if(f.pregunta) out.push({id: "h:" + base + ":q", clase: "yo", quien: "facundo", texto: f.pregunta,
+                             iso: f.ts, tema: t, explicito: true});
+    var r = String(f.respuesta || ""), mt = /^\s*\[([\w\/-]+)\]\s*/.exec(r);
+    if(mt && esTema(mt[1])) r = r.slice(mt[0].length);   // el `[tema]` ya lo dice la pestaña
+    // un mensaje partido en dos temas tuvo UNA sola respuesta: no se pinta dos veces
+    var k = f.ts + "|" + r.slice(0, 80);
+    if(r && !resp[k]){
+      resp[k] = true;
+      out.push({id: "h:" + base + ":r", clase: "agente", quien: "agente", texto: r, iso: f.ts,
+                tema: t, explicito: true, tag: t});
+    }
   });
+  msgsHist[t] = out;
+  return out.length;
+}
+function cargarChatTema(tema){
+  var arch = archivoChat(tema), t = normTema(tema);
+  return crudo(arch, etagChat[arch]).then(function(r){
+    if(r.status === 304) return (msgsHist[t] || []).length;
+    etagChat[arch] = r.etag;
+    return recibirChat(t, r.json);
+  }).catch(function(e){
+    var m = (e && e.message) || "";
+    if(/http 404/.test(m)){ msgsHist[t] = msgsHist[t] || []; return 0; }   // tema sin charla todavia
+    if(m === "401" || m === "freno") return 0;
+    throw e;
+  });
+}
+function cargarChatIndex(){
+  return crudo(CHAT_INDEX, etagChat[CHAT_INDEX]).then(function(r){
+    if(r.status === 304) return chatIndex;
+    etagChat[CHAT_INDEX] = r.etag;
+    chatIndex = (r.json && r.json.temas) || {};
+    return chatIndex;
+  }).catch(function(e){
+    var m = (e && e.message) || "";
+    if(/http 404/.test(m) || m === "401" || m === "freno"){ chatIndex = chatIndex || {}; return chatIndex; }
+    throw e;
+  });
+}
+// que charlas hacen falta: la de la pestaña activa primero, las de las demas pestañas, y si esta
+// abierta la general (`auto`), todas las del indice: la general junta lo que no tiene pestaña propia.
+function temasACargar(){
+  var out = [];
+  function sumar(t){ t = normTema(t); if(t && t !== AUTO && out.indexOf(t) < 0) out.push(t); }
+  sumar(temaActivo());
+  paneles.forEach(sumar);
+  if(tabs.indexOf(AUTO) >= 0) Object.keys(chatIndex || {}).forEach(sumar);
+  tabs.forEach(sumar);
+  return out;
+}
+function cargarChat(){
+  return cargarChatIndex().then(function(){
+    return Promise.all(temasACargar().map(cargarChatTema));
+  }).then(function(ns){
+    return (ns || []).reduce(function(a, b){ return a + (b || 0); }, 0);
+  });
+}
+// abrir una pestaña que nunca se bajo: su charla llega sola, sin esperar al proximo sync
+function chatDeTab(tema){
+  var t = normTema(tema);
+  if(!token || t === AUTO || msgsHist[t]) return Promise.resolve(0);
+  return cargarChatTema(t).then(function(n){
+    if(n){ mezclar(); render(); irDonde(); }
+    return n;
+  }).catch(function(){ return 0; });
 }
 
 function tick(){
@@ -1626,10 +1737,13 @@ function sincronizar(primera){
   var cartel = setTimeout(function(){ pintarSync("sync"); }, primera ? 0 : 250);
   syncEnVuelo = Promise.all([
     cargarEstado(),
+    // el historial completo de cada pestaña y la franja reciente de comentarios, en paralelo
+    cargarChat(),
     cargarComentarios(!!primera),
     cargarWidgets().catch(function(e){ if(ruidoso(e)) pintarWidgets(null, e.message); }),
     cargarTabs()
   ]).then(function(){
+    mezclar(); render();               // una sola pasada de pintado, ya con todo abajo
     clearTimeout(cartel); pintarSync(null);
     irDonde();                         // y te deja donde estabas leyendo esa pestaña
   }).catch(function(e){
@@ -1737,7 +1851,7 @@ function mandar(texto, tema, crudo){
         vistos[r.json.id] = true;
         var m = {id: r.json.id, clase: "yo", quien: "facundo", texto: texto, iso: r.json.created_at,
                  explicito: true, tema: tema};
-        msgs.push(m); pintarMsg(m, false); alFinal();
+        msgsCom.push(m); msgs.push(m); pintarMsg(m, false); alFinal();
       }
       etagCom = null;
     })
@@ -1948,20 +2062,6 @@ txt.addEventListener("input", function(){
 $("rapidos").addEventListener("click", function(e){
   var b = e.target.closest("button");
   if(b && b.dataset.cmd) mandar(b.dataset.cmd, temaActivo(), true);   // comandos del daemon: sin prefijo
-});
-$("mas").addEventListener("click", function(){
-  if(sinMasViejo) return;
-  $("mas").disabled = true;
-  $("mas").textContent = "cargando " + PASO + " h más...";
-  cargarViejos().then(function(n){
-    $("mas").disabled = sinMasViejo;
-    $("mas").textContent = sinMasViejo ? "no hay nada más viejo (desde el principio)"
-      : "cargar más viejo (" + (n || 0) + " nuevos, van " + horas + " h)";
-  }).catch(function(e){
-    $("mas").disabled = false;
-    $("mas").textContent = "cargar más viejo";
-    sistema("error: " + e.message, "error");
-  });
 });
 
 // ---------- widgets (web 2): widgets.json que publica el daemon en el buzon ----------
@@ -2715,8 +2815,8 @@ function arrancar(t){
   try{ localStorage.setItem("agente_token", t); }catch(x){}
   login.style.display = "none";
   document.body.classList.remove("sinlogin");
-  msgs = []; render(); vistos = {}; etagCom = null; etagIssue = null;
-  $("mas").disabled = false; $("mas").textContent = "cargar más viejo";
+  msgsCom = []; msgsHist = {}; chatIndex = null; etagChat = {};
+  mezclar(); render(); vistos = {}; etagCom = null; etagIssue = null;
   etagWid = null; widUlt = 0;
   etagTabs = null; shaTabs = null; tabsUlt = 0; tabsListo = false; tabsSync = true;
   sincronizar(true)
@@ -2847,11 +2947,21 @@ window.__agente = {
     return false;
   },
   cargar: function(coms){
-    msgs = []; vistos = {};
+    msgsCom = []; vistos = {};
     coms.forEach(function(c){ agregar(c, false); });
-    recalcularTemas(); render();
+    mezclar(); render();
     return msgs.map(function(m){ return {id: m.id, tema: m.tema, texto: m.texto}; });
   },
+  // historial por tema: lo que publica el daemon en `chat/<tema>.json`
+  cargarChat: cargarChat, cargarChatTema: cargarChatTema, recibirChat: recibirChat, render: render,
+  temasACargar: temasACargar, archivoChat: archivoChat, mezclar: mezclar, claveMsg: claveMsg,
+  hist: function(t){ return (msgsHist[normTema(t)] || []).map(function(m){
+    return {id: m.id, tema: m.tema, clase: m.clase, texto: m.texto, iso: m.iso}; }); },
+  charla: function(){ return msgs.map(function(m){
+    return {id: m.id, tema: m.tema, clase: m.clase, texto: m.texto, iso: m.iso}; }); },
+  chatIndex: function(){ return chatIndex; },
+  limpiarChat: function(){ msgsHist = {}; msgsCom = []; chatIndex = null; etagChat = {};
+                           msgs = []; render(); },
   enPanel: function(j){
     var l = listaDe(j);
     return l ? l.querySelectorAll(".msg").length : -1;

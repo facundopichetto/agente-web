@@ -137,6 +137,42 @@ viaja en el mismo `tabs.json`, al lado de los borradores:
 
 probarlo: `python3 -m recetas.prueba_web_tabs` (bloques "sincronizando" y "la vista de cada pestaña").
 
+## el historial de cada pestaña sale del buzon, entero (facundo, 2026-09-11)
+
+facundo: "cada vez que prendo el celu lo primero que veo es una conversacion re vieja" / "la pestaña de
+server esta muerta". la causa era como se armaba el historial: `cargarComentarios` traia los comentarios
+del issue de las ultimas N horas (`horas`, con un boton "cargar mas viejo" de a 24 h) y recien despues
+`recalcularTemas` los repartia entre pestañas. una pestaña de tema con poca actividad reciente (`server`)
+quedaba vacia y lo primero que se pintaba era el cache de `localStorage`.
+
+ahora la charla **no sale de los comentarios**:
+
+- **el daemon publica un archivo por tema** en el repo del buzon: `chat/<tema>.json` con TODA la charla
+  de ese tema (de `logs/chat-<tema>.jsonl`: `ts, origen, tema, motor, fuente, modelo, pregunta,
+  respuesta, partido`, ultimos `TOPE_CHAT_WEB` = 300 intercambios) y `chat/index.json` con
+  `{tema: {ts, n}}`. misma contents api, mismo token y mismo mecanismo que `widgets.json` / `tabs.json`
+  (`chat_web_publicar` en `daemon.py`). se publica **en el momento** en que se guarda cada respuesta
+  (`chat_guardar` -> `chat_web_al_toque`, hilo aparte) y el script `chat_web` (cada 120 s, cero tokens)
+  recupera lo que haya quedado sin subir. un motor (`awtomic/qa`) comparte el archivo de su tema padre.
+- **la web baja `chat/index.json` y, en paralelo, el archivo de cada pestaña abierta** (el de la activa
+  primero; si esta la general, los de todos los temas del indice, porque junta lo que no tiene pestaña
+  propia). eso pasa dentro de `sincronizar()`, **antes** de pintar: una sola pasada de render con todo
+  abajo, sin cache vieja de por medio.
+- **el poll de comentarios sigue**, pero solo para la franja reciente (`horas` = 3, `?h=` para agrandarla):
+  cubre lo que todavia no se publico y lo que el daemon contesta **sin modelo** (`status`, `cola`,
+  `op N X`, `dale N`), que no va al log de chat.
+- **las dos fuentes se mezclan en `mezclar()`**: `msgsHist` (por tema, orden del log) + `msgsCom` (orden
+  de llegada), unidas por fecha con `mezclarOrdenadas` (cada lista conserva su orden interno). lo que ya
+  esta en el historial no se pinta dos veces: `claveMsg` (clase + 120 chars normalizados) y una ventana
+  de 30 min (`CERCA`).
+- **abrir una pestaña que nunca se bajo** (`abrirTab` / `splitCon`) dispara `chatDeTab`: su charla llega
+  sola, sin esperar el proximo sync.
+- **fuera el boton "cargar mas viejo"**, `cargarViejos`, `PASO`, `masViejoIso` y `sinMasViejo`.
+
+probar: `python3 -m recetas.prueba_web_tabs` (bloque "4 quater": abre con la pestaña `server` activa
+contra un stub del buzon y chequea que aparezca llena al primer render, que el `[tema]` no se pinte, que
+el indice diga que temas hay, y que un mensaje que ya esta en el historial no se duplique con el poll).
+
 ## publicar
 
 no se pushea a mano: se edita el clon (`~/.claudio/tools/agente/web/`), se corre
