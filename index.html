@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.15">
-<link rel="manifest" href="manifest.json?v=4.15">
+<meta name="agente-web-version" content="4.16">
+<link rel="manifest" href="manifest.json?v=4.16">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -434,22 +434,171 @@ function partir(txt){
   return grupos.map(function(g){ return {tema: g.tema || defecto, texto: txt.slice(g.a, g.b).trim()}; });
 }
 
-// estado de las pestañas (sobrevive a cerrar la pwa; en la consola esto es tui_layout.json)
+// ---------- estado de las pestañas, compartido entre dispositivos (facundo, 2026-09-11) ----------
+// antes vivia solo en localStorage y por eso el celu y el desktop veian pestañas distintas. ahora el
+// layout se publica en el buzon como `tabs.json` (mismo repo y mismo token que `widgets.json`) y
+// localStorage queda de **cache offline**: pinta al instante al abrir y sirve si github no contesta.
+// resolucion de conflictos: **el ultimo que escribe gana**, por el `ts` de cada layout.
 var tabs = ["tools", AUTO], paneles = ["tools"], foco = 0;
-(function(){
+var layoutTs = 0;                 // cuando se escribio el layout que estoy mostrando
+var shaTabs = null;               // sha del tabs.json remoto (para el PUT)
+var etagTabs = null, tabsUlt = 0; // poll con etag, como los widgets
+var tabsSync = true;              // si el token no puede escribir el repo, queda en local y no insiste
+var aplicando = false;            // pintando un layout remoto: no volver a publicarlo
+var layoutFirma = null;           // firma de lo ultimo guardado: si no cambio, el `ts` no se toca
+var tabsPendiente = null, tabsPub = 0;
+var TABS_ARCHIVO = "tabs.json";
+var TABS_DEBOUNCE = 1500, TABS_MINIMO = 8000;   // agrupar cambios seguidos y no pegarle a la api
+// id corto de este dispositivo: sirve para no re-aplicarme lo que acabo de publicar yo
+var DISPOSITIVO = (function(){
+  try{
+    var d = localStorage.getItem("agente_dispositivo");
+    if(!d){ d = Math.random().toString(36).slice(2, 8); localStorage.setItem("agente_dispositivo", d); }
+    return d;
+  }catch(x){ return Math.random().toString(36).slice(2, 8); }
+})();
+
+// {tabs, paneles, foco} saneado: solo temas conocidos, sin repetidos, paneles dentro de tabs.
+// las reglas de siempre: una pestaña por tema, y la general (`auto`) es una mas de la lista.
+function sanearLayout(L){
+  if(!L || !L.tabs || !L.tabs.length) return null;
+  var ts = [];
+  L.tabs.forEach(function(t){
+    if((TEMAS.indexOf(t) >= 0 || t === AUTO) && ts.indexOf(t) < 0) ts.push(t);
+  });
+  if(!ts.length) return null;
+  var ps = (L.paneles || [ts[0]]).filter(function(t){ return ts.indexOf(t) >= 0; }).slice(0, 2);
+  if(!ps.length) ps = [ts[0]];
+  if(ps.length === 2 && ps[0] === ps[1]) ps = [ps[0]];
+  return {tabs: ts, paneles: ps, foco: Math.min(Math.max(L.foco || 0, 0), ps.length - 1)};
+}
+function layoutActual(){ return {tabs: tabs, paneles: paneles, foco: foco}; }
+function firmaLayout(L){ return JSON.stringify([L.tabs, L.paneles, L.foco]); }
+// pinta un layout (venga del cache o del buzon) sin dispararme una publicacion de vuelta
+function aplicarLayout(L, ts){
+  var s = sanearLayout(L);
+  if(!s) return false;
+  var igual = firmaLayout(s) === firmaLayout(layoutActual());
+  tabs = s.tabs; paneles = s.paneles; foco = s.foco;
+  layoutTs = ts || Date.now();
+  aplicando = true;
+  try{ pintarTabs(); if(!igual){ render(); alFinal(); } }finally{ aplicando = false; }
+  guardarCache();
+  return !igual;
+}
+function guardarCache(){
+  layoutFirma = firmaLayout(layoutActual());
+  try{
+    localStorage.setItem("agente_tabs", JSON.stringify(
+      {tabs: tabs, paneles: paneles, foco: foco, ts: layoutTs, origen: DISPOSITIVO}));
+  }catch(x){}
+}
+// cambio local: sube el reloj, guarda el cache y encola la publicacion. si el layout quedo igual
+// (el pintado de siempre, un foco que ya estaba) no toca el `ts`: si no, abrir la pagina se llevaria
+// por delante lo que dejo el otro dispositivo.
+function guardarLayout(){
+  if(aplicando || firmaLayout(layoutActual()) === layoutFirma){ guardarCache(); return; }
+  layoutTs = Math.max(Date.now(), layoutTs + 1);
+  guardarCache();
+  publicarTabs();
+}
+(function(){                                   // cache: pinta al instante, antes de hablar con github
   try{
     var L = JSON.parse(localStorage.getItem("agente_tabs") || "null");
-    if(L && L.tabs && L.tabs.length){
-      tabs = L.tabs.filter(function(t){ return TEMAS.indexOf(t) >= 0 || t === AUTO; });
-      if(!tabs.length) tabs = ["tools", AUTO];
-      paneles = (L.paneles || ["tools"]).filter(function(t){ return tabs.indexOf(t) >= 0; });
-      if(!paneles.length) paneles = [tabs[0]];
-      foco = Math.min(L.foco || 0, paneles.length - 1);
-    }
+    var s = L && sanearLayout(L);
+    if(s){ tabs = s.tabs; paneles = s.paneles; foco = s.foco; layoutTs = L.ts || 0; }
   }catch(x){}
+  layoutFirma = firmaLayout(layoutActual());
 })();
-function guardarLayout(){
-  try{ localStorage.setItem("agente_tabs", JSON.stringify({tabs: tabs, paneles: paneles, foco: foco})); }catch(x){}
+
+// --- tabs.json en el buzon: leer al abrir y en cada poll, escribir cuando cambia algo ---
+var tabsListo = false;    // hasta la primera lectura no publico (si no, cada carga pisa el remoto)
+function b64aTexto(b64){
+  var bin = atob(String(b64).replace(/\s/g, "")), u = new Uint8Array(bin.length);
+  for(var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(u);
+}
+function textoAb64(t){
+  var u = new TextEncoder().encode(t), bin = "";
+  for(var i = 0; i < u.length; i++) bin += String.fromCharCode(u[i]);
+  return btoa(bin);
+}
+function sinSync(motivo){
+  if(!tabsSync) return;
+  tabsSync = false;
+  sistema("las pestañas quedan solo en este dispositivo: no puedo escribir " + TABS_ARCHIVO +
+          " en el buzón (" + motivo + "). el token necesita permiso `Contents: read and write`.", "error");
+}
+function cargarTabs(){
+  if(!token) return Promise.resolve();
+  tabsUlt = Date.now();
+  return api("GET", "/repos/" + REPO + "/contents/" + TABS_ARCHIVO, null, etagTabs).then(function(r){
+    tabsListo = true;
+    if(r.status === 304) return;
+    etagTabs = r.etag;
+    var j = r.json || {};
+    if(j.sha) shaTabs = j.sha;
+    var L = null;
+    try{ L = JSON.parse(b64aTexto(j.content || "")); }catch(x){}
+    if(L) recibirTabs(L);
+  }).catch(function(e){
+    var m = (e && e.message) || "";
+    if(/http 404/.test(m)){                                        // todavia no existe: lo creo yo
+      tabsListo = true; shaTabs = null; publicarTabs(true); return;
+    }
+    if(m === "401" || m === "freno") return;
+    throw e;
+  });
+}
+// llego un layout del buzon: gana el `ts` mas nuevo. si el mio es mas nuevo y lo escribio otro
+// dispositivo, publico el mio. devuelve "remoto" | "mio" | "igual" (lo usa la prueba).
+function recibirTabs(L){
+  var ts = +L.ts || 0;
+  if(ts > layoutTs){ aplicarLayout(L, ts); return "remoto"; }
+  if(layoutTs > ts && L.origen !== DISPOSITIVO){ publicarTabs(true); return "mio"; }
+  return "igual";
+}
+// agrupa los cambios seguidos (abrir, split, foco) en una sola escritura
+function publicarTabs(ya){
+  if(!token || !tabsSync || !tabsListo) return;
+  if(tabsPendiente) clearTimeout(tabsPendiente);
+  var espera = Math.max(ya ? 0 : TABS_DEBOUNCE, TABS_MINIMO - (Date.now() - tabsPub));
+  tabsPendiente = setTimeout(function(){ tabsPendiente = null; ponerTabs(false); }, espera);
+}
+function ponerTabs(reintento){
+  if(!token || !tabsSync) return Promise.resolve();
+  if(Date.now() < frenoHasta){ publicarTabs(); return Promise.resolve(); }
+  tabsPub = Date.now();
+  var L = layoutActual();
+  L.v = 1; L.ts = layoutTs; L.origen = DISPOSITIVO;
+  var cuerpo = {message: "tabs " + DISPOSITIVO, content: textoAb64(JSON.stringify(L))};
+  if(shaTabs) cuerpo.sha = shaTabs;
+  // fetch propio y no `api()`: un 403 de escritura NO tiene que desloguear a facundo del chat
+  return fetch(API + "/repos/" + REPO + "/contents/" + TABS_ARCHIVO, {
+    method: "PUT", cache: "no-store",
+    headers: {"authorization": "Bearer " + token, "accept": "application/vnd.github+json",
+              "content-type": "application/json"},
+    body: JSON.stringify(cuerpo)
+  }).then(function(r){
+    if(r.ok) return r.json().then(function(j){
+      shaTabs = ((j || {}).content || {}).sha || null;
+      etagTabs = null;                                   // la proxima lectura trae el archivo nuevo
+    });
+    if((r.status === 409 || r.status === 422) && !reintento){   // otro dispositivo escribio primero
+      var antes = firmaLayout(layoutActual());
+      shaTabs = null; etagTabs = null;
+      return cargarTabs().then(function(){
+        if(firmaLayout(layoutActual()) === antes) return ponerTabs(true);   // si gane yo, reintento
+      });
+    }
+    if(r.status === 429 || r.headers.get("x-ratelimit-remaining") === "0"){
+      var reint = parseInt(r.headers.get("retry-after"), 10);
+      frenar(reint > 0 ? reint + 5 : 60, r.status + " al guardar las pestañas");
+      return;
+    }
+    if(r.status === 403 || r.status === 404) return r.json().catch(function(){ return {}; })
+      .then(function(j){ sinSync((j && j.message) || ("http " + r.status)); });
+  }).catch(function(){});                                 // sin red: queda el cache y se reintenta solo
 }
 function temaActivo(){ return paneles[foco] || paneles[0]; }
 // `auto` junta lo que no tiene pestaña propia: nada desaparece cuando el daemon clasifica a un tema
@@ -1037,6 +1186,10 @@ function tick(){
   if(Date.now() - widUlt > cada){
     cargarWidgets().catch(function(e){ if(ruidoso(e)) pintarWidgets(null, e.message); });
   }
+  // las pestañas van al mismo ritmo: si las cambiaste en el celu, el desktop las ve en <= 30 s
+  if(tabsSync && Date.now() - tabsUlt > cada){
+    cargarTabs().catch(function(e){ if(ruidoso(e)) sistema("pestañas: " + e.message, "error"); });
+  }
 }
 
 function reprogramar(){
@@ -1602,7 +1755,8 @@ function arrancar(t){
   msgs = []; render(); vistos = {}; etagCom = null; etagIssue = null;
   $("mas").disabled = false; $("mas").textContent = "cargar más viejo";
   etagWid = null; widUlt = 0;
-  Promise.all([cargarEstado(), cargarComentarios(true), cargarWidgets()])
+  etagTabs = null; shaTabs = null; tabsUlt = 0; tabsListo = false; tabsSync = true;
+  Promise.all([cargarEstado(), cargarComentarios(true), cargarWidgets(), cargarTabs()])
     .then(function(){ alFinal(); reprogramar(); })
     .catch(function(e){
       if(ruidoso(e)) sistema("error: " + e.message, "error");
@@ -1661,7 +1815,12 @@ if(urlSucia) sistema("el token venía en la url: lo guardé acá y limpié la di
 // el clasificador de la web da lo mismo que la receta de python y que cada mensaje cae en su pestaña.
 window.__agente = {
   clasificar: clasificar, partir: partir,
-  estado: function(){ return {tabs: tabs, paneles: paneles, foco: foco}; },
+  estado: function(){ return {tabs: tabs, paneles: paneles, foco: foco, ts: layoutTs,
+                              sync: tabsSync, dispositivo: DISPOSITIVO}; },
+  aplicarLayout: aplicarLayout, sanearLayout: sanearLayout, recibirTabs: recibirTabs,
+  guardarLayout: guardarLayout, layoutRemoto: function(){
+    var L = layoutActual(); L.v = 1; L.ts = layoutTs; L.origen = DISPOSITIVO; return L;
+  },
   abrirTab: abrirTab, splitCon: splitCon, unPanel: unPanel, renombrarTab: renombrarTab,
   cuerpoMsg: cuerpoMsg, deEstaTab: deEstaTab, enviarMensaje: enviarMensaje,
   resaltar: resaltar, pintarWidgets: pintarWidgets,

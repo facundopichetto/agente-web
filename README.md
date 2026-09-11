@@ -38,6 +38,29 @@ abiertas se recargan solas en menos de 60 s.
 12 chequeos: metas, intervalo de 60 s, `visibilitychange`, `no-store`, html viejo del cache que
 se recarga solo, version nueva que dispara la recarga, y el freno mientras se escribe.
 
+## pestañas sincronizadas entre dispositivos (2026-09-11)
+
+las pestañas ya no viven solo en el `localStorage` del navegador (por eso el celu y el desktop
+veian pestañas distintas). el layout se publica en el buzon como **`tabs.json`**, el mismo
+mecanismo que `widgets.json`:
+
+    {"v":1, "ts":1757600000000, "origen":"ab12cd", "tabs":["tools","auto"], "paneles":["tools"], "foco":0}
+
+- **al abrir**: primero pinta el cache de `localStorage` (instantaneo, sirve sin red) y despues lee
+  `tabs.json` del repo; si el remoto es mas nuevo, se aplica.
+- **cada vez que cambia algo** (abrir, cerrar, split, foco): sube el `ts`, guarda el cache y publica
+  con un debounce de 1,5 s (minimo 8 s entre escrituras, para no pegarle a la api).
+- **conflictos**: gana el `ts` mas nuevo. si el remoto es mas viejo y lo escribio otro dispositivo,
+  se republica el mio. un `409`/`422` de sha releee y reintenta una vez.
+- **pintar sin cambios no toca el `ts`**: abrir la pagina no pisa lo que dejo el otro dispositivo.
+- `localStorage` queda **solo como cache offline** (`agente_tabs`, mas `agente_dispositivo` con el id
+  corto de este telefono/mac).
+- el poll va al mismo ritmo que los widgets: 30 s a la vista, 120 s en background.
+- **el token necesita `Contents: read and write`** sobre `agente-buzon`. si el PUT da 403/404, la web
+  avisa una sola vez y sigue andando con las pestañas locales: **un 403 de escritura no desloguea**
+  (por eso el PUT usa `fetch` propio y no `api()`).
+- reglas de siempre: una pestaña por tema, y la general (`auto`) no se renombra.
+
 ## publicar
 
 no se pushea a mano: se edita el clon (`~/.claudio/tools/agente/web/`), se corre
