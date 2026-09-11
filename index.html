@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.20">
-<link rel="manifest" href="manifest.json?v=4.20">
+<meta name="agente-web-version" content="4.21">
+<link rel="manifest" href="manifest.json?v=4.21">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -118,9 +118,9 @@
   }
   #pie{
     flex:0 0 auto;border-top:1px solid var(--linea);background:#000;
-    padding:6px 10px calc(6px + env(safe-area-inset-bottom)) 10px;
+    padding:4px 10px calc(4px + env(safe-area-inset-bottom)) 10px;
   }
-  #rapidos{display:flex;gap:6px;overflow-x:auto;padding:2px 0 8px 0;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  #rapidos{display:flex;gap:6px;overflow-x:auto;padding:2px 0 6px 0;scrollbar-width:none;-webkit-overflow-scrolling:touch}
   #rapidos::-webkit-scrollbar{display:none}
   #rapidos button{
     flex:0 0 auto;background:#000;color:var(--cian);border:1px solid var(--linea);
@@ -128,19 +128,20 @@
   }
   #rapidos button:active{background:#111}
   #fila{display:flex;gap:6px;align-items:flex-end}
-  #prompt{color:var(--magenta);padding-bottom:11px;flex:0 0 auto;user-select:none}
+  #prompt{color:var(--magenta);padding-bottom:7px;flex:0 0 auto;user-select:none}
   #txt{
-    flex:1 1 auto;background:#000;color:var(--blanco);border:1px solid var(--linea);
-    border-radius:6px;padding:9px 10px;font:inherit;font-size:13px;line-height:1.4;
-    resize:none;max-height:28dvh;min-height:42px;
+    flex:1 1 auto;background:#000;color:var(--blanco);border:1px solid #1a1a1a;
+    border-radius:6px;padding:5px 8px;font:inherit;font-size:13px;line-height:1.4;
+    resize:none;max-height:28dvh;min-height:30px;
   }
-  #txt:focus{outline:none;border-color:var(--verde)}
+  #txt:focus{outline:none;border-color:#2a2a2a}
   #mandar{
-    flex:0 0 auto;background:#000;color:var(--verde);border:1px solid var(--verde);
-    border-radius:6px;padding:11px 14px;font:inherit;font-size:13px;cursor:pointer;
+    flex:0 0 auto;background:#000;color:var(--verde);border:1px solid transparent;
+    border-radius:6px;padding:5px 8px;font:inherit;font-size:13px;line-height:1.4;
+    cursor:pointer;letter-spacing:0;
   }
   #mandar:active{background:#0a1a06}
-  #mandar:disabled{color:var(--gris);border-color:var(--linea)}
+  #mandar:disabled{color:var(--gris);border-color:transparent}
   #alfinal{
     position:absolute;right:12px;bottom:8px;z-index:5;display:none;
     background:#001a00;color:var(--verde);border:1px solid var(--verde);
@@ -359,7 +360,7 @@
   <div id="fila">
     <span id="prompt">facundo&gt;</span>
     <textarea id="txt" rows="1" placeholder="orden o comando" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
-    <button id="mandar" type="button">mandar</button>
+    <button id="mandar" type="button" title="mandar" aria-label="mandar">&gt;_</button>
   </div>
 </div>
 </div><!-- /panel-chat -->
@@ -616,7 +617,7 @@ function recibirBorradores(rem){
   return cambio;
 }
 function ajustarCaja(){
-  txt.style.height = "auto";
+  txt.style.height = "auto";   // el min-height del css deja una linea
   txt.style.height = Math.min(txt.scrollHeight, (vv ? vv.height : window.innerHeight) * 0.28) + "px";
 }
 // pone un texto en la caja y deja el cursor al final (donde quedo escribiendo en el otro dispositivo)
