@@ -231,3 +231,25 @@ Nada de presupuesto, horario laboral ni costo (los datos siguen en el json, no s
   arrastra de verdad con `Input.dispatchMouseEvent` y el chat se achica en vivo, ningun panel baja del
   minimo de los dos lados, el ancho viaja en `tabs.json` y gana el `ts` mas nuevo, y en celu no aplica.
   ganchos: `window.__agente.split()` / `guardarSplit` / `recibirSplit` / `aplicarSplit` / `limitarPct`.
+
+## el envio es idempotente (facundo, 2026-09-11)
+
+dos enter muy rapidos mandaban el mismo mensaje dos veces y confundian la charla: la caja se vaciaba
+recien cuando volvia el POST, asi que el segundo enter leia el mismo texto. ahora `mandar()`:
+
+- no sale si ya hay un envio en vuelo (`enviando`), y bloquea el boton `>_` mientras tanto.
+- vacia la caja y borra el borrador (tumba en `tabs.json`) **al toque**, antes del POST.
+- ignora un texto identico al ultimo enviado hace menos de `REPE_MS` (2 s).
+- si el POST falla, devuelve el texto a la caja y libera el dedupe para poder reintentar.
+
+enter = mandar en desktop (shift+enter salto) y salto de linea en tactil sigue igual.
+lo prueba `recetas/prueba_web_tabs` (punto 12) enchufando un POST falso con
+`window.__agente.stubApi(fn)`; en produccion `apiStub` es null.
+
+## fuente del input del chat (2026-09-11)
+
+facundo: "orden o comando font esta muy grande, al menos desde el celu". el textarea `#txt` y el boton
+`#mandar` van en **12px**, el mismo tamaño que los mensajes del chat (antes 13px en desktop y 16px forzados
+en celu). el zoom automatico de ios safari al enfocar un input de menos de 16px lo frena
+**`maximum-scale=1`** en el `meta viewport`, no la fuente grande; los inputs de login (`#clave`, `#tok`)
+siguen en 16px. `python3 -m recetas.prueba_web` lo chequea en desktop y con el viewport de celu emulado.

@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <meta name="theme-color" content="#000000">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.31">
-<link rel="manifest" href="manifest.json?v=4.31">
+<meta name="agente-web-version" content="4.32">
+<link rel="manifest" href="manifest.json?v=4.32">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -125,13 +125,13 @@
   #prompt{color:var(--magenta);padding-bottom:7px;flex:0 0 auto;user-select:none}
   #txt{
     flex:1 1 auto;background:#000;color:var(--blanco);border:1px solid #1a1a1a;
-    border-radius:6px;padding:5px 8px;font:inherit;font-size:13px;line-height:1.4;
-    resize:none;max-height:28dvh;min-height:30px;
+    border-radius:6px;padding:5px 8px;font:inherit;font-size:12px;line-height:1.4;
+    resize:none;max-height:28dvh;min-height:28px;
   }
   #txt:focus{outline:none;border-color:#2a2a2a}
   #mandar{
     flex:0 0 auto;background:#000;color:var(--verde);border:1px solid transparent;
-    border-radius:6px;padding:5px 8px;font:inherit;font-size:13px;line-height:1.4;
+    border-radius:6px;padding:5px 8px;font:inherit;font-size:12px;line-height:1.4;
     cursor:pointer;letter-spacing:0;
   }
   #mandar:active{background:#0a1a06}
@@ -237,8 +237,10 @@
     body.ver-widgets #panel-chat{display:none}
     body:not(.ver-lado) #panel-lado{display:none}
     body.ver-lado #panel-chat,body.ver-lado #panel-widgets{display:none}
-    /* ios zoomea al enfocar un input de menos de 16px: solo este queda en 16 */
-    #txt,#login input,#clave,#tok{font-size:16px}
+    /* ios zoomea al enfocar un input de menos de 16px: lo frena maximum-scale=1 en el
+       viewport, asi que el input del chat va chico como el resto del chat. los de login
+       quedan en 16 (se tocan una vez y ahi no molesta). */
+    #login input,#clave,#tok{font-size:16px}
   }
   #login button{
     background:#000;color:var(--verde);border:1px solid var(--verde);border-radius:4px;
