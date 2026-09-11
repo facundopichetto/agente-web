@@ -113,3 +113,15 @@ que el css pinta con la paleta fluo de `:root`.
 el cuerpo del agente es `#e8e8e8` y el de facundo verde tenue `#9be88a`, para distinguir quien habla.
 se chequea con `python3 -m recetas.prueba_web_color` (colores computados del css real, chrome
 headless, cero tokens); corre solo dentro de `python3 -m recetas.prueba_web`.
+
+## la fila del input (2026-09-11)
+
+facundo: "sacale el borde verde a este input y a mandar, achica el alto de esta linea, mandar reemplazalo
+por algun icono de terminal".
+
+- `#txt` y `#mandar` sin verde: borde `#1a1a1a` (focus `#2a2a2a`, `outline:none`) y el boton con borde
+  transparente. el verde queda solo en el texto del icono.
+- alto de una linea: padding `5px 8px` y `min-height:30px` (30 px medidos), crece solo si el texto tiene
+  varias lineas hasta `28dvh`.
+- el boton dice `>_` (icono en texto plano, sin imagen), con el mismo id, el mismo handler y
+  `title`/`aria-label` "mandar" para que se siga entendiendo.
