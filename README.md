@@ -203,3 +203,31 @@ Nada de presupuesto, horario laboral ni costo (los datos siguen en el json, no s
 - tocar el nombre de una cuenta abre el modal de siempre, ahora con `linea` y `reset en ...`.
 - se prueba con `python3 -m recetas.prueba_web_tabs` (cero tokens): seis barras, el ancho es el `%`,
   el tick esta en la linea, los tres colores, y que entre sin scroll horizontal.
+
+## separador arrastrable entre chat y widgets (facundo, 2026-09-11)
+
+> "tendria que haber un cursor resize horizontal entre chat y widgets y tendria que poder yo correr
+> eso con mi cursor"
+
+- **`#sep`** entre `#panel-chat` y `#panel-widgets`: una linea fina con el color de borde de la paleta
+  (el `border-left` que antes tenia el panel de widgets), area de agarre de 7px, `cursor:col-resize`,
+  y se prende en verde con glow al pasar el mouse o mientras se arrastra.
+- **solo en escritorio**: abajo de 900px el separador no se pinta y `aplicarSplit()` no toca nada
+  (en el celu las vistas van de a una y no hay dos paneles juntos).
+- **arrastre por pointer events** (mouse y dedo en tablet), con `setPointerCapture`: mientras se
+  arrastra solo se **pinta** (`guardarSplit(pct, false, true)`); al soltar recien ahi se guarda y se
+  publica. asi no se escribe localStorage ni la api en cada pixel.
+- **minimo de 280px por panel** (`SPLIT_MIN`). el pct es sobre el ancho de `#cuerpo`, con el separador
+  adentro, asi que el tope de la derecha se calcula descontandolo.
+- **con un tercer panel** (una pestaña al lado de los widgets) el separador queda entre el chat y todo
+  el bloque de la derecha: el chat va a `flex:0 0 <pct>%` y los widgets a `flex:1 1 auto`, que se
+  estiran con lo que sobra; `#panel-lado` mantiene sus 380px.
+- **viaja en `tabs.json`** como campo nuevo `split: {pct, ts}`, al lado de `tabs`, `paneles`, `foco`,
+  `borradores` y `vistas`, con `localStorage` de cache. se resuelve **por su propio `ts`** (como los
+  borradores y las vistas) y no por el del layout: correr el separador en la compu no se lleva puestas
+  las pestañas del celu, y al reves tampoco.
+- al cambiar el ancho de la ventana el pct se recorta de nuevo contra el minimo (`resize`).
+- se prueba en `recetas/prueba_web_tabs` (chrome headless, cero tokens): el separador se ve, se
+  arrastra de verdad con `Input.dispatchMouseEvent` y el chat se achica en vivo, ningun panel baja del
+  minimo de los dos lados, el ancho viaja en `tabs.json` y gana el `ts` mas nuevo, y en celu no aplica.
+  ganchos: `window.__agente.split()` / `guardarSplit` / `recibirSplit` / `aplicarSplit` / `limitarPct`.

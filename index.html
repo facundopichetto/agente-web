@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.29">
-<link rel="manifest" href="manifest.json?v=4.29">
+<meta name="agente-web-version" content="4.30">
+<link rel="manifest" href="manifest.json?v=4.30">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -152,10 +152,22 @@
   #cuerpo{flex:1 1 auto;min-height:0;display:flex;flex-direction:row}
   #panel-chat{flex:1 1 auto;min-width:0;display:flex;flex-direction:column}
   #panel-widgets{
-    flex:0 0 420px;min-width:0;overflow-y:auto;border-left:1px solid var(--linea);
+    flex:0 0 420px;min-width:0;overflow-y:auto;
     padding:8px 10px calc(8px + env(safe-area-inset-bottom)) 10px;
     -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
   }
+  /* separador arrastrable entre el chat y los widgets (facundo, 2026-09-11). la linea del medio es
+     el borde que antes pintaba #panel-widgets; el area de agarre es mas ancha que la linea. */
+  #sep{
+    flex:0 0 7px;position:relative;cursor:col-resize;background:transparent;
+    touch-action:none;-webkit-user-select:none;user-select:none;
+  }
+  #sep::after{
+    content:"";position:absolute;top:0;bottom:0;left:3px;width:1px;background:var(--linea);
+  }
+  #sep:hover::after,#sep.arrastrando::after{background:var(--verde);box-shadow:0 0 6px var(--verde)}
+  body.arrastrando-sep{cursor:col-resize}
+  body.arrastrando-sep #hist,body.arrastrando-sep #panel-widgets{pointer-events:none}
   .caja{border:1px solid var(--linea);border-radius:6px;padding:7px 9px 8px 9px;margin:0 0 8px 0}
   .caja > .tit{
     color:var(--gris);font-size:9px;letter-spacing:.06em;text-transform:uppercase;
@@ -217,7 +229,8 @@
   /* angosto (celu): una vista a la vez, la elige la barra de arriba. puro css, sin js de layout */
   @media (max-width:899px){
     #vistas{display:flex}
-    #panel-widgets{flex:1 1 auto;border-left:none;padding-bottom:calc(14px + env(safe-area-inset-bottom))}
+    #panel-widgets{flex:1 1 auto;padding-bottom:calc(14px + env(safe-area-inset-bottom))}
+    #sep{display:none}
     #panel-lado{flex:1 1 auto;border-left:none}
     /* una vista a la vez: la elige la barra de arriba (chat | widgets | la pestaña de al lado) */
     body:not(.ver-widgets) #panel-widgets{display:none}
@@ -395,6 +408,7 @@
   </div>
 </div>
 </div><!-- /panel-chat -->
+<div id="sep" title="arrastrar para cambiar el ancho" aria-label="separador" role="separator" aria-orientation="vertical"></div>
 <div id="panel-widgets"><div id="widgets"></div></div>
 <div id="panel-lado" class="oculta">
   <div class="ladotit"><span id="lado-tema"></span><button id="lado-cerrar" type="button">&#9634; 1 pane</button></div>
@@ -554,6 +568,12 @@ var enviando = 0;                 // hay un mensaje saliendo: ese texto ya no es
 // pantalla no coinciden entre celu y desktop. se guarda el **id del comentario** que quedo arriba de
 // la vista, y al restaurar se scrollea hasta ese mensaje.
 var vistas = {};
+// ancho de los paneles: el porcentaje de #cuerpo que ocupa el chat, elegido arrastrando el separador
+// (facundo, 2026-09-11). viaja en el mismo `tabs.json` y se resuelve **por su propio `ts`**, como los
+// borradores y las vistas: mover el separador en la compu no se lleva puestas las pestañas del celu.
+// `null` = nunca se toco: quedan los anchos de siempre (chat elastico, widgets 420px).
+var split = null;                 // {pct, ts}
+var SPLIT_MIN = 280;              // px minimos por panel
 var VISTA_DEBOUNCE = 4000;        // leer scrollea todo el tiempo: no se le pega a la api por eso
 var VISTA_VIDA = 604800000;       // 7 dias: una vista mas vieja que esto ya no dice nada
 // id corto de este dispositivo: sirve para no re-aplicarme lo que acabo de publicar yo
@@ -600,7 +620,7 @@ function guardarCache(){
   try{
     localStorage.setItem("agente_tabs", JSON.stringify(
       {tabs: tabs, paneles: paneles, foco: foco, ts: layoutTs, origen: DISPOSITIVO,
-       borradores: borradoresLimpios(), vistas: vistasLimpias()}));
+       borradores: borradoresLimpios(), vistas: vistasLimpias(), split: splitLimpio()}));
   }catch(x){}
 }
 // cambio local: sube el reloj, guarda el cache y encola la publicacion. si el layout quedo igual
@@ -611,6 +631,58 @@ function guardarLayout(){
   layoutTs = Math.max(Date.now(), layoutTs + 1);
   guardarCache();
   publicarTabs();
+}
+
+// ---------- separador arrastrable entre chat y widgets (facundo, 2026-09-11) ----------
+// solo en escritorio: en el celu las vistas van de a una y el separador ni se pinta.
+function anchoDesktop(){ return window.innerWidth >= 900; }
+function splitPct(){ return split && typeof split.pct === "number" ? split.pct : null; }
+function splitLimpio(){ return split ? {pct: Math.round(split.pct * 100) / 100, ts: +split.ts || 0} : null; }
+// el pct que pidieron, recortado para que ningun panel baje de SPLIT_MIN px
+function limitarPct(pct){
+  if(typeof pct !== "number" || !isFinite(pct)) return null;
+  // el pct es sobre el ancho de #cuerpo (el separador va adentro), asi que el minimo de la
+  // derecha se mide descontandolo: si no, el bloque de widgets quedaba unos pixeles corto.
+  var cuerpo = $("cuerpo"), sep = $("sep");
+  var w = cuerpo ? cuerpo.clientWidth : 0, ancho = sep ? sep.offsetWidth : 0;
+  if(w - ancho > SPLIT_MIN * 2){
+    var min = SPLIT_MIN / w * 100, max = (w - ancho - SPLIT_MIN) / w * 100;
+    pct = Math.min(Math.max(pct, min), max);
+  }
+  return Math.min(Math.max(pct, 5), 95);
+}
+// pinta el ancho elegido. con un tercer panel (una pestaña al lado de los widgets) el separador
+// queda entre el chat y todo el bloque de la derecha: los widgets son los que se estiran.
+function aplicarSplit(){
+  var chat = $("panel-chat"), w = $("panel-widgets"), pct = splitPct();
+  if(!chat || !w) return;
+  if(pct === null || !anchoDesktop()){
+    chat.style.flex = ""; w.style.flex = "";
+    document.body.classList.remove("split");
+    return;
+  }
+  document.body.classList.add("split");
+  chat.style.flex = "0 0 " + pct.toFixed(2) + "%";
+  w.style.flex = "1 1 auto";
+}
+// cambio local: `soloVer` = estoy arrastrando (pinta pero no escribe), `ya` = publicar sin esperar
+function guardarSplit(pct, ya, soloVer){
+  pct = limitarPct(pct);
+  if(pct === null) return;
+  split = {pct: pct, ts: Math.max(Date.now(), (+(split || {}).ts || 0) + 1)};
+  aplicarSplit();
+  if(soloVer) return;
+  guardarCache();
+  publicarTabs(ya);
+}
+// llego el ancho del buzon (o del cache): gana el `ts` mas nuevo
+function recibirSplit(rem){
+  if(!rem || typeof rem.pct !== "number") return false;
+  if((+rem.ts || 0) <= (+(split || {}).ts || 0)) return false;
+  split = {pct: rem.pct, ts: +rem.ts || 0};
+  aplicarSplit();
+  guardarCache();
+  return true;
 }
 
 // ---------- borrador del input, continuable en cualquier dispositivo (facundo, 2026-09-11) ----------
@@ -785,7 +857,9 @@ function borrarBorrador(tema){
     if(s){ tabs = s.tabs; paneles = s.paneles; foco = s.foco; layoutTs = L.ts || 0; }
     if(L && L.borradores) recibirBorradores(L.borradores);
     if(L && L.vistas) recibirVistas(L.vistas);
+    if(L && L.split) recibirSplit(L.split);
   }catch(x){}
+  aplicarSplit();
   layoutFirma = firmaLayout(layoutActual());
   cajaDeTema(temaActivo(), true);        // la caja arranca con lo que quedaste escribiendo
 })();
@@ -837,9 +911,11 @@ function recibirTabs(L){
   var borr = recibirBorradores(L.borradores);
   // idem el scroll: donde quedaste leyendo cada pestaña se resuelve por tema, no por layout
   var vis = recibirVistas(L.vistas);
+  // idem el ancho de los paneles: por su propio `ts`, no por el del layout
+  var sp = recibirSplit(L.split);
   if(ts > layoutTs){ aplicarLayout(L, ts); return "remoto"; }
   if(layoutTs > ts && L.origen !== DISPOSITIVO){ publicarTabs(true); return "mio"; }
-  if(borr || vis) publicarTabs();   // mezcle los dos lados: que el otro vea el resultado
+  if(borr || vis || sp) publicarTabs();   // mezcle los dos lados: que el otro vea el resultado
   return "igual";
 }
 // agrupa los cambios seguidos (abrir, split, foco) en una sola escritura
@@ -857,6 +933,7 @@ function ponerTabs(reintento){
   L.v = 1; L.ts = layoutTs; L.origen = DISPOSITIVO;
   L.borradores = borradoresLimpios();
   L.vistas = vistasLimpias();
+  L.split = splitLimpio();
   var cuerpo = {message: "tabs " + DISPOSITIVO, content: textoAb64(JSON.stringify(L))};
   if(shaTabs) cuerpo.sha = shaTabs;
   // fetch propio y no `api()`: un 403 de escritura NO tiene que desloguear a facundo del chat
@@ -2261,7 +2338,46 @@ $("tabs").addEventListener("click", function(e){
 // celu: si la vista es el chat, ahi se escribe (el foco no puede quedar en un panel que no se ve)
 window.addEventListener("resize", function(){
   if(window.innerWidth < 900 && foco === 1 && !document.body.classList.contains("ver-lado")) focoEn(0);
+  // la ventana cambio de ancho: el pct sigue valiendo, pero hay que recortarlo si algun panel
+  // quedaria abajo del minimo (y en celu el separador desaparece y mandan los anchos de siempre)
+  if(splitPct() !== null){ var p = limitarPct(splitPct()); if(p !== null) split.pct = p; }
+  aplicarSplit();
 });
+// arrastrar el separador: pointer events, asi anda igual con mouse y con dedo en tablet.
+// mientras se arrastra solo se pinta; el ancho se guarda y se publica al soltar.
+(function(){
+  var sep = $("sep"), arr = false;
+  function pctDe(e){
+    var r = $("cuerpo").getBoundingClientRect();
+    if(!r.width) return null;
+    return (e.clientX - r.left) / r.width * 100;
+  }
+  sep.addEventListener("pointerdown", function(e){
+    if(!anchoDesktop()) return;
+    arr = true;
+    sep.classList.add("arrastrando");
+    document.body.classList.add("arrastrando-sep");
+    try{ sep.setPointerCapture(e.pointerId); }catch(x){}
+    e.preventDefault();
+  });
+  sep.addEventListener("pointermove", function(e){
+    if(!arr) return;
+    var p = pctDe(e);
+    if(p !== null) guardarSplit(p, false, true);      // en vivo, sin escribir en cada pixel
+    e.preventDefault();
+  });
+  function soltar(e){
+    if(!arr) return;
+    arr = false;
+    sep.classList.remove("arrastrando");
+    document.body.classList.remove("arrastrando-sep");
+    try{ sep.releasePointerCapture(e.pointerId); }catch(x){}
+    var p = splitPct();
+    if(p !== null) guardarSplit(p, true);             // recien aca se guarda y se publica
+  }
+  sep.addEventListener("pointerup", soltar);
+  sep.addEventListener("pointercancel", soltar);
+})();
 (function(){
   var arrastrada = null;
   $("tabs").addEventListener("dragstart", function(e){
@@ -2396,7 +2512,7 @@ window.__agente = {
   aplicarLayout: aplicarLayout, sanearLayout: sanearLayout, recibirTabs: recibirTabs,
   guardarLayout: guardarLayout, layoutRemoto: function(){
     var L = layoutActual(); L.v = 1; L.ts = layoutTs; L.origen = DISPOSITIVO;
-    L.borradores = borradoresLimpios(); L.vistas = vistasLimpias(); return L;
+    L.borradores = borradoresLimpios(); L.vistas = vistasLimpias(); L.split = splitLimpio(); return L;
   },
   abrirTab: abrirTab, splitCon: splitCon, unPanel: unPanel, renombrarTab: renombrarTab,
   // borrador del input, continuable entre dispositivos
@@ -2405,6 +2521,16 @@ window.__agente = {
   cajaDeTema: cajaDeTema, soltarBorrador: soltarBorrador, borrarBorrador: borrarBorrador,
   // donde quedaste leyendo cada pestaña, y el estado de sincronizacion al abrir / volver al foco
   vistas: function(){ return vistasLimpias(); },
+  // separador arrastrable entre chat y widgets
+  split: function(){
+    var chat = $("panel-chat"), w = $("panel-widgets"), sep = $("sep");
+    return {pct: splitPct(), guardado: splitLimpio(),
+            anchoChat: chat.getBoundingClientRect().width,
+            anchoWidgets: w.getBoundingClientRect().width,
+            sepVisible: sep.offsetWidth > 0};
+  },
+  guardarSplit: guardarSplit, recibirSplit: recibirSplit, aplicarSplit: aplicarSplit,
+  limitarPct: limitarPct, splitMin: SPLIT_MIN,
   guardarVista: guardarVista, recibirVistas: recibirVistas, aplicarVista: aplicarVista,
   restaurarVistas: restaurarVistas, anclaDe: anclaDe,
   sync: function(){ return {sincronizando: sincronizando, texto: $("sync").textContent,
