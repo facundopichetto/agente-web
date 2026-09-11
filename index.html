@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.14">
-<link rel="manifest" href="manifest.json?v=4.14">
+<meta name="agente-web-version" content="4.15">
+<link rel="manifest" href="manifest.json?v=4.15">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1264,7 +1264,7 @@ function vacio(t){ return '<span class="vacio">' + esc(t) + "</span>"; }
 
 function cajaUsage(u){
   var p = u.presupuesto || {}, c = u.costo || {}, filas = [];
-  // facundo tiene dos cuentas de claude (facu = la principal, personal): se pinta un bloque por cuenta.
+  // facundo tiene dos cuentas de claude (facu = la principal, orugote): se pinta un bloque por cuenta.
   // la marca ok/over del presupuesto va solo en la semana de la cuenta activa, que es la que mide el daemon.
   function barras(lista, activa){
     (lista || []).forEach(function(b){
