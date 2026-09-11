@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.35">
-<link rel="manifest" href="manifest.json?v=4.35">
+<meta name="agente-web-version" content="4.36">
+<link rel="manifest" href="manifest.json?v=4.36">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2226,11 +2226,13 @@ function cajaTickets(t){
 
 function cajaOportunidades(o){
   if(o.error) return caja("opportunities", "", '<span class="r">' + esc(o.error) + "</span>");
-  if(!(o.items || []).length)
+  // solo las pendientes: apenas facundo decide una, sale de aca y pasa a la caja `decided`
+  var pend = o.pendientes || o.items || [];
+  if(!pend.length)
     return caja("opportunities", "", vacio("nada pendiente · se rellena solo") +
       (o.hechas ? ' <span class="g">' + o.hechas + " hechas</span>" : ""));
   var filas = [];
-  o.items.forEach(function(i){
+  pend.forEach(function(i){
     var sello = i.valor + "/" + i.esfuerzo + (i.dias ? " " + i.dias + "d" : "");
     filas.push(it({tipo: "oportunidad", tema: "tools", d: i},
                '<span class="' + (i.limbo ? "r" : "a") + ' b">' + i.id + '</span> <span class="g">' +
@@ -2245,6 +2247,23 @@ function cajaOportunidades(o){
   filas.push('<span class="g">toca una letra para elegir' + (o.hechas ? " · " + o.hechas + " hechas" : "") + "</span>" +
              (o.refill_pausado ? ' <span class="r">refill en pausa</span>' : ""));
   return caja("opportunities", "", filas.join("\n"));
+}
+
+// las oportunidades que ya decidio facundo (facundo, 2026-09-11: "cuando una opportunity tiene decision
+// mia tiene que salir de ese widget e ir a otro lado"). muestra la letra elegida y como viene la orden.
+var ORD_ESTADO = {" ": ["en cola", "g"], ">": ["corriendo", "a"], "x": ["hecha", "v"], "!": ["fallo", "r"]};
+function cajaDecididas(o){
+  var ds = (o || {}).decididas || [];
+  if(!ds.length) return "";
+  var filas = ds.map(function(d){
+    var e = ORD_ESTADO[d.orden_estado] || (d.estado === "descartada" ? ["descartada", "g"] : ["sin orden", "g"]);
+    return it({tipo: "decidida", tema: "tools", d: d},
+      '<span class="g b">' + d.id + "</span> " +
+      (d.letra ? '<span class="c b">' + esc(d.letra) + "</span> " : "") +
+      esc(corto(d.titulo, 60)) + ' <span class="' + e[1] + '">' + e[0] + "</span>" +
+      (d.decidida ? ' <span class="g">' + esc(String(d.decidida).slice(5, 16)) + "</span>" : ""));
+  });
+  return caja("decided", "", filas.join("\n"));
 }
 
 function cajaSombra(sb){
@@ -2347,6 +2366,7 @@ function pintarWidgets(d, err){
     cajaVerif(d.verificaciones || {}),
     cajaTickets(d.tickets || {}),
     cajaOportunidades(d.oportunidades || {}),
+    cajaDecididas(d.oportunidades || {}),
     cajaSombra(d.sombra || {}),
     cajaPropuestas(d.propuestas || []),
     cajaAvisos(d.avisos || []),
@@ -2458,6 +2478,25 @@ function modalDe(o){
                        op.letra === d.voto]);
     });
     m.acciones.push(accHablar(o, "la oportunidad " + d.id + " (" + corto(d.titulo, 70) + ")"));
+  } else if(o.tipo === "decidida"){
+    var e = ORD_ESTADO[d.orden_estado] || (d.estado === "descartada" ? ["descartada", "g"] : ["sin orden", "g"]);
+    m.titulo = "oportunidad " + d.id + " · decidida";
+    m.cuerpo = '<span class="a b">' + esc(d.titulo) + "</span>" +
+      (d.porque ? "\n" + esc(d.porque) : "") +
+      '\n\n<span class="g">decision</span> ' + (d.letra ? '<span class="c b">' + esc(d.letra) + ")</span> " : "") +
+      esc(d.opcion || (d.estado === "descartada" ? "descartada" : "")) +
+      (d.decidida ? ' <span class="g">' + esc(d.decidida) + "</span>" : "") +
+      (d.motivo ? '\n<span class="g">motivo</span> ' + esc(d.motivo) : "") +
+      '\n<span class="g">orden</span> <span class="' + e[1] + '">' + e[0] + "</span>" +
+      (d.orden ? '\n<span class="g">' + esc(corto(d.orden, 300)) + "</span>" : "");
+    if(d.orden_estado === "x" || d.orden_estado === "!")
+      m.acciones.push(["ver cómo salió", function(){
+        actuar("tools", "cómo salió la orden de la oportunidad " + d.id + " («" + corto(d.orden, 90) +
+                        "»): qué hizo, qué quedó y si falló algo");
+      }, true]);
+    else if(d.orden_estado)
+      m.acciones.push(["ver la cola entera", function(){ actuar("tools", "cola", true); }, true]);
+    m.acciones.push(accHablar(o, "la oportunidad " + d.id + " (" + corto(d.titulo, 70) + "), que ya decidí"));
   } else if(o.tipo === "propuesta"){
     m.titulo = "propuesta " + d.n;
     m.cuerpo = esc(d.orden) + '\n\n<span class="g">tema</span> <span class="c">' + esc(tema) + "</span>";
