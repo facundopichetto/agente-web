@@ -280,3 +280,34 @@ facundo: "y esa caja de input deberia sugerir respuestas".
   y cuando llega `widgets.json` (`pintarWidgets`, que es de donde salen las opciones de las oportunidades).
 - probado en `recetas/prueba_web_tabs` (chips de A/B/C con su titulo, `dale N`, si/no, `op N X` con las
   opciones del json, la fila oculta sin respuesta previa, y que tocar un chip llene la caja sin mandar).
+
+## el split se hace arrastrando la pestaña (facundo, 2026-09-11)
+
+> "sacame el boton de split de las pestañas. vamos a usar la funcionalidad de split pero con drag and
+> drop como en vscode"
+
+- **no hay mas boton `⊞ split`** en la barra de pestañas (ni la funcion `split()` que elegia tema por
+  dropdown). el boton `⊟ 1 pane` sigue, y tambien el `×` de `#panel-lado`.
+- **una pestaña se manda al lado de los widgets arrastrandola** hasta la zona que aparece resaltada
+  (`#zona-drop`, borde punteado; en verde con glow cuando el puntero esta adentro) y soltandola ahi:
+  eso llama a `splitCon(tema)`. arrastrarla de vuelta **a la barra** la devuelve al panel de chat
+  (y cierra el segundo panel si era esa).
+- **pointer events, no el drag nativo del html** (que en el celu no existe): `pointerdown` sobre la
+  pestaña, `pointermove` / `pointerup` en `document` (hasta que se captura el puntero, el mouse sale
+  de la barra y los eventos ya no le llegan a `#tabs`).
+  - **mouse**: arranca a los 6px de movimiento.
+  - **dedo**: arranca con movimiento **vertical** de 12px (`touch-action:pan-x` en `.tab` deja que el
+    horizontal siga scrolleando la barra) o manteniendo apretado 400ms. si el gesto se va de costado,
+    el arrastre se cancela y la barra scrollea como siempre.
+- **`#fantasma-tab`** sigue al puntero con el nombre de la pestaña, y se borra al soltar o cancelar
+  (tambien en `blur` y `pointercancel`: no queda nada suelto).
+- **la zona de drop** la calcula `rectZona()`: en escritorio es todo lo que esta a la derecha del
+  panel de chat (widgets + panel de al lado); en el celu, donde se ve una vista a la vez, es una
+  franja del 42% sobre el borde derecho.
+- un click que termina un arrastre no reabre la pestaña (guard de 400ms en fase de captura).
+- el layout sigue viajando igual en `tabs.json` (`paneles`, `foco`, `split`): esto solo cambia **como**
+  se dispara el split.
+- se prueba en `recetas/prueba_web_tabs` (chrome headless, cero tokens): que no exista el boton ni
+  `draggable`, arrastre real con `Input.dispatchMouseEvent` hasta la zona (fantasma, zona resaltada,
+  panel abierto, todo limpio al soltar), vuelta a la barra, y el gesto con dedo (`PointerEvent` con
+  `pointerType: touch`) tanto el que scrollea como el que arrastra. gancho: `window.__arrastre`.

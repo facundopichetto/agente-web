@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.33">
-<link rel="manifest" href="manifest.json?v=4.33">
+<meta name="agente-web-version" content="4.34">
+<link rel="manifest" href="manifest.json?v=4.34">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -296,7 +296,32 @@
   #sync.off{color:var(--amarillo)}
   body.sincronizando #lista,body.sincronizando #lista1,
   body.sincronizando #widgets,body.sincronizando #tabs .tab{opacity:.45}
-  #panel-widgets.soltar,#panel-lado.soltar{border-left:1px dashed var(--verde)}
+  /* ---------- arrastrar una pestaña (drag and drop estilo vscode, facundo 2026-09-11) ----------
+     no hay boton de split: una pestaña se manda al lado de los widgets arrastrandola hasta la zona
+     que aparece resaltada, y vuelve al chat arrastrandola de nuevo a la barra. mouse y dedo. */
+  #zona-drop{
+    position:fixed;z-index:60;display:flex;align-items:center;justify-content:center;
+    border:1px dashed var(--linea);border-radius:6px;background:rgba(10,20,10,.55);
+    color:var(--gris);font-size:10.5px;letter-spacing:.04em;text-align:center;
+    pointer-events:none;padding:6px;
+  }
+  #zona-drop.oculta{display:none}
+  #zona-drop.activa{
+    border-color:var(--verde);border-style:dashed;color:var(--verde);
+    background:rgba(0,255,120,.10);box-shadow:0 0 12px rgba(0,255,120,.35) inset;
+  }
+  #tabs.soltar{background:rgba(0,255,120,.08);box-shadow:0 0 10px rgba(0,255,120,.25) inset}
+  /* la pestaña fantasma que sigue al dedo o al mouse */
+  #fantasma-tab{
+    position:fixed;z-index:61;pointer-events:none;background:#060606;color:var(--verde);
+    border:1px solid var(--verde);border-radius:4px;padding:3px 8px;font-size:10.5px;
+    white-space:nowrap;opacity:.92;transform:translate(-50%,-140%);
+  }
+  body.arrastrando-tab{-webkit-user-select:none;user-select:none}
+  body.arrastrando-tab #hist,body.arrastrando-tab #panel-widgets{pointer-events:none}
+  /* con touch-action pan-x la barra se sigue scrolleando de costado y el movimiento vertical
+     (el que arranca el arrastre) nos llega a nosotros como pointermove */
+  #tabs .tab{touch-action:pan-x}
   /* segundo panel: la pestaña que se manda al lado de la fila de widgets */
   #panel-lado{
     flex:0 0 380px;min-width:0;display:flex;flex-direction:column;border-left:1px solid var(--linea);
@@ -430,6 +455,9 @@
   <div id="hist1"><div id="lista1"></div></div>
 </div>
 </div><!-- /cuerpo -->
+
+<!-- zona de drop del arrastre de pestañas: se muestra sola mientras se arrastra una pestaña -->
+<div id="zona-drop" class="oculta"><span class="zd-txt">soltar acá: al lado de los widgets</span></div>
 
 <div id="ddfondo" class="oculta"></div>
 <div id="dd" class="oculta"></div>
@@ -1004,7 +1032,6 @@ function pintarTabs(){
     b.type = "button";
     b.className = "tab" + (t === temaActivo() ? " activo" : (paneles.indexOf(t) >= 0 ? " enpanel" : ""));
     b.dataset.tema = t;
-    b.draggable = true;
     b.textContent = ETIQUETA[t] || t;
     if(t === temaActivo() && tabs.length > 1){
       var x = document.createElement("span");
@@ -1014,7 +1041,6 @@ function pintarTabs(){
     barra.appendChild(b);
   });
   barra.appendChild(btnBarra("+", "nueva_tab"));
-  barra.appendChild(btnBarra("⊞ split", "split"));
   if(paneles.length === 2) barra.appendChild(btnBarra("⊟ 1 pane", "un_panel"));
   var r = document.createElement("span"); r.className = "relleno";
   barra.appendChild(r);
@@ -1063,12 +1089,6 @@ function nuevaTab(){
   var ops = [["general (sin tema, la puerta de entrada)", AUTO]];
   TEMAS.forEach(function(t){ if(tabs.indexOf(t) < 0) ops.push([t, t]); });
   dd("pestaña nueva: qué tema?", ops, abrirTab);
-}
-function split(){
-  if(paneles.length === 2){ unPanel(); return; }
-  var otro = null;
-  for(var i = 0; i < tabs.length; i++) if(tabs[i] !== paneles[0]){ otro = tabs[i]; break; }
-  splitCon(otro || paneles[0]);
 }
 // manda `tema` al panel de al lado de los widgets (lo abre si no estaba partido)
 function splitCon(tema){
@@ -2477,10 +2497,6 @@ $("tabs").addEventListener("click", function(e){
   var b = e.target.closest("[data-accion]");
   if(b){
     if(b.dataset.accion === "nueva_tab") nuevaTab();
-    else if(b.dataset.accion === "split"){
-      if(paneles.length === 2) unPanel();
-      else dd("al lado de los widgets:", tabs.map(function(t){ return [t, t]; }), splitCon);
-    }
     else if(b.dataset.accion === "un_panel") unPanel();
     return;
   }
@@ -2533,32 +2549,134 @@ window.addEventListener("resize", function(){
   sep.addEventListener("pointerup", soltar);
   sep.addEventListener("pointercancel", soltar);
 })();
+// arrastrar una pestaña (estilo vscode, facundo 2026-09-11: ya no hay boton de split).
+// pointer events, asi anda igual con mouse y con dedo: soltarla sobre la zona resaltada la manda
+// al lado de los widgets, soltarla sobre la barra la devuelve al panel de chat.
 (function(){
-  var arrastrada = null;
-  $("tabs").addEventListener("dragstart", function(e){
+  var barra = $("tabs"), est = null;
+  var UMBRAL_MOUSE = 6, UMBRAL_TOUCH = 12, HOLD = 400;   // px y ms para que arranque el arrastre
+  // la zona de drop tapa todo lo que esta a la derecha del chat (widgets + panel de al lado).
+  // en el celu hay una vista a la vez y el panel de widgets puede no estar en pantalla: ahi la
+  // zona es una franja sobre el borde derecho.
+  function rectZona(){
+    var cuerpo = $("cuerpo").getBoundingClientRect();
+    if(!cuerpo.width || !cuerpo.height) return null;
+    if(anchoDesktop()){
+      var chat = $("panel-chat").getBoundingClientRect();
+      var izq = Math.max(chat.right, cuerpo.left + cuerpo.width * 0.35);
+      return {left: izq, top: cuerpo.top, width: Math.max(60, cuerpo.right - izq), height: cuerpo.height};
+    }
+    var ancho = Math.max(90, cuerpo.width * 0.42);
+    return {left: cuerpo.right - ancho, top: cuerpo.top, width: ancho, height: cuerpo.height};
+  }
+  function mostrarZona(si){
+    var z = $("zona-drop");
+    if(!si){ z.classList.add("oculta"); z.classList.remove("activa"); return; }
+    var r = rectZona();
+    if(!r){ z.classList.add("oculta"); return; }
+    z.style.left = Math.round(r.left) + "px"; z.style.top = Math.round(r.top) + "px";
+    z.style.width = Math.round(r.width) + "px"; z.style.height = Math.round(r.height) + "px";
+    z.classList.remove("oculta");
+  }
+  function dentro(r, x, y){ return !!r && x >= r.left && x <= r.left + r.width && y >= r.top && y <= r.top + r.height; }
+  function sobreBarra(x, y){
+    var r = barra.getBoundingClientRect();
+    return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+  }
+  function limpiar(){
+    if(!est) return;
+    clearTimeout(est.timer);
+    if(est.el) est.el.classList.remove("arrastrando");
+    try{ if(est.activa) est.el.releasePointerCapture(est.id); }catch(x){}
+    if(est.fantasma && est.fantasma.parentNode) est.fantasma.parentNode.removeChild(est.fantasma);
+    mostrarZona(false);
+    barra.classList.remove("soltar");
+    document.body.classList.remove("arrastrando-tab");
+    est = null;
+  }
+  function arrancar(){
+    if(!est || est.activa) return;
+    est.activa = true;
+    clearTimeout(est.timer);
+    est.el.classList.add("arrastrando");
+    document.body.classList.add("arrastrando-tab");
+    try{ est.el.setPointerCapture(est.id); }catch(x){}
+    var f = document.createElement("div");
+    f.id = "fantasma-tab"; f.textContent = ETIQUETA[est.tema] || est.tema;
+    document.body.appendChild(f);
+    est.fantasma = f;
+    mostrarZona(true);
+    pintarDestino(est.x, est.y);
+  }
+  function pintarDestino(x, y){
+    if(!est || !est.activa) return;
+    if(est.fantasma){ est.fantasma.style.left = x + "px"; est.fantasma.style.top = y + "px"; }
+    var enZona = dentro(rectZona(), x, y);
+    $("zona-drop").classList.toggle("activa", enZona);
+    barra.classList.toggle("soltar", !enZona && sobreBarra(x, y));
+  }
+  // soltar: la zona la manda al lado de los widgets; la barra la devuelve al panel de chat
+  function soltarEn(x, y){
+    var tema = est.tema;
+    if(dentro(rectZona(), x, y)){ limpiar(); splitCon(tema); return; }
+    if(sobreBarra(x, y)){
+      limpiar();
+      if(paneles.length === 2 && paneles[1] === tema) unPanel();
+      focoEn(0); abrirTab(tema);
+      if(window.innerWidth < 900) verPanel("chat");
+      return;
+    }
+    limpiar();
+  }
+  barra.addEventListener("pointerdown", function(e){
+    if(e.button !== undefined && e.button !== 0) return;
+    if(e.target.closest("[data-cerrar]") || e.target.closest("[data-accion]")) return;
     var t = e.target.closest("[data-tema]");
     if(!t) return;
-    arrastrada = t.dataset.tema;
-    t.classList.add("arrastrando");
-    try{ e.dataTransfer.setData("text/plain", arrastrada); }catch(x){}
+    limpiar();
+    est = {tema: t.dataset.tema, el: t, id: e.pointerId, x0: e.clientX, y0: e.clientY,
+           x: e.clientX, y: e.clientY, tactil: e.pointerType !== "mouse", activa: false, timer: 0};
+    est.timer = setTimeout(arrancar, HOLD);        // mantener apretado tambien arranca el arrastre
   });
-  $("tabs").addEventListener("dragend", function(e){
-    var t = e.target.closest("[data-tema]");
-    if(t) t.classList.remove("arrastrando");
-    arrastrada = null;
+  document.addEventListener("pointermove", function(e){
+    if(!est || e.pointerId !== est.id) return;
+    est.x = e.clientX; est.y = e.clientY;
+    var dx = e.clientX - est.x0, dy = e.clientY - est.y0;
+    if(est.activa){ pintarDestino(e.clientX, e.clientY); e.preventDefault(); return; }
+    if(!est.tactil){
+      if(Math.abs(dx) > UMBRAL_MOUSE || Math.abs(dy) > UMBRAL_MOUSE) arrancar();
+      return;
+    }
+    // con el dedo: el movimiento vertical arranca el arrastre (el horizontal scrollea la barra)
+    if(Math.abs(dy) > UMBRAL_TOUCH && Math.abs(dy) > Math.abs(dx)){ arrancar(); e.preventDefault(); return; }
+    if(Math.abs(dx) > UMBRAL_TOUCH) limpiar();     // se fue a scrollear: no era un arrastre
   });
-  // soltar una pestaña sobre la fila de widgets (o sobre el panel de al lado) = mandarla ahi
-  ["panel-widgets", "panel-lado"].forEach(function(id){
-    var el = $(id);
-    el.addEventListener("dragover", function(e){ e.preventDefault(); el.classList.add("soltar"); });
-    el.addEventListener("dragleave", function(){ el.classList.remove("soltar"); });
-    el.addEventListener("drop", function(e){
-      e.preventDefault(); el.classList.remove("soltar");
-      var t = arrastrada;
-      try{ t = e.dataTransfer.getData("text/plain") || arrastrada; }catch(x){}
-      if(t) splitCon(t);
-    });
+  document.addEventListener("pointerup", function(e){
+    if(!est || e.pointerId !== est.id) return;
+    if(!est.activa){ limpiar(); return; }          // fue un click: lo atiende el handler de click
+    e.preventDefault();
+    ultArrastre = Date.now();
+    soltarEn(e.clientX, e.clientY);
   });
+  document.addEventListener("pointercancel", function(e){
+    if(est && e.pointerId === est.id) limpiar();
+  });
+  // el click de cierre del gesto no tiene que abrir la pestaña de nuevo
+  var ultArrastre = 0;
+  barra.addEventListener("click", function(e){
+    if(Date.now() - ultArrastre < 400){ e.stopPropagation(); e.preventDefault(); }
+  }, true);
+  window.addEventListener("blur", limpiar);
+  window.addEventListener("resize", function(){ if(est && est.activa) mostrarZona(true); });
+  // ganchos para la prueba sin mouse de verdad
+  window.__arrastre = {
+    rectZona: rectZona,
+    estado: function(){
+      return est ? {tema: est.tema, activa: est.activa,
+                    zona: $("zona-drop").classList.contains("activa"),
+                    barra: barra.classList.contains("soltar")} : null;
+    }
+  };
 })();
 // donde se escribe: click en el panel de al lado lo enfoca, click en la charla grande vuelve
 $("panel-lado").addEventListener("click", function(e){
