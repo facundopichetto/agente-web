@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.32">
-<link rel="manifest" href="manifest.json?v=4.32">
+<meta name="agente-web-version" content="4.33">
+<link rel="manifest" href="manifest.json?v=4.33">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -121,6 +121,18 @@
     border-radius:14px;padding:7px 12px;font:inherit;font-size:11px;cursor:pointer;white-space:nowrap;
   }
   #rapidos button:active{background:#111}
+  /* sugerencias de respuesta: salen de la ultima respuesta del daemon en esta pestaña (cero tokens) */
+  #chips{display:flex;gap:5px;overflow-x:auto;padding:0 0 5px 0;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  #chips::-webkit-scrollbar{display:none}
+  #chips.oculta{display:none}
+  #chips button{
+    flex:0 0 auto;background:#000;color:var(--gris);border:1px solid var(--linea);
+    border-radius:3px;padding:3px 7px;font:inherit;font-size:10.5px;line-height:1.3;
+    cursor:pointer;white-space:nowrap;
+  }
+  #chips button .l{color:var(--amarillo)}
+  #chips button:hover{color:var(--blanco);border-color:#2a2a2a}
+  #chips button:active{background:#111}
   #fila{display:flex;gap:6px;align-items:flex-end}
   #prompt{color:var(--magenta);padding-bottom:7px;flex:0 0 auto;user-select:none}
   #txt{
@@ -403,6 +415,7 @@
     <button data-cmd="avisos">avisos</button>
     <button data-cmd="ronda jira">ronda jira</button>
   </div>
+  <div id="chips" class="oculta"></div>
   <div id="fila">
     <span id="prompt">facundo&gt;</span>
     <textarea id="txt" rows="1" placeholder="orden o comando" enterkeyhint="enter" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
@@ -1016,6 +1029,7 @@ function pintarTabs(){
   $("prompt").textContent = (paneles.length === 2 ? "facundo[" + temaActivo() + "]" : "facundo") + ">";
   guardarLayout();
   cajaDeTema(temaActivo());     // cada pestaña se lleva su borrador y trae el suyo
+  pintarChips();                // y sus sugerencias, que salen de la ultima respuesta de esa pestaña
 }
 
 // ---------- acciones de pestañas ----------
@@ -1364,10 +1378,12 @@ function pintarMsg(m, arriba){
     if(!l) return;
     if(arriba) l.insertBefore(nodoMsg(m), l.firstChild); else l.appendChild(nodoMsg(m));
   });
+  if(!arriba && m.clase === "agente") pintarChips();   // contesto el daemon: sugerencias nuevas
 }
 function render(){
   [0, 1].forEach(function(j){ var l = listaDe(j); if(l) l.innerHTML = ""; });
   msgs.forEach(function(m){ pintarMsg(m, false); });
+  pintarChips();
 }
 function alFinal(){
   abajo();
@@ -1777,6 +1793,124 @@ function preguntarDestino(texto, activo, otro, trozos){
   });
 }
 
+// ---------- sugerencias de respuesta arriba del input (facundo, 2026-09-11) ----------
+// cero tokens y cero red: los chips salen de leer la **ultima respuesta del daemon en esta pestaña**.
+// tocar uno **llena la caja y deja el foco ahi, NO manda**: el `tema x:` lo agrega el envio como
+// siempre, asi que el chip lleva el texto pelado (`A`, `dale 3`, `op 2 B`, `status`).
+var CHIP_TOPE = 30;      // el titulo de una opcion se recorta a esto
+var CHIP_MAX = 10;       // tope de chips sugeridos, sin contar los fijos
+function chipRecorte(t, n){
+  t = (t || "").replace(/[`*_]/g, "").replace(/\s+/g, " ").trim();
+  n = n || CHIP_TOPE;
+  return t.length > n ? t.slice(0, n - 1) + "…" : t;
+}
+// la ultima respuesta del daemon que cae en esta pestaña (null si todavia no contesto nada)
+function ultimaRespuesta(tema){
+  for(var i = msgs.length - 1; i >= 0; i--){
+    var m = msgs[i];
+    if(m.clase === "agente" && deEstaTab(m.tema, tema)) return m.texto || "";
+  }
+  return null;
+}
+// opciones a/b/c: lineas `A) texto`, `**A** texto`, `- A. texto`, y el cierre "decime A, B o C"
+function chipsABC(texto){
+  var tit = {}, letras = [];
+  function sumar(L, t){
+    L = L.toUpperCase();
+    if(letras.indexOf(L) < 0) letras.push(L);
+    if(t && !tit[L]) tit[L] = t;
+  }
+  texto.split("\n").forEach(function(l){
+    // `**A** texto` (la negrita ya marca que es una opcion) o `A) texto` / `- A. texto` / `A: texto`
+    var m = l.match(/^[\s>]*(?:[-*]\s+)?\*\*([A-D])\*\*\s*[\)\.:—-]?\s+(\S.*)$/) ||
+            l.match(/^[\s>]*(?:[-*]\s+)?([A-D])\s*[\)\.:—-]\s+(\S.*)$/);
+    if(m) sumar(m[1], m[2]);
+  });
+  var dec = texto.match(/decime[^\n]*/i);
+  if(dec && /\b[A-D]\b[^\n]*\b[A-D]\b/.test(dec[0]))
+    (dec[0].match(/\b[A-D]\b/g) || []).forEach(function(L){ sumar(L, null); });
+  letras.sort();
+  return letras.map(function(L){
+    return {cmd: L, letra: L, texto: tit[L] ? chipRecorte(tit[L]) : ""};
+  });
+}
+// propuestas numeradas: lineas `- \`N\`` o un "dale N" (tambien "dale 3, 7 y 9")
+function chipsDale(texto){
+  var ns = [];
+  function sumar(n){ if(ns.indexOf(n) < 0 && ns.length < CHIP_MAX) ns.push(n); }
+  texto.split("\n").forEach(function(l){
+    var m = l.match(/^[\s>]*[-*]\s*`(\d{1,3})`/);
+    if(m) sumar(m[1]);
+  });
+  var d = texto.match(/dale\s+\d{1,3}(?:\s*(?:,|y)\s*\d{1,3})*/gi) || [];
+  d.forEach(function(frag){ (frag.match(/\d{1,3}/g) || []).forEach(sumar); });
+  return ns.map(function(n){ return {cmd: "dale " + n, letra: "dale", texto: n}; });
+}
+// oportunidades: si la respuesta nombra `op N` se ofrecen las opciones REALES de ese item
+// (widgets.json, que es lo que publica oportunidades.json). si no hay datos, la letra que diga el texto.
+function chipsOp(texto){
+  var vistos = {}, chips = [], m, re = /\bop\s+(\d{1,3})(?:\s*([A-D])\b)?/gi;
+  var items = ((widDatos || {}).oportunidades || {}).items || [];
+  while((m = re.exec(texto))){
+    var id = m[1];
+    if(vistos[id]) continue;
+    vistos[id] = 1;
+    var item = null;
+    items.forEach(function(i){ if(String(i.id) === id) item = i; });
+    if(item && (item.opciones || []).length){
+      item.opciones.forEach(function(op){
+        chips.push({cmd: "op " + id + " " + op.letra, letra: "op " + id + " " + op.letra,
+                    texto: chipRecorte(op.texto)});
+      });
+    }else if(m[2]){
+      chips.push({cmd: "op " + id + " " + m[2].toUpperCase(), letra: "op " + id + " " + m[2].toUpperCase(), texto: ""});
+    }
+  }
+  return chips;
+}
+// las sugerencias de una respuesta, en orden: a/b/c, `dale N`, `op N X`, si/no, y al final los fijos
+function sugerencias(texto){
+  if(texto === null || texto === undefined) return [];
+  var chips = chipsABC(texto).concat(chipsDale(texto)).concat(chipsOp(texto));
+  if(/\?\s*$/.test(texto.trim()))
+    chips = chips.concat([{cmd: "si", letra: "si", texto: ""}, {cmd: "no", letra: "no", texto: ""}]);
+  chips = chips.slice(0, CHIP_MAX);
+  chips.push({cmd: "status", letra: "status", texto: ""});
+  chips.push({cmd: "cola", letra: "cola", texto: ""});
+  var vistos = {};
+  return chips.filter(function(c){
+    if(vistos[c.cmd]) return false;
+    vistos[c.cmd] = 1;
+    return true;
+  });
+}
+function pintarChips(){
+  var fila = $("chips");
+  if(!fila) return;
+  var resp = ultimaRespuesta(temaActivo());
+  var chips = resp === null ? [] : sugerencias(resp);
+  fila.innerHTML = "";
+  if(!chips.length){ fila.classList.add("oculta"); return; }
+  chips.forEach(function(c){
+    var b = document.createElement("button");
+    b.type = "button";
+    b.dataset.cmd = c.cmd;
+    b.title = c.cmd;
+    b.innerHTML = '<span class="l"></span>' + (c.texto ? ' <span class="t"></span>' : "");
+    b.querySelector(".l").textContent = c.letra;
+    if(c.texto) b.querySelector(".t").textContent = c.texto;
+    fila.appendChild(b);
+  });
+  fila.classList.remove("oculta");
+}
+$("chips").addEventListener("click", function(e){
+  var b = e.target.closest("button");
+  if(!b || !b.dataset.cmd) return;
+  ponerCaja(b.dataset.cmd);                                  // llena la caja, no manda
+  guardarBorrador(temaCaja || temaActivo(), txt.value);
+  txt.focus();
+});
+
 alfinal.addEventListener("click", abajo);
 $("mandar").addEventListener("click", function(){ enviarMensaje(txt.value); txt.focus(); });
 txt.addEventListener("focus", function(){ setTimeout(abajo, 250); });
@@ -2103,6 +2237,7 @@ function pintarWidgets(d, err){
   var y = $("panel-widgets").scrollTop;
   widgetsEl.innerHTML = partes.join("");
   $("panel-widgets").scrollTop = y;
+  pintarChips();                // los chips `op N X` usan las opciones reales de este json
 }
 
 function cargarWidgets(){
@@ -2558,6 +2693,20 @@ window.__agente = {
                             off: $("sync").classList.contains("off")}; },
   pintarSync: pintarSync, sincronizar: sincronizar, alVolver: alVolver,
   caja: function(){ return {tema: temaCaja, texto: txt.value, sel: txt.selectionStart}; },
+  // sugerencias de respuesta arriba del input (cero tokens): salen de la ultima respuesta de la pestaña
+  sugerencias: sugerencias, pintarChips: pintarChips, ultimaRespuesta: ultimaRespuesta,
+  chips: function(){
+    return [].map.call(document.querySelectorAll("#chips button"), function(b){
+      return {cmd: b.dataset.cmd, texto: b.textContent};
+    });
+  },
+  chipsVisibles: function(){ return !$("chips").classList.contains("oculta"); },
+  tocarChip: function(cmd){
+    var ns = document.querySelectorAll("#chips button");
+    for(var i = 0; i < ns.length; i++)
+      if(ns[i].dataset.cmd === cmd){ ns[i].click(); return true; }
+    return false;
+  },
   cuerpoMsg: cuerpoMsg, deEstaTab: deEstaTab, enviarMensaje: enviarMensaje, mandar: mandar,
   // envio idempotente: dos enter rapidos no mandan dos veces (prueba_web_tabs lo chequea)
   envios: function(){ return {enviando: enviando, ultimo: ultimoTexto, repeMs: REPE_MS}; },

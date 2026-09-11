@@ -253,3 +253,30 @@ facundo: "orden o comando font esta muy grande, al menos desde el celu". el text
 en celu). el zoom automatico de ios safari al enfocar un input de menos de 16px lo frena
 **`maximum-scale=1`** en el `meta viewport`, no la fuente grande; los inputs de login (`#clave`, `#tok`)
 siguen en 16px. `python3 -m recetas.prueba_web` lo chequea en desktop y con el viewport de celu emulado.
+
+## sugerencias de respuesta arriba del input (facundo, 2026-09-11)
+
+facundo: "y esa caja de input deberia sugerir respuestas".
+
+- **fila `#chips`** entre los botones rapidos y `#fila`, look terminal (mismo estilo que las pestañas,
+  sin borde verde, alto chico, scroll horizontal en el celu). **se oculta si no hay sugerencias**
+  (o sea: si el daemon todavia no contesto nada en esa pestaña).
+- **cero tokens y cero red**: los chips los arma `sugerencias(texto)` en js leyendo la **ultima
+  respuesta del daemon de esa pestaña** (`ultimaRespuesta(tema)`, el ultimo `clase: "agente"` que
+  cae en la pestaña segun `deEstaTab`). el orden es:
+  - **a/b/c**: lineas `**A** texto`, `A) texto`, `- A. texto`, `A: texto`, mas el cierre
+    "decime A, B o C". chip = la letra y el titulo de la opcion recortado a 30 chars; **manda la letra sola**.
+  - **`dale N`**: lineas `` - `N` `` o un "dale N" en el texto (tambien "dale 3, 7 y 9").
+  - **`op N X`**: si la respuesta nombra `op N`, las opciones son las **reales** de `widgets.json`
+    (`oportunidades.items[].opciones`), no las que diga el texto; si no hay datos y el texto trae la
+    letra, queda ese chip solo.
+  - **si / no** si la respuesta termina en pregunta.
+  - siempre al final **`status`** y **`cola`**.
+- **tocar un chip llena la caja y deja el foco ahi, NO manda**: queda como borrador de la pestaña
+  (viaja en `tabs.json` como cualquier borrador) y se manda con enter o el boton. el `tema x:` lo
+  agrega el envio de siempre, asi que el chip lleva el texto pelado (`status`, `op 2 B` y `dale 3`
+  son de `RE_CRUDO` y salen sin prefijo).
+- se repinta en `render()`, al llegar una respuesta (`pintarMsg`), al cambiar de pestaña (`pintarTabs`)
+  y cuando llega `widgets.json` (`pintarWidgets`, que es de donde salen las opciones de las oportunidades).
+- probado en `recetas/prueba_web_tabs` (chips de A/B/C con su titulo, `dale N`, si/no, `op N X` con las
+  opciones del json, la fila oculta sin respuesta previa, y que tocar un chip llene la caja sin mandar).
