@@ -61,6 +61,32 @@ mecanismo que `widgets.json`:
   (por eso el PUT usa `fetch` propio y no `api()`).
 - reglas de siempre: una pestaña por tema, y la general (`auto`) no se renombra.
 
+## borrador del input continuable entre dispositivos (2026-09-11)
+
+facundo: "quiero dejar de escribir esto desde la compu y sin tocar enviar terminar este mensaje
+desde el celu". lo que hay en la caja es un **borrador por pestaña** y viaja en el mismo `tabs.json`:
+
+    {"v":1, "ts":..., "tabs":[...], "paneles":[...], "foco":0,
+     "borradores": {"tools": {"texto": "lo que venia escribiendo", "ts": 1757600000000}}}
+
+- **se guarda al tipear**: cada tecla actualiza el borrador de la pestaña activa en memoria y en el
+  cache, y encola la publicacion con debounce de 1 s (con el minimo de 8 s entre escrituras de la api).
+- **se resuelve por tema, no por layout**: gana el `ts` mas nuevo de **cada** borrador. un cambio de
+  pestañas hecho en la compu no se lleva puesto lo que el celu esta escribiendo, y al reves tampoco
+  (`recibirBorradores()` corre siempre, gane el layout remoto o el mio).
+- **al abrir, recargar o volver al foco**: la caja aparece con el borrador de la pestaña activa y el
+  **cursor al final**. primero el cache de `localStorage` (instantaneo) y despues lo que traiga el buzon.
+- **cambiar de pestaña** guarda lo escrito como borrador de la que se deja y trae el de la nueva
+  (`cajaDeTema()`, al final de `pintarTabs()`), incluido el panel de al lado del split.
+- **al mandar el mensaje** el borrador de esa pestaña se borra en todos los dispositivos: queda una
+  **tumba** (`{"texto": "", "ts": ...}`) que le gana al borrador viejo del otro lado. las tumbas de mas
+  de 2 dias se podan solas y el texto se corta en 8000 caracteres.
+- **cerrar la pestaña o bloquear el telefono** no pierde nada: en `pagehide` / `beforeunload` /
+  `visibilitychange` se publica lo escrito y el PUT va con `keepalive`.
+- `localStorage` sigue siendo **solo cache offline**.
+
+probarlo: `python3 -m recetas.prueba_web_tabs` (bloque "borrador del input", cero tokens).
+
 ## publicar
 
 no se pushea a mano: se edita el clon (`~/.claudio/tools/agente/web/`), se corre

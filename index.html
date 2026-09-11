@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.19">
-<link rel="manifest" href="manifest.json?v=4.19">
+<meta name="agente-web-version" content="4.20">
+<link rel="manifest" href="manifest.json?v=4.20">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -505,6 +505,16 @@ var layoutFirma = null;           // firma de lo ultimo guardado: si no cambio, 
 var tabsPendiente = null, tabsPub = 0;
 var TABS_ARCHIVO = "tabs.json";
 var TABS_DEBOUNCE = 1500, TABS_MINIMO = 8000;   // agrupar cambios seguidos y no pegarle a la api
+var BORRA_DEBOUNCE = 1000;        // lo que se esta tipeando se publica mas seguido que el layout
+var BORRA_TOPE = 8000;            // un borrador mas largo que esto no se sincroniza entero
+var BORRA_VIDA = 172800000;       // 2 dias: un borrador vacio mas viejo que esto se poda
+// borradores del input, uno por pestaña: `{tema: {texto, ts}}`. viajan en el mismo `tabs.json` pero se
+// resuelven **por tema y no por layout**: gana el `ts` mas nuevo de cada borrador, asi lo que escribiste
+// en el celu no lo pisa un cambio de pestañas hecho en la compu (facundo, 2026-09-11: "quiero dejar de
+// escribir esto desde la compu y sin tocar enviar terminar este mensaje desde el celu").
+var borradores = {};
+var temaCaja = null;              // de que pestaña es lo que hay ahora en la caja
+var enviando = 0;                 // hay un mensaje saliendo: ese texto ya no es borrador
 // id corto de este dispositivo: sirve para no re-aplicarme lo que acabo de publicar yo
 var DISPOSITIVO = (function(){
   try{
@@ -548,7 +558,8 @@ function guardarCache(){
   layoutFirma = firmaLayout(layoutActual());
   try{
     localStorage.setItem("agente_tabs", JSON.stringify(
-      {tabs: tabs, paneles: paneles, foco: foco, ts: layoutTs, origen: DISPOSITIVO}));
+      {tabs: tabs, paneles: paneles, foco: foco, ts: layoutTs, origen: DISPOSITIVO,
+       borradores: borradoresLimpios()}));
   }catch(x){}
 }
 // cambio local: sube el reloj, guarda el cache y encola la publicacion. si el layout quedo igual
@@ -560,13 +571,93 @@ function guardarLayout(){
   guardarCache();
   publicarTabs();
 }
+
+// ---------- borrador del input, continuable en cualquier dispositivo (facundo, 2026-09-11) ----------
+// lo que facundo escribe en la caja es un borrador **por pestaña**: se guarda mientras tipea, viaja en
+// `tabs.json` y vuelve a aparecer con el cursor al final cuando abre la web en el celu o recarga la
+// compu. al mandar el mensaje, el borrador de esa pestaña se borra en todos lados (tumba con `ts`: un
+// `{texto: "", ts}` que le gana al borrador viejo del otro dispositivo).
+function borradorDe(tema){ var b = borradores[tema]; return (b && b.texto) || ""; }
+// lo que sale al buzon: sin las tumbas viejas y con los textos gigantes cortados
+function borradoresLimpios(){
+  var out = {}, ahora = Date.now();
+  Object.keys(borradores).forEach(function(t){
+    var b = borradores[t];
+    if(!b || typeof b.texto !== "string") return;
+    if(!b.texto && ahora - (+b.ts || 0) > BORRA_VIDA) return;          // tumba vieja: ya no hace falta
+    out[t] = {texto: b.texto.slice(0, BORRA_TOPE), ts: +b.ts || 0};
+  });
+  return out;
+}
+// cambio local del borrador de una pestaña: el estado se actualiza **al instante** (asi un `tabs.json`
+// viejo nunca le gana a lo que se esta tipeando) y la publicacion va con debounce.
+function guardarBorrador(tema, texto, ya){
+  if(!tema) return;
+  texto = String(texto === null || texto === undefined ? "" : texto);
+  if(borradorDe(tema) === texto) return;
+  borradores[tema] = {texto: texto, ts: Math.max(Date.now(), (+(borradores[tema] || {}).ts || 0) + 1)};
+  guardarCache();
+  publicarTabs(ya, BORRA_DEBOUNCE);
+}
+// llegaron los borradores del buzon (o del cache): se mezclan uno por uno, gana el `ts` mas nuevo.
+// esto corre **siempre**, gane el layout remoto o el mio: si no, publicar mis pestañas borraria lo que
+// el otro dispositivo esta escribiendo.
+function recibirBorradores(rem){
+  var cambio = false;
+  Object.keys(rem || {}).forEach(function(t){
+    var r = rem[t];
+    if(!r || typeof r.texto !== "string") return;
+    if((+r.ts || 0) > (+(borradores[t] || {}).ts || 0)){
+      borradores[t] = {texto: r.texto.slice(0, BORRA_TOPE), ts: +r.ts || 0};
+      cambio = true;
+    }
+  });
+  if(cambio){ guardarCache(); refrescarCaja(); }
+  return cambio;
+}
+function ajustarCaja(){
+  txt.style.height = "auto";
+  txt.style.height = Math.min(txt.scrollHeight, (vv ? vv.height : window.innerHeight) * 0.28) + "px";
+}
+// pone un texto en la caja y deja el cursor al final (donde quedo escribiendo en el otro dispositivo)
+function ponerCaja(t){
+  txt.value = t || "";
+  ajustarCaja();
+  try{ txt.setSelectionRange(txt.value.length, txt.value.length); }catch(x){}
+}
+// el borrador de esta pestaña cambio en otro dispositivo: se refleja en la caja, salvo que facundo
+// este escribiendo aca mismo en este momento
+function refrescarCaja(){
+  if(temaCaja === null || typeof txt === "undefined" || !txt) return;
+  var t = borradorDe(temaCaja);
+  if(t === txt.value) return;
+  ponerCaja(t);
+}
+// cambio de pestaña (o de panel con el split): lo que hay en la caja queda como borrador de la que
+// se deja y la nueva trae el suyo. mientras se esta mandando un mensaje no se guarda nada: ese texto
+// ya salio.
+function cajaDeTema(tema, forzar){
+  if(!tema) return;
+  if(tema === temaCaja && !forzar) return;
+  if(temaCaja !== null && temaCaja !== tema && !enviando) guardarBorrador(temaCaja, txt.value, true);
+  temaCaja = tema;
+  ponerCaja(borradorDe(tema));
+}
+// el mensaje salio: el borrador de esa pestaña se borra en todos los dispositivos
+function borrarBorrador(tema){
+  if(!tema) return;
+  if(!borradores[tema] && !borradorDe(tema)) return;
+  guardarBorrador(tema, "", true);
+}
 (function(){                                   // cache: pinta al instante, antes de hablar con github
   try{
     var L = JSON.parse(localStorage.getItem("agente_tabs") || "null");
     var s = L && sanearLayout(L);
     if(s){ tabs = s.tabs; paneles = s.paneles; foco = s.foco; layoutTs = L.ts || 0; }
+    if(L && L.borradores) recibirBorradores(L.borradores);
   }catch(x){}
   layoutFirma = firmaLayout(layoutActual());
+  cajaDeTema(temaActivo(), true);        // la caja arranca con lo que quedaste escribiendo
 })();
 
 // --- tabs.json en el buzon: leer al abrir y en cada poll, escribir cuando cambia algo ---
@@ -612,15 +703,18 @@ function cargarTabs(){
 // dispositivo, publico el mio. devuelve "remoto" | "mio" | "igual" (lo usa la prueba).
 function recibirTabs(L){
   var ts = +L.ts || 0;
+  // los borradores no se resuelven por el `ts` del layout: uno por uno, el mas nuevo de cada tema
+  var borr = recibirBorradores(L.borradores);
   if(ts > layoutTs){ aplicarLayout(L, ts); return "remoto"; }
   if(layoutTs > ts && L.origen !== DISPOSITIVO){ publicarTabs(true); return "mio"; }
+  if(borr) publicarTabs();   // mezcle borradores de los dos lados: que el otro vea el resultado
   return "igual";
 }
 // agrupa los cambios seguidos (abrir, split, foco) en una sola escritura
-function publicarTabs(ya){
+function publicarTabs(ya, debounce){
   if(!token || !tabsSync || !tabsListo) return;
   if(tabsPendiente) clearTimeout(tabsPendiente);
-  var espera = Math.max(ya ? 0 : TABS_DEBOUNCE, TABS_MINIMO - (Date.now() - tabsPub));
+  var espera = Math.max(ya ? 0 : (debounce || TABS_DEBOUNCE), TABS_MINIMO - (Date.now() - tabsPub));
   tabsPendiente = setTimeout(function(){ tabsPendiente = null; ponerTabs(false); }, espera);
 }
 function ponerTabs(reintento){
@@ -629,11 +723,12 @@ function ponerTabs(reintento){
   tabsPub = Date.now();
   var L = layoutActual();
   L.v = 1; L.ts = layoutTs; L.origen = DISPOSITIVO;
+  L.borradores = borradoresLimpios();
   var cuerpo = {message: "tabs " + DISPOSITIVO, content: textoAb64(JSON.stringify(L))};
   if(shaTabs) cuerpo.sha = shaTabs;
   // fetch propio y no `api()`: un 403 de escritura NO tiene que desloguear a facundo del chat
   return fetch(API + "/repos/" + REPO + "/contents/" + TABS_ARCHIVO, {
-    method: "PUT", cache: "no-store",
+    method: "PUT", cache: "no-store", keepalive: true,   // que sobreviva al cierre de la pagina
     headers: {"authorization": "Bearer " + token, "accept": "application/vnd.github+json",
               "content-type": "application/json"},
     body: JSON.stringify(cuerpo)
@@ -708,6 +803,7 @@ function pintarTabs(){
   if(paneles.length < 2) document.body.classList.remove("ver-lado");
   $("prompt").textContent = (paneles.length === 2 ? "facundo[" + temaActivo() + "]" : "facundo") + ">";
   guardarLayout();
+  cajaDeTema(temaActivo());     // cada pestaña se lleva su borrador y trae el suyo
 }
 
 // ---------- acciones de pestañas ----------
@@ -1266,8 +1362,17 @@ function reprogramar(){
 }
 document.addEventListener("visibilitychange", function(){
   reprogramar();
-  if(!document.hidden) tick();
+  // el borrador viaja en los dos sentidos: al irme publico lo que escribi, al volver releo el del otro
+  if(document.hidden) soltarBorrador();
+  else { tabsUlt = 0; tick(); }
 });
+// cerrar la pestaña / bloquear el telefono no puede perder lo escrito: el PUT va con `keepalive`
+function soltarBorrador(){
+  guardarBorrador(temaCaja || temaActivo(), txt.value, true);
+  if(tabsPendiente){ clearTimeout(tabsPendiente); tabsPendiente = null; ponerTabs(false); }
+}
+window.addEventListener("pagehide", soltarBorrador);
+window.addEventListener("beforeunload", soltarBorrador);
 setInterval(function(){ refrescarCabecera(); }, 1000);
 
 // ---------- auto actualizacion ----------
@@ -1315,10 +1420,13 @@ function mandar(texto, tema, crudo){
   if(!texto) return;
   tema = tema || temaActivo();
   var cuerpo = cuerpoMsg(texto, tema, crudo);
+  var caja = temaCaja;
+  enviando++;
   $("mandar").disabled = true;
   return api("POST", "/repos/" + REPO + "/issues/" + ISSUE + "/comments", {body: cuerpo})
     .then(function(r){
       txt.value = ""; txt.style.height = "";
+      borrarBorrador(tema); if(caja && caja !== tema) borrarBorrador(caja);
       if(r.json && !vistos[r.json.id]){
         vistos[r.json.id] = true;
         var m = {id: r.json.id, clase: "yo", quien: "facundo", texto: texto, iso: r.json.created_at,
@@ -1328,7 +1436,7 @@ function mandar(texto, tema, crudo){
       etagCom = null;
     })
     .catch(function(e){ if(ruidoso(e)) sistema("no se pudo mandar: " + e.message, "error"); })
-    .then(function(){ $("mandar").disabled = false; });
+    .then(function(){ enviando = Math.max(0, enviando - 1); $("mandar").disabled = false; });
 }
 // un mensaje partido sale como varios mensajes, uno por tema, **en orden** y cada uno con su
 // `tema x:` a su pestaña (la abre si no estaba). el foco queda en la del ultimo fragmento.
@@ -1404,8 +1512,8 @@ txt.addEventListener("keydown", function(e){
 });
 txt.addEventListener("input", function(){
   var pego = pegadoAbajo();
-  txt.style.height = "auto";
-  txt.style.height = Math.min(txt.scrollHeight, (vv ? vv.height : window.innerHeight) * 0.28) + "px";
+  ajustarCaja();
+  guardarBorrador(temaCaja || temaActivo(), txt.value);
   if(pego) abajo();
 });
 $("rapidos").addEventListener("click", function(e){
@@ -1787,10 +1895,10 @@ function hablar(o, contexto){
   cerrarModal();
   var tema = temaItem(o);
   if(temaActivo() !== tema) abrirTab(tema);
-  txt.value = "sobre " + contexto + ": ";
+  ponerCaja("sobre " + contexto + ": ");
+  guardarBorrador(temaActivo(), txt.value, true);
   if(window.innerWidth < 900) verPanel(foco === 1 ? "lado" : "chat");
   txt.focus();
-  txt.setSelectionRange(txt.value.length, txt.value.length);
 }
 function accHablar(o, contexto){
   return ["hablar de esto en el chat", function(){ hablar(o, contexto); }];
@@ -2122,9 +2230,15 @@ window.__agente = {
                               sync: tabsSync, dispositivo: DISPOSITIVO}; },
   aplicarLayout: aplicarLayout, sanearLayout: sanearLayout, recibirTabs: recibirTabs,
   guardarLayout: guardarLayout, layoutRemoto: function(){
-    var L = layoutActual(); L.v = 1; L.ts = layoutTs; L.origen = DISPOSITIVO; return L;
+    var L = layoutActual(); L.v = 1; L.ts = layoutTs; L.origen = DISPOSITIVO;
+    L.borradores = borradoresLimpios(); return L;
   },
   abrirTab: abrirTab, splitCon: splitCon, unPanel: unPanel, renombrarTab: renombrarTab,
+  // borrador del input, continuable entre dispositivos
+  borradores: function(){ return borradoresLimpios(); },
+  borradorDe: borradorDe, guardarBorrador: guardarBorrador, recibirBorradores: recibirBorradores,
+  cajaDeTema: cajaDeTema, soltarBorrador: soltarBorrador, borrarBorrador: borrarBorrador,
+  caja: function(){ return {tema: temaCaja, texto: txt.value, sel: txt.selectionStart}; },
   cuerpoMsg: cuerpoMsg, deEstaTab: deEstaTab, enviarMensaje: enviarMensaje,
   normTema: normTema, padreTema: padreTema,
   resaltar: resaltar, pintarWidgets: pintarWidgets,
