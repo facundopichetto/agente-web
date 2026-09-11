@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.12">
-<link rel="manifest" href="manifest.json?v=4.12">
+<meta name="agente-web-version" content="4.13">
+<link rel="manifest" href="manifest.json?v=4.13">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -353,6 +353,7 @@ var alfinal = $("alfinal"), envoltorio = $("envoltorio");
 /* TEMAS-JS: generado por `python3 -m recetas.clasificar_tema --sync-web`, no editar a mano */
 var TEMAS = ["tools", "awtomic", "awtomic-qa", "flabs", "fuzzer", "juegos", "plata", "personal"];
 var PRIORIDAD = ["awtomic-qa", "flabs", "juegos", "plata", "fuzzer", "awtomic", "tools"];
+var RE_CORTE_SRC = "(\\n+)|([.;!?]\\s+)|(^|[\\s,;:])(?:y\\s+otra\\s+cosa|otra\\s+cosa|aparte|adem[a\u00e1]s|tambi[e\u00e9]n)(?!\\w)";
 var PALABRAS = {
   "awtomic-qa": ["verificador", "awtomic[- ]?qa", "qa", "tanda de tickets", "revisor de tanda", "loop verificador", "capturas del ticket"],
   "awtomic": ["jira", "ticket", "tickets", "cx", "shopify", "merchant", "merchants", "theme", "mvp-?\\d+", "cx-?\\d+", "subscription", "suscripci\\wn", "bundle", "brian", "emily", "verify", "selling plan", "app de awtomic", "awtomic"],
@@ -360,7 +361,7 @@ var PALABRAS = {
   "juegos": ["retroid", "rom", "roms", "emulador", "emuladores", "ps2", "psp", "vita", "psvita", "gamecube", "dreamcast", "consolita", "emudeck", "retroarch", "juego", "juegos", "chd", "iso", "black_?5tb"],
   "plata": ["plata", "ahorro", "ahorrar", "inversi\\wn", "invertir", "d\\wlar", "dolares", "cedear", "cedears", "plazo fijo", "banco", "gastos", "presupuesto personal"],
   "flabs": ["flabs", "flabsdev"],
-  "tools": ["claude", "iterm", "fish", "chrome", "tui", "consola", "daemon", "agente", "receta", "recetas", "skill", "terminal", "tmux", "widget", "widgets", "web terminal", "mision", "modelo", "tokens", "cola", "launchd"],
+  "tools": ["claude", "iterm", "fish", "chrome", "tui", "consola", "daemon", "agente", "receta", "recetas", "skill", "terminal", "tmux", "widget", "widgets", "web terminal", "mision", "modelo", "tokens", "cola", "launchd", "pesta[\u00f1n]a", "pesta[\u00f1n]as", "interfaz", "chat"],
 };
 /* /TEMAS-JS */
 var AUTO = "auto";
@@ -396,6 +397,41 @@ function clasificar(txt){
   var t = porPalabras(txt);
   if(t) return {tema: t, fuente: "palabras"};
   return {tema: null, fuente: "default"};
+}
+
+// ---------- mensajes con dos temas adentro (facundo, 2026-09-11) ----------
+// facundo escribe de corrido y la primera mitad es de un tema y la segunda de otro. `partir()` es la
+// copia js de `clasificar_tema.partir`: corta por parrafo / oracion / conector (`otra cosa`, `aparte`,
+// `ademas`, `tambien`), clasifica cada fragmento solo por palabras y pega los vecinos del mismo tema.
+// devuelve [{tema, texto}]; un solo elemento = el mensaje es de un tema solo.
+function cortes(txt){
+  var re = new RegExp(RE_CORTE_SRC, "gi"), ps = [0], m;
+  while((m = re.exec(txt)) !== null){
+    var p = (m[1] || m[2]) ? m.index + m[0].length : m.index + (m[3] || "").length;
+    if(p > ps[ps.length - 1] && p < txt.length) ps.push(p);
+    if(re.lastIndex === m.index) re.lastIndex++;      // por si algun dia el corte es de ancho cero
+  }
+  ps.push(txt.length);
+  return ps;
+}
+function partir(txt){
+  txt = (txt || "").trim();
+  if(!txt) return [];
+  var m = RE_TEMA.exec(txt);
+  if(m && TEMAS.indexOf(m[1].toLowerCase()) >= 0)
+    return [{tema: m[1].toLowerCase(), texto: txt.slice(m[0].length).trim()}];
+  var ps = cortes(txt), grupos = [];
+  for(var i = 0; i < ps.length - 1; i++){
+    var a = ps[i], b = ps[i + 1];
+    if(!txt.slice(a, b).trim()) continue;
+    var t = porPalabras(txt.slice(a, b)), g = grupos[grupos.length - 1];
+    if(g && (!t || t === g.tema)) g.b = b;
+    else if(g && !g.tema){ g.tema = t; g.b = b; }
+    else grupos.push({tema: t, a: a, b: b});
+  }
+  var defecto = clasificar(txt).tema;                 // puede ser null: ahi lo pone la pestaña
+  if(grupos.length < 2) return [{tema: defecto, texto: txt}];
+  return grupos.map(function(g){ return {tema: g.tema || defecto, texto: txt.slice(g.a, g.b).trim()}; });
 }
 
 // estado de las pestañas (sobrevive a cerrar la pwa; en la consola esto es tui_layout.json)
@@ -1062,7 +1098,7 @@ function mandar(texto, tema, crudo){
   tema = tema || temaActivo();
   var cuerpo = cuerpoMsg(texto, tema, crudo);
   $("mandar").disabled = true;
-  api("POST", "/repos/" + REPO + "/issues/" + ISSUE + "/comments", {body: cuerpo})
+  return api("POST", "/repos/" + REPO + "/issues/" + ISSUE + "/comments", {body: cuerpo})
     .then(function(r){
       txt.value = ""; txt.style.height = "";
       if(r.json && !vistos[r.json.id]){
@@ -1075,6 +1111,18 @@ function mandar(texto, tema, crudo){
     })
     .catch(function(e){ if(ruidoso(e)) sistema("no se pudo mandar: " + e.message, "error"); })
     .then(function(){ $("mandar").disabled = false; });
+}
+// un mensaje partido sale como varios mensajes, uno por tema, **en orden** y cada uno con su
+// `tema x:` a su pestaña (la abre si no estaba). el foco queda en la del ultimo fragmento.
+function mandarPartido(trozos){
+  var p = Promise.resolve();
+  trozos.forEach(function(tr){
+    p = p.then(function(){
+      if(tabs.indexOf(tr.tema) < 0 || temaActivo() !== tr.tema) abrirTab(tr.tema);
+      return mandar(tr.texto, tr.tema);
+    });
+  });
+  return p;
 }
 
 // el tema lo detecta el clasificador (cero tokens) y se cruza con el de la pestaña:
@@ -1100,17 +1148,29 @@ function enviarMensaje(texto){
     if(c.tema && tabs.indexOf(c.tema) >= 0) abrirTab(c.tema);
     return;
   }
+  // el mensaje trae dos temas adentro: se pregunta aunque el tema del conjunto sea el de la pestaña
+  var trozos = partir(texto);
+  if(trozos.length > 1){
+    var otro = null;
+    for(var i = 0; i < trozos.length; i++) if(trozos[i].tema !== activo){ otro = trozos[i].tema; break; }
+    preguntarDestino(texto, activo, otro || trozos[0].tema, trozos);
+    return;
+  }
   if(c.fuente === "palabras" && c.tema !== activo){ preguntarDestino(texto, activo, c.tema); return; }
   mandar(texto, activo);
 }
-// el mensaje parece de otro tema: 3 opciones y no se manda hasta elegir (igual que la consola)
-function preguntarDestino(texto, activo, otro){
-  var existe = tabs.indexOf(otro) >= 0;
-  dd("esto parece de " + otro, [
-    ["mandalo a la pestaña " + otro + (existe ? "" : " (la abre)"), "ir"],
-    ["abrí " + otro + " al lado de los widgets y mandalo ahí", "lado"],
-    ["no, dejalo acá como `tema " + activo + ":`", "aqui"]
-  ], function(que){
+// el mensaje parece de otro tema: opciones y no se manda hasta elegir (igual que la consola).
+// si ademas viene partido en 2+ temas, la primera opcion es partirlo: cada mitad a su pestaña.
+function preguntarDestino(texto, activo, otro, trozos){
+  var existe = tabs.indexOf(otro) >= 0, ops = [];
+  if(trozos && trozos.length > 1)
+    ops.push(["partir: " + trozos.map(function(t){ return t.tema; }).join(" / "), "partir"]);
+  ops.push(["mandalo a la pestaña " + otro + (existe ? "" : " (la abre)"), "ir"]);
+  ops.push(["abrí " + otro + " al lado de los widgets y mandalo ahí", "lado"]);
+  ops.push(["no, dejalo acá como `tema " + activo + ":`", "aqui"]);
+  dd(trozos && trozos.length > 1 ? "esto tiene " + trozos.length + " temas" : "esto parece de " + otro,
+     ops, function(que){
+    if(que === "partir"){ mandarPartido(trozos); return; }
     if(que === "aqui"){ mandar(texto, activo); return; }
     if(que === "lado") splitCon(otro); else abrirTab(otro);
     mandar(texto, otro);
@@ -1583,10 +1643,10 @@ if(urlSucia) sistema("el token venía en la url: lo guardé acá y limpié la di
 // gancho de prueba: `recetas/prueba_web` (chrome headless, cero tokens) usa esto para chequear que
 // el clasificador de la web da lo mismo que la receta de python y que cada mensaje cae en su pestaña.
 window.__agente = {
-  clasificar: clasificar,
+  clasificar: clasificar, partir: partir,
   estado: function(){ return {tabs: tabs, paneles: paneles, foco: foco}; },
   abrirTab: abrirTab, splitCon: splitCon, unPanel: unPanel, renombrarTab: renombrarTab,
-  cuerpoMsg: cuerpoMsg, deEstaTab: deEstaTab,
+  cuerpoMsg: cuerpoMsg, deEstaTab: deEstaTab, enviarMensaje: enviarMensaje,
   resaltar: resaltar,
   cargar: function(coms){
     msgs = []; vistos = {};
