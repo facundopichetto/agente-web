@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.9">
-<link rel="manifest" href="manifest.json?v=4.9">
+<meta name="agente-web-version" content="4.10">
+<link rel="manifest" href="manifest.json?v=4.10">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -332,6 +332,8 @@ var PALABRAS = {
 };
 /* /TEMAS-JS */
 var AUTO = "auto";
+// la general: puerta de entrada sin tema fijo. en el layout se guarda como `auto`, se muestra `general`
+var ETIQUETA = {auto: "general"};
 var RE_TEMA = /^\s*tema\s+([\w-]+)\s*:\s*/i;
 // lo que el daemon atiende por texto exacto (sin modelo): sale crudo, sin `tema x:` adelante
 var RE_CRUDO = /^(status|estado|pausa|segu[ií]|log|cola|[oó]rdenes|ordenes|propuestas|avisos|reinicia|reiniciar|cuenta(\s+\S+)?|op\s+\d+\s+[a-dA-D]|dale\s+\d+)$/i;
@@ -384,7 +386,8 @@ function guardarLayout(){
 function temaActivo(){ return paneles[foco] || paneles[0]; }
 // `auto` junta lo que no tiene pestaña propia: nada desaparece cuando el daemon clasifica a un tema
 // que facundo no abrio.
-function deEstaTab(tm, tab){ return tab === AUTO ? tabs.indexOf(tm) < 0 : tm === tab; }
+// la general junta lo que mando ella (sin prefijo) y lo que no tiene pestaña propia
+function deEstaTab(tm, tab){ return tab === AUTO ? (tm === AUTO || tabs.indexOf(tm) < 0) : tm === tab; }
 
 // ---------- barra ----------
 function btnBarra(texto, accion){
@@ -402,7 +405,7 @@ function pintarTabs(){
     b.className = "tab" + (t === temaActivo() ? " activo" : (paneles.indexOf(t) >= 0 ? " enpanel" : ""));
     b.dataset.tema = t;
     b.draggable = true;
-    b.textContent = t;
+    b.textContent = ETIQUETA[t] || t;
     if(t === temaActivo() && tabs.length > 1){
       var x = document.createElement("span");
       x.className = "x"; x.textContent = "×"; x.dataset.cerrar = t;
@@ -434,7 +437,8 @@ function abrirTab(tema){
   paneles[foco] = tema;
   pintarTabs(); render(); alFinal();
 }
-// la pestaña `auto` se vuelve la del tema que detecto el clasificador (si ya habia una, no se duplica)
+// renombrar una pestaña (si ya habia una de ese tema, no se duplica). la general ya no se renombra sola
+// (facundo, 2026-09-11); queda por si hace falta renombrar a mano.
 function renombrarTab(viejo, nuevo){
   if(viejo === nuevo || tabs.indexOf(viejo) < 0) return;
   if(tabs.indexOf(nuevo) >= 0) tabs.splice(tabs.indexOf(viejo), 1);
@@ -453,7 +457,7 @@ function cerrarTab(tema){
   pintarTabs(); render(); alFinal();
 }
 function nuevaTab(){
-  var ops = [[AUTO + " (lo detecta solo)", AUTO]];
+  var ops = [["general (sin tema, la puerta de entrada)", AUTO]];
   TEMAS.forEach(function(t){ if(tabs.indexOf(t) < 0) ops.push([t, t]); });
   dd("pestaña nueva: qué tema?", ops, abrirTab);
 }
@@ -909,12 +913,17 @@ document.addEventListener("visibilitychange", function(){ if(!document.hidden) m
 // cada mensaje sale con su `tema x:` explicito, asi que cae si o si en la pestaña desde donde se
 // escribio (y el daemon contesta con ese mismo tema). `crudo` es para lo que el daemon atiende por
 // texto exacto sin modelo (status, cola, op 2 B, dale 3): ahi el prefijo lo rompería.
+// el texto tal cual sale al buzon: con `tema x:` adelante, salvo que ya lo traiga, que sea un comando
+// crudo, o que venga de la pestaña general (que no fija tema: ahi clasifica el daemon)
+function cuerpoMsg(texto, tema, crudo){
+  var ya = RE_TEMA.test(texto);
+  return (crudo || ya || tema === AUTO) ? texto : "tema " + tema + ": " + texto;
+}
 function mandar(texto, tema, crudo){
   texto = (texto || "").trim();
   if(!texto) return;
   tema = tema || temaActivo();
-  var ya = RE_TEMA.test(texto);
-  var cuerpo = (crudo || ya || tema === AUTO) ? texto : "tema " + tema + ": " + texto;
+  var cuerpo = cuerpoMsg(texto, tema, crudo);
   $("mandar").disabled = true;
   api("POST", "/repos/" + REPO + "/issues/" + ISSUE + "/comments", {body: cuerpo})
     .then(function(r){
@@ -933,7 +942,10 @@ function mandar(texto, tema, crudo){
 
 // el tema lo detecta el clasificador (cero tokens) y se cruza con el de la pestaña:
 // - `tema x:` escrito a mano: manda, y la charla se va a esa pestaña.
-// - pestaña `auto`: adopta el tema detectado y se renombra sola.
+// - pestaña general (`auto`): la puerta de entrada. va sin prefijo (el clasificador es solo el default y el
+//   daemon contesta viendo la charla de todos los temas) y **no se renombra nunca** (facundo, 2026-09-11:
+//   quiere una puerta de entrada fija ademas de las pestañas de tema). si el tema detectado ya tiene
+//   pestaña, salta ahi para que la respuesta se vea donde cae.
 // - pestaña X y el mensaje parece de Y: pregunta antes de mandar (3 opciones).
 // - si no hay pistas, se queda en la pestaña donde esta.
 function enviarMensaje(texto){
@@ -947,9 +959,8 @@ function enviarMensaje(texto){
     return;
   }
   if(activo === AUTO){
-    var destino = c.tema || "tools";
-    renombrarTab(AUTO, destino);
-    mandar(texto, destino);
+    mandar(texto, AUTO);                                       // crudo: la general no fija tema
+    if(c.tema && tabs.indexOf(c.tema) >= 0) abrirTab(c.tema);
     return;
   }
   if(c.fuente === "palabras" && c.tema !== activo){ preguntarDestino(texto, activo, c.tema); return; }
@@ -1438,6 +1449,7 @@ window.__agente = {
   clasificar: clasificar,
   estado: function(){ return {tabs: tabs, paneles: paneles, foco: foco}; },
   abrirTab: abrirTab, splitCon: splitCon, unPanel: unPanel, renombrarTab: renombrarTab,
+  cuerpoMsg: cuerpoMsg, deEstaTab: deEstaTab,
   cargar: function(coms){
     msgs = []; vistos = {};
     coms.forEach(function(c){ agregar(c, false); });
