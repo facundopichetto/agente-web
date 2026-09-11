@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.18">
-<link rel="manifest" href="manifest.json?v=4.18">
+<meta name="agente-web-version" content="4.19">
+<link rel="manifest" href="manifest.json?v=4.19">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -271,6 +271,49 @@
     padding:8px 10px;font:inherit;font-size:11.5px;cursor:pointer;text-align:left;
   }
   #dd .ddop:active{background:#111}
+
+  /* ---------- modal de item de widget (facundo, 2026-09-11) ----------
+     tocar cualquier fila de un widget la expande y ofrece 2 a 4 acciones a/b/c. look terminal. */
+  .it{cursor:pointer;border-radius:3px}
+  .it:hover{background:#0d1410}
+  #mfondo{position:fixed;inset:0;z-index:29;background:rgba(0,0,0,.65)}
+  #mfondo.oculta,#modal.oculta{display:none}
+  #modal{
+    position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:30;
+    width:min(560px,calc(100vw - 20px));max-height:82dvh;overflow-y:auto;
+    background:#000;border:1px solid var(--verde);border-radius:6px;
+    box-shadow:0 0 0 1px #06210a,0 10px 40px rgba(0,0,0,.85);
+    -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+  }
+  #modal .mtit{
+    position:sticky;top:0;background:#000;display:flex;justify-content:space-between;gap:8px;
+    align-items:center;border-bottom:1px solid var(--linea);padding:7px 9px;
+    color:var(--verde);font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;
+  }
+  #modal .mx{
+    background:#000;color:var(--gris);border:1px solid var(--linea);border-radius:4px;
+    padding:2px 7px;font:inherit;font-size:9px;cursor:pointer;flex:0 0 auto;
+  }
+  #modal .mcuerpo{
+    padding:9px;font-size:11.5px;line-height:1.55;color:var(--blanco);
+    white-space:pre-wrap;word-break:break-word;
+  }
+  #modal .mcuerpo a{color:var(--cian);text-decoration:none;border-bottom:1px dotted #1f3a44}
+  #modal .macc{display:flex;flex-direction:column;gap:5px;padding:0 9px 10px 9px}
+  #modal .macc button{
+    background:#000;color:var(--cian);border:1px solid var(--linea);border-radius:4px;
+    padding:8px 10px;font:inherit;font-size:11.5px;cursor:pointer;text-align:left;
+  }
+  #modal .macc button:active{background:#111}
+  #modal .macc button.principal{color:var(--verde);border-color:var(--verde)}
+  #modal .macc .let{color:var(--verde);font-weight:600;margin-right:6px}
+  @media (max-width:899px){
+    /* en el celu el modal ocupa toda la pantalla */
+    #modal{
+      left:0;top:0;transform:none;width:100vw;max-width:none;height:100dvh;max-height:none;
+      border:none;border-radius:0;padding-bottom:env(safe-area-inset-bottom);
+    }
+  }
 </style>
 </head>
 <body>
@@ -329,6 +372,13 @@
 
 <div id="ddfondo" class="oculta"></div>
 <div id="dd" class="oculta"></div>
+
+<div id="mfondo" class="oculta"></div>
+<div id="modal" class="oculta" role="dialog" aria-modal="true">
+  <div class="mtit"><span id="mtitulo"></span><button id="mcerrar" class="mx" type="button">esc ×</button></div>
+  <div class="mcuerpo" id="mcuerpo"></div>
+  <div class="macc" id="macc"></div>
+</div>
 
 <script>
 (function(){
@@ -1430,6 +1480,16 @@ function caja(tit, extra, cuerpo, tabla){
 }
 function vacio(t){ return '<span class="vacio">' + esc(t) + "</span>"; }
 
+// ---------- items tocables (facundo, 2026-09-11) ----------
+// cada fila de un widget se registra aca y se envuelve en un `.it`: tocarla abre el modal con el item
+// expandido y sus acciones. el registro se limpia en cada repintado.
+var itemsW = {}, itemN = 0;
+function it(o, html){
+  var id = ++itemN;
+  itemsW[id] = o;
+  return '<span class="it" data-it="' + id + '">' + html + "</span>";
+}
+
 function cajaUsage(u){
   var p = u.presupuesto || {}, c = u.costo || {}, filas = [];
   // facundo tiene dos cuentas de claude (facu = la principal, orugote): se pinta un bloque por cuenta.
@@ -1445,8 +1505,9 @@ function cajaUsage(u){
   var cuentas = u.cuentas || [];
   if(cuentas.length){
     cuentas.forEach(function(cu){
-      filas.push('<span class="c b">' + esc(cu.nombre) + "</span>" +
-                 (cu.activa ? ' <span class="v">activa</span>' : ""));
+      filas.push(it({tipo: "cuenta", tema: "tools", d: cu},
+                 '<span class="c b">' + esc(cu.nombre) + "</span>" +
+                 (cu.activa ? ' <span class="v">activa</span>' : "")));
       barras(cu.barras, cu.activa);
       (cu.limites || []).forEach(function(l){
         filas.push(pad(l.modelo, 4) + " " + bar(l.pct) + ' <span class="g">week</span>');
@@ -1490,8 +1551,9 @@ function cajaAgente(a){
           : (a.corriendo || []).length ? '<span class="a b">trabajando</span>' : '<span class="v">idle</span>';
   filas.push('cola <span class="c b">' + a.pendientes + "</span> pendientes  " + est);
   (a.corriendo || []).forEach(function(t){
-    filas.push('<span class="a">&gt;</span> <span class="m b">' + esc(t.modelo) + '</span> <span class="g">' +
-               (t.min === null ? "?" : t.min) + "m</span> " + esc(String(t.texto || "").slice(0, 120)));
+    filas.push(it({tipo: "tarea", estado: "corriendo", tema: t.tema, d: t},
+               '<span class="a">&gt;</span> <span class="m b">' + esc(t.modelo) + '</span> <span class="g">' +
+               (t.min === null ? "?" : t.min) + "m</span> " + esc(String(t.texto || "").slice(0, 120))));
   });
   filas.push(a.horas + "h  ok <span class=\"v b\">" + a.ok + '</span>  fallo <span class="r b">' + a.fallo +
              '</span>  <span class="g">chat ' + a.chat + "</span>");
@@ -1499,13 +1561,16 @@ function cajaAgente(a){
   if(!ult.length) filas.push(vacio("nada terminado todavia"));
   ult.forEach(function(t){
     var hora = (t.fecha || "").slice(11, 16) || "--:--";
-    filas.push('<span class="g">' + esc(hora) + "</span> " +
+    filas.push(it({tipo: "tarea", estado: "hecha", tema: t.tema, d: t},
+               '<span class="g">' + esc(hora) + "</span> " +
                (t.ok ? '<span class="v">ok</span>' : '<span class="r">!!</span>') + " " +
                esc(String(t.texto || "").slice(0, 90)) +
-               (t.usd ? ' <span class="m">$' + t.usd.toFixed(2) + "</span>" : ""));
+               (t.usd ? ' <span class="m">$' + t.usd.toFixed(2) + "</span>" : "")));
   });
   (a.cola || []).slice(0, 4).forEach(function(t){
-    filas.push('<span class="a">[ ]</span> <span class="g">' + esc(t.tema) + "</span> " + esc(String(t.texto).slice(0, 80)));
+    filas.push(it({tipo: "tarea", estado: "cola", tema: t.tema, d: t},
+               '<span class="a">[ ]</span> <span class="g">' + esc(t.tema) + "</span> " +
+               esc(String(t.texto).slice(0, 80))));
   });
   var pausa = boton(a.pausa ? "segui" : "pausa", a.pausa ? "segui" : "pausa");
   filas.push(pausa + boton("cola", "cola") + boton("status", "status"));
@@ -1516,16 +1581,18 @@ function cajaVerif(v){
   if(v.verify === undefined) return caja("verification agent", "", vacio("sin cache de jira"));
   var edad = v.edad_min > 30 ? ' <span class="g">(' + v.edad_min + "m)</span>" : "";
   return caja("verification agent", "",
-    'verify <span class="c b">' + v.verify + '</span> · mine <span class="b">' + v.mine +
-    '</span> · unassigned <span class="b">' + v.unassigned + "</span>" + edad +
-    ' · running <span class="' + (v.running ? "a" : "v") + ' b">' + v.running + "</span>");
+    it({tipo: "verif", tema: "awtomic", d: v},
+      'verify <span class="c b">' + v.verify + '</span> · mine <span class="b">' + v.mine +
+      '</span> · unassigned <span class="b">' + v.unassigned + "</span>" + edad +
+      ' · running <span class="' + (v.running ? "a" : "v") + ' b">' + v.running + "</span>"));
 }
 
 function cajaTickets(t){
   if(t.sin_datos) return caja("my tickets", "", vacio("sin jira_mine.json"));
   var filas = (t.mine || []).map(function(x){
-    return '<span class="c b">' + esc(x.key) + '</span> <span class="a">' + esc(x.estado) + '</span> ' +
-           '<span class="g">' + haceSeg(x.hace_s) + "</span> " + esc(x.titulo);
+    return it({tipo: "ticket", tema: "awtomic", d: x},
+      '<span class="c b">' + esc(x.key) + '</span> <span class="a">' + esc(x.estado) + '</span> ' +
+      '<span class="g">' + haceSeg(x.hace_s) + "</span> " + esc(x.titulo));
   });
   if(!filas.length) filas.push(vacio("nada asignado en curso"));
   if(t.total > (t.mine || []).length) filas.push('<span class="g">+' + (t.total - t.mine.length) + " mas</span>");
@@ -1543,7 +1610,9 @@ function cajaOportunidades(o){
   var filas = [];
   o.items.forEach(function(i){
     var sello = i.valor + "/" + i.esfuerzo + (i.dias ? " " + i.dias + "d" : "");
-    filas.push('<span class="' + (i.limbo ? "r" : "a") + ' b">' + i.id + '</span> <span class="g">' + sello + "</span> " + esc(i.titulo));
+    filas.push(it({tipo: "oportunidad", tema: "tools", d: i},
+               '<span class="' + (i.limbo ? "r" : "a") + ' b">' + i.id + '</span> <span class="g">' +
+               sello + "</span> " + esc(i.titulo)));
     (i.opciones || []).forEach(function(op){
       var voto = op.letra === i.voto;
       filas.push("  " + boton(op.letra, "op " + i.id + " " + op.letra, voto ? "voto" : "") +
@@ -1578,7 +1647,8 @@ function cajaSombra(sb){
     var ver = v.veredicto === "apto" ? '<span class="v b">' + pad("ok " + (cortos[v.proveedor] || v.proveedor || ""), 9) + "</span>"
             : v.veredicto === "no apto" ? '<span class="r b">' + pad("no", 9) + "</span>"
             : '<span class="g">' + pad("pocos", 9) + "</span>";
-    filas.push(pad(cat, 11) + celdas.join(" ") + " " + ver);
+    filas.push(it({tipo: "catbackup", tema: "tools", d: {cat: cat, fila: f, cols: cols, veredicto: v}},
+               pad(cat, 11) + celdas.join(" ") + " " + ver));
   });
   if(filas.length === 1) filas.push(vacio("sin corridas todavia"));
   var hoy = sb.hoy || {}, est = hoy.estados || {};
@@ -1587,8 +1657,11 @@ function cajaSombra(sb){
     var chips = Object.keys(est).map(function(p){
       var e = est[p], c = clEst[e.estado] || "g";
       var lat = e.estado === "ok" && e.latencia !== null ? " " + e.latencia + "s" : "";
-      return '<span class="' + c + ' b">' + esc(cortos[p] || p) + "</span>" +
-             '<span class="' + c + '">' + esc(" " + e.estado + lat) + "</span>";
+      return it({tipo: "modelo", tema: "tools",
+                 d: {prov: p, hoy: e, info: (sb.modelos || {})[p] || {}, tabla: sb.tabla || {},
+                     cats: sb.cats || [], veredictos: sb.veredictos || {}}},
+                '<span class="' + c + ' b">' + esc(cortos[p] || p) + "</span>" +
+                '<span class="' + c + '">' + esc(" " + e.estado + lat) + "</span>");
     });
     filas.push('<span class="g">' + pad("hoy", 11) + "</span>" + chips.join('<span class="g"> \u00b7 </span>'));
   }
@@ -1602,15 +1675,17 @@ function cajaAvisos(av){
   return caja("avisos", "", av.map(function(l){
     var m = /^(\d{4}-\d\d-\d\d \d\d:\d\d)\s+([\s\S]*)$/.exec(l);
     var t = m ? '<span class="g">' + esc(m[1].slice(5, 16)) + "</span> " + esc(m[2]) : esc(l);
-    return t.length > 400 ? t.slice(0, 400) + "…" : t;
+    return it({tipo: "aviso", d: {texto: m ? m[2] : l, fecha: m ? m[1] : null}},
+              t.length > 400 ? t.slice(0, 400) + "…" : t);
   }).join("\n"));
 }
 
 function cajaPropuestas(pr){
   if(!(pr || []).length) return caja("propuestas", "", vacio("nada esperando un dale"));
   return caja("propuestas", "", pr.map(function(p){
-    return '<span class="a b">' + p.n + '</span> <span class="g">' + esc(p.tema) + "</span> " +
-           esc(String(p.orden).slice(0, 220)) + "\n  " + boton("dale", "dale " + p.n, "dale");
+    return it({tipo: "propuesta", tema: p.tema, d: p},
+      '<span class="a b">' + p.n + '</span> <span class="g">' + esc(p.tema) + "</span> " +
+      esc(String(p.orden).slice(0, 220))) + "\n  " + boton("dale", "dale " + p.n, "dale");
   }).join("\n"));
 }
 
@@ -1626,7 +1701,8 @@ function cajaPodcast(p){
   var filas = [btn + link(p.web || "#", "la web del podcast")];
   if(!eps.length) filas.push(vacio("sin episodios"));
   eps.forEach(function(e){
-    filas.push('<span class="g">' + esc((e.fecha || "").slice(5)) + "</span> " + esc(e.titulo));
+    filas.push(it({tipo: "episodio", tema: "tools", d: e},
+               '<span class="g">' + esc((e.fecha || "").slice(5)) + "</span> " + esc(e.titulo)));
     filas.push("  " + (e.voces || []).map(function(v){
       return link(v.url, v.voz + (v.min ? " " + v.min + "m" : ""));
     }).join(" · "));
@@ -1641,6 +1717,7 @@ function pintarWidgets(d, err){
   }
   if(d) widDatos = d;
   d = widDatos;
+  itemsW = {}; itemN = 0;            // los items del repintado anterior ya no existen
   var edad = haceSeg((Date.now() - fecha(d.ts)) / 1000);
   var partes = [
     cajaUsage(d.usage || {}),
@@ -1674,11 +1751,204 @@ widgetsEl.addEventListener("click", function(e){
   var pod = e.target.closest("button[data-pod]");
   if(pod){ podAbierto = !podAbierto; pintarWidgets(null); return; }
   var b = e.target.closest("button[data-msg]");
-  if(!b) return;
-  b.disabled = true;
-  mandar(b.dataset.msg, temaActivo(), true);   // `op N X` / `dale N`: los resuelve el daemon sin modelo
-  setTimeout(function(){ b.disabled = false; }, 1500);
+  if(b){
+    b.disabled = true;
+    mandar(b.dataset.msg, temaActivo(), true);   // `op N X` / `dale N`: los resuelve el daemon sin modelo
+    setTimeout(function(){ b.disabled = false; }, 1500);
+    return;
+  }
+  var n = e.target.closest("[data-it]");         // tocar la fila = modal con el item expandido
+  if(n && itemsW[n.dataset.it]) abrirModal(itemsW[n.dataset.it]);
 });
+
+// ---------- modal de item de widget (facundo, 2026-09-11) ----------
+// el widget muestra una linea; el modal muestra el item entero (lo que manda widgets_json) y 2 a 4
+// acciones a/b/c segun el tipo. lo que termina en un mensaje sale **por la pestaña del tema del item**
+// (la abre si no existe), salvo los comandos que el daemon atiende crudos (`dale N`, `op N X`, `cola`).
+var JIRA = "https://shopbundle.atlassian.net/browse/";
+
+function corto(t, n){
+  t = String(t === null || t === undefined ? "" : t).replace(/\s+/g, " ").trim();
+  return t.length > n ? t.slice(0, n) + "…" : t;
+}
+function temaItem(o){
+  var t = o.tema || clasificar(String((o.d || {}).texto || (o.d || {}).titulo || "")).tema || "tools";
+  t = normTema(t);
+  return esTema(t) ? t : "tools";
+}
+// un mensaje que sale del modal: a la pestaña del tema del item (los crudos no llevan prefijo ni saltan)
+function actuar(tema, msg, crudo){
+  cerrarModal();
+  if(!crudo && esTema(tema) && temaActivo() !== tema) abrirTab(tema);
+  mandar(msg, esTema(tema) ? tema : temaActivo(), crudo);
+}
+// "hablar de esto": deja el chat en la pestaña del tema, con el contexto del item ya escrito
+function hablar(o, contexto){
+  cerrarModal();
+  var tema = temaItem(o);
+  if(temaActivo() !== tema) abrirTab(tema);
+  txt.value = "sobre " + contexto + ": ";
+  if(window.innerWidth < 900) verPanel(foco === 1 ? "lado" : "chat");
+  txt.focus();
+  txt.setSelectionRange(txt.value.length, txt.value.length);
+}
+function accHablar(o, contexto){
+  return ["hablar de esto en el chat", function(){ hablar(o, contexto); }];
+}
+
+function modalDe(o){
+  var d = o.d || {}, tema = temaItem(o), m = {tema: tema, acciones: [], titulo: o.tipo, cuerpo: ""};
+  if(o.tipo === "tarea"){
+    m.titulo = o.estado === "corriendo" ? "tarea corriendo" : o.estado === "hecha" ? "tarea terminada" : "tarea en la cola";
+    m.cuerpo = esc(d.completo || d.texto || "") + '\n\n<span class="g">tema</span> <span class="c">' + esc(tema) + "</span>" +
+      (d.modelo ? ' <span class="g">modelo</span> <span class="m">' + esc(d.modelo) + "</span>" : "") +
+      (d.tags ? ' <span class="g">' + esc(d.tags) + "</span>" : "") +
+      (d.min !== null && d.min !== undefined ? ' <span class="g">' + d.min + " min</span>" : "") +
+      (d.fecha ? ' <span class="g">' + esc(d.fecha) + "</span>" : "") +
+      (d.usd ? ' <span class="m">$' + d.usd.toFixed(2) + "</span>" : "") +
+      (o.estado === "hecha" ? (d.ok ? ' <span class="v">ok</span>' : ' <span class="r">fallo</span>') : "") +
+      (d.meta ? '\n<span class="g">' + esc(d.meta) + "</span>" : "");
+    if(o.estado === "hecha")
+      m.acciones.push(["ver el log de esta tarea", function(){
+        actuar(tema, "mostrame el log de la tarea «" + corto(d.texto, 90) + "»" +
+                     (d.log ? " (logs/" + d.log + ".txt)" : "") + ": qué hizo, qué falló y cuánto costó");
+      }]);
+    else
+      m.acciones.push(["ver la cola entera", function(){ actuar(tema, "cola", true); }]);
+    m.acciones.push(accHablar(o, "la tarea «" + corto(d.texto, 70) + "»"));
+  } else if(o.tipo === "oportunidad"){
+    m.titulo = "oportunidad " + d.id;
+    m.cuerpo = '<span class="a b">' + esc(d.titulo) + "</span>" +
+      (d.porque ? "\n" + esc(d.porque) : "") +
+      '\n<span class="g">valor ' + d.valor + " / esfuerzo " + d.esfuerzo +
+      (d.dias ? " · " + d.dias + " d esperando" : "") + (d.limbo ? " · refill en pausa" : "") + "</span>" +
+      (d.opciones || []).map(function(op){
+        return '\n\n<span class="' + (op.letra === d.voto ? "v" : "c") + ' b">' + esc(op.letra) + ")</span> " +
+               esc(op.texto) + (op.tiempo ? ' <span class="g">(' + esc(op.tiempo) + ")</span>" : "") +
+               (op.letra === d.voto ? ' <span class="v">← mi voto</span>' : "") +
+               (op.orden ? '\n<span class="g">' + esc(corto(op.orden, 220)) + "</span>" : "");
+      }).join("");
+    (d.opciones || []).forEach(function(op){
+      m.acciones.push([op.letra + ") " + corto(op.texto, 80) + (op.tiempo ? " (" + op.tiempo + ")" : "") +
+                       (op.letra === d.voto ? "  ← mi voto" : ""),
+                       function(){ actuar("tools", "op " + d.id + " " + op.letra, true); },
+                       op.letra === d.voto]);
+    });
+    m.acciones.push(accHablar(o, "la oportunidad " + d.id + " (" + corto(d.titulo, 70) + ")"));
+  } else if(o.tipo === "propuesta"){
+    m.titulo = "propuesta " + d.n;
+    m.cuerpo = esc(d.orden) + '\n\n<span class="g">tema</span> <span class="c">' + esc(tema) + "</span>";
+    m.acciones.push(["dale: encolala ahora", function(){ actuar(tema, "dale " + d.n, true); }, true]);
+    m.acciones.push(accHablar(o, "la propuesta " + d.n + " (" + corto(d.orden, 70) + ")"));
+    m.acciones.push(["descartarla", function(){
+      actuar(tema, "descartá la propuesta " + d.n + " («" + corto(d.orden, 90) +
+                   "»): borrala de propuestas-chat.md y no la encoles");
+    }]);
+  } else if(o.tipo === "modelo"){
+    var inf = d.info || {}, hoy = d.hoy || {};
+    m.titulo = "backup model: " + d.prov;
+    m.cuerpo = esc(inf.que_es || "modelo de respaldo que se mide en sombra.") +
+      '\n\n<span class="g">hoy</span> ' + esc(hoy.estado || "?") +
+      (hoy.latencia !== null && hoy.latencia !== undefined ? " " + hoy.latencia + "s" : "") +
+      (inf.modelo || hoy.modelo ? '\n<span class="g">modelo</span> <span class="c">' + esc(inf.modelo || hoy.modelo) + "</span>" : "") +
+      '\n<span class="g">clave</span> ' + (inf.clave === false ? '<span class="r">falta</span>' : '<span class="v">ok</span>') +
+      "\n" + (d.cats || []).map(function(c){
+        var x = ((d.tabla || {})[c] || {})[d.prov];
+        if(!x || x.acierto === null || x.acierto === undefined) return "";
+        return '\n<span class="g">' + pad(c, 11) + "</span>" + x.acierto + "% · " +
+               (x.latencia === null ? "?" : x.latencia) + "s · " + x.n + " corridas";
+      }).join("");
+    m.acciones.push(["probarlo ahora (manda un `eco:`)", function(){
+      actuar(tema, "eco: probando " + d.prov + ": contestame en una linea que modelo sos", true);
+    }]);
+    m.acciones.push(accHablar(o, "el modelo de backup " + d.prov));
+    m.acciones.push(["sacarlo del widget", function(){
+      actuar("tools", "sacá " + d.prov + " del widget `backup models`: quitalo de COLS_SOMBRA en " +
+                      "recetas/widgets_json.py y de donde se mida en recetas/sombra.py, y decime por qué quedó afuera");
+    }]);
+  } else if(o.tipo === "catbackup"){
+    var v = d.veredicto || {};
+    m.titulo = "backup: categoria " + d.cat;
+    m.cuerpo = '<span class="g">acierto por proveedor en esta categoria</span>' +
+      (d.cols || []).map(function(c){
+        var x = (d.fila || {})[c];
+        if(!x) return "";
+        return "\n" + pad(c, 11) + (x.acierto === null || x.acierto === undefined ? "sin datos"
+               : x.acierto + "% · " + (x.latencia === null ? "?" : x.latencia) + "s · " + x.n + " corridas");
+      }).join("") +
+      '\n\n<span class="g">veredicto</span> ' + esc(v.veredicto || "pocos datos") +
+      (v.proveedor ? " (" + esc(v.proveedor) + ")" : "");
+    m.acciones.push(accHablar(o, "la categoria " + d.cat + " de los modelos de backup"));
+  } else if(o.tipo === "ticket"){
+    m.titulo = d.key;
+    m.cuerpo = esc(d.titulo) + '\n\n<span class="a">' + esc(d.estado) + '</span> <span class="g">hace ' +
+      haceSeg(d.hace_s) + "</span>\n" + link(JIRA + d.key, "abrir " + d.key + " en jira");
+    m.acciones.push(accHablar(o, "el ticket " + d.key + " (" + corto(d.titulo, 70) + ")"));
+  } else if(o.tipo === "cuenta"){
+    m.titulo = "cuenta de claude: " + d.nombre;
+    m.cuerpo = (d.activa ? '<span class="v">es la cuenta que usa el agente ahora</span>'
+                         : '<span class="g">no es la cuenta activa</span>') +
+      (d.barras || []).map(function(b){
+        return "\n" + pad(b.nombre, 5) + (b.pct === null || b.pct === undefined ? "?" : b.pct + "%") +
+               (b.resets_at ? ' <span class="g">reset ' + esc(horaLocal(b.resets_at)) + "</span>" : "");
+      }).join("") +
+      (d.limites || []).map(function(l){ return "\n" + pad(l.modelo, 5) + l.pct + "% <span class=\"g\">week</span>"; }).join("");
+    if(!d.activa)
+      m.acciones.push(["pasar el agente a esta cuenta", function(){ actuar(tema, "cuenta " + d.nombre, true); }, true]);
+    m.acciones.push(["ver el uso ahora", function(){ actuar(tema, "status", true); }]);
+    m.acciones.push(accHablar(o, "la cuenta " + d.nombre));
+  } else if(o.tipo === "verif"){
+    m.titulo = "verification agent";
+    m.cuerpo = "verify " + d.verify + " · mine " + d.mine + " · unassigned " + d.unassigned +
+      " · running " + d.running + (d.edad_min !== null && d.edad_min !== undefined
+        ? '\n<span class="g">cache de jira de hace ' + d.edad_min + " min</span>" : "");
+    m.acciones.push(accHablar(o, "los tickets en verify"));
+  } else if(o.tipo === "aviso"){
+    m.titulo = "aviso" + (d.fecha ? " · " + d.fecha : "");
+    m.cuerpo = esc(d.texto || "");
+    m.tema = tema = temaItem({tema: null, d: d});
+    m.acciones.push(accHablar({tema: tema, d: d}, "el aviso «" + corto(d.texto, 70) + "»"));
+  } else if(o.tipo === "episodio"){
+    m.titulo = "podcast · " + (d.fecha || "");
+    m.cuerpo = esc(d.titulo || "") + "\n" + (d.voces || []).map(function(v){
+      return link(v.url, v.voz + (v.min ? " " + v.min + "m" : ""));
+    }).join(" · ");
+    m.acciones.push(accHablar(o, "el episodio «" + corto(d.titulo, 60) + "»"));
+  } else {
+    m.cuerpo = esc(JSON.stringify(d, null, 1));
+    m.acciones.push(accHablar(o, "esto del widget"));
+  }
+  return m;
+}
+
+var LETRAS = "abcdefgh";
+var modalAbierto = null;
+function abrirModal(o){
+  var m = modalDe(o);
+  modalAbierto = m;
+  $("mtitulo").textContent = m.titulo || "item";
+  $("mcuerpo").innerHTML = m.cuerpo || "";
+  var acc = $("macc");
+  acc.innerHTML = "";
+  (m.acciones || []).forEach(function(a, i){
+    var b = document.createElement("button");
+    b.type = "button";
+    if(a[2]) b.className = "principal";
+    b.innerHTML = '<span class="let">' + LETRAS[i] + ")</span>" + esc(a[0]);
+    b.addEventListener("click", a[1]);
+    acc.appendChild(b);
+  });
+  $("modal").classList.remove("oculta");
+  $("mfondo").classList.remove("oculta");
+}
+function cerrarModal(){
+  modalAbierto = null;
+  $("modal").classList.add("oculta");
+  $("mfondo").classList.add("oculta");
+  $("macc").innerHTML = "";
+}
+$("mfondo").addEventListener("click", cerrarModal);
+$("mcerrar").addEventListener("click", cerrarModal);
 
 // celu: una vista a la vez (chat | widgets | la pestaña de al lado, si esta partido).
 // en desktop (>= 900px) los paneles se ven juntos y esta barra no aparece.
@@ -1756,7 +2026,14 @@ $("panel-lado").addEventListener("click", function(e){
 $("lado-cerrar").addEventListener("click", function(e){ e.stopPropagation(); unPanel(); });
 $("envoltorio").addEventListener("click", function(){ focoEn(0); });
 $("ddfondo").addEventListener("click", cerrarDd);
-document.addEventListener("keydown", function(e){ if(e.key === "Escape") cerrarDd(); });
+document.addEventListener("keydown", function(e){
+  if(e.key === "Escape"){ cerrarDd(); cerrarModal(); return; }
+  // con el modal abierto, a/b/c dispara la accion de esa letra
+  if(!modalAbierto || e.metaKey || e.ctrlKey || e.altKey) return;
+  var j = LETRAS.indexOf((e.key || "").toLowerCase());
+  var bs = $("macc").querySelectorAll("button");
+  if(j >= 0 && j < bs.length){ e.preventDefault(); bs[j].click(); }
+});
 pintarTabs();
 
 pintarWidgets(null);
@@ -1851,6 +2128,21 @@ window.__agente = {
   cuerpoMsg: cuerpoMsg, deEstaTab: deEstaTab, enviarMensaje: enviarMensaje,
   normTema: normTema, padreTema: padreTema,
   resaltar: resaltar, pintarWidgets: pintarWidgets,
+  // modal de items de widget: `recetas/prueba_web_tabs` lo abre y lee lo que quedo pintado
+  abrirModal: abrirModal, cerrarModal: cerrarModal, modalDe: modalDe,
+  items: function(){ return itemsW; },
+  modalInfo: function(){
+    if(!modalAbierto) return null;
+    return {titulo: $("mtitulo").textContent, cuerpo: $("mcuerpo").textContent, tema: modalAbierto.tema,
+            acciones: [].map.call($("macc").querySelectorAll("button"), function(b){ return b.textContent; })};
+  },
+  tocarItem: function(sel){          // click sobre la n-esima fila tocable de los widgets
+    var ns = document.querySelectorAll("#widgets [data-it]");
+    if(typeof sel === "number") return ns[sel] ? (ns[sel].click(), true) : false;
+    for(var i = 0; i < ns.length; i++)
+      if((ns[i].textContent || "").indexOf(sel) >= 0){ ns[i].click(); return true; }
+    return false;
+  },
   cargar: function(coms){
     msgs = []; vistos = {};
     coms.forEach(function(c){ agregar(c, false); });
