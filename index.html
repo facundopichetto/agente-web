@@ -13,14 +13,14 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.7">
-<link rel="manifest" href="manifest.json?v=4.7">
+<meta name="agente-web-version" content="4.8">
+<link rel="manifest" href="manifest.json?v=4.8">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
-<!-- agente-web v4.3 (fuentes mas chicas; auto actualizacion por version.json cada 60 s; los mensajes viejos se pliegan a 2 lineas solo cuando scrolleas hacia arriba) -->
+<!-- agente-web v4.3 (fuentes mas chicas; auto actualizacion por version.json cada 60 s; los mensajes se muestran siempre enteros, sin plegado) -->
 <style>
   :root{
     --verde:#39ff14; --blanco:#e8e8e8; --gris:#666; --cian:#22d3ee;
@@ -69,22 +69,7 @@
   .yo .cuerpo{color:var(--blanco)}
   .error .cuerpo{color:var(--rojo)}
   .sistema .cuerpo{color:var(--gris)}
-  /* plegado: solo cuando facundo scrolleo hacia arriba (body.arriba). el ultimo mensaje nunca se
-     pliega, y al volver al fondo se despliega todo solo. `.abierto` = lo abrio el a mano. */
-  .msg .toggle{display:none}
-  body.arriba .msg.plegable:not(.abierto):not(:last-child) .cuerpo{
-    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
-    overflow:hidden;
-    -webkit-mask-image:linear-gradient(#000 62%,transparent);
-    mask-image:linear-gradient(#000 62%,transparent);
-  }
-  body.arriba .msg.plegable:not(:last-child){cursor:pointer}
-  body.arriba .msg.plegable:not(:last-child) .toggle{
-    display:inline-block;margin-top:3px;color:var(--cian);font-size:10px;
-    border-bottom:1px dotted var(--linea);
-  }
-  .msg.plegable .toggle::before{content:"ver más (" attr(data-lineas) " líneas)"}
-  .msg.plegable.abierto .toggle::before{content:"plegar"}
+  /* los mensajes se muestran siempre enteros: no hay plegado (facundo, 2026-09-10) */
   .cuerpo .ok{color:var(--verde)}
   .cuerpo .fallo{color:var(--rojo)}
   .cuerpo .pend{color:var(--amarillo)}
@@ -305,23 +290,11 @@ function hace(iso){
 function abajo(){
   hist.scrollTop = hist.scrollHeight;
   // segunda pasada: el teclado y el autosize del textarea cambian el alto despues del layout
-  requestAnimationFrame(function(){ hist.scrollTop = hist.scrollHeight; marcarArriba(); });
+  requestAnimationFrame(function(){ hist.scrollTop = hist.scrollHeight; });
   alfinal.style.display = "none";
-  marcarArriba();
 }
 function pegadoAbajo(){ return hist.scrollHeight - hist.scrollTop - hist.clientHeight < 80; }
-// pegado al fondo = lectura normal, todo entero. scrolleado hacia arriba = los viejos se pliegan
-// a 2 lineas (css, `body.arriba`) asi se escanea la charla sin bajar mil pantallas.
-function marcarArriba(){
-  var a = !pegadoAbajo();
-  if(a === document.body.classList.contains("arriba")) return;
-  document.body.classList.toggle("arriba", a);
-  if(!a) Array.prototype.forEach.call(lista.querySelectorAll(".msg.abierto"), function(m){
-    m.classList.remove("abierto");   // al volver al fondo no queda nada a medio abrir
-  });
-}
 hist.addEventListener("scroll", function(){
-  marcarArriba();
   if(pegadoAbajo()) alfinal.style.display = "none";
 });
 
@@ -388,14 +361,6 @@ function pintar(clase, quien, cuerpo, iso, id, arriba){
   b.className = "cuerpo";
   b.innerHTML = resaltar(cuerpo);
   div.appendChild(cab); div.appendChild(b);
-  var lineas = Math.max(cuerpo.split("\n").length, Math.ceil(cuerpo.length / 60));
-  if(lineas > 2){
-    div.classList.add("plegable");   // el css decide si se pliega (solo con body.arriba y no siendo el ultimo)
-    var t = document.createElement("div");
-    t.className = "toggle";
-    t.dataset.lineas = lineas;
-    div.appendChild(t);
-  }
   if(arriba) lista.insertBefore(div, lista.firstChild); else lista.appendChild(div);
   return div;
 }
@@ -408,15 +373,6 @@ function sistema(t, clase){
   pintar(clase || "sistema", "web", t, null, null);
   if(pego) abajo();
 }
-
-lista.addEventListener("click", function(e){
-  if(!document.body.classList.contains("arriba")) return;   // pegado al fondo no hay nada plegado
-  var m = e.target.closest(".msg.plegable");
-  if(!m || m === lista.lastElementChild) return;
-  var abrir = !m.classList.contains("abierto");
-  m.classList.toggle("abierto", abrir);
-  if(!abrir) m.scrollIntoView({block:"nearest"});
-});
 
 // ---------- api ----------
 function frenar(seg, motivo){
