@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.30">
-<link rel="manifest" href="manifest.json?v=4.30">
+<meta name="agente-web-version" content="4.31">
+<link rel="manifest" href="manifest.json?v=4.31">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1402,7 +1402,11 @@ function frenar(seg, motivo){
   }
   reprogramar();
 }
+// `recetas/prueba_web_tabs` enchufa aca un POST falso para probar el envio sin tocar github.
+// en produccion es null y esta linea no hace nada.
+var apiStub = null;
 function api(metodo, ruta, cuerpo, etag, accept){
+  if(apiStub) return apiStub(metodo, ruta, cuerpo, etag, accept);
   if(!token) return Promise.reject(new Error("401"));
   if(Date.now() < frenoHasta && metodo === "GET"){
     return Promise.reject(new Error("freno"));   // el poll no insiste; mandar un mensaje si
@@ -1669,18 +1673,28 @@ function cuerpoMsg(texto, tema, crudo){
   var ya = RE_TEMA.test(texto);
   return (crudo || ya || tema === AUTO) ? texto : "tema " + tema + ": " + texto;
 }
+// dos enter muy rapidos mandaban el mismo mensaje dos veces (facundo, 2026-09-11): la caja se vaciaba
+// recien cuando volvia el POST, asi que el segundo enter leia el mismo texto. ahora `mandar()` es
+// idempotente: mientras hay un envio en vuelo no sale nada nuevo, la caja se vacia **al toque** (y con
+// ella el borrador, que si no lo resucita el `tabs.json` del otro dispositivo), y un texto identico al
+// ultimo enviado hace menos de REPE_MS se ignora. si el POST falla, el texto vuelve a la caja.
+var REPE_MS = 2000;
+var ultimoTexto = "", ultimoTs = 0;
 function mandar(texto, tema, crudo){
   texto = (texto || "").trim();
   if(!texto) return;
+  if(enviando) return;                                          // hay uno saliendo: este enter no cuenta
+  if(texto === ultimoTexto && Date.now() - ultimoTs < REPE_MS) return;
   tema = tema || temaActivo();
   var cuerpo = cuerpoMsg(texto, tema, crudo);
   var caja = temaCaja;
+  ultimoTexto = texto; ultimoTs = Date.now();
   enviando++;
   $("mandar").disabled = true;
+  if(txt.value.trim() === texto){ txt.value = ""; txt.style.height = ""; }   // la caja se vacia ya
+  borrarBorrador(tema); if(caja && caja !== tema) borrarBorrador(caja);      // y su tumba se publica ya
   return api("POST", "/repos/" + REPO + "/issues/" + ISSUE + "/comments", {body: cuerpo})
     .then(function(r){
-      txt.value = ""; txt.style.height = "";
-      borrarBorrador(tema); if(caja && caja !== tema) borrarBorrador(caja);
       if(r.json && !vistos[r.json.id]){
         vistos[r.json.id] = true;
         var m = {id: r.json.id, clase: "yo", quien: "facundo", texto: texto, iso: r.json.created_at,
@@ -1689,7 +1703,11 @@ function mandar(texto, tema, crudo){
       }
       etagCom = null;
     })
-    .catch(function(e){ if(ruidoso(e)) sistema("no se pudo mandar: " + e.message, "error"); })
+    .catch(function(e){
+      ultimoTexto = ""; ultimoTs = 0;                           // fallo: se puede reintentar igual
+      if(!txt.value.trim()){ ponerCaja(texto); guardarBorrador(caja || tema, texto, true); }
+      if(ruidoso(e)) sistema("no se pudo mandar: " + e.message, "error");
+    })
     .then(function(){ enviando = Math.max(0, enviando - 1); $("mandar").disabled = false; });
 }
 // un mensaje partido sale como varios mensajes, uno por tema, **en orden** y cada uno con su
@@ -2538,7 +2556,10 @@ window.__agente = {
                             off: $("sync").classList.contains("off")}; },
   pintarSync: pintarSync, sincronizar: sincronizar, alVolver: alVolver,
   caja: function(){ return {tema: temaCaja, texto: txt.value, sel: txt.selectionStart}; },
-  cuerpoMsg: cuerpoMsg, deEstaTab: deEstaTab, enviarMensaje: enviarMensaje,
+  cuerpoMsg: cuerpoMsg, deEstaTab: deEstaTab, enviarMensaje: enviarMensaje, mandar: mandar,
+  // envio idempotente: dos enter rapidos no mandan dos veces (prueba_web_tabs lo chequea)
+  envios: function(){ return {enviando: enviando, ultimo: ultimoTexto, repeMs: REPE_MS}; },
+  stubApi: function(f){ apiStub = f || null; },
   normTema: normTema, padreTema: padreTema,
   resaltar: resaltar, pintarWidgets: pintarWidgets,
   // modal de items de widget: `recetas/prueba_web_tabs` lo abre y lee lo que quedo pintado
