@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.170">
-<link rel="manifest" href="manifest.json?v=4.170">
+<meta name="agente-web-version" content="4.171">
+<link rel="manifest" href="manifest.json?v=4.171">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2758,18 +2758,24 @@ function faltaTxt(s){
   return m + "m";
 }
 // una barra: el ancho es el % usado, el tick blanco es la linea (la parte de la ventana que ya paso)
-// y el color sale del `nivel` que ya calculo widgets_json.py (ok / cerca / sobre / mal).
+// y el color es el `color` continuo que ya calculo reparto_cuentas.py por distancia a la linea
+// (verde bien abajo, amarillo justo en la linea, rojo arriba). la clase `n-*` queda de fallback.
+function colorUso(c){ return /^hsl\(\s*\d+(\.\d+)?\s*,\s*\d+(\.\d+)?%\s*,\s*\d+(\.\d+)?%\s*\)$/.test(c || "") ? c : null; }
 function barraUso(b){
   var pct = (b.pct === null || b.pct === undefined) ? null : Math.max(0, Math.min(100, b.pct));
   var tick = (b.linea === null || b.linea === undefined) ? null : Math.max(0, Math.min(100, b.linea));
+  var col = colorUso(b.color), est = col ? 'style="color:' + col + '"' : "";
   return '<div class="ub n-' + esc(b.nivel || "sin") + '" title="' +
          esc(b.nombre + ": usado " + (pct === null ? "?" : Math.round(pct)) + "%, linea " +
              (tick === null ? "?" : Math.round(tick)) + "%" +
-             (b.ratio ? ", ratio " + b.ratio : "")) + '">' +
+             (b.ratio ? ", ratio " + b.ratio : "") +
+             (b.dist === null || b.dist === undefined ? "" :
+              ", " + (b.dist > 0 ? "+" : "") + b.dist + " de la linea")) + '">' +
          '<span class="ub-n">' + esc(b.nombre) + "</span>" +
-         '<span class="ub-pista"><span class="ub-lleno" style="width:' + (pct === null ? 0 : pct) + '%"></span>' +
+         '<span class="ub-pista"><span class="ub-lleno" style="width:' + (pct === null ? 0 : pct) + '%' +
+         (col ? ";background:" + col : "") + '"></span>' +
          (tick === null ? "" : '<span class="ub-tick" style="left:' + tick + '%"></span>') + "</span>" +
-         '<span class="ub-p">' + (pct === null ? "?" : Math.round(pct)) + "%</span>" +
+         '<span class="ub-p" ' + est + ">" + (pct === null ? "?" : Math.round(pct)) + "%</span>" +
          '<span class="ub-r">' + esc(faltaTxt(b.falta_s)) + "</span></div>";
 }
 // ---------- server (la geekom `claudio`) ----------
@@ -2910,8 +2916,10 @@ function cajaUsage(u){
     var b = bs.filter(function(x){ return x.nombre === cu.peor; })[0];
     if(!b) b = bs.slice().sort(function(x, y){ return (y.ratio || 0) - (x.ratio || 0); })[0];
     if(!b) return esc(cu.nombre);
+    var col = colorUso(b.color);
     return '<span class="b">' + esc(cu.nombre) + "</span> " +
-           '<span class="uw n-' + esc(b.nivel || "sin") + '">' + esc(b.nombre) + " " +
+           '<span class="uw n-' + esc(b.nivel || "sin") + '"' + (col ? ' style="color:' + col + '"' : "") +
+           ">" + esc(b.nombre) + " " +
            (b.pct === null || b.pct === undefined ? "?" : Math.round(b.pct)) + "%</span>";
   }).join('<span class="g"> \u00b7 </span>');
   return caja("usage", ese, '<div class="usage">' + (html || vacio("sin datos")) + "</div>",
