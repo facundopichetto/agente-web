@@ -422,13 +422,36 @@ antes una pestaña se podia arrastrar hasta los widgets y quedaba como segundo p
   120 px, y `body.teclado #pie{padding-bottom:4px}` lo pega abajo. con el teclado cerrado el
   safe-area vuelve.
 - **la fila de chips** ya no ocupa alto ni margen cuando esta vacia (`#chips.oculta,#chips:empty`).
-- **la barra de flechas + "listo"** que aparece arriba del teclado es la **accesoria del sistema** de
-  ios (el mismo teclado la pinta para cualquier campo de texto): **no se puede sacar desde una web**,
-  ni en safari ni en pwa; no hay api. lo que si esta hecho: el `manifest.json` ya declara
-  `display: standalone` (agregando la web a la pantalla de inicio se gana la barra de safari, no la
-  del teclado), y el textarea va con `enterkeyhint="enter"`, `inputmode="text"` y `autocomplete="off"`
-  para que el teclado no sume nada mas (autocorreccion y mayusculas de oracion quedan **prendidas** a
-  proposito: no tienen nada que ver con esa barra y facundo escribe mejor con ellas).
+- **la barra de flechas + "listo"** que aparece arriba del teclado es la **accesoria de safari**
+  (la pinta el navegador, no la pagina): desde el html no se saca, pero **en pwa standalone safari no
+  la pinta**. por eso la web se agrega a la pantalla de inicio (ver abajo).
+- **la fila predictiva** ("no y si" arriba del teclado) la pone el teclado de ios cuando el campo
+  tiene autocorreccion. desde el 2026-09-12 el textarea va con `autocorrect="off"`,
+  `autocapitalize="off"` y `spellcheck="false"` (mas `enterkeyhint="enter"`, `inputmode="text"` y
+  `autocomplete="off"`), asi el teclado no suma nada arriba del input. si igual aparece, se apaga del
+  todo en ajustes > general > teclado > predictivo.
+
+## pwa: agregarla a la pantalla de inicio (facundo, 2026-09-12)
+
+el objetivo es que **entre el input y el teclado no quede nada**: en standalone no hay barra de
+safari ni barra de accesorios.
+
+- **lo que declara la pagina**: `manifest.json` (`display: standalone`, `start_url` y `scope` `./`,
+  iconos 192/512 + svg, fondo y tema negros), las metas `apple-mobile-web-app-capable`,
+  `apple-mobile-web-app-status-bar-style`, `apple-mobile-web-app-title`, `mobile-web-app-capable` y
+  `<link rel="apple-touch-icon" href="icon-180.png">`. el manifest se pide con `?v=<version>`: el
+  bump del daemon lo actualiza solo, si no pages lo cachea para siempre.
+- **agregar a inicio (ios)**: abrir `https://facundopichetto.github.io/agente-web/` en **safari**
+  (chrome no puede agregar pwa en ios), compartir > "agregar a inicio", y abrirla desde el icono. la
+  clave del board y el token se piden una vez adentro de la pwa (es otro almacenamiento que safari).
+- **como se detecta**: `esStandalone()` mira `navigator.standalone` (ios) y
+  `matchMedia("(display-mode: standalone)")` (android / desktop), y deja la clase `standalone` en el
+  `body` (`window.__agente.esStandalone()` / `marcarStandalone()` para las pruebas).
+- **el teclado en standalone** sigue el mismo camino que en safari: `ajustarAlto()` con
+  `visualViewport`, `body.teclado` para comerse el `safe-area` de abajo y `trabarScroll()` para que
+  la ventana no se corra. `recetas/prueba_web_tabs` lo chequea con la clase `standalone` puesta.
+- **lo que la pwa cambia y hay que saber**: los links se abren en safari aparte, no hay pull to
+  refresh (la pagina igual se recarga sola con `version.json`), y cerrar la app no borra nada.
 
 ## se saco la fila de comandos rapidos (facundo, 2026-09-11)
 

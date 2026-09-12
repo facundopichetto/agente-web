@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.179">
-<link rel="manifest" href="manifest.json?v=4.179">
+<meta name="agente-web-version" content="4.180">
+<link rel="manifest" href="manifest.json?v=4.180">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -517,7 +517,7 @@
   <div id="chips" class="oculta"></div>
   <div id="fila">
     <span id="prompt">facundo&gt;</span>
-    <textarea id="txt" rows="1" placeholder="orden o comando" enterkeyhint="enter" inputmode="text" autocomplete="off" autocapitalize="sentences" autocorrect="on" spellcheck="true"></textarea>
+    <textarea id="txt" rows="1" placeholder="orden o comando" enterkeyhint="enter" inputmode="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
     <span id="grabinfo" aria-live="polite"></span>
     <button id="grabar" type="button" title="mantené apretado para grabar un audio" aria-label="grabar audio">[&#9679;]</button>
     <button id="camara" type="button" title="foto (camara o galeria)" aria-label="foto">[&#9673;]</button>
@@ -994,6 +994,25 @@ function esTactil(){
   // respaldo para navegadores sin `pointer`: el hardware tactil
   return (navigator.maxTouchPoints || 0) > 0;
 }
+// pwa: agregada a la pantalla de inicio, ios corre la pagina SIN la barra de safari (y sin su
+// barra de accesorios). `navigator.standalone` es lo que dice ios; `display-mode: standalone` es
+// lo que dicen android y desktop. queda como clase en el body para el css y para las pruebas.
+function esStandalone(){
+  try{
+    if(navigator.standalone === true) return true;
+    if(window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) return true;
+  }catch(x){}
+  return false;
+}
+function marcarStandalone(){ document.body.classList.toggle("standalone", esStandalone()); }
+marcarStandalone();
+try{
+  if(window.matchMedia){
+    var mqPwa = window.matchMedia("(display-mode: standalone)");
+    if(mqPwa.addEventListener) mqPwa.addEventListener("change", marcarStandalone);
+  }
+}catch(x){}
+
 var TOPE_LINEAS = 6;   // la caja crece con los parrafos hasta 6 lineas y ahi scrollea
 function ajustarCaja(){
   txt.style.height = "auto";   // el min-height del css deja una linea
@@ -4086,6 +4105,8 @@ window.__agente = {
   enlaces: enlaces, resaltar: resaltar,
   // enter en el celu hace salto de linea, no manda (prueba_web_tabs lo chequea)
   esTactil: esTactil, ajustarCaja: ajustarCaja, topeLineas: TOPE_LINEAS,
+  // pwa en la pantalla de inicio: sin barra de safari arriba del teclado (prueba_web_tabs lo chequea)
+  esStandalone: esStandalone, marcarStandalone: marcarStandalone,
   // de donde se escribe: viaja como `[desde: celu abc123 ios/safari]` al final del mensaje
   desde: desdeActual, marcaDesde: marcaDesde, sacarDesde: sacarDesde, cuerpoMsg: cuerpoMsg,
   esVistaMobile: esVistaMobile, sincronizarVista: sincronizarVista, mqMobile: MQ_MOBILE,
