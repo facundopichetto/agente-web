@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.183">
-<link rel="manifest" href="manifest.json?v=4.183">
+<meta name="agente-web-version" content="4.184">
+<link rel="manifest" href="manifest.json?v=4.184">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -899,6 +899,7 @@ var WSETS = {
   podcast:     [{k: "abierto", et: "abierto por default", tipo: "bool", def: false}],
   dj:          [{k: "cola", et: "mostrar la cola", tipo: "bool", def: true}],
   mail:        [{k: "pendientes", et: "mostrar los pendientes", tipo: "bool", def: true}],
+  que_ver:     [{k: "falta_login", et: "avisar que fuente falta", tipo: "bool", def: true}],
   verificaciones: [], decided: [], sombra: []
 };
 var WSETS_COMUNES = [{k: "plegado", et: "plegado por default", tipo: "bool", def: false},
@@ -3464,6 +3465,29 @@ function cajaMail(p){
   return caja("mail", extra, limFilas("mail", filas).join("\n"), false, "mail");
 }
 
+function cajaQueVer(p){
+  // `que ver` (facundo, 2026-09-12): 5 cosas para poner ahora, con link directo al titulo. lo arma
+  // `recetas/que_ver.py` con las sesiones de facundo (youtube y prime por cookies; plex, disney+,
+  // max y flow atan la sesion a tokens y necesitan login aca). tocar una fila abre el modal a/b/c.
+  var its = p.items || [];
+  if(!its.length) return caja("que ver", '<span class="g">sin nada</span>',
+    '<span class="g">' + esc(p.error || p.texto || "sin nada para recomendar") + "</span>" +
+    ((p.falta_login || []).length ? '\n<span class="a">falta login: ' + esc(p.falta_login.join(", ")) + "</span>" : ""),
+    false, "que_ver");
+  var extra = '<span class="v b">' + its.length + "</span> " +
+              '<span class="g">' + esc((p.con_sesion || []).join(" · ")) + "</span>";
+  var filas = its.map(function(i, n){
+    return it({tipo: "queVer", tema: "tools", d: i},
+      '<span class="c b">' + (n + 1) + '</span> <span class="g">' + esc(i.nombre) + "</span> " +
+      esc(corto(i.titulo, 64)) + ' <span class="g">' + esc(i.porque) + "</span>") +
+      "\n  " + link(i.url, "abrir");
+  });
+  if((p.falta_login || []).length && wset("que_ver", "falta_login"))
+    filas.push('<span class="a">falta login: ' + esc(p.falta_login.join(", ")) + "</span> " +
+               '<span class="g">(`que ver login` en el chat)</span>');
+  return caja("que ver", extra, limFilas("que_ver", filas).join("\n"), false, "que_ver");
+}
+
 // ---------- selector de nodos (facundo, 2026-09-12) ----------
 // SERVER (la geekom, main), MAC (la macbook) y CLOUD (todavia no existe: gris). los datos salen de
 // `widgets.json` (clave `nodos`, la arma `recetas/nodos.py` sin gastar un token). tocar un nodo abre
@@ -3515,6 +3539,7 @@ function pintarWidgets(d, err){
     cajaPodcast(d.podcast || {}),
     cajaDj(d.dj || {}),
     cajaMail(d.mail || {}),
+    cajaQueVer(d.que_ver || {}),
     '<div class="caja"><div class="cuerpo g">datos de hace ' + edad +
       (err ? ' · <span class="r">' + esc(err) + "</span>" : "") + "</div></div>"
   ];
@@ -3792,6 +3817,18 @@ function modalDe(o){
                        function(){ actuar(m.tema, "guardia " + d.id, true); }]);
     m.acciones.push(["ver los tres nodos en el chat", function(){ actuar(m.tema, "nodos", true); }]);
     m.acciones.push(accHablar(o, "el nodo " + (d.nombre || d.id)));
+  } else if(o.tipo === "queVer"){
+    // abrir / otra de esta fuente / no me interesa. los dos ultimos los atiende el daemon sin modelo.
+    m.titulo = d.nombre + " · " + corto(d.titulo, 50);
+    m.cuerpo = '<span class="a b">' + esc(d.titulo) + "</span>" +
+      '\n<span class="g">' + esc(d.porque) + (d.extra ? " · " + esc(d.extra) : "") + "</span>" +
+      "\n\n" + link(d.url, "abrir en " + d.nombre);
+    m.acciones.push(["abrir " + d.nombre, function(){
+      window.open(d.url, "_blank", "noopener"); cerrarModal();
+    }, true]);
+    m.acciones.push(["otra de " + d.nombre, function(){ actuar("tools", "que ver otra " + d.fuente, true); }]);
+    m.acciones.push(["no me interesa", function(){ actuar("tools", "que ver no " + d.id, true); }]);
+    m.acciones.push(accHablar(o, "«" + corto(d.titulo, 60) + "» de " + d.nombre));
   } else if(o.tipo === "verif"){
     m.titulo = "verification agent";
     m.cuerpo = "verify " + d.verify + " · mine " + d.mine + " · unassigned " + d.unassigned +

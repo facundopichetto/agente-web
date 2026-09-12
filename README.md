@@ -834,3 +834,36 @@ uno por maquina donde puede vivir claudio:
   guardia si la mac no contesta.
 - probar: `python3 -m recetas.prueba_nodos` (cero tokens) y el bloque de nodos de
   `recetas/prueba_web_tabs` (desktop y celu).
+
+## las pruebas web piden un puerto libre (2026-09-12)
+
+`recetas/prueba_web`, `prueba_web_tabs`, `prueba_web_audio` y `prueba_web_color` tenian el puerto de
+depuracion escrito a mano (9333 / 9334 / 9337 / 9336). si otro chrome ya lo estaba escuchando (el del
+server, una pestaña de login abierta) la prueba moria con `no arranco chrome` **sin decir por que**, y
+la web quedaba sin forma de verificarse. ahora lo piden con `cdp.puerto_libre(<preferido>)` (usa el
+preferido si esta libre, si no uno efimero) y el error dice el puerto.
+
+## widget `que ver` (facundo, 2026-09-12)
+
+"5 opciones de que ver con source (plex, youtube, disney+, amazon prime, flow, hbomax, todas mis
+cuentas!). idealmente el widget deberia llevarme al contenido".
+
+- lo arma `recetas/que_ver.py` (cero tokens, cero modelo) y viaja en `widgets.json` como clave
+  `que_ver`. **cache de 30 min**: el refresco del panel no sale a preguntarle nada a nadie, solo el
+  `[↻]` del header (o `que ver fresco` en el chat) vuelve a mirar las fuentes.
+- **como entra a las cuentas: sin chrome.** las cookies del perfil `orugote` de la mac viajan en
+  `secretos/google-cookies.json` y se usan con urllib pelado. hoy andan **youtube** (lo nuevo de tus
+  suscripciones y lo que dejaste a medias) y **prime video** (tu watchlist, por la sesion de
+  `amazon.com`). **plex, disney+, hbo max y flow no viajan**: atan la sesion a tokens de
+  localStorage, no a cookies, asi que necesitan un login por vnc en el chrome del server
+  (`ver-chrome.sh`). la fuente que falta **nunca frena al widget**: se salta y se dice cual.
+- **cada fila lleva al contenido**: `watch?v=` de youtube y `primevideo.com/detail/<asin>`, que en el
+  celu abren la app. tocar la fila abre el modal a/b/c: **abrir**, **otra de esta fuente**
+  (`que ver otra prime`) y **no me interesa** (`que ver no <id>`, queda en `.que_ver-descartes.json`
+  y no vuelve a salir). los dos ultimos son **comandos crudos que contesta el daemon sin modelo**
+  (`es_cmd_que_ver` / `que_ver_cmd`), igual que `dale N` y `op N X`.
+- settings del `[⚙]`: las dos comunes (plegado, filas) mas "avisar que fuente falta".
+- en el chat, sin gastar un token: `que ver`, `que ver fresco`, `que ver otra <fuente>`,
+  `que ver no <n>`, `que ver login` (que falta loguear y donde).
+- probar: `python3 -m recetas.prueba_que_ver` (cero tokens, cero red) y el bloque `que ver` de
+  `recetas/prueba_web_tabs`.
