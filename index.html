@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.174">
-<link rel="manifest" href="manifest.json?v=4.174">
+<meta name="agente-web-version" content="4.175">
+<link rel="manifest" href="manifest.json?v=4.175">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -36,10 +36,17 @@
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0;background:#000;color:var(--blanco)}
+  /* ios safari: al abrir el teclado ademas de achicar el viewport visible scrollea la ventana
+     entera, y el body (que mide el alto del viewport visible) se iba para arriba dejando una
+     franja negra de ~150 px entre el input y el teclado (facundo, 2026-09-12). la ventana se
+     bloquea: nada scrollea salvo `#hist`, asi que `scrollY` es siempre 0 y el unico
+     desplazamiento que hay que compensar es el `offsetTop` del visualViewport. */
+  html{height:100%;overflow:hidden;position:fixed;top:0;left:0;right:0;bottom:0}
   body{
     font-family:"Fira Code",ui-monospace,SFMono-Regular,Menlo,Monaco,"Courier New",monospace;
     font-size:12px;line-height:1.55;letter-spacing:.01em;
     height:100dvh;height:var(--alto,100dvh);
+    position:fixed;top:0;left:0;right:0;width:100%;
     display:flex;flex-direction:column;overflow:hidden;
     -webkit-text-size-adjust:100%;
   }
@@ -116,7 +123,9 @@
   body.teclado #pie{padding-bottom:4px}
   /* la fila de comandos rapidos se saco (facundo, 2026-09-11): esos comandos quedan en el widget `agent` */
   /* sugerencias de respuesta: salen de la ultima respuesta del daemon en esta pestaña (cero tokens) */
-  #chips{display:flex;gap:5px;overflow-x:auto;padding:0 0 5px 0;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  /* pegados a la caja de texto: sin padding ni margen abajo (facundo, 2026-09-12: "entre el input
+     y el si/no no quiero que haya nada"). lo chequea `prueba_web_tabs` (chipsPegados). */
+  #chips{display:flex;gap:5px;overflow-x:auto;padding:0;margin:0;scrollbar-width:none;-webkit-overflow-scrolling:touch}
   #chips::-webkit-scrollbar{display:none}
   #chips.oculta,#chips:empty{display:none;padding:0;margin:0}   /* sin chips no ocupa ni alto ni margen */
   #chips button{
@@ -1351,6 +1360,11 @@ function abajo(){
   alfinal.style.display = "none";
 }
 function pegadoAbajo(){ return hist.scrollHeight - hist.scrollTop - hist.clientHeight < 80; }
+// para lo que LLEGA (respuestas del daemon), escribir en la caja cuenta como estar al final: con el
+// teclado abierto el alto de `#hist` cambia y la respuesta quedaba pintada abajo, fuera de pantalla
+// (facundo, 2026-09-12: la de las 17:09 "tardo 2 minutos en aparecer"). scrollear para leer lo viejo
+// cierra el teclado (blur), asi que esto no pisa la lectura.
+function seguirAlFinal(){ return pegadoAbajo() || document.activeElement === txt; }
 var vistaTimer = null;
 function anotarVista(){
   if(vistaTimer) clearTimeout(vistaTimer);
@@ -1382,12 +1396,26 @@ hist.addEventListener("wheel", function(e){ if(e.deltaY < 0) cerrarTeclado(); },
 
 // el teclado del celu tapa el input: usamos el alto real del viewport visible
 var vv = window.visualViewport;
+var vvStub = null;                       // solo para `recetas/prueba_web_tabs` (visualViewport no se falsea)
+function vvActual(){ return vvStub || vv; }
+// la ventana no scrollea nunca (html/body van fijos): si ios la corre igual al abrir el teclado,
+// se la devuelve a 0 antes de medir, asi el body arranca pegado al borde de arriba del viewport
+// y lo unico que queda por compensar es el desplazamiento del viewport visible.
+function trabarScroll(){
+  var sy = window.scrollY || window.pageYOffset || 0;
+  var sx = window.scrollX || window.pageXOffset || 0;
+  if(sy || sx) window.scrollTo(0, 0);
+  return sy;
+}
 function ajustarAlto(){
-  if(!vv) return;
-  var alto = vv.height;
-  // en ios el viewport ademas se desplaza; compensamos con el offset
+  var v = vvActual();
+  if(!v) return;
+  trabarScroll();
+  var alto = v.height;
+  // lo que queda de desplazamiento del viewport visible dentro del layout viewport
+  var off = v.offsetTop || 0;
   document.documentElement.style.setProperty("--alto", alto + "px");
-  document.body.style.transform = vv.offsetTop ? "translateY(" + vv.offsetTop + "px)" : "";
+  document.body.style.transform = off ? "translateY(" + off + "px)" : "";
   // teclado arriba: ios sigue reservando el safe-area de abajo y queda una franja negra entre el
   // input y el teclado (facundo, 2026-09-11). con `body.teclado` el pie va pegado.
   document.body.classList.toggle("teclado", window.innerHeight - alto > 120);
@@ -1397,6 +1425,14 @@ if(vv){
   vv.addEventListener("scroll", ajustarAlto);
   ajustarAlto();
 }
+// el foco del input es lo que abre el teclado: ios scrollea unos ms despues, asi que se remide ahi
+// tambien (y una vez mas en el proximo frame, cuando el teclado ya termino de subir).
+window.addEventListener("scroll", ajustarAlto, {passive:true});
+if(txt) txt.addEventListener("focus", function(){
+  ajustarAlto();
+  setTimeout(ajustarAlto, 120);
+  setTimeout(ajustarAlto, 350);
+});
 
 // urls clickeables (facundo, 2026-09-12: abrio una url de oauth cortada antes de `&state=` y claude.com
 // le dijo "Missing state parameter"). el texto YA viene escapado, asi que `&` llega como `&amp;` y va
@@ -1798,7 +1834,7 @@ function cargarComentarios(reemplazar){
     if(!reemplazar) etagCom = r.etag;
     var cs = r.json || [];
     if(reemplazar){ msgsCom = []; vistos = {}; }
-    var pego = pegadoAbajo() || reemplazar;
+    var pego = seguirAlFinal() || reemplazar;
     var nuevos = 0;
     cs.sort(function(a, b){ return a.id - b.id; }).forEach(function(c){
       if(vistos[c.id]) return;
@@ -1927,7 +1963,7 @@ function tick(){
     chatCambio = false;
     cargarChat().then(function(){
       if(!chatCambio) return;
-      var pego = pegadoAbajo();
+      var pego = seguirAlFinal();
       mezclar(); render();
       if(pego) alFinal(); else restaurarVistas();
     }).catch(function(e){ if(ruidoso(e)) sistema("chat: " + e.message, "error"); });
@@ -4046,9 +4082,29 @@ window.__agente = {
     var f = $("fila").getBoundingClientRect(), p = $("pie").getBoundingClientRect();
     return Math.round(p.bottom - f.bottom);
   },
+  gapChips: function(){          // px entre el chip mas bajo y la caja de texto (tiene que ser 0)
+    var b = $("chips").querySelector("button"), f = $("txt").getBoundingClientRect();
+    if(!b) return -1;
+    return Math.round(f.top - b.getBoundingClientRect().bottom);
+  },
   teclado: function(on){         // simula el teclado del celu (visualViewport no se puede falsear)
     document.body.classList.toggle("teclado", !!on);
   },
+  // `visualViewport` no se puede falsear: se stubea y se llama a `ajustarAlto` a mano.
+  stubVV: function(v){ vvStub = v || null; ajustarAlto(); },
+  ajustarAlto: ajustarAlto,
+  viewportInfo: function(){          // donde quedaron el body y el pie respecto del viewport visible
+    var p = $("pie").getBoundingClientRect(), v = vvActual() || {height: window.innerHeight, offsetTop: 0};
+    return {alto: getComputedStyle(document.documentElement).getPropertyValue("--alto").trim(),
+            transform: document.body.style.transform,
+            posHtml: getComputedStyle(document.documentElement).position,
+            posBody: getComputedStyle(document.body).position,
+            ovHtml: getComputedStyle(document.documentElement).overflow,
+            scrollY: window.scrollY || window.pageYOffset || 0,
+            // 0 = el pie termina justo en el borde de abajo del viewport visible (sin franja negra)
+            sobra: Math.round((v.offsetTop || 0) + v.height - p.bottom)};
+  },
+  seguirAlFinal: seguirAlFinal,
   // envio idempotente: dos enter rapidos no mandan dos veces (prueba_web_tabs lo chequea)
   envios: function(){ return {enviando: enviando, ultimo: ultimoTexto, repeMs: REPE_MS}; },
   stubApi: function(f){ apiStub = f || null; },
