@@ -752,3 +752,30 @@ compensaba `vv.offsetTop`, asi que lo que se habia ido en `window.scrollY` queda
 - **prueba**: `recetas/prueba_web_tabs` punto 14b. `visualViewport` no se puede falsear en headless, asi
   que se stubea (`window.__agente.stubVV({height, offsetTop})`) y `viewportInfo()` devuelve `sobra`, los
   px entre el borde de abajo del `#pie` y el borde de abajo del viewport visible: tiene que dar 0.
+
+## selector de nodos: SERVER | MBP | NUBE (facundo, 2026-09-12)
+
+arriba a la izquierda de la barra (antes del toggle `chat | widgets` y de `salir`) hay tres botones,
+uno por maquina donde puede vivir claudio:
+
+| nodo | que es | hoy |
+|---|---|---|
+| `SERVER` | la geekom (`claudio`), la **main** | ahi corre el daemon |
+| `MBP` | la macbook de facundo | daemon apagado, de respaldo |
+| `NUBE` | tercer nodo online | **no existe**: se pinta gris, "sin configurar" |
+
+- **los datos salen de `widgets.json`**, clave `nodos`, que arma `recetas/nodos.py` (cero tokens, y la
+  mac se consulta por ssh **cacheada 120 s**, no en cada repintado). cada nodo trae `estado`, `nivel`
+  (`bien` / `medio` / `mal` / `gris`, la lucecita), ultima señal, pid, cola, cuenta de claude y su uso.
+- **el nodo de guardia va marcado** (`◉` y borde verde): es el unico que publica en el buzon, o sea con
+  el que habla la web. la marca es `.guardia-server` y la mueve `~/.claudio/server/guardia.sh`.
+- **tocar un nodo abre el modal de siempre** con dos acciones: `revivir` (reinicia el daemon de ESE
+  nodo) y `poner de guardia` (solo si no lo esta). los dos salen como **comando crudo** (`revivir mbp`,
+  `guardia server`) y los atiende el daemon **sin modelo** (`es_cmd_nodos` / `nodos_cmd`).
+- **revivir el server no corta ninguna tarea**: pasa por `pedir_reinicio` (diferido). si el daemon esta
+  muerto, va por `systemctl --user restart` o por el kit de rescate del puerto 8899.
+- **pasar la guardia a la mac se hace diferido y en otro proceso**: `guardia.sh mac` para el daemon que
+  esta contestando el chat; si se hiciera en linea, la respuesta nunca saldria. y no se suelta la
+  guardia si la mac no contesta.
+- probar: `python3 -m recetas.prueba_nodos` (cero tokens) y el bloque de nodos de
+  `recetas/prueba_web_tabs` (desktop y celu).

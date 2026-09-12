@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.176">
-<link rel="manifest" href="manifest.json?v=4.176">
+<meta name="agente-web-version" content="4.177">
+<link rel="manifest" href="manifest.json?v=4.177">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -296,6 +296,23 @@
   .btn:active{background:#111}
   .btn.voto{color:var(--verde);border-color:#1f3a14}
   .btn.dale{color:var(--verde);border-color:var(--verde)}
+  /* selector de nodos (facundo, 2026-09-12): donde puede vivir claudio. arriba a la izquierda,
+     antes del toggle chat | widgets. el nodo de guardia va marcado: la web habla con ese. */
+  #nodos{display:flex;gap:6px;flex:1 1 auto;min-width:0;overflow-x:auto;scrollbar-width:none}
+  #nodos::-webkit-scrollbar{display:none}
+  #nodos button{
+    background:#000;color:var(--gris);border:1px solid var(--linea);border-radius:4px;
+    padding:4px 8px;font:inherit;font-size:9px;cursor:pointer;white-space:nowrap;flex:0 0 auto;
+    display:flex;align-items:center;gap:5px;
+  }
+  #nodos button:active{background:#111}
+  #nodos button.guardia{color:var(--blanco);border-color:var(--verde-tenue)}
+  #nodos button.gris{opacity:.5;cursor:default}
+  #nodos .luz{width:6px;height:6px;border-radius:50%;background:var(--gris);flex:0 0 auto}
+  #nodos .luz.bien{background:var(--verde)}
+  #nodos .luz.medio{background:var(--amarillo)}
+  #nodos .luz.mal{background:var(--rojo)}
+  #nodos .marca{color:var(--verde);font-size:8px}
   #vistas{display:none;gap:6px;flex:0 0 auto}
   #vistas button{
     background:#000;color:var(--gris);border:1px solid var(--linea);border-radius:4px;
@@ -309,6 +326,8 @@
      el mismo media query vive en el js como `MQ_MOBILE`: si cambia uno, cambia el otro. */
   @media (max-width:899px), (max-aspect-ratio: 1/1){
     #vistas{display:flex}
+    /* dedo: los nodos de la barra tambien se tocan con el pulgar */
+    #nodos button{min-height:32px;padding:4px 10px}
     /* dedo: los botones del header de cada widget con area tactil de 40px (facundo, 2026-09-12) */
     .caja > .tit > .wacc .wbtn{min-width:40px;min-height:40px;font-size:13px;padding:0}
     .caja > .tit{min-height:40px}
@@ -464,6 +483,7 @@
 <body>
 
 <div id="cabecera">
+  <div id="nodos"></div>
   <div id="vistas">
     <button id="ver-chat" class="on" type="button">chat</button>
     <button id="ver-widgets" type="button">widgets</button>
@@ -3277,6 +3297,32 @@ function cajaDj(p){
   return caja("dj", extra, limFilas("dj", filas).join("\n"), false, "dj");
 }
 
+// ---------- selector de nodos (facundo, 2026-09-12) ----------
+// SERVER (la geekom, main), MBP (la mac) y NUBE (todavia no existe: gris). los datos salen de
+// `widgets.json` (clave `nodos`, la arma `recetas/nodos.py` sin gastar un token). tocar un nodo abre
+// el modal de siempre con sus acciones: revivir y poner de guardia.
+var nodosEl = null;
+function pintarNodos(n){
+  if(!nodosEl) nodosEl = $("nodos");
+  if(!nodosEl) return;
+  var ns = (n && n.nodos) || [];
+  if(!ns.length){ nodosEl.innerHTML = '<span class="g" style="font-size:9px">nodos…</span>'; return; }
+  nodosEl.innerHTML = ns.map(function(x, i){
+    var gris = x.nivel === "gris";
+    return '<button type="button" data-nodo="' + i + '" class="' + (x.guardia ? "guardia " : "") +
+      (gris ? "gris" : "") + '" title="' + esc((x.detalle || "") + " · " + (x.estado || "")) + '">' +
+      '<span class="luz ' + esc(x.nivel || "") + '"></span>' + esc(x.nombre || x.id || "?") +
+      (x.guardia ? '<span class="marca">\u25c9</span>' : "") + "</button>";
+  }).join("");
+}
+$("nodos").addEventListener("click", function(e){
+  var b = e.target.closest("button[data-nodo]");
+  if(!b) return;
+  var n = ((widDatos || {}).nodos || {}).nodos || [];
+  var x = n[+b.dataset.nodo];
+  if(x) abrirModal({tipo: "nodo", tema: x.id === "mbp" ? "tools" : "server", d: x});
+});
+
 function pintarWidgets(d, err){
   if(!d && !widDatos){
     widgetsEl.innerHTML = caja("widgets", "", err ? '<span class="r">' + esc(err) + "</span>" : vacio("cargando..."));
@@ -3307,6 +3353,7 @@ function pintarWidgets(d, err){
   var y = $("panel-widgets").scrollTop;
   widgetsEl.innerHTML = partes.join("");
   $("panel-widgets").scrollTop = y;
+  pintarNodos(d.nodos);         // la barra de arriba: SERVER | MBP | NUBE, con quien esta de guardia
   pintarChips();                // los chips `op N X` usan las opciones reales de este json
 }
 
@@ -3537,6 +3584,32 @@ function modalDe(o){
         d.esperando.map(function(x){ return "? " + esc(x); }).join("\n") : "");
     m.acciones.push(["ver el estado del server en el chat", function(){ actuar("server", "status", true); }]);
     m.acciones.push(accHablar(o, "el server"));
+  } else if(o.tipo === "nodo"){
+    m.titulo = "nodo " + (d.nombre || d.id) + " \u00b7 " + (d.detalle || "");
+    var color = d.nivel === "bien" ? "v" : d.nivel === "medio" ? "a" : d.nivel === "mal" ? "r" : "g";
+    m.cuerpo = '<span class="' + color + ' b">' + esc(d.estado || "?") + "</span>" +
+      (d.guardia ? '  <span class="v">\u25c9 de guardia</span>' : '  <span class="g">no esta de guardia</span>') +
+      (d.aqui ? '  <span class="g">(el chat corre aca)</span>' : "") +
+      (d.senal_hace_s !== null && d.senal_hace_s !== undefined
+        ? '\n<span class="g">ultima se\u00f1al</span> hace ' + haceSeg(d.senal_hace_s) : "") +
+      (d.pid ? '  <span class="g">pid</span> ' + d.pid : "") +
+      (d.unit ? '  <span class="g">unit</span> ' + esc(d.unit) : "") +
+      (d.corriendo !== null && d.corriendo !== undefined
+        ? '\n<span class="g">tareas</span> ' + d.corriendo + " corriendo" +
+          (d.cola !== null && d.cola !== undefined ? " \u00b7 " + d.cola + " en cola" : "") : "") +
+      (d.cuenta ? '\n<span class="g">cuenta claude</span> <span class="c">' + esc(d.cuenta) + "</span>" +
+        (d.uso_pct !== null && d.uso_pct !== undefined ? '  <span class="g">uso</span> ' + d.uso_pct + "%" : "") : "") +
+      (d.porque ? '\n<span class="g">' + esc(d.porque) + "</span>" : "") +
+      (d.host ? '\n<span class="g">host</span> ' + esc(d.host) : "") +
+      (d.motivo && d.nivel !== "bien" ? '\n<span class="g">' + esc(d.motivo) + "</span>" : "");
+    if((d.acciones || []).indexOf("revivir") >= 0)
+      m.acciones.push(["revivir el daemon de " + (d.nombre || d.id),
+                       function(){ actuar(m.tema, "revivir " + d.id, true); }, !!d.guardia]);
+    if((d.acciones || []).indexOf("guardia") >= 0)
+      m.acciones.push(["poner de guardia a " + (d.nombre || d.id) + " (la web le habla a ese)",
+                       function(){ actuar(m.tema, "guardia " + d.id, true); }]);
+    m.acciones.push(["ver los tres nodos en el chat", function(){ actuar(m.tema, "nodos", true); }]);
+    m.acciones.push(accHablar(o, "el nodo " + (d.nombre || d.id)));
   } else if(o.tipo === "verif"){
     m.titulo = "verification agent";
     m.cuerpo = "verify " + d.verify + " · mine " + d.mine + " · unassigned " + d.unassigned +
@@ -3972,6 +4045,8 @@ if(urlSucia) sistema("el token venía en la url: lo guardé acá y limpié la di
 // gancho de prueba: `recetas/prueba_web` (chrome headless, cero tokens) usa esto para chequear que
 // el clasificador de la web da lo mismo que la receta de python y que cada mensaje cae en su pestaña.
 window.__agente = {
+  pintarNodos: function(n){ pintarNodos(n); },
+  nodos: function(){ return ((widDatos || {}).nodos || {}).nodos || []; },
   clasificar: clasificar, partir: partir,
   // 403 secondary rate limit: freno de 60 s y el mensaje frenado sale solo (prueba_web_tabs lo chequea)
   limiteGithub: limiteGithub, frenar: frenar, guardarSalida: guardarSalida, vaciarSalida: vaciarSalida,
