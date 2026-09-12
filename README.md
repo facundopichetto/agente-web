@@ -728,3 +728,27 @@ limite **primario**.
 
 probar: `python3 -m recetas.prueba_buzon_403` (cero red: coalesce, tormenta, tope, 403 con y sin
 retry-after, 409) y `recetas/prueba_web_tabs` (punto 12b).
+
+## el teclado de ios no deja hueco abajo del input (facundo, 2026-09-12)
+
+captura `IMG_8095`: con el teclado abierto en el celu quedaba una franja negra de ~150 px entre el input
+y el teclado. la causa no era el `safe-area` (eso ya lo tapaba `body.teclado`, 2026-09-11) sino el
+**scroll de la ventana**: al enfocar el textarea, ios safari achica el viewport visible **y ademas
+scrollea la pagina entera**; el body mide el alto del viewport visible (`--alto`) y `ajustarAlto()` solo
+compensaba `vv.offsetTop`, asi que lo que se habia ido en `window.scrollY` quedaba como hueco.
+
+- **la ventana se traba**: `html` y `body` van `position:fixed` con `overflow:hidden`. lo unico que
+  scrollea es `#hist`. `trabarScroll()` devuelve la ventana a `0,0` antes de cada medicion, por si ios
+  la corre igual.
+- **queda un solo desplazamiento por compensar**, el del viewport visible dentro del layout viewport:
+  `body { transform: translateY(vv.offsetTop) }`, como antes.
+- **se remide al enfocar el input** (`focus` + 120 ms + 350 ms) y en el `scroll` de la ventana, porque
+  ios mueve las cosas unos frames despues de abrir el teclado.
+- **lo que llega mientras escribis se ve**: `seguirAlFinal()` (= `pegadoAbajo()` o el input enfocado)
+  reemplaza a `pegadoAbajo()` en las **llegadas** (comentarios y `chat/<tema>.json`). con el teclado
+  abierto el alto de `#hist` cambia y la respuesta quedaba pintada fuera de pantalla (la de las 17:09
+  "tardo 2 minutos en aparecer"). scrollear para leer lo viejo cierra el teclado, asi que esto no pisa
+  la lectura. el poll nunca se pausaba por el foco: eso ya estaba bien.
+- **prueba**: `recetas/prueba_web_tabs` punto 14b. `visualViewport` no se puede falsear en headless, asi
+  que se stubea (`window.__agente.stubVV({height, offsetTop})`) y `viewportInfo()` devuelve `sobra`, los
+  px entre el borde de abajo del `#pie` y el borde de abajo del viewport visible: tiene que dar 0.
