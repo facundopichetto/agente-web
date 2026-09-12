@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.162">
-<link rel="manifest" href="manifest.json?v=4.162">
+<meta name="agente-web-version" content="4.163">
+<link rel="manifest" href="manifest.json?v=4.163">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2592,7 +2592,8 @@ txt.addEventListener("input", function(){
 // misma estetica que la consola: verde ok, rojo fallo, amarillo pendiente, cian corriendo, magenta $.
 // el json lo arma `recetas/widgets_json.py` y lo sube el script `widgets_web` del daemon cada 60 s.
 var widgetsEl = $("widgets");
-var podAbierto = false;   // el desplegable de podcast, se conserva entre repintados
+var podAbierto = null;   // el desplegable de podcast: null = lo que diga la setting `abierto`
+function abiertoPod(){ return podAbierto === null ? !!wset("podcast", "abierto") : podAbierto; }
 
 function kilo(n){
   n = n || 0;
@@ -2678,6 +2679,7 @@ function temasPropuestas(){
   return vs;
 }
 function vacio(t){ return '<span class="vacio">' + esc(t) + "</span>"; }
+function pad2(n){ return (n < 10 ? "0" : "") + n; }
 
 // ---------- items tocables (facundo, 2026-09-11) ----------
 // cada fila de un widget se registra aca y se envuelve en un `.it`: tocarla abre el modal con el item
@@ -2833,8 +2835,11 @@ function cajaUsage(u){
   });
   // dato esencial: por cuenta, el limite mas cerca de la linea (el `peor` que ya calcula el reparto)
   var ese = cuentas.map(function(cu){
-    var peor = cu.peor || ((cu.barras || [])[0] || {}).clave || "";
-    var b = (cu.barras || []).filter(function(x){ return x.clave === peor; })[0] || (cu.barras || [])[0];
+    // `peor` es el NOMBRE de la barra (5h / week / fable) que calcula reparto_cuentas; si no vino,
+    // la de ratio mas alto (la mas pasada de la linea).
+    var bs = cu.barras || [];
+    var b = bs.filter(function(x){ return x.nombre === cu.peor; })[0];
+    if(!b) b = bs.slice().sort(function(x, y){ return (y.ratio || 0) - (x.ratio || 0); })[0];
     if(!b) return esc(cu.nombre);
     return '<span class="b">' + esc(cu.nombre) + "</span> " +
            '<span class="uw n-' + esc(b.nivel || "sin") + '">' + esc(b.nombre) + " " +
@@ -2895,27 +2900,37 @@ function cajaVerif(v){
 }
 
 function cajaTickets(t){
-  if(t.sin_datos) return caja("my tickets", "", vacio("sin jira_mine.json"));
-  var filas = (t.mine || []).map(function(x){
+  if(t.sin_datos) return caja("my tickets", "", vacio("sin jira_mine.json"), false, "tickets");
+  var mine = t.mine || [], filtro = wset("tickets", "estado");
+  if(filtro && filtro !== "todos") mine = mine.filter(function(x){ return x.estado === filtro; });
+  var filas = mine.map(function(x){
     return it({tipo: "ticket", tema: "awtomic", d: x},
       '<span class="c b">' + esc(x.key) + '</span> <span class="a">' + esc(x.estado) + '</span> ' +
       '<span class="g">' + haceSeg(x.hace_s) + "</span> " + esc(x.titulo));
   });
-  if(!filas.length) filas.push(vacio("nada asignado en curso"));
+  filas = limFilas("tickets", filas);
+  if(!filas.length) filas.push(vacio(filtro && filtro !== "todos" ? "nada en " + filtro : "nada asignado en curso"));
   if(t.total > (t.mine || []).length) filas.push('<span class="g">+' + (t.total - t.mine.length) + " mas</span>");
   if(t.ultimo) filas.push('<span class="g">ultimo</span> <span class="b">' + esc(t.ultimo.key) + '</span> <span class="g">hace ' + haceSeg(t.ultimo.hace_s) + "</span>");
   if(t.cx_total) filas.push('<span class="g">cx sin asignar</span> <span class="m b">' + t.cx_total + '</span> <span class="g">' +
                             esc((t.cx[0] || {}).key || "") + " " + haceSeg((t.cx[0] || {}).hace_s) + "</span>");
-  return caja("my tickets", t.cache_s > 1800 ? '<span class="g">cache ' + haceSeg(t.cache_s) + "</span>" : "", filas.join("\n"));
+  // dato esencial: cuantos tengo asignados (y el cache si esta viejo)
+  var ese = '<span class="c b">' + mine.length + "</span> " +
+            '<span class="g">asignado' + (mine.length === 1 ? "" : "s") +
+            (filtro && filtro !== "todos" ? " \u00b7 " + esc(filtro) : "") + "</span>" +
+            (t.cache_s > 1800 ? ' <span class="g">cache ' + haceSeg(t.cache_s) + "</span>" : "");
+  return caja("my tickets", ese, filas.join("\n"), false, "tickets");
 }
 
 function cajaOportunidades(o){
-  if(o.error) return caja("opportunities", "", '<span class="r">' + esc(o.error) + "</span>");
+  if(o.error)
+    return caja("opportunities", "", '<span class="r">' + esc(o.error) + "</span>", false, "oportunidades");
   // solo las pendientes: apenas facundo decide una, sale de aca y pasa a la caja `decided`
   var pend = o.pendientes || o.items || [];
   if(!pend.length)
-    return caja("opportunities", "", vacio("nada pendiente · se rellena solo") +
-      (o.hechas ? ' <span class="g">' + o.hechas + " hechas</span>" : ""));
+    return caja("opportunities", '<span class="g">0 pendientes</span>',
+      vacio("nada pendiente · se rellena solo") +
+      (o.hechas ? ' <span class="g">' + o.hechas + " hechas</span>" : ""), false, "oportunidades");
   var filas = [];
   pend.forEach(function(i){
     var sello = i.valor + "/" + i.esfuerzo + (i.dias ? " " + i.dias + "d" : "");
@@ -2929,9 +2944,12 @@ function cajaOportunidades(o){
                  (op.tiempo ? " (" + esc(op.tiempo) + ")" : "") + "</span>");
     });
   });
+  filas = limFilas("oportunidades", filas);
   filas.push('<span class="g">toca una letra para elegir' + (o.hechas ? " · " + o.hechas + " hechas" : "") + "</span>" +
              (o.refill_pausado ? ' <span class="r">refill en pausa</span>' : ""));
-  return caja("opportunities", "", filas.join("\n"));
+  var ese = '<span class="a b">' + pend.length + "</span> " +
+            '<span class="g">pendiente' + (pend.length === 1 ? "" : "s") + "</span>";
+  return caja("opportunities", ese, filas.join("\n"), false, "oportunidades");
 }
 
 // las oportunidades que ya decidio facundo (facundo, 2026-09-11: "cuando una opportunity tiene decision
@@ -2939,6 +2957,8 @@ function cajaOportunidades(o){
 var ORD_ESTADO = {" ": ["en cola", "g"], ">": ["corriendo", "a"], "x": ["hecha", "v"], "!": ["fallo", "r"]};
 function cajaDecididas(o){
   var ds = (o || {}).decididas || [];
+  // setting de `opportunities`: ocultar las decididas saca esta caja entera
+  if(wset("oportunidades", "ocultar_decididas")) return "";
   if(!ds.length) return "";
   var filas = ds.map(function(d){
     var e = ORD_ESTADO[d.orden_estado] || (d.estado === "descartada" ? ["descartada", "g"] : ["sin orden", "g"]);
@@ -2948,11 +2968,13 @@ function cajaDecididas(o){
       esc(corto(d.titulo, 60)) + ' <span class="' + e[1] + '">' + e[0] + "</span>" +
       (d.decidida ? ' <span class="g">' + esc(String(d.decidida).slice(5, 16)) + "</span>" : ""));
   });
-  return caja("decided", "", filas.join("\n"));
+  return caja("decided", '<span class="g">' + ds.length + " decidida" + (ds.length === 1 ? "" : "s") +
+              "</span>", limFilas("decided", filas).join("\n"), false, "decided");
 }
 
 function cajaSombra(sb){
-  if(sb.error) return caja("backup models", "", '<span class="r">' + esc(sb.error) + "</span>");
+  if(sb.error)
+    return caja("backup models", "", '<span class="r">' + esc(sb.error) + "</span>", false, "sombra");
   var cols = sb.cols || [], cortos = {principal:"prin", gemini:"gem", groq:"groq", openrouter:"orou", mistral:"mist"};
   var filas = ['<span class="g">' + pad("categoria", 11) + cols.map(function(c){ return pad(cortos[c] || c, 5, true); }).join(" ") +
                " " + pad("veredicto", 9) + "</span>"];
@@ -2993,26 +3015,47 @@ function cajaSombra(sb){
   }
   filas.push('<span class="g">' + (sb.n || 0) + " corridas · apto = 85%+ &lt;5s 20+" +
              ((sb.faltan || []).length ? " · sin clave: " + sb.faltan.length : "") + "</span>");
-  return caja("backup models", "", filas.join("\n"), true);
+  // dato esencial: el ultimo veredicto (el primer proveedor apto, o que no hay)
+  var apto = null;
+  (sb.cats || []).forEach(function(c){
+    var v = (sb.veredictos || {})[c] || {};
+    if(!apto && v.veredicto === "apto") apto = (cortos[v.proveedor] || v.proveedor || "") + " en " + c;
+  });
+  var ese = apto ? '<span class="v b">apto</span> <span class="g">' + esc(apto) + "</span>"
+                 : '<span class="g">sin apto todavia</span>';
+  return caja("backup models", ese, limFilas("sombra", filas).join("\n"), true, "sombra");
 }
 
 function cajaAvisos(av){
-  if(!(av || []).length) return caja("avisos", "", vacio("sin avisos"));
-  return caja("avisos", "", av.map(function(l){
+  av = av || [];
+  if(wset("avisos", "solo_hoy")){
+    var hoy = new Date(), d = hoy.getFullYear() + "-" + pad2(hoy.getMonth() + 1) + "-" + pad2(hoy.getDate());
+    av = av.filter(function(l){ return String(l).slice(0, 10) === d; });
+  }
+  var ese = '<span class="c b">' + av.length + "</span> " +
+            '<span class="g">' + (wset("avisos", "solo_hoy") ? "hoy" : "en total") + "</span>";
+  if(!av.length) return caja("avisos", ese, vacio(wset("avisos", "solo_hoy") ? "sin avisos hoy" : "sin avisos"),
+                             false, "avisos");
+  return caja("avisos", ese, limFilas("avisos", av.map(function(l){
     var m = /^(\d{4}-\d\d-\d\d \d\d:\d\d)\s+([\s\S]*)$/.exec(l);
     var t = m ? '<span class="g">' + esc(m[1].slice(5, 16)) + "</span> " + esc(m[2]) : esc(l);
     return it({tipo: "aviso", d: {texto: m ? m[2] : l, fecha: m ? m[1] : null}},
               t.length > 400 ? t.slice(0, 400) + "…" : t);
-  }).join("\n"));
+  })).join("\n"), false, "avisos");
 }
 
 function cajaPropuestas(pr){
-  if(!(pr || []).length) return caja("propuestas", "", vacio("nada esperando un dale"));
-  return caja("propuestas", "", pr.map(function(p){
+  pr = pr || [];
+  var tf = wset("propuestas", "tema");
+  if(tf && tf !== "todos") pr = pr.filter(function(p){ return p.tema === tf; });
+  var ese = '<span class="a b">' + pr.length + "</span> " +
+            '<span class="g">esperando un dale' + (tf && tf !== "todos" ? " · " + esc(tf) : "") + "</span>";
+  if(!pr.length) return caja("propuestas", ese, vacio("nada esperando un dale"), false, "propuestas");
+  return caja("propuestas", ese, limFilas("propuestas", pr.map(function(p){
     return it({tipo: "propuesta", tema: p.tema, d: p},
       '<span class="a b">' + p.n + '</span> <span class="g">' + esc(p.tema) + "</span> " +
       esc(String(p.orden).slice(0, 220))) + "\n  " + boton("dale", "dale " + p.n, "dale");
-  }).join("\n"));
+  })).join("\n"), false, "propuestas");
 }
 
 function link(url, texto){
@@ -3020,10 +3063,15 @@ function link(url, texto){
 }
 
 function cajaPodcast(p){
-  var eps = p.episodios || [];
-  var btn = '<button class="btn" type="button" data-pod="1">' + (podAbierto ? "cerrar" : "podcast") + "</button>";
-  var extra = eps.length ? '<span class="g">' + eps.length + " ep</span>" : "";
-  if(!podAbierto) return caja("podcast", extra, btn + '<span class="g">' + (eps.length ? "tocá para ver los links" : "sin episodios") + "</span>");
+  var eps = p.episodios || [], ab = abiertoPod();
+  var btn = '<button class="btn" type="button" data-pod="1">' + (ab ? "cerrar" : "podcast") + "</button>";
+  // dato esencial: el episodio de arriba (el mas nuevo) y cuantos hay
+  var ult = eps[0];
+  var extra = ult ? '<span class="b">' + esc(corto(ult.titulo, 42)) + "</span>" +
+                    '<span class="g"> · ' + eps.length + " ep</span>"
+                  : '<span class="g">sin episodios</span>';
+  if(!ab) return caja("podcast", extra, btn + '<span class="g">' + (eps.length ? "tocá para ver los links" : "sin episodios") + "</span>",
+                      false, "podcast");
   var filas = [btn + link(p.web || "#", "la web del podcast")];
   if(!eps.length) filas.push(vacio("sin episodios"));
   eps.forEach(function(e){
@@ -3033,22 +3081,25 @@ function cajaPodcast(p){
       return link(v.url, v.voz + (v.min ? " " + v.min + "m" : ""));
     }).join(" · "));
   });
-  return caja("podcast", extra, filas.join("\n"));
+  return caja("podcast", extra, limFilas("podcast", filas).join("\n"), false, "podcast");
 }
 
 function cajaDj(p){
   // motor `fuzzer/dj`: la cola nocturna de spotify. orden fijo, huecos aleatorios.
-  if(!p.plan) return caja("dj", '<span class="g">fuzzer</span>',
-    '<span class="g">' + esc(p.texto || "sin plan") + "</span>");
-  var extra = '<span class="a b">' + p.hechos + "/" + p.bloques + "</span>";
+  if(!p.plan) return caja("dj", '<span class="g">fuzzer · sin plan</span>',
+    '<span class="g">' + esc(p.texto || "sin plan") + "</span>", false, "dj");
+  // dato esencial: que esta pasando ahora y cuantos bloques van
+  var extra = (p.sonando ? '<span class="v b">suena</span> <span class="g">' + esc(corto(p.sonando, 30)) + "</span>"
+             : p.listo ? '<span class="g">en espera</span>' : '<span class="r">falta el oauth</span>') +
+              ' <span class="a b">' + p.hechos + "/" + p.bloques + "</span>";
   var filas = ['<span class="g">noche ' + esc(p.noche) + " · " + p.reproducciones + " reproducciones</span>"];
   if(p.sonando) filas.push('<span class="v b">suena</span> ' + esc(p.sonando));
   else if(p.proximo) filas.push('<span class="g">proximo bloque</span> ' + esc(p.proximo));
   if(!p.listo) filas.push('<span class="r">falta el oauth de spotify (premium)</span>');
-  (p.top || []).forEach(function(t){
+  if(wset("dj", "cola")) (p.top || []).forEach(function(t){
     filas.push('  <span class="g">' + esc(t.tema) + "</span> " + t.n + "×");
   });
-  return caja("dj", extra, filas.join("\n"));
+  return caja("dj", extra, limFilas("dj", filas).join("\n"), false, "dj");
 }
 
 function pintarWidgets(d, err){
@@ -3060,6 +3111,7 @@ function pintarWidgets(d, err){
   d = widDatos;
   itemsW = {}; itemN = 0;            // los items del repintado anterior ya no existen
   var edad = haceSeg((Date.now() - fecha(d.ts)) / 1000);
+  widEdad = edad;                    // el header de cada caja dice `hace Xs`
   var partes = [
     cajaServer(d.server || {}),
     cajaUsage(d.usage || {}),
@@ -3082,6 +3134,25 @@ function pintarWidgets(d, err){
   pintarChips();                // los chips `op N X` usan las opciones reales de este json
 }
 
+// el `[↻]` del header: vuelve a bajar widgets.json aunque no haya cambiado (sin etag) y repinta.
+// el json lo republica el script `widgets_web` del daemon cada 60 s, asi que esto trae lo ultimo
+// publicado sin gastar un solo token.
+var refrescando = false;
+function refrescarWidgets(clave){
+  if(refrescando) return Promise.resolve();
+  refrescando = true;
+  var b = document.querySelector('#widgets [data-ref="' + (clave || "").replace(/"/g, "") + '"]');
+  if(b) b.classList.add("girando");
+  etagWid = null;
+  return cargarWidgets().catch(function(e){
+    if(ruidoso(e)) pintarWidgets(null, e.message);
+  }).then(function(){
+    refrescando = false;
+    var n = document.querySelector('#widgets [data-ref="' + (clave || "").replace(/"/g, "") + '"]');
+    if(n) n.classList.remove("girando");
+  });
+}
+
 function cargarWidgets(){
   widUlt = Date.now();
   return api("GET", "/repos/" + REPO + "/contents/widgets.json", null, etagWid,
@@ -3093,8 +3164,17 @@ function cargarWidgets(){
 }
 
 widgetsEl.addEventListener("click", function(e){
+  var ref = e.target.closest("button[data-ref]");         // [↻] volver a bajar widgets.json
+  if(ref){ refrescarWidgets(ref.dataset.ref); return; }
+  var set = e.target.closest("button[data-set]");         // [⚙] settings de ese widget
+  if(set){ abrirSets(set.dataset.set); return; }
+  var fold = e.target.closest("[data-fold]");             // tocar el titulo pliega y despliega
+  if(fold){
+    guardarWset(fold.dataset.fold, "plegado", !wset(fold.dataset.fold, "plegado"));
+    return;
+  }
   var pod = e.target.closest("button[data-pod]");
-  if(pod){ podAbierto = !podAbierto; pintarWidgets(null); return; }
+  if(pod){ podAbierto = !abiertoPod(); pintarWidgets(null); return; }
   var b = e.target.closest("button[data-msg]");
   if(b){
     b.disabled = true;
@@ -3307,8 +3387,46 @@ function modalDe(o){
 
 var LETRAS = "abcdefgh";
 var modalAbierto = null;
-function abrirModal(o){
-  var m = modalDe(o);
+function abrirModal(o){ pintarModal(modalDe(o)); }
+
+// ---------- settings de un widget (facundo, 2026-09-12) ----------
+// el `[⚙]` del header abre el MISMO modal con look terminal: una accion por setting, que la cambia
+// en el momento (bool: si/no; opciones: cicla la lista) y repinta. se guardan en `tabs.json`.
+function valorTxt(v){
+  if(v === true) return "si";
+  if(v === false) return "no";
+  if(v === 0) return "todas";
+  return String(v);
+}
+function modalSets(clave){
+  var ls = setsDe(clave);
+  var m = {titulo: "settings \u00b7 " + clave, tema: "tools", acciones: [],
+           cuerpo: '<span class="g">se guardan en el buz\u00f3n: las ves igual en el celu y en la compu.</span>'};
+  ls.forEach(function(st){
+    var v = wset(clave, st.k);
+    m.acciones.push([st.et + ": " + valorTxt(v), function(){
+      var nuevo;
+      if(st.tipo === "bool") nuevo = !v;
+      else{
+        var ops = st.ops || [], i = ops.indexOf(v);
+        nuevo = ops[(i + 1) % (ops.length || 1)];
+        if(nuevo === undefined) nuevo = st.def;
+      }
+      guardarWset(clave, st.k, nuevo);
+      pintarModal(modalSets(clave));      // el modal se queda abierto con el valor nuevo
+    }, false]);
+  });
+  m.acciones.push(["volver a los valores de f\u00e1brica", function(){
+    wsets[clave] = {ts: Math.max(Date.now(), (+((wsets[clave] || {}).ts) || 0) + 1)};
+    guardarCache(); publicarTabs(false, WSETS_DEBOUNCE); repintarWidgets();
+    pintarModal(modalSets(clave));
+  }, false]);
+  m.acciones.push(["cerrar", cerrarModal, true]);
+  return m;
+}
+function abrirSets(clave){ pintarModal(modalSets(clave)); }
+
+function pintarModal(m){
   modalAbierto = m;
   $("mtitulo").textContent = m.titulo || "item";
   $("mcuerpo").innerHTML = m.cuerpo || "";
@@ -3825,6 +3943,27 @@ window.__agente = {
     L.wsets = wsetsLimpias(); return L;
   },
   abrirTab: abrirTab, splitCon: splitCon, unPanel: unPanel, renombrarTab: renombrarTab,
+  // header de cada widget: [↻] actualizar, [⚙] settings, plegar tocando el titulo
+  wsets: function(){ return wsetsLimpias(); },
+  wset: wset, setsDe: setsDe, guardarWset: guardarWset, recibirWsets: recibirWsets,
+  abrirSets: abrirSets, refrescarWidgets: refrescarWidgets,
+  headers: function(){
+    return [].map.call(document.querySelectorAll("#widgets > .caja"), function(c){
+      var t = c.querySelector(".tit") || {};
+      return {clave: c.dataset.w || "", titulo: ((t.querySelector && t.querySelector(".wtit")) || {}).textContent || "",
+              esencial: ((t.querySelector && t.querySelector(".wesc")) || {}).textContent || "",
+              refrescar: !!(t.querySelector && t.querySelector("[data-ref]")),
+              settings: !!(t.querySelector && t.querySelector("[data-set]")),
+              plegada: c.classList.contains("plegada"),
+              filas: ((c.querySelector(".cuerpo") || {}).textContent || "").split("\n").length};
+    });
+  },
+  tocarHeader: function(clave, que){
+    var n = document.querySelector('#widgets .caja[data-w="' + clave + '"] ' +
+      (que === "fold" ? "[data-fold]" : que === "set" ? "[data-set]" : "[data-ref]"));
+    if(!n) return false;
+    n.click(); return true;
+  },
   // borrador del input, continuable entre dispositivos
   borradores: function(){ return borradoresLimpios(); },
   borradorDe: borradorDe, guardarBorrador: guardarBorrador, recibirBorradores: recibirBorradores,
