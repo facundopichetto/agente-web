@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.167">
-<link rel="manifest" href="manifest.json?v=4.167">
+<meta name="agente-web-version" content="4.168">
+<link rel="manifest" href="manifest.json?v=4.168">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -907,9 +907,21 @@ function recibirBorradores(rem){
 }
 // en pantalla tactil (celu, tablet) enter hace salto de linea y manda solo el boton: facundo escribe
 // parrafos y terminaba mandando sin querer (2026-09-11). en desktop sigue enter = mandar.
+// se decide SOLO por hardware: nunca por ancho de ventana, aspect ratio ni vista (facundo,
+// 2026-09-12: en la compu con la ventana angosta enter dejaba de mandar). el ancho no dice nada
+// del teclado que tenes enchufado.
 function esTactil(){
-  try{ if(window.matchMedia && window.matchMedia("(pointer: coarse)").matches) return true; }catch(x){}
-  return window.innerWidth <= 899;
+  try{
+    if(window.matchMedia){
+      var fino = window.matchMedia("(pointer: fine)");
+      var grueso = window.matchMedia("(pointer: coarse)");
+      // si el navegador entiende la media query, manda ella y nada mas
+      if(grueso.matches) return true;
+      if(fino.matches) return false;
+    }
+  }catch(x){}
+  // respaldo para navegadores sin `pointer`: el hardware tactil
+  return (navigator.maxTouchPoints || 0) > 0;
 }
 var TOPE_LINEAS = 6;   // la caja crece con los parrafos hasta 6 lineas y ahi scrollea
 function ajustarCaja(){

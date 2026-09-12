@@ -218,11 +218,18 @@ por algun icono de terminal".
 
 ## enter en el celu no manda (facundo, 2026-09-11)
 
-en pantalla tactil (`esTactil()`: `pointer: coarse` o ancho <= 899) **enter hace salto de linea** y el
-mensaje sale solo con el boton `>_`; en desktop sigue enter = mandar, shift+enter = salto. el textarea
-lleva `enterkeyhint="enter"` para que el teclado del celu muestre "intro" y no "enviar", y `ajustarCaja()`
-crece con los parrafos hasta `TOPE_LINEAS` (6) o 28dvh, lo que sea menor, y ahi scrollea.
-lo chequea `recetas/prueba_web_tabs` (emula touch por cdp, cero tokens).
+en pantalla tactil **enter hace salto de linea** y el mensaje sale solo con el boton `>_`; en desktop
+enter = mandar, shift+enter = salto. el textarea lleva `enterkeyhint="enter"` para que el teclado del celu
+muestre "intro" y no "enviar", y `ajustarCaja()` crece con los parrafos hasta `TOPE_LINEAS` (6) o 28dvh,
+lo que sea menor, y ahi scrollea.
+
+**tactil se decide SOLO por hardware** (facundo, 2026-09-12: "tenes que saber si es un celular o compu
+independientemente del espacio de la ventana"). `esTactil()` mira `matchMedia("(pointer: coarse)")` y, si
+el navegador entiende la media query, esa respuesta manda (`pointer: fine` = desktop); solo cuando no la
+entiende cae a `navigator.maxTouchPoints > 0`. **nunca por ancho, aspect ratio ni vista**: la version vieja
+devolvia tactil con `innerWidth <= 899`, asi que en la compu con la ventana angosta enter dejaba de mandar.
+lo chequea `recetas/prueba_web_tabs` (emula touch y metricas por cdp, cero tokens) en las cuatro ramas:
+desktop ancho, desktop angosto (600px, enter manda igual), tactil ancho (1200px, enter no manda) y celu.
 
 ## widget usage: barras contra la linea (facundo, 2026-09-11)
 
