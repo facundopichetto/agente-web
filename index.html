@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.165">
-<link rel="manifest" href="manifest.json?v=4.165">
+<meta name="agente-web-version" content="4.166">
+<link rel="manifest" href="manifest.json?v=4.166">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -304,12 +304,9 @@
     .caja > .tit{min-height:40px}
     #panel-widgets{flex:1 1 auto;padding-bottom:calc(14px + env(safe-area-inset-bottom))}
     #sep{display:none}
-    #panel-lado{flex:1 1 auto;border-left:none}
-    /* una vista a la vez: la elige la barra de arriba (chat | widgets | la pestaña de al lado) */
+    /* una vista a la vez: la elige la barra de arriba (chat | widgets) */
     body:not(.ver-widgets) #panel-widgets{display:none}
     body.ver-widgets #panel-chat{display:none}
-    body:not(.ver-lado) #panel-lado{display:none}
-    body.ver-lado #panel-chat,body.ver-lado #panel-widgets{display:none}
     /* ios zoomea al enfocar un input de menos de 16px: lo frena maximum-scale=1 en el
        viewport, asi que el input del chat va chico como el resto del chat. los de login
        quedan en 16 (se tocan una vez y ahi no molesta). */
@@ -338,7 +335,6 @@
     color:var(--verde);border-color:var(--linea);border-bottom:1px solid #000;background:#060606;
   }
   #tabs .tab .x{color:#555;margin-left:7px}
-  #tabs .tab.arrastrando{opacity:.5}
   #tabs .barrabtn{
     flex:0 0 auto;background:#000;color:var(--gris);border:1px solid var(--linea);border-radius:4px;
     padding:2px 7px;font:inherit;font-size:9.5px;cursor:pointer;white-space:nowrap;
@@ -355,23 +351,8 @@
   }
   #sync.oculta{display:none}
   #sync.off{color:var(--amarillo)}
-  body.sincronizando #lista,body.sincronizando #lista1,
+  body.sincronizando #lista,
   body.sincronizando #widgets,body.sincronizando #tabs .tab{opacity:.45}
-  /* ---------- arrastrar una pestaña (drag and drop estilo vscode, facundo 2026-09-11) ----------
-     no hay boton de split: una pestaña se manda al lado de los widgets arrastrandola hasta la zona
-     que aparece resaltada, y vuelve al chat arrastrandola de nuevo a la barra. mouse y dedo. */
-  #zona-drop{
-    position:fixed;z-index:60;display:flex;align-items:center;justify-content:center;
-    border:1px dashed var(--linea);border-radius:6px;background:rgba(10,20,10,.55);
-    color:var(--gris);font-size:10.5px;letter-spacing:.04em;text-align:center;
-    pointer-events:none;padding:6px;
-  }
-  #zona-drop.oculta{display:none}
-  #zona-drop.activa{
-    border-color:var(--verde);border-style:dashed;color:var(--verde);
-    background:rgba(0,255,120,.10);box-shadow:0 0 12px rgba(0,255,120,.35) inset;
-  }
-  #tabs.soltar{background:rgba(0,255,120,.08);box-shadow:0 0 10px rgba(0,255,120,.25) inset}
   /* soltar una imagen sobre el chat (desktop, facundo 2026-09-11) */
   #panel-chat.soltar-img{position:relative}
   #panel-chat.soltar-img::after{
@@ -380,36 +361,7 @@
     border:1px dashed var(--verde);border-radius:6px;background:rgba(0,255,120,.10);
     color:var(--verde);font-size:11px;letter-spacing:.04em;
   }
-  /* la pestaña fantasma que sigue al dedo o al mouse */
-  #fantasma-tab{
-    position:fixed;z-index:61;pointer-events:none;background:#060606;color:var(--verde);
-    border:1px solid var(--verde);border-radius:4px;padding:3px 8px;font-size:10.5px;
-    white-space:nowrap;opacity:.92;transform:translate(-50%,-140%);
-  }
-  body.arrastrando-tab{-webkit-user-select:none;user-select:none}
-  body.arrastrando-tab #hist,body.arrastrando-tab #panel-widgets{pointer-events:none}
-  /* con touch-action pan-x la barra se sigue scrolleando de costado y el movimiento vertical
-     (el que arranca el arrastre) nos llega a nosotros como pointermove */
-  #tabs .tab{touch-action:pan-x}
-  /* segundo panel: la pestaña que se manda al lado de la fila de widgets */
-  #panel-lado{
-    flex:0 0 380px;min-width:0;display:flex;flex-direction:column;border-left:1px solid var(--linea);
-  }
-  #panel-lado.oculta{display:none}
-  #panel-lado .ladotit{
-    flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;gap:8px;
-    padding:4px 8px;border-bottom:1px solid var(--linea);color:var(--cian);font-size:10.5px;
-  }
-  #panel-lado .ladotit button{
-    background:#000;color:var(--gris);border:1px solid var(--linea);border-radius:4px;
-    padding:2px 7px;font:inherit;font-size:9.5px;cursor:pointer;
-  }
-  #panel-lado.foco .ladotit{color:var(--verde)}
-  #hist1{
-    flex:1 1 auto;min-height:0;overflow-y:auto;padding:10px 12px;
-    -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
-  }
-  /* dropdown: pestaña nueva, a que panel va, y la pregunta de "esto parece de otro tema" */
+  /* dropdown: pestaña nueva y la pregunta de "esto parece de otro tema" */
   #ddfondo{position:fixed;inset:0;z-index:19;background:rgba(0,0,0,.45)}
   #ddfondo.oculta,#dd.oculta{display:none}
   #dd{
@@ -506,7 +458,6 @@
   <div id="vistas">
     <button id="ver-chat" class="on" type="button">chat</button>
     <button id="ver-widgets" type="button">widgets</button>
-    <button id="ver-lado" type="button" style="display:none">lado</button>
   </div>
   <button id="salir" type="button">salir</button>
 </div>
@@ -545,14 +496,7 @@
 </div><!-- /panel-chat -->
 <div id="sep" title="arrastrar para cambiar el ancho" aria-label="separador" role="separator" aria-orientation="vertical"></div>
 <div id="panel-widgets"><div id="widgets"></div></div>
-<div id="panel-lado" class="oculta">
-  <div class="ladotit"><span id="lado-tema"></span><button id="lado-cerrar" type="button">&#9634; 1 pane</button></div>
-  <div id="hist1"><div id="lista1"></div></div>
-</div>
 </div><!-- /cuerpo -->
-
-<!-- zona de drop del arrastre de pestañas: se muestra sola mientras se arrastra una pestaña -->
-<div id="zona-drop" class="oculta"><span class="zd-txt">soltar acá: al lado de los widgets</span></div>
 
 <div id="ddfondo" class="oculta"></div>
 <div id="dd" class="oculta"></div>
@@ -683,7 +627,9 @@ function partir(txt){
 // layout se publica en el buzon como `tabs.json` (mismo repo y mismo token que `widgets.json`) y
 // localStorage queda de **cache offline**: pinta al instante al abrir y sirve si github no contesta.
 // resolucion de conflictos: **el ultimo que escribe gana**, por el `ts` de cada layout.
-var tabs = ["tools", AUTO], paneles = ["tools"], foco = 0;
+// el chat es un panel UNICO (facundo, 2026-09-12: "las pestañas del chat no tienen que poder ser
+// dragandropeables"): no hay segundo panel ni arrastre, solo la pestaña activa.
+var tabs = ["tools", AUTO], activo = "tools";
 var layoutTs = 0;                 // cuando se escribio el layout que estoy mostrando
 var shaTabs = null;               // sha del tabs.json remoto (para el PUT)
 var etagTabs = null, tabsUlt = 0; // poll con etag, como los widgets
@@ -709,7 +655,8 @@ var enviando = 0;                 // hay un mensaje saliendo: ese texto ya no es
 // pantalla no coinciden entre celu y desktop. se guarda el **id del comentario** que quedo arriba de
 // la vista, y al restaurar se scrollea hasta ese mensaje.
 var vistas = {};
-// ancho de los paneles: el porcentaje de #cuerpo que ocupa el chat, elegido arrastrando el separador
+// ancho de los dos paneles (chat | widgets): el porcentaje de #cuerpo que ocupa el chat, elegido
+// arrastrando el separador
 // (facundo, 2026-09-11). viaja en el mismo `tabs.json` y se resuelve **por su propio `ts`**, como los
 // borradores y las vistas: mover el separador en la compu no se lleva puestas las pestañas del celu.
 // `null` = nunca se toco: quedan los anchos de siempre (chat elastico, widgets 420px).
@@ -726,8 +673,10 @@ var DISPOSITIVO = (function(){
   }catch(x){ return Math.random().toString(36).slice(2, 8); }
 })();
 
-// {tabs, paneles, foco} saneado: solo temas conocidos, sin repetidos, paneles dentro de tabs.
+// {tabs, activo} saneado: solo temas conocidos, sin repetidos, la activa dentro de tabs.
 // las reglas de siempre: una pestaña por tema, y la general (`auto`) es una mas de la lista.
+// los layouts viejos traian `paneles` y `foco` (el split al lado de los widgets, ya sacado): se
+// leen solo para saber en que pestaña estabas y no se vuelven a escribir.
 function sanearLayout(L){
   if(!L || !L.tabs || !L.tabs.length) return null;
   var ts = [];
@@ -736,20 +685,19 @@ function sanearLayout(L){
     if((esTema(t) || t === AUTO) && ts.indexOf(t) < 0) ts.push(t);
   });
   if(!ts.length) return null;
-  var ps = (L.paneles || [ts[0]]).map(function(t){ return t === AUTO ? AUTO : normTema(t); })
-            .filter(function(t){ return ts.indexOf(t) >= 0; }).slice(0, 2);
-  if(!ps.length) ps = [ts[0]];
-  if(ps.length === 2 && ps[0] === ps[1]) ps = [ps[0]];
-  return {tabs: ts, paneles: ps, foco: Math.min(Math.max(L.foco || 0, 0), ps.length - 1)};
+  var a = L.activo || (L.paneles || [])[0] || ts[0];
+  a = a === AUTO ? AUTO : normTema(a);
+  if(ts.indexOf(a) < 0) a = ts[0];
+  return {tabs: ts, activo: a};
 }
-function layoutActual(){ return {tabs: tabs, paneles: paneles, foco: foco}; }
-function firmaLayout(L){ return JSON.stringify([L.tabs, L.paneles, L.foco]); }
+function layoutActual(){ return {tabs: tabs, activo: activo}; }
+function firmaLayout(L){ return JSON.stringify([L.tabs, L.activo]); }
 // pinta un layout (venga del cache o del buzon) sin dispararme una publicacion de vuelta
 function aplicarLayout(L, ts){
   var s = sanearLayout(L);
   if(!s) return false;
   var igual = firmaLayout(s) === firmaLayout(layoutActual());
-  tabs = s.tabs; paneles = s.paneles; foco = s.foco;
+  tabs = s.tabs; activo = s.activo;
   layoutTs = ts || Date.now();
   aplicando = true;
   try{ pintarTabs(); if(!igual){ render(); irDonde(); } }finally{ aplicando = false; }
@@ -760,7 +708,7 @@ function guardarCache(){
   layoutFirma = firmaLayout(layoutActual());
   try{
     localStorage.setItem("agente_tabs", JSON.stringify(
-      {tabs: tabs, paneles: paneles, foco: foco, ts: layoutTs, origen: DISPOSITIVO,
+      {tabs: tabs, activo: activo, ts: layoutTs, origen: DISPOSITIVO,
        borradores: borradoresLimpios(), vistas: vistasLimpias(), split: splitLimpio(),
        wsets: wsetsLimpias()}));
   }catch(x){}
@@ -986,7 +934,7 @@ function refrescarCaja(){
   if(t === txt.value) return;
   ponerCaja(t);
 }
-// cambio de pestaña (o de panel con el split): lo que hay en la caja queda como borrador de la que
+// cambio de pestaña: lo que hay en la caja queda como borrador de la que
 // se deja y la nueva trae el suyo. mientras se esta mandando un mensaje no se guarda nada: ese texto
 // ya salio.
 function cajaDeTema(tema, forzar){
@@ -1010,52 +958,50 @@ function vistasLimpias(){
   });
   return out;
 }
-// que mensaje esta arriba de todo en el panel j (el ancla que se guarda)
-function anclaDe(j){
-  var h = histDe(j), l = listaDe(j);
-  if(!h || !l) return null;
-  var ns = l.querySelectorAll(".msg[data-id]");
+// que mensaje esta arriba de todo en el chat (el ancla que se guarda)
+function anclaDe(){
+  if(!hist || !lista) return null;
+  var ns = lista.querySelectorAll(".msg[data-id]");
   for(var i = 0; i < ns.length; i++)
-    if(ns[i].offsetTop + ns[i].offsetHeight > h.scrollTop) return ns[i].dataset.id;
+    if(ns[i].offsetTop + ns[i].offsetHeight > hist.scrollTop) return ns[i].dataset.id;
   return null;
 }
 function cargado(id){
   return !!document.querySelector('.msg[data-id="' + String(id).replace(/"/g, "") + '"]');
 }
-function alFondo(j){
-  var h = histDe(j);
-  return !h || h.scrollHeight - h.scrollTop - h.clientHeight < 80;
+function alFondo(){
+  return !hist || hist.scrollHeight - hist.scrollTop - hist.clientHeight < 80;
 }
-// anota donde quedo la vista de la pestaña de cada panel. `ya` publica sin esperar el debounce.
+// anota donde quedo la vista de la pestaña activa. `ya` publica sin esperar el debounce.
 function guardarVista(ya){
   if(aplicandoVista) return;
   var cambio = false;
-  paneles.forEach(function(tema, j){
-    if(!tema) return;
-    var abajo = alFondo(j), ancla = abajo ? null : anclaDe(j), v = vistas[tema] || {};
-    if(!!v.abajo === abajo && (v.ancla || null) === ancla) return;
+  var tema = temaActivo();
+  if(tema){
+    var abajo = alFondo(), ancla = abajo ? null : anclaDe(), v = vistas[tema] || {};
     // este dispositivo trae menos historial que el otro: el ancla del celu todavia no esta cargada.
     // no se pisa con un "estoy al final" que en realidad es "no lo encontre" (perderia el lugar).
-    if(abajo && v.ancla && !cargado(v.ancla)) return;
-    vistas[tema] = {ancla: ancla, abajo: abajo, ts: Math.max(Date.now(), (+v.ts || 0) + 1)};
-    cambio = true;
-  });
+    if(!(!!v.abajo === abajo && (v.ancla || null) === ancla) && !(abajo && v.ancla && !cargado(v.ancla))){
+      vistas[tema] = {ancla: ancla, abajo: abajo, ts: Math.max(Date.now(), (+v.ts || 0) + 1)};
+      cambio = true;
+    }
+  }
   if(!cambio) return;
   guardarCache();
   publicarTabs(ya, VISTA_DEBOUNCE);
 }
 var aplicandoVista = false;
-// deja el panel j donde lo dejaste (en este o en el otro dispositivo). si el ancla ya no esta cargada
+// deja el chat donde lo dejaste (en este o en el otro dispositivo). si el ancla ya no esta cargada
 // -la otra punta tenia mas historial- se queda al final, que es lo de siempre.
-function aplicarVista(j){
-  var tema = paneles[j], h = histDe(j), l = listaDe(j);
-  if(!tema || !h || !l) return false;
+function aplicarVista(){
+  var tema = temaActivo();
+  if(!tema || !hist || !lista) return false;
   var v = vistas[tema];
   if(!v || v.abajo || !v.ancla) return false;
-  var n = l.querySelector('.msg[data-id="' + String(v.ancla).replace(/"/g, "") + '"]');
+  var n = lista.querySelector('.msg[data-id="' + String(v.ancla).replace(/"/g, "") + '"]');
   if(!n) return false;
   aplicandoVista = true;
-  try{ h.scrollTop = n.offsetTop; }finally{ aplicandoVista = false; }
+  try{ hist.scrollTop = n.offsetTop; }finally{ aplicandoVista = false; }
   return true;
 }
 // llegaron las vistas del buzon (o del cache): gana el `ts` mas nuevo de cada tema
@@ -1069,7 +1015,7 @@ function recibirVistas(rem){
       cambio = true;
     }
   });
-  if(cambio){ guardarCache(); [0, 1].forEach(aplicarVista); }
+  if(cambio){ guardarCache(); aplicarVista(); }
   return cambio;
 }
 
@@ -1083,7 +1029,7 @@ function borrarBorrador(tema){
   try{
     var L = JSON.parse(localStorage.getItem("agente_tabs") || "null");
     var s = L && sanearLayout(L);
-    if(s){ tabs = s.tabs; paneles = s.paneles; foco = s.foco; layoutTs = L.ts || 0; }
+    if(s){ tabs = s.tabs; activo = s.activo; layoutTs = L.ts || 0; }
     if(L && L.borradores) recibirBorradores(L.borradores);
     if(L && L.vistas) recibirVistas(L.vistas);
     if(L && L.split) recibirSplit(L.split);
@@ -1150,7 +1096,8 @@ function recibirTabs(L){
   if(borr || vis || sp || ws) publicarTabs();   // mezcle los dos lados: que el otro vea el resultado
   return "igual";
 }
-// agrupa los cambios seguidos (abrir, split, foco) en una sola escritura
+// agrupa los cambios seguidos (abrir una pestaña, cambiar de pestaña, mover el separador) en una
+// sola escritura
 function publicarTabs(ya, debounce){
   if(!token || !tabsSync || !tabsListo) return;
   if(tabsPendiente) clearTimeout(tabsPendiente);
@@ -1196,7 +1143,7 @@ function ponerTabs(reintento){
       .then(function(j){ sinSync((j && j.message) || ("http " + r.status)); });
   }).catch(function(){});                                 // sin red: queda el cache y se reintenta solo
 }
-function temaActivo(){ return paneles[foco] || paneles[0]; }
+function temaActivo(){ return activo; }
 // `auto` junta lo que no tiene pestaña propia: nada desaparece cuando el daemon clasifica a un tema
 // que facundo no abrio.
 // la general junta lo que mando ella (sin prefijo) y lo que no tiene pestaña propia
@@ -1220,7 +1167,7 @@ function pintarTabs(){
   tabs.forEach(function(t){
     var b = document.createElement("button");
     b.type = "button";
-    b.className = "tab" + (t === temaActivo() ? " activo" : (paneles.indexOf(t) >= 0 ? " enpanel" : ""));
+    b.className = "tab" + (t === temaActivo() ? " activo" : "");
     b.dataset.tema = t;
     b.textContent = ETIQUETA[t] || t;
     if(t === temaActivo() && tabs.length > 1){
@@ -1231,18 +1178,9 @@ function pintarTabs(){
     barra.appendChild(b);
   });
   barra.appendChild(btnBarra("+", "nueva_tab"));
-  if(paneles.length === 2) barra.appendChild(btnBarra("⊟ 1 pane", "un_panel"));
   var r = document.createElement("span"); r.className = "relleno";
   barra.appendChild(r);
-  // panel de al lado: titulo, marca de donde se escribe, y el boton de vista del celu
-  var lado = $("panel-lado");
-  lado.classList.toggle("oculta", paneles.length < 2);
-  lado.classList.toggle("foco", paneles.length === 2 && foco === 1);
-  $("lado-tema").textContent = paneles.length === 2 ? (paneles[1] + (foco === 1 ? " ✎" : "")) : "";
-  $("ver-lado").style.display = paneles.length === 2 ? "" : "none";
-  $("ver-lado").textContent = paneles.length === 2 ? paneles[1] : "lado";
-  if(paneles.length < 2) document.body.classList.remove("ver-lado");
-  $("prompt").textContent = (paneles.length === 2 ? "facundo[" + temaActivo() + "]" : "facundo") + ">";
+  $("prompt").textContent = "facundo>";
   guardarLayout();
   cajaDeTema(temaActivo());     // cada pestaña se lleva su borrador y trae el suyo
   pintarChips();                // y sus sugerencias, que salen de la ultima respuesta de esa pestaña
@@ -1253,7 +1191,7 @@ function abrirTab(tema){
   tema = tema === AUTO ? AUTO : normTema(tema);
   if(!esTema(tema) && tema !== AUTO){ sistema("tema desconocido: " + tema, "error"); return; }
   if(tabs.indexOf(tema) < 0) tabs.push(tema);
-  paneles[foco] = tema;
+  activo = tema;
   pintarTabs(); render(); irDonde();
   chatDeTab(tema);          // si nunca se bajo su charla, llega sola
 }
@@ -1263,7 +1201,7 @@ function renombrarTab(viejo, nuevo){
   if(viejo === nuevo || tabs.indexOf(viejo) < 0) return;
   if(tabs.indexOf(nuevo) >= 0) tabs.splice(tabs.indexOf(viejo), 1);
   else tabs[tabs.indexOf(viejo)] = nuevo;
-  paneles = paneles.map(function(t){ return t === viejo ? nuevo : t; });
+  if(activo === viejo) activo = nuevo;
   pintarTabs(); render(); irDonde();
 }
 function cerrarTab(tema){
@@ -1272,8 +1210,7 @@ function cerrarTab(tema){
   if(j < 0) return;
   tabs.splice(j, 1);
   var reemplazo = tabs[Math.min(j, tabs.length - 1)];
-  paneles = paneles.map(function(t){ return t === tema ? reemplazo : t; });
-  if(paneles.length === 2 && paneles[0] === paneles[1]) unPanel();
+  if(activo === tema) activo = reemplazo;
   pintarTabs(); render(); irDonde();
 }
 function nuevaTab(){
@@ -1281,30 +1218,8 @@ function nuevaTab(){
   TEMAS.forEach(function(t){ if(tabs.indexOf(t) < 0) ops.push([t, t]); });
   dd("pestaña nueva: qué tema?", ops, abrirTab);
 }
-// manda `tema` al panel de al lado de los widgets (lo abre si no estaba partido)
-function splitCon(tema){
-  tema = tema === AUTO ? AUTO : normTema(tema);
-  if(!esTema(tema) && tema !== AUTO) return;
-  if(tabs.indexOf(tema) < 0) tabs.push(tema);
-  if(paneles.length < 2) paneles.push(tema); else paneles[1] = tema;
-  foco = 1;
-  pintarTabs(); render(); irDonde();
-  chatDeTab(tema);
-  if(esVistaMobile()) verPanel("lado");
-}
-function unPanel(){
-  paneles = [paneles[0]];
-  foco = 0;
-  document.body.classList.remove("ver-lado");
-  pintarTabs(); render(); irDonde();
-  if(esVistaMobile()) verPanel("chat");   // en el celu la vista vuelve al chat
-}
-function focoEn(j){
-  if(j >= paneles.length || foco === j) return;
-  foco = j; pintarTabs();
-}
 
-// ---------- dropdown (pestaña nueva / a que panel va / esto parece de otro tema) ----------
+// ---------- dropdown (pestaña nueva / esto parece de otro tema) ----------
 function dd(titulo, opciones, alElegir){
   var d = $("dd");
   d.innerHTML = "";
@@ -1392,7 +1307,6 @@ hist.addEventListener("scroll", function(){
   if(pegadoAbajo()) alfinal.style.display = "none";
   anotarVista();
 });
-$("hist1").addEventListener("scroll", anotarVista);
 
 // celu: si facundo scrollea hacia arriba para leer, el teclado se cierra solo (blur del input).
 // solo por gesto propio (dedo o rueda) y solo hacia arriba: los scrolls programados (abajo(),
@@ -1556,14 +1470,12 @@ function resaltar(t){
 }
 
 // ---------- mensajes: uno solo por comentario, repartido a la pestaña de su tema ----------
-// msgs es la charla entera en orden; cada panel pinta los que caen en su pestaña (deEstaTab).
+// msgs es la charla entera en orden; el chat pinta los que caen en la pestaña activa (deEstaTab).
 // se arma con dos fuentes: `msgsHist`, la charla COMPLETA de cada tema que publica el daemon en el
 // buzon (`chat/<tema>.json`), y `msgsCom`, lo que trae el poll de comentarios del issue (lo de recien
 // y las respuestas que el daemon contesta sin modelo, que no van al log de chat). `mezclar()` las une
 // por fecha y saca los repetidos: la franja mas nueva esta en las dos.
 var msgs = [], msgsHist = {}, msgsCom = [];
-function listaDe(j){ return j === 0 ? lista : $("lista1"); }
-function histDe(j){ return j === 0 ? hist : $("hist1"); }
 // el tema de un mensaje: el que ya trae explicito, el `[tema]` con el que contesto el daemon, el
 // `tema x:` que escribio facundo, las palabras clave, y si no hay nada, el del mensaje anterior
 // (lo mismo que hace el daemon con `.ultimo-tema`).
@@ -1641,29 +1553,20 @@ function nodoMsg(m){
   return div;
 }
 function pintarMsg(m, arriba){
-  paneles.forEach(function(tab, j){
-    if(!deEstaTab(m.tema, tab)) return;
-    var l = listaDe(j);
-    if(!l) return;
-    if(arriba) l.insertBefore(nodoMsg(m), l.firstChild); else l.appendChild(nodoMsg(m));
-  });
+  if(deEstaTab(m.tema, temaActivo()) && lista){
+    if(arriba) lista.insertBefore(nodoMsg(m), lista.firstChild); else lista.appendChild(nodoMsg(m));
+  }
   if(!arriba && m.clase === "agente") pintarChips();   // contesto el daemon: sugerencias nuevas
 }
 function render(){
-  [0, 1].forEach(function(j){ var l = listaDe(j); if(l) l.innerHTML = ""; });
+  if(lista) lista.innerHTML = "";
   msgs.forEach(function(m){ pintarMsg(m, false); });
   pintarChips();
 }
-function alFinal(){
-  abajo();
-  var h1 = histDe(1);
-  if(h1) h1.scrollTop = h1.scrollHeight;
-}
+function alFinal(){ abajo(); }
 // abrir la web, volver al foco o cambiar de pestaña te deja **donde estabas**, no al final (facundo,
 // 2026-09-11). el fondo sigue siendo el default: `aplicarVista` solo mueve si habia algo guardado.
-function restaurarVistas(){
-  [0, 1].forEach(function(j){ aplicarVista(j); });
-}
+function restaurarVistas(){ aplicarVista(); }
 function irDonde(){
   alFinal();
   requestAnimationFrame(restaurarVistas);   // despues del layout: el alto recien existe aca
@@ -1879,13 +1782,12 @@ function cargarChatIndex(){
     throw e;
   });
 }
-// que charlas hacen falta: la de la pestaña activa primero, las de las demas pestañas, y si esta
+// que charlas hacen falta: la de la pestaña activa primero, las de las demas pestañas abiertas, y si esta
 // abierta la general (`auto`), todas las del indice: la general junta lo que no tiene pestaña propia.
 function temasACargar(){
   var out = [];
   function sumar(t){ t = normTema(t); if(t && t !== AUTO && out.indexOf(t) < 0) out.push(t); }
   sumar(temaActivo());
-  paneles.forEach(sumar);
   if(tabs.indexOf(AUTO) >= 0) Object.keys(chatIndex || {}).forEach(sumar);
   tabs.forEach(sumar);
   return out;
@@ -2132,20 +2034,20 @@ function enviarMensaje(texto){
   if(c.fuente === "palabras" && c.tema !== activo){ preguntarDestino(texto, activo, c.tema); return; }
   mandar(texto, activo);
 }
-// el mensaje parece de otro tema: opciones y no se manda hasta elegir (igual que la consola).
+// el mensaje parece de otro tema: opciones y no se manda hasta elegir (ir a esa pestaña, o forzar
+// el tema de esta; ya no hay "al lado de los widgets").
 // si ademas viene partido en 2+ temas, la primera opcion es partirlo: cada mitad a su pestaña.
 function preguntarDestino(texto, activo, otro, trozos){
   var existe = tabs.indexOf(otro) >= 0, ops = [];
   if(trozos && trozos.length > 1)
     ops.push(["partir: " + trozos.map(function(t){ return t.tema; }).join(" / "), "partir"]);
   ops.push(["mandalo a la pestaña " + otro + (existe ? "" : " (la abre)"), "ir"]);
-  ops.push(["abrí " + otro + " al lado de los widgets y mandalo ahí", "lado"]);
   ops.push(["no, dejalo acá como `tema " + activo + ":`", "aqui"]);
   dd(trozos && trozos.length > 1 ? "esto tiene " + trozos.length + " temas" : "esto parece de " + otro,
      ops, function(que){
     if(que === "partir"){ mandarPartido(trozos); return; }
     if(que === "aqui"){ mandar(texto, activo); return; }
-    if(que === "lado") splitCon(otro); else abrirTab(otro);
+    abrirTab(otro);
     mandar(texto, otro);
   });
 }
@@ -3286,7 +3188,7 @@ function hablar(o, contexto){
   if(temaActivo() !== tema) abrirTab(tema);
   ponerCaja("sobre " + contexto + ": ");
   guardarBorrador(temaActivo(), txt.value, true);
-  if(esVistaMobile()) verPanel(foco === 1 ? "lado" : "chat");
+  if(esVistaMobile()) verPanel("chat");
   txt.focus();
 }
 function accHablar(o, contexto){
@@ -3669,8 +3571,7 @@ function menuTab(nodo, x, y){
   var t = nodo.dataset.tema;
   if(!t) return false;
   var ops = [];
-  if(t !== AUTO){          // la general no se renombra nunca ni se manda al lado (es la puerta de entrada)
-    ops.push(["mandar al lado de los widgets", function(){ splitCon(t); }]);
+  if(t !== AUTO){          // la general no se renombra nunca (es la puerta de entrada)
     ops.push(["renombrar tema", function(){
       var op = [];
       TEMAS.forEach(function(otro){ if(otro !== t) op.push([otro, otro]); });
@@ -3685,7 +3586,6 @@ function pedirMenuMsg(target, x, y){
   return n ? menuMsg(n, x, y) : false;
 }
 gestos(lista, pedirMenuMsg);
-gestos($("lista1"), pedirMenuMsg);
 gestos($("widgets"), function(target, x, y){
   var n = target && target.closest && target.closest("[data-it]");
   return n ? menuItem(n, x, y) : false;
@@ -3699,48 +3599,37 @@ $("ctxfondo").addEventListener("contextmenu", function(e){ e.preventDefault(); c
 // scroll no burbujea: con captura se ve el de cualquier panel
 document.addEventListener("scroll", function(){ if(menuAbierto) cerrarMenu(); }, true);
 
-// celu: una vista a la vez (chat | widgets | la pestaña de al lado, si esta partido).
-// en desktop (>= 900px) los paneles se ven juntos y esta barra no aparece.
+// celu: una vista a la vez (chat | widgets). en desktop los dos paneles se ven juntos y esta barra
+// no aparece.
 function verPanel(cual){
   document.body.classList.toggle("ver-widgets", cual === "widgets");
-  document.body.classList.toggle("ver-lado", cual === "lado");
   $("ver-chat").classList.toggle("on", cual === "chat");
   $("ver-widgets").classList.toggle("on", cual === "widgets");
-  $("ver-lado").classList.toggle("on", cual === "lado");
   if(cual === "widgets" && Date.now() - widUlt > 15000) cargarWidgets().catch(function(){});
-  if(cual === "chat"){ focoEn(0); abajo(); }
-  if(cual === "lado") focoEn(1);
+  if(cual === "chat") abajo();
 }
 function verWidgets(si){ verPanel(si ? "widgets" : "chat"); }
 $("ver-chat").addEventListener("click", function(){ verPanel("chat"); });
 $("ver-widgets").addEventListener("click", function(){ verPanel("widgets"); });
-$("ver-lado").addEventListener("click", function(){ verPanel("lado"); });
 
-// ---------- barra de pestañas: click, arrastrar hasta los widgets, y el foco del input ----------
+// ---------- barra de pestañas: click y el foco del input ----------
 $("tabs").addEventListener("click", function(e){
   var x = e.target.closest("[data-cerrar]");
   if(x){ cerrarTab(x.dataset.cerrar); return; }
   var b = e.target.closest("[data-accion]");
   if(b){
     if(b.dataset.accion === "nueva_tab") nuevaTab();
-    else if(b.dataset.accion === "un_panel") unPanel();
     return;
   }
   var t = e.target.closest("[data-tema]");
   if(t){
-    focoEn(0); abrirTab(t.dataset.tema); txt.focus();
+    abrirTab(t.dataset.tema); txt.focus();
     if(esVistaMobile()) verPanel("chat");   // la pestaña que se toca es la que se ve
   }
 });
 // la ventana cambio de forma (ancho, alto, girar el celu): el css ya cambio de vista solo, aca
 // se acomoda lo que el css no puede. sin recargar y sin leer `innerWidth` por su cuenta.
 function sincronizarVista(){
-  if(esVistaMobile()){
-    // el foco no puede quedar en un panel que no se ve: si la vista es el chat, ahi se escribe
-    if(foco === 1 && !document.body.classList.contains("ver-lado")) focoEn(0);
-    // vista `lado` sin panel al lado (quedo de antes): no se veria nada, vuelve al chat
-    if(document.body.classList.contains("ver-lado") && paneles.length < 2) verPanel("chat");
-  }
   // el pct sigue valiendo, pero hay que recortarlo si algun panel quedaria abajo del minimo
   // (y en la vista mobile el separador desaparece y mandan los anchos de siempre)
   if(splitPct() !== null){ var p = limitarPct(splitPct()); if(p !== null) split.pct = p; }
@@ -3789,142 +3678,6 @@ if(mqMobile){
   sep.addEventListener("pointerup", soltar);
   sep.addEventListener("pointercancel", soltar);
 })();
-// arrastrar una pestaña (estilo vscode, facundo 2026-09-11: ya no hay boton de split).
-// pointer events, asi anda igual con mouse y con dedo: soltarla sobre la zona resaltada la manda
-// al lado de los widgets, soltarla sobre la barra la devuelve al panel de chat.
-(function(){
-  var barra = $("tabs"), est = null;
-  var UMBRAL_MOUSE = 6, UMBRAL_TOUCH = 12, HOLD = 400;   // px y ms para que arranque el arrastre
-  // la zona de drop tapa todo lo que esta a la derecha del chat (widgets + panel de al lado).
-  // en el celu hay una vista a la vez y el panel de widgets puede no estar en pantalla: ahi la
-  // zona es una franja sobre el borde derecho.
-  function rectZona(){
-    var cuerpo = $("cuerpo").getBoundingClientRect();
-    if(!cuerpo.width || !cuerpo.height) return null;
-    if(anchoDesktop()){
-      var chat = $("panel-chat").getBoundingClientRect();
-      var izq = Math.max(chat.right, cuerpo.left + cuerpo.width * 0.35);
-      return {left: izq, top: cuerpo.top, width: Math.max(60, cuerpo.right - izq), height: cuerpo.height};
-    }
-    var ancho = Math.max(90, cuerpo.width * 0.42);
-    return {left: cuerpo.right - ancho, top: cuerpo.top, width: ancho, height: cuerpo.height};
-  }
-  function mostrarZona(si){
-    var z = $("zona-drop");
-    if(!si){ z.classList.add("oculta"); z.classList.remove("activa"); return; }
-    var r = rectZona();
-    if(!r){ z.classList.add("oculta"); return; }
-    z.style.left = Math.round(r.left) + "px"; z.style.top = Math.round(r.top) + "px";
-    z.style.width = Math.round(r.width) + "px"; z.style.height = Math.round(r.height) + "px";
-    z.classList.remove("oculta");
-  }
-  function dentro(r, x, y){ return !!r && x >= r.left && x <= r.left + r.width && y >= r.top && y <= r.top + r.height; }
-  function sobreBarra(x, y){
-    var r = barra.getBoundingClientRect();
-    return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
-  }
-  function limpiar(){
-    if(!est) return;
-    clearTimeout(est.timer);
-    if(est.el) est.el.classList.remove("arrastrando");
-    try{ if(est.activa) est.el.releasePointerCapture(est.id); }catch(x){}
-    if(est.fantasma && est.fantasma.parentNode) est.fantasma.parentNode.removeChild(est.fantasma);
-    mostrarZona(false);
-    barra.classList.remove("soltar");
-    document.body.classList.remove("arrastrando-tab");
-    est = null;
-  }
-  function arrancar(){
-    if(!est || est.activa) return;
-    est.activa = true;
-    clearTimeout(est.timer);
-    est.el.classList.add("arrastrando");
-    document.body.classList.add("arrastrando-tab");
-    try{ est.el.setPointerCapture(est.id); }catch(x){}
-    var f = document.createElement("div");
-    f.id = "fantasma-tab"; f.textContent = ETIQUETA[est.tema] || est.tema;
-    document.body.appendChild(f);
-    est.fantasma = f;
-    mostrarZona(true);
-    pintarDestino(est.x, est.y);
-  }
-  function pintarDestino(x, y){
-    if(!est || !est.activa) return;
-    if(est.fantasma){ est.fantasma.style.left = x + "px"; est.fantasma.style.top = y + "px"; }
-    var enZona = dentro(rectZona(), x, y);
-    $("zona-drop").classList.toggle("activa", enZona);
-    barra.classList.toggle("soltar", !enZona && sobreBarra(x, y));
-  }
-  // soltar: la zona la manda al lado de los widgets; la barra la devuelve al panel de chat
-  function soltarEn(x, y){
-    var tema = est.tema;
-    if(dentro(rectZona(), x, y)){ limpiar(); splitCon(tema); return; }
-    if(sobreBarra(x, y)){
-      limpiar();
-      if(paneles.length === 2 && paneles[1] === tema) unPanel();
-      focoEn(0); abrirTab(tema);
-      if(esVistaMobile()) verPanel("chat");
-      return;
-    }
-    limpiar();
-  }
-  barra.addEventListener("pointerdown", function(e){
-    if(e.button !== undefined && e.button !== 0) return;
-    if(e.target.closest("[data-cerrar]") || e.target.closest("[data-accion]")) return;
-    var t = e.target.closest("[data-tema]");
-    if(!t) return;
-    limpiar();
-    est = {tema: t.dataset.tema, el: t, id: e.pointerId, x0: e.clientX, y0: e.clientY,
-           x: e.clientX, y: e.clientY, tactil: e.pointerType !== "mouse", activa: false, timer: 0};
-    est.timer = setTimeout(arrancar, HOLD);        // mantener apretado tambien arranca el arrastre
-  });
-  document.addEventListener("pointermove", function(e){
-    if(!est || e.pointerId !== est.id) return;
-    est.x = e.clientX; est.y = e.clientY;
-    var dx = e.clientX - est.x0, dy = e.clientY - est.y0;
-    if(est.activa){ pintarDestino(e.clientX, e.clientY); e.preventDefault(); return; }
-    if(!est.tactil){
-      if(Math.abs(dx) > UMBRAL_MOUSE || Math.abs(dy) > UMBRAL_MOUSE) arrancar();
-      return;
-    }
-    // con el dedo: el movimiento vertical arranca el arrastre (el horizontal scrollea la barra)
-    if(Math.abs(dy) > UMBRAL_TOUCH && Math.abs(dy) > Math.abs(dx)){ arrancar(); e.preventDefault(); return; }
-    if(Math.abs(dx) > UMBRAL_TOUCH) limpiar();     // se fue a scrollear: no era un arrastre
-  });
-  document.addEventListener("pointerup", function(e){
-    if(!est || e.pointerId !== est.id) return;
-    if(!est.activa){ limpiar(); return; }          // fue un click: lo atiende el handler de click
-    e.preventDefault();
-    ultArrastre = Date.now();
-    soltarEn(e.clientX, e.clientY);
-  });
-  document.addEventListener("pointercancel", function(e){
-    if(est && e.pointerId === est.id) limpiar();
-  });
-  // el click de cierre del gesto no tiene que abrir la pestaña de nuevo
-  var ultArrastre = 0;
-  barra.addEventListener("click", function(e){
-    if(Date.now() - ultArrastre < 400){ e.stopPropagation(); e.preventDefault(); }
-  }, true);
-  window.addEventListener("blur", limpiar);
-  window.addEventListener("resize", function(){ if(est && est.activa) mostrarZona(true); });
-  // ganchos para la prueba sin mouse de verdad
-  window.__arrastre = {
-    rectZona: rectZona,
-    estado: function(){
-      return est ? {tema: est.tema, activa: est.activa,
-                    zona: $("zona-drop").classList.contains("activa"),
-                    barra: barra.classList.contains("soltar")} : null;
-    }
-  };
-})();
-// donde se escribe: click en el panel de al lado lo enfoca, click en la charla grande vuelve
-$("panel-lado").addEventListener("click", function(e){
-  if(e.target.closest("#lado-cerrar")) return;
-  focoEn(1); txt.focus();
-});
-$("lado-cerrar").addEventListener("click", function(e){ e.stopPropagation(); unPanel(); });
-$("envoltorio").addEventListener("click", function(){ focoEn(0); });
 $("ddfondo").addEventListener("click", cerrarDd);
 document.addEventListener("keydown", function(e){
   if(e.key === "Escape"){ cerrarMenu(); cerrarDd(); cerrarModal(); return; }
@@ -4023,10 +3776,10 @@ window.__agente = {
   esVistaMobile: esVistaMobile, sincronizarVista: sincronizarVista, mqMobile: MQ_MOBILE,
   vistaActual: function(){ var b = document.body.classList; return {
     mobile: esVistaMobile(), toggle: document.getElementById('vistas').offsetHeight > 0,
-    ve: b.contains('ver-widgets') ? 'widgets' : (b.contains('ver-lado') ? 'lado' : 'chat'),
+    ve: b.contains('ver-widgets') ? 'widgets' : 'chat',
     chatVisible: document.getElementById('panel-chat').offsetWidth > 0,
     widgetsVisible: document.getElementById('panel-widgets').offsetWidth > 0}; },
-  estado: function(){ return {tabs: tabs, paneles: paneles, foco: foco, ts: layoutTs,
+  estado: function(){ return {tabs: tabs, activo: activo, ts: layoutTs,
                               sync: tabsSync, dispositivo: DISPOSITIVO}; },
   aplicarLayout: aplicarLayout, sanearLayout: sanearLayout, recibirTabs: recibirTabs,
   guardarLayout: guardarLayout, layoutRemoto: function(){
@@ -4034,7 +3787,7 @@ window.__agente = {
     L.borradores = borradoresLimpios(); L.vistas = vistasLimpias(); L.split = splitLimpio();
     L.wsets = wsetsLimpias(); return L;
   },
-  abrirTab: abrirTab, splitCon: splitCon, unPanel: unPanel, renombrarTab: renombrarTab,
+  abrirTab: abrirTab, renombrarTab: renombrarTab,
   // header de cada widget: [↻] actualizar, [⚙] settings, plegar tocando el titulo
   wsets: function(){ return wsetsLimpias(); },
   wset: wset, setsDe: setsDe, guardarWset: guardarWset, recibirWsets: recibirWsets,
@@ -4186,10 +3939,8 @@ window.__agente = {
   chatIndex: function(){ return chatIndex; },
   limpiarChat: function(){ msgsHist = {}; msgsCom = []; chatIndex = null; etagChat = {};
                            msgs = []; render(); },
-  enPanel: function(j){
-    var l = listaDe(j);
-    return l ? l.querySelectorAll(".msg").length : -1;
-  }
+  // el chat es un panel unico: `enPanel()` cuenta los mensajes pintados en la pestaña activa
+  enPanel: function(){ return lista ? lista.querySelectorAll(".msg").length : -1; }
 };
 
 })();

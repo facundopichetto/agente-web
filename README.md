@@ -47,11 +47,12 @@ las pestañas ya no viven solo en el `localStorage` del navegador (por eso el ce
 veian pestañas distintas). el layout se publica en el buzon como **`tabs.json`**, el mismo
 mecanismo que `widgets.json`:
 
-    {"v":1, "ts":1757600000000, "origen":"ab12cd", "tabs":["tools","auto"], "paneles":["tools"], "foco":0}
+    {"v":1, "ts":1757600000000, "origen":"ab12cd", "tabs":["tools","auto"], "activo":"tools"}
 
 - **al abrir**: primero pinta el cache de `localStorage` (instantaneo, sirve sin red) y despues lee
   `tabs.json` del repo; si el remoto es mas nuevo, se aplica.
-- **cada vez que cambia algo** (abrir, cerrar, split, foco): sube el `ts`, guarda el cache y publica
+- **cada vez que cambia algo** (abrir una pestaña, cerrarla, cambiar de pestaña): sube el `ts`,
+  guarda el cache y publica
   con un debounce de 1,5 s (minimo 8 s entre escrituras, para no pegarle a la api).
 - **conflictos**: gana el `ts` mas nuevo. si el remoto es mas viejo y lo escribio otro dispositivo,
   se republica el mio. un `409`/`422` de sha releee y reintenta una vez.
@@ -63,13 +64,16 @@ mecanismo que `widgets.json`:
   avisa una sola vez y sigue andando con las pestañas locales: **un 403 de escritura no desloguea**
   (por eso el PUT usa `fetch` propio y no `api()`).
 - reglas de siempre: una pestaña por tema, y la general (`auto`) no se renombra.
+- **el chat es un panel unico** (facundo, 2026-09-12): el layout es `tabs` + `activo` (la pestaña
+  abierta). los `tabs.json` viejos traian `paneles` y `foco` del split que ya no existe: se leen para
+  saber en que pestaña estabas (`sanearLayout` cae a `paneles[0]`) y **ya no se escriben**.
 
 ## borrador del input continuable entre dispositivos (2026-09-11)
 
 facundo: "quiero dejar de escribir esto desde la compu y sin tocar enviar terminar este mensaje
 desde el celu". lo que hay en la caja es un **borrador por pestaña** y viaja en el mismo `tabs.json`:
 
-    {"v":1, "ts":..., "tabs":[...], "paneles":[...], "foco":0,
+    {"v":1, "ts":..., "tabs":[...], "activo":"tools",
      "borradores": {"tools": {"texto": "lo que venia escribiendo", "ts": 1757600000000}}}
 
 - **se guarda al tipear**: cada tecla actualiza el borrador de la pestaña activa en memoria y en el
@@ -80,7 +84,7 @@ desde el celu". lo que hay en la caja es un **borrador por pestaña** y viaja en
 - **al abrir, recargar o volver al foco**: la caja aparece con el borrador de la pestaña activa y el
   **cursor al final**. primero el cache de `localStorage` (instantaneo) y despues lo que traiga el buzon.
 - **cambiar de pestaña** guarda lo escrito como borrador de la que se deja y trae el de la nueva
-  (`cajaDeTema()`, al final de `pintarTabs()`), incluido el panel de al lado del split.
+  (`cajaDeTema()`, al final de `pintarTabs()`).
 - **al mandar el mensaje** el borrador de esa pestaña se borra en todos los dispositivos: queda una
   **tumba** (`{"texto": "", "ts": ...}`) que le gana al borrador viejo del otro lado. las tumbas de mas
   de 2 dias se podan solas y el texto se corta en 8000 caracteres.
@@ -117,7 +121,7 @@ polls de 30 s a la vista y 120 s en background. ahora:
 
 viaja en el mismo `tabs.json`, al lado de los borradores:
 
-    {"v":1, "ts":..., "tabs":[...], "paneles":[...], "foco":0,
+    {"v":1, "ts":..., "tabs":[...], "activo":"tools",
      "vistas": {"tools": {"ancla": "3512349", "abajo": false, "ts": 1757600000000}}}
 
 - **no se guardan pixeles**: el alto de pantalla del celu y el de la mac no coinciden. se guarda el
@@ -131,8 +135,8 @@ viaja en el mismo `tabs.json`, al lado de los borradores:
   (`irDonde()` = ir al final y despues, si habia vista guardada, al ancla).
 - si el ancla del otro dispositivo **todavia no esta cargada** (este lado tiene menos historial), no se
   pisa con un "estoy al final" falso: la vista se respeta hasta que aparezca el mensaje.
-- el `foco` (que pestaña esta activa en cada panel) ya viajaba en `tabs.json` desde el dia 1: son
-  `paneles` (el tema de cada panel) y `foco` (cual de los dos tiene el cursor).
+- **que pestaña esta abierta** viaja en el mismo `tabs.json` como `activo` (antes eran `paneles` y
+  `foco`, del split que ya no existe).
 - las vistas de mas de 7 dias se podan solas.
 
 probarlo: `python3 -m recetas.prueba_web_tabs` (bloques "sincronizando" y "la vista de cada pestaña").
@@ -165,7 +169,7 @@ ahora la charla **no sale de los comentarios**:
   de llegada), unidas por fecha con `mezclarOrdenadas` (cada lista conserva su orden interno). lo que ya
   esta en el historial no se pinta dos veces: `claveMsg` (clase + 120 chars normalizados) y una ventana
   de 30 min (`CERCA`).
-- **abrir una pestaña que nunca se bajo** (`abrirTab` / `splitCon`) dispara `chatDeTab`: su charla llega
+- **abrir una pestaña que nunca se bajo** (`abrirTab`) dispara `chatDeTab`: su charla llega
   sola, sin esperar el proximo sync.
 - **fuera el boton "cargar mas viejo"**, `cargarViejos`, `PASO`, `masViejoIso` y `sinMasViejo`.
 
@@ -283,10 +287,9 @@ La **primera caja**, arriba de `usage`. El dato lo arma `w_server()` de `recetas
   publica. asi no se escribe localStorage ni la api en cada pixel.
 - **minimo de 280px por panel** (`SPLIT_MIN`). el pct es sobre el ancho de `#cuerpo`, con el separador
   adentro, asi que el tope de la derecha se calcula descontandolo.
-- **con un tercer panel** (una pestaña al lado de los widgets) el separador queda entre el chat y todo
-  el bloque de la derecha: el chat va a `flex:0 0 <pct>%` y los widgets a `flex:1 1 auto`, que se
-  estiran con lo que sobra; `#panel-lado` mantiene sus 380px.
-- **viaja en `tabs.json`** como campo nuevo `split: {pct, ts}`, al lado de `tabs`, `paneles`, `foco`,
+- **son dos paneles y nada mas** (chat | widgets): el chat va a `flex:0 0 <pct>%` y los widgets a
+  `flex:1 1 auto`, que se estiran con lo que sobra.
+- **viaja en `tabs.json`** como campo `split: {pct, ts}`, al lado de `tabs`, `activo`,
   `borradores` y `vistas`, con `localStorage` de cache. se resuelve **por su propio `ts`** (como los
   borradores y las vistas) y no por el del layout: correr el separador en la compu no se lleva puestas
   las pestañas del celu, y al reves tampoco.
@@ -346,36 +349,30 @@ facundo: "y esa caja de input deberia sugerir respuestas".
 - probado en `recetas/prueba_web_tabs` (chips de A/B/C con su titulo, `dale N`, si/no, `op N X` con las
   opciones del json, la fila oculta sin respuesta previa, y que tocar un chip llene la caja sin mandar).
 
-## el split se hace arrastrando la pestaña (facundo, 2026-09-11)
+## el chat es un panel unico: las pestañas no se arrastran (facundo, 2026-09-12)
 
-> "sacame el boton de split de las pestañas. vamos a usar la funcionalidad de split pero con drag and
-> drop como en vscode"
+> "che lo de los paneles del ui con el drag and drop por ahora sacalo. al menos las pestanas del chat
+> no tienen que poder ser dragandropeables. el chat es un panel unico (como lo es los widgets)"
 
-- **no hay mas boton `⊞ split`** en la barra de pestañas (ni la funcion `split()` que elegia tema por
-  dropdown). el boton `⊟ 1 pane` sigue, y tambien el `×` de `#panel-lado`.
-- **una pestaña se manda al lado de los widgets arrastrandola** hasta la zona que aparece resaltada
-  (`#zona-drop`, borde punteado; en verde con glow cuando el puntero esta adentro) y soltandola ahi:
-  eso llama a `splitCon(tema)`. arrastrarla de vuelta **a la barra** la devuelve al panel de chat
-  (y cierra el segundo panel si era esa).
-- **pointer events, no el drag nativo del html** (que en el celu no existe): `pointerdown` sobre la
-  pestaña, `pointermove` / `pointerup` en `document` (hasta que se captura el puntero, el mouse sale
-  de la barra y los eventos ya no le llegan a `#tabs`).
-  - **mouse**: arranca a los 6px de movimiento.
-  - **dedo**: arranca con movimiento **vertical** de 12px (`touch-action:pan-x` en `.tab` deja que el
-    horizontal siga scrolleando la barra) o manteniendo apretado 400ms. si el gesto se va de costado,
-    el arrastre se cancela y la barra scrollea como siempre.
-- **`#fantasma-tab`** sigue al puntero con el nombre de la pestaña, y se borra al soltar o cancelar
-  (tambien en `blur` y `pointercancel`: no queda nada suelto).
-- **la zona de drop** la calcula `rectZona()`: en escritorio es todo lo que esta a la derecha del
-  panel de chat (widgets + panel de al lado); en el celu, donde se ve una vista a la vez, es una
-  franja del 42% sobre el borde derecho.
-- un click que termina un arrastre no reabre la pestaña (guard de 400ms en fase de captura).
-- el layout sigue viajando igual en `tabs.json` (`paneles`, `foco`, `split`): esto solo cambia **como**
-  se dispara el split.
-- se prueba en `recetas/prueba_web_tabs` (chrome headless, cero tokens): que no exista el boton ni
-  `draggable`, arrastre real con `Input.dispatchMouseEvent` hasta la zona (fantasma, zona resaltada,
-  panel abierto, todo limpio al soltar), vuelta a la barra, y el gesto con dedo (`PointerEvent` con
-  `pointerType: touch`) tanto el que scrollea como el que arrastra. gancho: `window.__arrastre`.
+antes una pestaña se podia arrastrar hasta los widgets y quedaba como segundo panel (`#panel-lado`,
+`#zona-drop`, `splitCon()`), y esa era la unica forma de partir la vista. **eso se saco entero**:
+
+- **fuera el arrastre de pestañas**: `#zona-drop`, `#fantasma-tab`, `window.__arrastre`, los
+  `pointerdown`/`pointermove`/`pointerup` de `#tabs`, el `touch-action:pan-x` de `.tab` y su css. la
+  barra de pestañas **solo** hace click (cambiar de pestaña), `×` (cerrar) y `+` (pestaña nueva).
+- **fuera el segundo panel**: `#panel-lado`, `#hist1`/`#lista1`, el boton `⊟ 1 pane`, `splitCon()`,
+  `unPanel()`, `focoEn()` y la tercera vista del celu (`ver-lado`, el boton `lado` del header). el
+  menu contextual de una pestaña ya no ofrece "mandar al lado de los widgets" y la pregunta de "esto
+  parece de otro tema" queda con **ir a esa pestaña** o **forzar `tema x:` aca**.
+- **el estado del chat es una sola pestaña**: `activo` en vez de `paneles` + `foco`, y `pintarMsg` /
+  `render` / `anclaDe` / `aplicarVista` trabajan sobre `#lista` y nada mas.
+- **los layouts guardados no se rompen**: `sanearLayout` ignora `paneles`/`foco` y solo los usa como
+  respaldo para saber que pestaña dejar abierta; `tabs.json` ya no los escribe.
+- **el resize horizontal chat | widgets queda como estaba** (`#sep`, `split: {pct, ts}`): eso no es
+  drag and drop de pestañas.
+- se prueba en `recetas/prueba_web_tabs` (chrome headless, cero tokens): no existe el boton de split,
+  ni `draggable`, ni `window.__arrastre`, ni `#zona-drop`, ni `#panel-lado`, y arrastrar una pestaña
+  con el mouse hasta los widgets **no** pinta fantasma ni abre ningun panel.
 
 ## camara: una foto desde el celu o la compu (facundo, 2026-09-11)
 
@@ -457,9 +454,9 @@ mensaje viaja en el nodo como `div.__msg`):
 |---|---|
 | un mensaje del chat | `responder`, `copiar`; y si es de facundo, `editar` y `mandar a otra pestaña` |
 | una fila de un widget | `ver y decidir (a/b/c)` (abre el modal que ya existia) y `copiar` |
-| una pestaña | `mandar al lado de los widgets`, `renombrar tema`, `cerrar la pestaña` |
+| una pestaña | `renombrar tema`, `cerrar la pestaña` |
 
-la pestaña **general** (`auto`) solo ofrece cerrar: no se renombra nunca ni se manda al lado.
+la pestaña **general** (`auto`) solo ofrece cerrar: no se renombra nunca.
 
 **responder** pone en el input un bloque de cita y una linea vacia abajo (queda como borrador de la
 pestaña, asi que se puede terminar de escribir desde el otro dispositivo):
@@ -617,14 +614,12 @@ celu de pie, caia en los dos paneles y quedaba ilegible.
   `!esVistaMobile()` y **ningun otro lugar del js lee `innerWidth` para decidir layout**.
 - **reacciona sin recargar**: `sincronizarVista()` corre en `resize`, en `orientationchange` y en el
   evento `change` del propio media query (que ademas avisa cuando cambia el alto sin un `resize`
-  util: teclado de ios, ventana partida, zoom). ahi se acomoda lo que el css no puede: el foco no
-  queda en un panel que no se ve, una vista `lado` sin panel al lado vuelve al chat, y el `pct` del
+  util: teclado de ios, ventana partida, zoom). ahi se acomoda lo que el css no puede: el `pct` del
   separador se recorta a los minimos.
-- **la vista elegida se recuerda**: girar a apaisado muestra los dos paneles (el css ignora las
-  clases `ver-widgets` / `ver-lado` fuera de mobile) y al volver a vertical se cae donde estabas.
+- **la vista elegida se recuerda**: girar a apaisado muestra los dos paneles (el css ignora la clase
+  `ver-widgets` fuera de mobile) y al volver a vertical se cae donde estabas.
 - **el separador** (`#sep`) sigue siendo solo de desktop: en vista mobile no se pinta y el `flex`
   elegido en la compu no le toca el layout, aunque la ventana sea ancha.
 - se prueba en `recetas/prueba_web_tabs` con `Emulation.setDeviceMetricsOverride`: `1000x1400` tiene
-  que dar toggle y una vista a la vez, `1400x1000` los dos paneles y el separador, `600x900` y
-  `844x390` (celu de pie y acostado) mobile las dos, y girar ida y vuelta con el panel de al lado
-  abierto no deja ninguna vista vacia.
+  que dar toggle y una vista a la vez, `1400x1000` los dos paneles y el separador, y `600x900` y
+  `844x390` (celu de pie y acostado) mobile las dos.
