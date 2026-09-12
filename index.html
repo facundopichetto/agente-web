@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.161">
-<link rel="manifest" href="manifest.json?v=4.161">
+<meta name="agente-web-version" content="4.162">
+<link rel="manifest" href="manifest.json?v=4.162">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -212,8 +212,26 @@
   .caja{border:1px solid var(--linea);border-radius:6px;padding:7px 9px 8px 9px;margin:0 0 8px 0}
   .caja > .tit{
     color:var(--gris);font-size:9px;letter-spacing:.06em;text-transform:uppercase;
-    margin:0 0 5px 0;display:flex;justify-content:space-between;gap:8px;
+    margin:0 0 5px 0;display:flex;justify-content:space-between;gap:8px;align-items:center;
   }
+  /* ---------- header de cada widget (facundo, 2026-09-12) ----------
+     izquierda: titulo + un dato esencial de una linea. derecha: [↻] actualizar y [⚙] settings. */
+  .caja > .tit > .wtit{flex:0 0 auto;cursor:pointer;color:var(--gris)}
+  .caja > .tit > .wtit:hover{color:var(--verde)}
+  .caja > .tit > .wesc{
+    flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    text-transform:none;letter-spacing:0;font-size:10px;
+  }
+  .caja > .tit > .wacc{flex:0 0 auto;display:flex;align-items:center;gap:4px}
+  .caja > .tit > .wacc .wage{color:#4a4a4a;font-size:8.5px;letter-spacing:0;text-transform:none}
+  .wbtn{
+    background:#000;color:var(--gris);border:1px solid var(--linea);border-radius:4px;
+    font:inherit;font-size:10px;line-height:1;padding:3px 6px;cursor:pointer;
+  }
+  .wbtn:hover{color:var(--verde);border-color:var(--verde)}
+  .wbtn:active{background:#111}
+  .wbtn.girando{color:var(--verde);border-color:var(--verde)}
+  .caja.plegada > .cuerpo{display:none}
   .caja .cuerpo{white-space:pre-wrap;word-break:break-word;font-size:11px;line-height:1.5}
   .caja .cuerpo.tabla{white-space:pre;overflow-x:auto;-webkit-overflow-scrolling:touch}
   .caja .vacio{color:var(--gris)}
@@ -251,6 +269,9 @@
   .ub.n-cerca .ub-p{color:var(--amarillo)}
   .ub.n-sobre .ub-lleno{background:var(--naranja)}
   .ub.n-sobre .ub-p{color:var(--naranja)}
+  /* el mismo color del nivel, para el dato esencial del header de usage */
+  .wesc .uw.n-ok{color:var(--verde)} .wesc .uw.n-cerca{color:var(--amarillo)}
+  .wesc .uw.n-sobre{color:var(--naranja)} .wesc .uw.n-mal{color:var(--rojo);font-weight:700}
   .ub.n-mal .ub-lleno{background:var(--rojo);box-shadow:0 0 7px var(--rojo)}
   .ub.n-mal .ub-p{color:var(--rojo);font-weight:700}
   .usage.off{opacity:.45}
@@ -275,6 +296,9 @@
   /* angosto (celu): una vista a la vez, la elige la barra de arriba. puro css, sin js de layout */
   @media (max-width:899px){
     #vistas{display:flex}
+    /* dedo: los botones del header de cada widget con area tactil de 40px (facundo, 2026-09-12) */
+    .caja > .tit > .wacc .wbtn{min-width:40px;min-height:40px;font-size:13px;padding:0}
+    .caja > .tit{min-height:40px}
     #panel-widgets{flex:1 1 auto;padding-bottom:calc(14px + env(safe-area-inset-bottom))}
     #sep{display:none}
     #panel-lado{flex:1 1 auto;border-left:none}
@@ -726,7 +750,8 @@ function guardarCache(){
   try{
     localStorage.setItem("agente_tabs", JSON.stringify(
       {tabs: tabs, paneles: paneles, foco: foco, ts: layoutTs, origen: DISPOSITIVO,
-       borradores: borradoresLimpios(), vistas: vistasLimpias(), split: splitLimpio()}));
+       borradores: borradoresLimpios(), vistas: vistasLimpias(), split: splitLimpio(),
+       wsets: wsetsLimpias()}));
   }catch(x){}
 }
 // cambio local: sube el reloj, guarda el cache y encola la publicacion. si el layout quedo igual
@@ -789,6 +814,82 @@ function recibirSplit(rem){
   aplicarSplit();
   guardarCache();
   return true;
+}
+
+// ---------- settings de cada widget (facundo, 2026-09-12) ----------
+// cada caja de la derecha tiene un header con `[↻]` (volver a bajar widgets.json) y `[⚙]`, que abre el
+// modal de siempre con 2 o 3 settings: plegado por default, cuantas filas se ven, y una propia del
+// widget. viajan en `tabs.json` como los borradores y el split, **resueltas una por una por su `ts`**
+// (cambiar el filtro de tickets en la compu no pisa el plegado que dejaste en el celu) y localStorage
+// queda de cache offline.
+var wsets = {};                   // {clave: {valores..., ts}}
+var WSETS_DEBOUNCE = 1200;
+// que se puede tocar en cada widget. `tipo`: bool (si/no) u opciones (una lista, se cicla).
+// `filas: 0` = todas. la tercera de cada uno es la especifica que pidio facundo.
+var WSETS = {
+  server:      [{k: "log", et: "mostrar el log", tipo: "bool", def: true}],
+  usage:       [{k: "cuentas", et: "cuentas", tipo: "opciones", def: "todas", ops: ["todas"]}],
+  agent:       [{k: "cola", et: "mostrar la cola", tipo: "bool", def: true}],
+  tickets:     [{k: "estado", et: "filtro de estado", tipo: "opciones", def: "todos", ops: ["todos"]}],
+  oportunidades: [{k: "ocultar_decididas", et: "ocultar las decididas", tipo: "bool", def: false}],
+  propuestas:  [{k: "tema", et: "filtro de tema", tipo: "opciones", def: "todos", ops: ["todos"]}],
+  avisos:      [{k: "solo_hoy", et: "solo los de hoy", tipo: "bool", def: false}],
+  podcast:     [{k: "abierto", et: "abierto por default", tipo: "bool", def: false}],
+  dj:          [{k: "cola", et: "mostrar la cola", tipo: "bool", def: true}],
+  verificaciones: [], decided: [], sombra: []
+};
+var WSETS_COMUNES = [{k: "plegado", et: "plegado por default", tipo: "bool", def: false},
+                     {k: "filas", et: "filas visibles", tipo: "opciones", def: 0, ops: [0, 3, 5, 8, 12]}];
+// la lista entera de un widget: las dos comunes primero, despues la suya
+function setsDe(clave){
+  return WSETS_COMUNES.concat(WSETS[clave] || []).map(function(s){
+    var o = {}; for(var k in s) o[k] = s[k];
+    if(s.k === "cuentas") o.ops = ["todas"].concat(cuentasConocidas());
+    if(s.k === "estado" && clave === "tickets") o.ops = ["todos"].concat(estadosConocidos());
+    if(s.k === "tema" && clave === "propuestas") o.ops = ["todos"].concat(temasPropuestas());
+    return o;
+  });
+}
+function defDe(clave, k){
+  var ls = setsDe(clave);
+  for(var i = 0; i < ls.length; i++) if(ls[i].k === k) return ls[i].def;
+  return null;
+}
+// el valor de una setting: lo guardado, y si no el default
+function wset(clave, k){
+  var w = wsets[clave] || {};
+  return (w[k] === undefined || w[k] === null) ? defDe(clave, k) : w[k];
+}
+function guardarWset(clave, k, v){
+  var w = wsets[clave] || (wsets[clave] = {});
+  w[k] = v;
+  w.ts = Math.max(Date.now(), (+w.ts || 0) + 1);
+  guardarCache();
+  publicarTabs(false, WSETS_DEBOUNCE);
+  repintarWidgets();
+}
+// repinta si el dom de los widgets ya existe (el cache se aplica antes de que se arme)
+function repintarWidgets(){ if(typeof widgetsEl !== "undefined" && widgetsEl) pintarWidgets(null); }
+function wsetsLimpias(){
+  var o = {};
+  Object.keys(wsets).forEach(function(c){
+    var w = wsets[c], n = {};
+    Object.keys(w).forEach(function(k){ if(k !== "ts" && w[k] !== undefined) n[k] = w[k]; });
+    if(Object.keys(n).length){ n.ts = +w.ts || 0; o[c] = n; }
+  });
+  return o;
+}
+// llego el paquete del buzon (o del cache): gana el `ts` de CADA widget, no el del layout
+function recibirWsets(rem){
+  if(!rem || typeof rem !== "object") return false;
+  var cambio = false;
+  Object.keys(rem).forEach(function(c){
+    var r = rem[c] || {}, mio = wsets[c] || {};
+    if((+r.ts || 0) <= (+mio.ts || 0)) return;
+    wsets[c] = r; cambio = true;
+  });
+  if(cambio){ guardarCache(); repintarWidgets(); }
+  return cambio;
 }
 
 // ---------- borrador del input, continuable en cualquier dispositivo (facundo, 2026-09-11) ----------
@@ -964,6 +1065,7 @@ function borrarBorrador(tema){
     if(L && L.borradores) recibirBorradores(L.borradores);
     if(L && L.vistas) recibirVistas(L.vistas);
     if(L && L.split) recibirSplit(L.split);
+    if(L && L.wsets) recibirWsets(L.wsets);
   }catch(x){}
   aplicarSplit();
   layoutFirma = firmaLayout(layoutActual());
@@ -1019,9 +1121,11 @@ function recibirTabs(L){
   var vis = recibirVistas(L.vistas);
   // idem el ancho de los paneles: por su propio `ts`, no por el del layout
   var sp = recibirSplit(L.split);
+  // idem las settings de cada widget: una por una, gana el `ts` de esa caja
+  var ws = recibirWsets(L.wsets);
   if(ts > layoutTs){ aplicarLayout(L, ts); return "remoto"; }
   if(layoutTs > ts && L.origen !== DISPOSITIVO){ publicarTabs(true); return "mio"; }
-  if(borr || vis || sp) publicarTabs();   // mezcle los dos lados: que el otro vea el resultado
+  if(borr || vis || sp || ws) publicarTabs();   // mezcle los dos lados: que el otro vea el resultado
   return "igual";
 }
 // agrupa los cambios seguidos (abrir, split, foco) en una sola escritura
@@ -1040,6 +1144,7 @@ function ponerTabs(reintento){
   L.borradores = borradoresLimpios();
   L.vistas = vistasLimpias();
   L.split = splitLimpio();
+  L.wsets = wsetsLimpias();
   var cuerpo = {message: "tabs " + DISPOSITIVO, content: textoAb64(JSON.stringify(L))};
   if(shaTabs) cuerpo.sha = shaTabs;
   // fetch propio y no `api()`: un 403 de escritura NO tiene que desloguear a facundo del chat
@@ -1225,6 +1330,7 @@ var horas = parseFloat(qs.get("h")) || 3;
 var ultimoIso = null;   // created_at del comentario mas nuevo cargado (el poll pide desde ahi)
 var etagCom = null, etagIssue = null, etagWid = null;
 var widUlt = 0, widDatos = null;
+var widEdad = "";            // `hace Xs` del header de cada caja (la edad del widgets.json que se ve)
 var enPausa = false;
 var timer = null;
 
@@ -2529,9 +2635,47 @@ function pad(t, n, der){
 function boton(texto, msg, clase){
   return '<button class="btn ' + (clase || "") + '" type="button" data-msg="' + esc(msg) + '">' + esc(texto) + "</button>";
 }
-function caja(tit, extra, cuerpo, tabla){
-  return '<div class="caja"><div class="tit"><span>' + esc(tit) + '</span><span>' + (extra || "") +
-         '</span></div><div class="cuerpo' + (tabla ? " tabla" : "") + '">' + cuerpo + "</div></div>";
+// una caja de widget con su header (facundo, 2026-09-12): a la izquierda el titulo (tocarlo pliega)
+// y `extra`, el dato esencial de una linea; a la derecha `hace Xs`, `[↻]` actualizar y `[⚙]` settings.
+// `clave` es el nombre con el que se guardan las settings en `tabs.json` (default: el titulo).
+function caja(tit, extra, cuerpo, tabla, clave){
+  clave = clave || tit;
+  var pleg = !!wset(clave, "plegado");
+  return '<div class="caja' + (pleg ? " plegada" : "") + '" data-w="' + esc(clave) + '">' +
+         '<div class="tit"><span class="wtit" data-fold="' + esc(clave) + '" title="' +
+         (pleg ? "desplegar" : "plegar") + '">' + esc(tit) + "</span>" +
+         '<span class="wesc">' + (extra || "") + "</span>" +
+         '<span class="wacc">' + (widEdad ? '<span class="wage">hace ' + esc(widEdad) + "</span>" : "") +
+         '<button class="wbtn" type="button" data-ref="' + esc(clave) + '" title="actualizar">\u21bb</button>' +
+         '<button class="wbtn" type="button" data-set="' + esc(clave) + '" title="settings">\u2699</button>' +
+         "</span></div>" +
+         '<div class="cuerpo' + (tabla ? " tabla" : "") + '">' + cuerpo + "</div></div>";
+}
+// las filas que se ven: la setting `filas` de cada widget (0 = todas)
+function limFilas(clave, filas){
+  var n = +wset(clave, "filas") || 0;
+  if(!n || filas.length <= n) return filas;
+  return filas.slice(0, n).concat(['<span class="vacio">+' + (filas.length - n) +
+                                   " m\u00e1s (\u2699 filas)</span>"]);
+}
+// opciones que dependen de los datos de ahora (para el modal de settings)
+function cuentasConocidas(){
+  return ((widDatos || {}).usage || {}).cuentas ?
+         (widDatos.usage.cuentas || []).map(function(c){ return c.nombre; }) : [];
+}
+function estadosConocidos(){
+  var vs = [];
+  (((widDatos || {}).tickets || {}).mine || []).forEach(function(t){
+    if(t.estado && vs.indexOf(t.estado) < 0) vs.push(t.estado);
+  });
+  return vs;
+}
+function temasPropuestas(){
+  var vs = [];
+  ((widDatos || {}).propuestas || []).forEach(function(p){
+    if(p.tema && vs.indexOf(p.tema) < 0) vs.push(p.tema);
+  });
+  return vs;
 }
 function vacio(t){ return '<span class="vacio">' + esc(t) + "</span>"; }
 
@@ -2594,7 +2738,7 @@ function upTxt(s){
   return d ? d + "d" + h + "h" : h ? h + "h" + m + "m" : m + "m";
 }
 function cajaServer(s){
-  if(!s || !s.host) return caja("server", "", vacio("sin datos del server"));
+  if(!s || !s.host) return caja("server", "", vacio("sin datos del server"), false, "server");
   var on = !!s.online, filas = [];
   var cab = on ? '<span class="v b">' + esc(s.estado || "ok") + "</span>"
                : '<span class="r b">apagado</span> <span class="g">' + esc(s.estado || "") +
@@ -2647,10 +2791,15 @@ function cajaServer(s){
     filas.push(it({tipo: "server", tema: "server", d: s},
       '<span class="a b">?</span> ' + esc(String(p).slice(0, 100))));
   });
-  (s.log || []).slice(0, 3).forEach(function(l){
-    filas.push('<span class="g">' + esc(String(l).slice(0, 110)) + "</span>");
-  });
-  return caja("server", cab, filas.join("\n"));
+  if(wset("server", "log"))
+    (s.log || []).slice(0, 3).forEach(function(l){
+      filas.push('<span class="g">' + esc(String(l).slice(0, 110)) + "</span>");
+    });
+  // dato esencial: vivo o apagado, y como viene la cpu
+  var ese = cab + (s.cpu === null || s.cpu === undefined ? "" :
+    ' <span class="g">cpu</span> <span class="' + (nivelPct(s.cpu) === "mal" ? "r" : "b") + '">' +
+    Math.round(s.cpu) + "%</span>");
+  return caja("server", ese, limFilas("server", filas).join("\n"), false, "server");
 }
 
 // facundo (2026-09-11): el widget muestra SOLO las barras, tres por cuenta (5h, week, fable).
@@ -2661,6 +2810,9 @@ function cajaUsage(u){
   var cuentas = u.cuentas || [], rep = u.reparto || {}, html = "";
   if(!cuentas.length && (u.barras || []).length)
     cuentas = [{nombre: "cuenta", activa: true, barras: u.barras}];
+  var soloCta = wset("usage", "cuentas");
+  if(soloCta && soloCta !== "todas")
+    cuentas = cuentas.filter(function(c){ return c.nombre === soloCta; });
   if(rep.elegida)
     html += it({tipo: "cuenta", tema: "tools", d: rep, completo: rep.porque || ""},
       '<div class="rep"><span class="g">usa</span> <span class="nom">' + esc(rep.elegida) + "</span> " +
@@ -2679,7 +2831,17 @@ function cajaUsage(u){
                "</span>") +
             (cu.barras || []).map(barraUso).join("") + "</div>";
   });
-  return caja("usage", "", '<div class="usage">' + (html || vacio("sin datos")) + "</div>");
+  // dato esencial: por cuenta, el limite mas cerca de la linea (el `peor` que ya calcula el reparto)
+  var ese = cuentas.map(function(cu){
+    var peor = cu.peor || ((cu.barras || [])[0] || {}).clave || "";
+    var b = (cu.barras || []).filter(function(x){ return x.clave === peor; })[0] || (cu.barras || [])[0];
+    if(!b) return esc(cu.nombre);
+    return '<span class="b">' + esc(cu.nombre) + "</span> " +
+           '<span class="uw n-' + esc(b.nivel || "sin") + '">' + esc(b.nombre) + " " +
+           (b.pct === null || b.pct === undefined ? "?" : Math.round(b.pct)) + "%</span>";
+  }).join('<span class="g"> \u00b7 </span>');
+  return caja("usage", ese, '<div class="usage">' + (html || vacio("sin datos")) + "</div>",
+              false, "usage");
 }
 
 function cajaAgente(a){
@@ -2704,24 +2866,32 @@ function cajaAgente(a){
                esc(String(t.texto || "").slice(0, 90)) +
                (t.usd ? ' <span class="m">$' + t.usd.toFixed(2) + "</span>" : "")));
   });
-  (a.cola || []).slice(0, 4).forEach(function(t){
+  if(wset("agent", "cola")) (a.cola || []).slice(0, 4).forEach(function(t){
     filas.push(it({tipo: "tarea", estado: "cola", tema: t.tema, d: t},
                '<span class="a">[ ]</span> <span class="g">' + esc(t.tema) + "</span> " +
                esc(String(t.texto).slice(0, 80))));
   });
   var pausa = boton(a.pausa ? "segui" : "pausa", a.pausa ? "segui" : "pausa");
-  filas.push(pausa + boton("cola", "cola") + boton("status", "status"));
-  return caja("agent", 'cuenta <span class="c b">' + esc(a.cuenta || "?") + "</span>", filas.join("\n"));
+  var botones = pausa + boton("cola", "cola") + boton("status", "status");
+  filas = limFilas("agent", filas);
+  filas.push(botones);
+  // dato esencial: la cuenta que esta usando y que esta corriendo ahora
+  var act = (a.corriendo || [])[0];
+  var ese = 'cuenta <span class="c b">' + esc(a.cuenta || "?") + "</span>" +
+            (act ? ' <span class="a">&gt;</span> <span class="g">' + esc(corto(act.texto, 40)) + "</span>"
+                 : (a.pausa ? ' <span class="r b">PAUSA</span>' : ' <span class="g">idle</span>'));
+  return caja("agent", ese, filas.join("\n"), false, "agent");
 }
 
 function cajaVerif(v){
-  if(v.verify === undefined) return caja("verification agent", "", vacio("sin cache de jira"));
+  if(v.verify === undefined)
+    return caja("verification agent", "", vacio("sin cache de jira"), false, "verificaciones");
   var edad = v.edad_min > 30 ? ' <span class="g">(' + v.edad_min + "m)</span>" : "";
-  return caja("verification agent", "",
+  return caja("verification agent", 'verify <span class="c b">' + v.verify + "</span>",
     it({tipo: "verif", tema: "awtomic", d: v},
       'verify <span class="c b">' + v.verify + '</span> · mine <span class="b">' + v.mine +
       '</span> · unassigned <span class="b">' + v.unassigned + "</span>" + edad +
-      ' · running <span class="' + (v.running ? "a" : "v") + ' b">' + v.running + "</span>"));
+      ' · running <span class="' + (v.running ? "a" : "v") + ' b">' + v.running + "</span>"), false, "verificaciones");
 }
 
 function cajaTickets(t){
@@ -3651,7 +3821,8 @@ window.__agente = {
   aplicarLayout: aplicarLayout, sanearLayout: sanearLayout, recibirTabs: recibirTabs,
   guardarLayout: guardarLayout, layoutRemoto: function(){
     var L = layoutActual(); L.v = 1; L.ts = layoutTs; L.origen = DISPOSITIVO;
-    L.borradores = borradoresLimpios(); L.vistas = vistasLimpias(); L.split = splitLimpio(); return L;
+    L.borradores = borradoresLimpios(); L.vistas = vistasLimpias(); L.split = splitLimpio();
+    L.wsets = wsetsLimpias(); return L;
   },
   abrirTab: abrirTab, splitCon: splitCon, unPanel: unPanel, renombrarTab: renombrarTab,
   // borrador del input, continuable entre dispositivos
