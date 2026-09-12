@@ -552,3 +552,46 @@ contesto un menu a/b/c, la letra le sigue llegando al modelo como siempre.
 
 probar sin gastar tokens: `python3 -m recetas.prueba_sin_tokens -v` (simula los nueve fallos y muestra el
 texto de cada uno) y `python3 -m recetas.sin_tokens --estado` (que ve claudio ahora mismo).
+
+## header de cada widget: dato esencial, [↻] y [⚙] (facundo, 2026-09-12)
+
+cada caja de la derecha tiene una fila de header:
+
+- **izquierda**: el titulo (tocarlo **pliega y despliega** la caja) y un **dato esencial de una
+  linea**, el que resume el widget sin abrirlo:
+  `server` vivo/apagado + cpu, `usage` la barra mas cerca de la linea **por cuenta**, `agent` la
+  cuenta activa + que esta corriendo, `verification agent` / `my tickets` / `propuestas` / `avisos`
+  la cantidad, `opportunities` las pendientes, `decided` las decididas, `podcast` el episodio de
+  arriba, `dj` si suena algo y cuantos bloques van, `backup models` el ultimo veredicto.
+- **derecha**: `hace Xs` (la edad del `widgets.json` que se esta viendo), **`[↻]`** y **`[⚙]`**.
+  en el celu los dos botones tienen area tactil de 40 px.
+
+`[↻]` **vuelve a bajar `widgets.json` del buzon al toque**: tira el etag (si no github contesta 304)
+y repinta. el json lo republica solo el script `widgets_web` del daemon cada 60 s, asi que el boton
+trae lo ultimo publicado sin gastar un token; no fuerza al daemon a re-medir.
+
+`[⚙]` abre el **modal con look terminal de siempre**, una accion a/b/c por setting (bool: si/no;
+opciones: cicla la lista), mas "volver a los valores de fabrica" y "cerrar". las settings se aplican
+en el momento y el modal se queda abierto:
+
+| widget | comunes | propia |
+|---|---|---|
+| todos | `plegado por default`, `filas visibles` (todas / 3 / 5 / 8 / 12) | |
+| `server` | | `mostrar el log` |
+| `usage` | | `cuentas` (todas o una) |
+| `agent` | | `mostrar la cola` |
+| `my tickets` | | `filtro de estado` (los estados que hay ahora) |
+| `opportunities` | | `ocultar las decididas` (saca la caja `decided`) |
+| `propuestas` | | `filtro de tema` |
+| `avisos` | | `solo los de hoy` |
+| `podcast` | | `abierto por default` |
+| `dj` | | `mostrar la cola` |
+
+**donde viven**: en `tabs.json` del buzon, en la clave `wsets` (`{clave: {setting: valor, ts}}`),
+junto al layout, los borradores y el split, con el mismo debounce. se resuelven **una por una por su
+propio `ts`** (como los borradores): tocar el filtro de tickets en la compu no pisa el plegado que
+dejaste en el celu. `localStorage` (`agente_tabs`) queda de cache offline.
+
+lo prueba `recetas/prueba_web_tabs` (cero tokens): que cada caja tenga su header con los dos botones,
+el dato esencial de cada una, que plegar quede guardado y viaje en `tabs.json`, que el modal liste las
+settings, que filtrar y recortar filas cambie lo que se pinta, y que el `[↻]` tire el etag.

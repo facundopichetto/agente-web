@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.163">
-<link rel="manifest" href="manifest.json?v=4.163">
+<meta name="agente-web-version" content="4.164">
+<link rel="manifest" href="manifest.json?v=4.164">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -3110,8 +3110,9 @@ function pintarWidgets(d, err){
   if(d) widDatos = d;
   d = widDatos;
   itemsW = {}; itemN = 0;            // los items del repintado anterior ya no existen
-  var edad = haceSeg((Date.now() - fecha(d.ts)) / 1000);
-  widEdad = edad;                    // el header de cada caja dice `hace Xs`
+  var t0 = fecha(d.ts);
+  var edad = t0 ? haceSeg((Date.now() - t0) / 1000) : "?";
+  widEdad = t0 ? edad : "";          // el header de cada caja dice `hace Xs` (si el json trae `ts`)
   var partes = [
     cajaServer(d.server || {}),
     cajaUsage(d.usage || {}),
@@ -3137,10 +3138,10 @@ function pintarWidgets(d, err){
 // el `[↻]` del header: vuelve a bajar widgets.json aunque no haya cambiado (sin etag) y repinta.
 // el json lo republica el script `widgets_web` del daemon cada 60 s, asi que esto trae lo ultimo
 // publicado sin gastar un solo token.
-var refrescando = false;
+var refrescando = false, refrescos = 0;
 function refrescarWidgets(clave){
   if(refrescando) return Promise.resolve();
-  refrescando = true;
+  refrescando = true; refrescos++;
   var b = document.querySelector('#widgets [data-ref="' + (clave || "").replace(/"/g, "") + '"]');
   if(b) b.classList.add("girando");
   etagWid = null;
@@ -3947,6 +3948,7 @@ window.__agente = {
   wsets: function(){ return wsetsLimpias(); },
   wset: wset, setsDe: setsDe, guardarWset: guardarWset, recibirWsets: recibirWsets,
   abrirSets: abrirSets, refrescarWidgets: refrescarWidgets,
+  refrescos: function(){ return refrescos; }, etagWid: function(){ return etagWid; },
   headers: function(){
     return [].map.call(document.querySelectorAll("#widgets > .caja"), function(c){
       var t = c.querySelector(".tit") || {};
