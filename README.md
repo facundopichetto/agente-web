@@ -294,7 +294,7 @@ siguen en 16px. `python3 -m recetas.prueba_web` lo chequea en desktop y con el v
 
 facundo: "y esa caja de input deberia sugerir respuestas".
 
-- **fila `#chips`** entre los botones rapidos y `#fila`, look terminal (mismo estilo que las pestañas,
+- **fila `#chips`** arriba de `#fila`, look terminal (mismo estilo que las pestañas,
   sin borde verde, alto chico, scroll horizontal en el celu). **se oculta si no hay sugerencias**
   (o sea: si el daemon todavia no contesto nada en esa pestaña).
 - **cero tokens y cero red**: los chips los arma `sugerencias(texto)` en js leyendo la **ultima
@@ -307,7 +307,8 @@ facundo: "y esa caja de input deberia sugerir respuestas".
     (`oportunidades.items[].opciones`), no las que diga el texto; si no hay datos y el texto trae la
     letra, queda ese chip solo.
   - **si / no** si la respuesta termina en pregunta.
-  - siempre al final **`status`** y **`cola`**.
+  - **nada fijo**: los chips `status` y `cola` se sacaron (facundo, 2026-09-11), solo quedan los
+    derivados de la ultima respuesta.
 - **tocar un chip llena la caja y deja el foco ahi, NO manda**: queda como borrador de la pestaña
   (viaja en `tabs.json` como cualquier borrador) y se manda con enter o el boton. el `tema x:` lo
   agrega el envio de siempre, asi que el chip lleva el texto pelado (`status`, `op 2 B` y `dale 3`
@@ -391,3 +392,16 @@ facundo: "y esa caja de input deberia sugerir respuestas".
   del teclado), y el textarea va con `enterkeyhint="enter"`, `inputmode="text"` y `autocomplete="off"`
   para que el teclado no sume nada mas (autocorreccion y mayusculas de oracion quedan **prendidas** a
   proposito: no tienen nada que ver con esa barra y facundo escribe mejor con ellas).
+
+## se saco la fila de comandos rapidos (facundo, 2026-09-11)
+
+facundo: "sacame la linea esa que ahora dice status cola y la de arriba tambien".
+
+- se borro del todo la fila **`#rapidos`** que iba arriba del input (`status` / `log` / `cola` /
+  `pausa` / `propuestas` / `avisos` / `ronda jira`), con su css y su handler de click.
+- se sacaron tambien los chips **fijos** `status` y `cola` que `sugerencias()` agregaba al final de
+  cada respuesta: la fila `#chips` ahora solo muestra lo derivado de la ultima respuesta
+  (A/B/C, `dale N`, `op N X`, si/no) y sigue oculta si no hay nada.
+- **los comandos no se perdieron**: el widget `agent` mantiene su fila `pausa` / `cola` / `status`,
+  que manda los mismos mensajes crudos.
+- `recetas/prueba_web_tabs` chequea que `#rapidos` ya no exista y que los chips no traigan fijos.

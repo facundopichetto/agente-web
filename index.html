@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.38">
-<link rel="manifest" href="manifest.json?v=4.38">
+<meta name="agente-web-version" content="4.39">
+<link rel="manifest" href="manifest.json?v=4.39">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -114,13 +114,7 @@
      input y el teclado (facundo, 2026-09-11: "hay un gap abajo de la linea del input"). mientras el
      teclado esta arriba el pie va pegado: lo marca `body.teclado` (visualViewport). */
   body.teclado #pie{padding-bottom:4px}
-  #rapidos{display:flex;gap:6px;overflow-x:auto;padding:2px 0 6px 0;scrollbar-width:none;-webkit-overflow-scrolling:touch}
-  #rapidos::-webkit-scrollbar{display:none}
-  #rapidos button{
-    flex:0 0 auto;background:#000;color:var(--cian);border:1px solid var(--linea);
-    border-radius:14px;padding:7px 12px;font:inherit;font-size:11px;cursor:pointer;white-space:nowrap;
-  }
-  #rapidos button:active{background:#111}
+  /* la fila de comandos rapidos se saco (facundo, 2026-09-11): esos comandos quedan en el widget `agent` */
   /* sugerencias de respuesta: salen de la ultima respuesta del daemon en esta pestaña (cero tokens) */
   #chips{display:flex;gap:5px;overflow-x:auto;padding:0 0 5px 0;scrollbar-width:none;-webkit-overflow-scrolling:touch}
   #chips::-webkit-scrollbar{display:none}
@@ -440,15 +434,6 @@
 </div>
 
 <div id="pie">
-  <div id="rapidos">
-    <button data-cmd="status">status</button>
-    <button data-cmd="log">log</button>
-    <button data-cmd="cola">cola</button>
-    <button data-cmd="pausa" id="btn-pausa">pausa</button>
-    <button data-cmd="propuestas">propuestas</button>
-    <button data-cmd="avisos">avisos</button>
-    <button data-cmd="ronda jira">ronda jira</button>
-  </div>
   <div id="chips" class="oculta"></div>
   <div id="fila">
     <span id="prompt">facundo&gt;</span>
@@ -1561,8 +1546,9 @@ function pintarEstado(body){
   var e;
   try{ e = JSON.parse(m[1]); }catch(x){ return; }
   enPausa = !!e.pausa;
-  $("btn-pausa").textContent = enPausa ? "segui" : "pausa";
-  $("btn-pausa").dataset.cmd = enPausa ? "segui" : "pausa";
+  // el boton de pausa vive en el widget `agent` (la fila `#rapidos` se saco, 2026-09-11)
+  var bp = $("btn-pausa");
+  if(bp){ bp.textContent = enPausa ? "segui" : "pausa"; bp.dataset.cmd = enPausa ? "segui" : "pausa"; }
 }
 function esc(s){
   return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
@@ -1950,7 +1936,7 @@ function preguntarDestino(texto, activo, otro, trozos){
 // tocar uno **llena la caja y deja el foco ahi, NO manda**: el `tema x:` lo agrega el envio como
 // siempre, asi que el chip lleva el texto pelado (`A`, `dale 3`, `op 2 B`, `status`).
 var CHIP_TOPE = 30;      // el titulo de una opcion se recorta a esto
-var CHIP_MAX = 10;       // tope de chips sugeridos, sin contar los fijos
+var CHIP_MAX = 10;       // tope de chips sugeridos
 function chipRecorte(t, n){
   t = (t || "").replace(/[`*_]/g, "").replace(/\s+/g, " ").trim();
   n = n || CHIP_TOPE;
@@ -2020,15 +2006,13 @@ function chipsOp(texto){
   }
   return chips;
 }
-// las sugerencias de una respuesta, en orden: a/b/c, `dale N`, `op N X`, si/no, y al final los fijos
+// las sugerencias de una respuesta, en orden: a/b/c, `dale N`, `op N X`, si/no. solo derivadas.
 function sugerencias(texto){
   if(texto === null || texto === undefined) return [];
   var chips = chipsABC(texto).concat(chipsDale(texto)).concat(chipsOp(texto));
   if(/\?\s*$/.test(texto.trim()))
     chips = chips.concat([{cmd: "si", letra: "si", texto: ""}, {cmd: "no", letra: "no", texto: ""}]);
-  chips = chips.slice(0, CHIP_MAX);
-  chips.push({cmd: "status", letra: "status", texto: ""});
-  chips.push({cmd: "cola", letra: "cola", texto: ""});
+  chips = chips.slice(0, CHIP_MAX);   // sin fijos: `status`/`cola` se sacaron (facundo, 2026-09-11)
   var vistos = {};
   return chips.filter(function(c){
     if(vistos[c.cmd]) return false;
@@ -2189,10 +2173,6 @@ txt.addEventListener("input", function(){
   ajustarCaja();
   guardarBorrador(temaCaja || temaActivo(), txt.value);
   if(pego) abajo();
-});
-$("rapidos").addEventListener("click", function(e){
-  var b = e.target.closest("button");
-  if(b && b.dataset.cmd) mandar(b.dataset.cmd, temaActivo(), true);   // comandos del daemon: sin prefijo
 });
 
 // ---------- widgets (web 2): widgets.json que publica el daemon en el buzon ----------
