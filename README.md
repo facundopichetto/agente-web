@@ -630,3 +630,42 @@ celu de pie, caia en los dos paneles y quedaba ilegible.
 - se prueba en `recetas/prueba_web_tabs` con `Emulation.setDeviceMetricsOverride`: `1000x1400` tiene
   que dar toggle y una vista a la vez, `1400x1000` los dos paneles y el separador, y `600x900` y
   `844x390` (celu de pie y acostado) mobile las dos.
+
+## de donde escribe facundo: `celu` o `compu` (facundo, 2026-09-12)
+
+> "deberias poder saber de donde te escribo (al menos de donde mando el send jaja)"
+
+cada mensaje que sale de la web lleva pegada al final una marca con **de donde salio**:
+
+```
+tema tools: hola
+[desde: celu ab12cd ios/safari]
+```
+
+- **`celu` / `compu` se decide por HARDWARE**, con el mismo `esTactil()` que decide si enter manda
+  (`pointer: coarse` + `maxTouchPoints`). nunca por ancho de ventana, aspect ratio ni vista: la compu
+  con la ventana angosta sigue siendo `compu`.
+- **`ab12cd`** es el id corto del dispositivo (`DISPOSITIVO`, `localStorage agente_dispositivo`), el
+  mismo que ya usaba `tabs.json` para no re-aplicarse lo que acaba de publicar.
+- **`ios/safari`** sale de `navCorto()` (os + navegador del `userAgent`), o `otro` si no se reconoce.
+
+la forma es **cerrada a proposito** (`celu|compu` + id + navegador): un mensaje que termina en
+"[desde: casa]" es texto de facundo y no se toca. misma regex en los dos lados (`RE_DESDE` de
+`index.html` y de `daemon.py`).
+
+del lado del daemon, `marca_desde(texto)` la saca **antes de mirar el texto** (primera linea de
+`atender_mensaje`), asi los comandos crudos (`status`, `cola`, `op 2 B`, `dale 3`, `codigo <x>`)
+siguen matcheando exacto. de ahi:
+
+- se guarda como campo `desde` en `logs/chat-<tema>.jsonl` (`chat_guardar`), y viaja a la web en
+  `chat/<tema>.json` (`CAMPOS_CHAT_WEB`);
+- se le pasa al modelo en el prompt del chat como una seccion `## desde donde escribe`, para que
+  sepa si facundo esta frente a la mac o con el celu en la mano antes de darle pasos a tipear;
+- queda en `log.md` en la linea del chat (`..., desde celu ab12cd (ios/safari)`).
+
+la web la saca del cuerpo al pintar (`sacarDesde()` en `agregar()`), asi que en el chat se ve el
+mensaje limpio y el dato queda en `m.desde`.
+
+pruebas (cero tokens): `python3 -m recetas.prueba_web` (incluye `prueba_web_tabs`: la marca al final
+del cuerpo, que se saque al pintar y que un "[desde: casa]" no cuente) y `python3 daemon.py --prueba`
+(`marca_desde` / `desde_texto` / `CAMPOS_CHAT_WEB`).

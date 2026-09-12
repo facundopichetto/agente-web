@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.168">
-<link rel="manifest" href="manifest.json?v=4.168">
+<meta name="agente-web-version" content="4.169">
+<link rel="manifest" href="manifest.json?v=4.169">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -672,6 +672,44 @@ var DISPOSITIVO = (function(){
     return d;
   }catch(x){ return Math.random().toString(36).slice(2, 8); }
 })();
+
+// de donde escribe facundo (facundo, 2026-09-12: "deberias poder saber de donde te escribo"):
+// `celu` o `compu` por HARDWARE (el mismo `esTactil()` que decide si enter manda, nunca el ancho de
+// la ventana), mas el id corto del dispositivo y un nombre corto de navegador/os sacado del userAgent.
+// viaja pegado al final del mensaje como `[desde: celu abc123 ios/safari]`: el daemon lo saca del texto
+// antes de cualquier cosa (asi `status` y los comandos crudos siguen matcheando exacto), lo guarda en
+// `logs/chat-<tema>.jsonl` como `desde` y se lo pasa al modelo.
+function navCorto(){
+  var ua = (navigator.userAgent || "").toLowerCase(), os = "", nav = "";
+  if(/iphone|ipad|ipod/.test(ua)) os = "ios";
+  else if(/android/.test(ua)) os = "android";
+  else if(/mac os x|macintosh/.test(ua)) os = "mac";
+  else if(/windows/.test(ua)) os = "win";
+  else if(/linux/.test(ua)) os = "linux";
+  if(/edg\//.test(ua)) nav = "edge";
+  else if(/opr\/|opera/.test(ua)) nav = "opera";
+  else if(/firefox|fxios/.test(ua)) nav = "firefox";
+  else if(/chrome|crios/.test(ua)) nav = "chrome";
+  else if(/safari/.test(ua)) nav = "safari";
+  return [os, nav].filter(Boolean).join("/") || "otro";
+}
+function desdeActual(){
+  return {tipo: esTactil() ? "celu" : "compu", id: DISPOSITIVO, nav: navCorto()};
+}
+function marcaDesde(){
+  var d = desdeActual();
+  return "[desde: " + d.tipo + " " + d.id + " " + d.nav + "]";
+}
+// la forma es cerrada (celu|compu + id + navegador): un mensaje que termine en "[desde: casa]" es
+// texto de facundo y no se toca. misma regex que `RE_DESDE` de daemon.py.
+var RE_DESDE = /\s*\[desde:\s*(celu|compu)\s+([\w.-]{1,24})(?:\s+([\w./+-]{1,32}))?\]\s*$/i;
+// saca la marca del texto que se muestra: {texto, desde}
+function sacarDesde(t){
+  var m = RE_DESDE.exec(t || "");
+  if(!m) return {texto: t || "", desde: null};
+  return {texto: (t || "").slice(0, m.index).replace(/\s+$/, ""),
+          desde: {tipo: m[1].toLowerCase(), id: m[2], nav: m[3] || ""}};
+}
 
 // {tabs, activo} saneado: solo temas conocidos, sin repetidos, la activa dentro de tabs.
 // las reglas de siempre: una pestaña por tema, y la general (`auto`) es una mas de la lista.
@@ -1695,9 +1733,11 @@ function agregar(c, arriba){
     if(mt && esTema(mt[1])){ tag = normTema(mt[1]); cuerpo = cuerpo.slice(mt[0].length); }
     m = {id: c.id, clase: "agente", quien: "agente", texto: cuerpo, iso: c.created_at, tag: tag};
   }else{
-    var mp = RE_TEMA.exec(b), tg = null, texto = b;
-    if(mp && esTema(mp[1])){ tg = normTema(mp[1]); texto = b.slice(mp[0].length); }
-    m = {id: c.id, clase: "yo", quien: "facundo", texto: texto, iso: c.created_at, tag: tg};
+    var sd = sacarDesde(b), tg = null, texto = sd.texto;
+    var mp = RE_TEMA.exec(texto);
+    if(mp && esTema(mp[1])){ tg = normTema(mp[1]); texto = texto.slice(mp[0].length); }
+    m = {id: c.id, clase: "yo", quien: "facundo", texto: texto, iso: c.created_at, tag: tg,
+         desde: sd.desde};
   }
   if(arriba) msgsCom.unshift(m); else msgsCom.push(m);
   return m;
@@ -1960,7 +2000,8 @@ document.addEventListener("visibilitychange", function(){ if(!document.hidden) m
 // crudo, o que venga de la pestaña general (que no fija tema: ahi clasifica el daemon)
 function cuerpoMsg(texto, tema, crudo){
   var ya = RE_TEMA.test(texto);
-  return (crudo || ya || tema === AUTO) ? texto : "tema " + tema + ": " + texto;
+  var base = (crudo || ya || tema === AUTO) ? texto : "tema " + tema + ": " + texto;
+  return base + "\n" + marcaDesde();     // el daemon la saca antes de mirar el texto
 }
 // dos enter muy rapidos mandaban el mismo mensaje dos veces (facundo, 2026-09-11): la caja se vaciaba
 // recien cuando volvia el POST, asi que el segundo enter leia el mismo texto. ahora `mandar()` es
@@ -3797,6 +3838,8 @@ window.__agente = {
   clasificar: clasificar, partir: partir,
   // enter en el celu hace salto de linea, no manda (prueba_web_tabs lo chequea)
   esTactil: esTactil, ajustarCaja: ajustarCaja, topeLineas: TOPE_LINEAS,
+  // de donde se escribe: viaja como `[desde: celu abc123 ios/safari]` al final del mensaje
+  desde: desdeActual, marcaDesde: marcaDesde, sacarDesde: sacarDesde, cuerpoMsg: cuerpoMsg,
   esVistaMobile: esVistaMobile, sincronizarVista: sincronizarVista, mqMobile: MQ_MOBILE,
   vistaActual: function(){ var b = document.body.classList; return {
     mobile: esVistaMobile(), toggle: document.getElementById('vistas').offsetHeight > 0,
