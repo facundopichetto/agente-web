@@ -669,3 +669,30 @@ mensaje limpio y el dato queda en `m.desde`.
 pruebas (cero tokens): `python3 -m recetas.prueba_web` (incluye `prueba_web_tabs`: la marca al final
 del cuerpo, que se saque al pintar y que un "[desde: casa]" no cuente) y `python3 daemon.py --prueba`
 (`marca_desde` / `desde_texto` / `CAMPOS_CHAT_WEB`).
+
+## urls: enteras y clickeables (facundo, 2026-09-12)
+
+paso con el `login orugote`: la url de oauth (450 chars) llego cortada y claude.com contesto
+**"Invalid OAuth Request / Missing state parameter"**. eran dos cosas:
+
+- el widget `avisos` cortaba cada fila a **400 chars** (`cajaAvisos`), y el `&state=` de esa url
+  arranca justo en el 400. ahora **un aviso con url no se corta nunca** (el tope de 400 sigue para
+  los avisos sin link);
+- en el chat las urls eran **texto plano**: habia que seleccionar 450 chars a dedo en el celu.
+
+`enlaces(l)` (arriba de `costos()`) es el unico lugar donde se arman links: convierte
+`[texto](url)` y las urls sueltas en `<a target="_blank">`, y lo llama `enLinea()` **al final**
+(despues de `code`, costos y negrita) y `cajaAvisos()`. detalles que importan:
+
+- el texto ya viene escapado, asi que `&` llega como `&amp;` y **va igual al href**: el html lo
+  decodifica solo. no hay que des-escapar nada;
+- la puntuacion final (`.`, `)`, `,`, `!`) queda afuera del link, pero **`;` no se saca**: es el
+  cierre de `&amp;`, que trae casi toda url larga;
+- lo que esta entre backticks no se linkea (lo aparta `enCodigo`).
+
+del lado del que manda la url, `recetas/login_remoto.url_ok()`: una url de oauth se manda **solo si
+llego entera** (`state=` y `code_challenge=`). si la pantalla del tmux se leyo a medias, no se manda
+nada y lo dice; la url ademas va **sola en su propio aviso**.
+
+pruebas: `recetas/prueba_web_tabs` (el link entero con su `&state=`, el punto final afuera, el
+markdown link, y el aviso sin cortar ni puntos suspensivos).

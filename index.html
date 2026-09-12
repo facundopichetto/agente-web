@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.169">
-<link rel="manifest" href="manifest.json?v=4.169">
+<meta name="agente-web-version" content="4.170">
+<link rel="manifest" href="manifest.json?v=4.170">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -86,6 +86,10 @@
   .cuerpo .orden{color:var(--amarillo)}                        /* ORDEN: / PROPUESTA: */
   .cuerpo .tag{color:var(--verde)}                             /* [tema] / [openrouter/x] */
   .cuerpo .vin{color:var(--verde-tenue)}                       /* el guion de cada bullet */
+  /* urls clickeables: una url larga (oauth) se abre tocandola, nunca se copia a mano ni se corta */
+  .msg .cuerpo a{color:var(--cian);text-decoration:none;border-bottom:1px dotted #1f3a44;
+                 overflow-wrap:anywhere;word-break:break-all}
+  .msg .cuerpo a:active{color:var(--verde)}
   .cuerpo .tcab{color:var(--magenta);font-weight:600}          /* cabecera de tabla */
   .cuerpo .tsep{color:var(--linea-clara)}                      /* |---|---| */
   .cuerpo .tfila{color:var(--blanco)}
@@ -235,7 +239,8 @@
   .caja .cuerpo{white-space:pre-wrap;word-break:break-word;font-size:11px;line-height:1.5}
   .caja .cuerpo.tabla{white-space:pre;overflow-x:auto;-webkit-overflow-scrolling:touch}
   .caja .vacio{color:var(--gris)}
-  .caja .cuerpo a{color:var(--cian);text-decoration:none;border-bottom:1px dotted #1f3a44}
+  .caja .cuerpo a{color:var(--cian);text-decoration:none;border-bottom:1px dotted #1f3a44;
+                  overflow-wrap:anywhere;word-break:break-all}
   .caja .cuerpo a:active{color:var(--verde)}
   .bar .lleno{color:var(--verde)}
   .bar.med .lleno{color:var(--amarillo)}
@@ -1395,6 +1400,31 @@ if(vv){
   ajustarAlto();
 }
 
+// urls clickeables (facundo, 2026-09-12: abrio una url de oauth cortada antes de `&state=` y claude.com
+// le dijo "Missing state parameter"). el texto YA viene escapado, asi que `&` llega como `&amp;` y va
+// igual al href: el html lo decodifica solo. nada de cortar ni de copiar a mano.
+var RE_MDLINK = /\[([^\]\n]+)\]\(\s*(https?:\/\/[^)\s]+)\s*\)/g;
+var RE_URL = /(https?:\/\/[^\s<>"'`]+)/g;
+function unLink(u, texto){
+  return '<a href="' + String(u).replace(/"/g, "&quot;") + '" target="_blank" rel="noopener">' +
+         (texto === undefined ? u : texto) + "</a>";
+}
+function enlaces(l){
+  // `;` no se saca como puntuacion final: es el cierre de `&amp;`, que trae casi toda url larga
+  var COLA = /(?:[).,:!?]|&quot;|&gt;)+$/;
+  var hechos = [];                                  // los `[texto](url)` salen del paso, como los `code`
+  var x = String(l).replace(RE_MDLINK, function(m0, texto, u){
+    hechos.push(unLink(u, texto));
+    return "\u0002" + (hechos.length - 1) + "\u0002";
+  });
+  x = x.replace(RE_URL, function(u){
+    var m = COLA.exec(u), cola = m ? m[0] : "";
+    if(cola) u = u.slice(0, u.length - cola.length);
+    return unLink(u) + cola;
+  });
+  return x.replace(/\u0002(\d+)\u0002/g, function(m0, i){ return hechos[+i]; });
+}
+
 function costos(l){
   return l.replace(/\$\d+(?:[.,]\d+)?/g, '<span class="costo">$&</span>')
           .replace(/\brc=(\d+)\b/g, function(m0, n){
@@ -1415,7 +1445,8 @@ function enCodigo(l, f){  // saca los `code` antes de tocar el resto y los devue
 function enLinea(l){
   return enCodigo(l, function(x){
     x = costos(x);
-    return x.replace(/\*\*([^*]+)\*\*/g, function(m0, c){ return '<span class="neg">' + c + "</span>"; });
+    x = x.replace(/\*\*([^*]+)\*\*/g, function(m0, c){ return '<span class="neg">' + c + "</span>"; });
+    return enlaces(x);      // lo ultimo: las urls quedan enteras y clickeables (nunca a mano)
   });
 }
 // imagenes: `![alt](src)`. el daemon ya publico el archivo local en el repo del buzon
@@ -3076,9 +3107,15 @@ function cajaAvisos(av){
                              false, "avisos");
   return caja("avisos", ese, limFilas("avisos", av.map(function(l){
     var m = /^(\d{4}-\d\d-\d\d \d\d:\d\d)\s+([\s\S]*)$/.exec(l);
-    var t = m ? '<span class="g">' + esc(m[1].slice(5, 16)) + "</span> " + esc(m[2]) : esc(l);
-    return it({tipo: "aviso", d: {texto: m ? m[2] : l, fecha: m ? m[1] : null}},
-              t.length > 400 ? t.slice(0, 400) + "…" : t);
+    var cuerpo = m ? m[2] : String(l);
+    // un aviso con url NO se corta: cortar a 400 chars dejaba la url de oauth sin `&state=` y
+    // claude.com contestaba "Missing state parameter" (facundo, 2026-09-12). ademas va clickeable.
+    var conUrl = RE_URL.test(cuerpo);
+    RE_URL.lastIndex = 0;
+    var cuerpoHtml = conUrl ? enlaces(esc(cuerpo))
+                            : (esc(cuerpo).length > 400 ? esc(cuerpo).slice(0, 400) + "…" : esc(cuerpo));
+    var t = (m ? '<span class="g">' + esc(m[1].slice(5, 16)) + "</span> " : "") + cuerpoHtml;
+    return it({tipo: "aviso", d: {texto: cuerpo, fecha: m ? m[1] : null}}, t);
   })).join("\n"), false, "avisos");
 }
 
@@ -3836,6 +3873,8 @@ if(urlSucia) sistema("el token venía en la url: lo guardé acá y limpié la di
 // el clasificador de la web da lo mismo que la receta de python y que cada mensaje cae en su pestaña.
 window.__agente = {
   clasificar: clasificar, partir: partir,
+  // urls: enteras y clickeables, en el chat y en los widgets (prueba_web_tabs lo chequea)
+  enlaces: enlaces, resaltar: resaltar,
   // enter en el celu hace salto de linea, no manda (prueba_web_tabs lo chequea)
   esTactil: esTactil, ajustarCaja: ajustarCaja, topeLineas: TOPE_LINEAS,
   // de donde se escribe: viaja como `[desde: celu abc123 ios/safari]` al final del mensaje
