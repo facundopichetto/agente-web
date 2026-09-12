@@ -391,7 +391,7 @@ antes una pestaña se podia arrastrar hasta los widgets y quedaba como segundo p
   android saltaban directo a la camara y no dejaban elegir una foto ya sacada).
 - **pegar y arrastrar** (desktop): un `ctrl+v` con una imagen en el portapapeles, o arrastrar un
   archivo de imagen sobre el panel de chat (se resalta con `#panel-chat.soltar-img`), entran por el
-  **mismo camino** que la camara (`imagenDe(dataTransfer)` -> `mandarFoto`). texto pegado sigue
+  **mismo camino** que la camara (`imagenDe(dataTransfer)` -> `adjuntarFoto`). texto pegado sigue
   normal y el arrastre de pestañas no se toca (solo reacciona a `dataTransfer.types` con `Files`).
 - **la foto se achica antes de subir**: canvas a `FOTO_LADO` (1600 px de lado mayor) y jpeg con
   calidad decreciente hasta entrar en `FOTO_TOPE` (2 mb). si el navegador no puede decodificarla
@@ -400,6 +400,8 @@ antes una pestaña se podia arrastrar hasta los widgets y quedaba como segundo p
   mismo token, como `img/<hash12>-<nombre>` (hash sha-256 del contenido: la misma foto no se sube dos
   veces; un 422 se toma como "ya esta"). `fetch` propio y no `api()`: un 403 de escritura no puede
   desloguear a facundo del chat.
+- **no se manda sola**: elegirla la deja como **adjunto pendiente** arriba del input (ver la seccion
+  de abajo). se sube y se manda recien al tocar enviar.
 - **sale como un mensaje normal de la pestaña activa**, con su `tema x:`: lo que hubiera en la caja
   como pie, mas `![<nombre>](img/<hash>-<nombre>)`. la web lo pinta inline con el mismo camino que
   las imagenes que manda el daemon (`conImagenes` / `bajarImagen`), sin volver a bajarla (el blob ya
@@ -410,6 +412,33 @@ antes una pestaña se podia arrastrar hasta los widgets y quedaba como segundo p
   del propio buzon, con extension de imagen y menos de 8 mb; si falla, el mensaje va igual.
 - se prueba en `recetas/prueba_web_tabs` (cero tokens, cero red: `window.__agente.stubFoto()` y un
   `File` de juguete) y en `python3 -m recetas.mostrar_imagen --probar` (la bajada, con un bajador falso).
+
+## el adjunto no se manda solo: primero se ve, se escribe o se borra (facundo, 2026-09-12)
+
+> "cuando suba una foto tengo que poder borrarla o escribir algo. es decir que no se mande
+> automáticamente el mensaje."
+
+- **una foto elegida (camara, galeria, pegar, arrastrar) y un audio grabado con `[●]` quedan
+  pendientes**, no salen al toque. el adjunto se pinta en `#adjunto`, arriba de los chips y del
+  input: miniatura de 44 px (imagen) o `[▶]` con la duracion (audio), el nombre, y una **`×`** que
+  lo descarta. mientras tanto el input sigue editable.
+- **uno a la vez**: elegir otra foto reemplaza a la que estaba (el object url de la anterior se
+  suelta). la `×` lo saca sin subir nada.
+- **enviar** (boton `>_`, o enter en desktop) es lo unico que sube: comprime / hashea, sube al buzon
+  y manda **un solo mensaje** de la pestaña activa con el texto de la caja mas el
+  `![](img/...)` o `[audio](audio/...)`. con adjunto pendiente, un enter con la caja vacia manda
+  igual (el archivo solo).
+- **el adjunto vive solo en memoria**: no viaja en el borrador de `tabs.json` (el archivo no esta en
+  el otro dispositivo, un blob no se sincroniza). el texto de la caja si, como siempre.
+- **si la subida falla** (sin token, github frenado, 403), el adjunto **vuelve** al pie y el texto a
+  la caja: no se pierde y se puede reintentar.
+- funciones: `adjuntarFoto` / `adjuntarAudio` dejan el pendiente, `pintarAdjunto` lo dibuja,
+  `descartarAdjunto` es la `×`, y `mandarAdjunto(texto)` (lo llama `enviarMensaje` antes de
+  clasificar) sube y manda. `mandarFoto(file, pie)` y `mandarAudio(blob, mime, pie)` siguen siendo
+  el camino de subida, ahora con el texto explicito.
+- se prueba en `recetas/prueba_web_tabs` (cero tokens, cero red): el adjunto pendiente no dispara
+  envio, la `×` lo saca sin subir, enviar manda imagen+texto (y audio+texto) en un solo mensaje, y
+  no aparece en `tabs.json`.
 
 ## el gap de abajo del input y la barra de flechas de ios (facundo, 2026-09-11)
 
@@ -519,12 +548,15 @@ las dos puntas no se separen.
 > tener un play para que me los lea daniela en un formato que ocupe lo menos posible de audio."
 
 **entrantes.** el boton `[●]`, al lado del de camara, graba con **tap and hold** (pointer, asi vale el
-dedo y el mouse): apretado graba y el boton late en rojo con el reloj al lado, soltar manda, arrastrar
-el dedo afuera cancela y un toque de menos de `AUDIO_MIN_MS` (600 ms) no manda nada. el formato lo
-elige el navegador entre `MIMES` (opus en webm donde se puede, mp4 en safari) a 24 kbps. el archivo se
-sube al **mismo repo del buzon** que las fotos (`audio/<hash>.<ext>`, contents api, mismo token,
-`subirBuzon`) y sale como un mensaje normal de la pestaña activa con su `tema x:` y el marcador
-`[audio](audio/<hash>.webm)`.
+dedo y el mouse): apretado graba y el boton late en rojo con el reloj al lado, arrastrar el dedo afuera
+cancela y un toque de menos de `AUDIO_MIN_MS` (600 ms) no deja nada. el formato lo elige el navegador
+entre `MIMES` (opus en webm donde se puede, mp4 en safari) a 24 kbps.
+
+**soltar ya no manda** (facundo, 2026-09-12): el audio queda como **adjunto pendiente** arriba del
+input, con `[▶]` para escucharlo, su duracion y una `×` para descartarlo (ver "el adjunto no se manda
+solo"). al tocar enviar se sube al **mismo repo del buzon** que las fotos (`audio/<hash>.<ext>`,
+contents api, mismo token, `subirBuzon`) y sale como un mensaje normal de la pestaña activa con su
+`tema x:`, el texto que haya escrito y el marcador `[audio](audio/<hash>.webm)`.
 
 el daemon lo baja a `tmp/audio-entrante/` y lo transcribe **local y sin tokens** con faster-whisper
 `small` en cpu int8 (`recetas/transcribir_audio.py`, venv en `~/.claudio/tools/stt`), asi que al modelo
