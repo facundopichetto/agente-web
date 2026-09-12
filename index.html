@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.177">
-<link rel="manifest" href="manifest.json?v=4.177">
+<meta name="agente-web-version" content="4.178">
+<link rel="manifest" href="manifest.json?v=4.178">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2990,6 +2990,17 @@ function cajaUsage(u){
   var soloCta = wset("usage", "cuentas");
   if(soloCta && soloCta !== "todas")
     cuentas = cuentas.filter(function(c){ return c.nombre === soloCta; });
+  // caidas de hoy (facundo, 2026-09-12): cuantas veces y cuanto tiempo claudio estuvo sin claude hoy,
+  // con hora y causa de cada una. lo calcula `recetas/autosalvataje.py` leyendo `log.md`, cero tokens.
+  var ca = u.caidas || {};
+  if(ca.n)
+    html += it({tipo: "caidas", tema: "tools", d: ca, completo: ca.texto || ""},
+      '<div class="rep"><span class="g">caidas hoy</span> ' +
+      '<span class="' + (ca.abierta ? "r" : "a") + ' b">' + esc(String(ca.n)) + "</span>" +
+      '<span class="g">' + esc(String(ca.minutos || 0)) + " min</span>" +
+      '<span class="g por">' + esc((ca.episodios || []).map(function(e){
+        return e.desde + "-" + e.hasta + " " + e.causa + (e.abierta ? " (sigue)" : "");
+      }).join(" \u00b7 ")) + "</span></div>");
   if(rep.elegida)
     html += it({tipo: "cuenta", tema: "tools", d: rep, completo: rep.porque || ""},
       '<div class="rep"><span class="g">usa</span> <span class="nom">' + esc(rep.elegida) + "</span> " +
@@ -3034,6 +3045,8 @@ function cajaUsage(u){
            ">" + esc(b.nombre) + " " +
            (b.pct === null || b.pct === undefined ? "?" : Math.round(b.pct)) + "%</span>";
   }).join('<span class="g"> \u00b7 </span>');
+  if(ca.n) ese += '<span class="g"> \u00b7 </span><span class="' + (ca.abierta ? "r" : "a") +
+                  '">' + esc(String(ca.n)) + " caida" + (ca.n > 1 ? "s" : "") + " hoy</span>";
   return caja("usage", ese, '<div class="usage">' + (html || vacio("sin datos")) + "</div>",
               false, "usage");
 }
@@ -3551,6 +3564,17 @@ function modalDe(o){
     m.cuerpo = esc(d.titulo) + '\n\n<span class="a">' + esc(d.estado) + '</span> <span class="g">hace ' +
       haceSeg(d.hace_s) + "</span>\n" + link(JIRA + d.key, "abrir " + d.key + " en jira");
     m.acciones.push(accHablar(o, "el ticket " + d.key + " (" + corto(d.titulo, 70) + ")"));
+  } else if(o.tipo === "caidas"){
+    // los ratos sin claude de hoy (facundo, 2026-09-12): hora, causa y duracion de cada uno
+    m.titulo = "caidas de hoy: " + (d.n || 0) + " (" + (d.minutos || 0) + " min)";
+    m.cuerpo = (d.episodios || []).map(function(e){
+      return pad(e.desde + "-" + e.hasta, 13) + pad(e.minutos + " min", 8, true) + "  " + esc(e.causa) +
+             (e.abierta ? ' <span class="r">sigue</span>' : "") +
+             (e.veces > 1 ? ' <span class="g">x' + e.veces + "</span>" : "");
+    }).join("\n") || '<span class="v">sin caidas hoy</span>';
+    m.acciones.push(["que intente salvarse ahora", function(){ actuar(tema, "salvame", true); }, true]);
+    m.acciones.push(["ver el uso de las cuentas", function(){ actuar(tema, "usage", true); }]);
+    m.acciones.push(accHablar(o, "las caidas de hoy (" + (d.texto || "") + ")"));
   } else if(o.tipo === "cuenta"){
     m.titulo = "cuenta de claude: " + d.nombre;
     m.cuerpo = (d.activa ? '<span class="v">es la cuenta que usa el agente ahora</span>'
