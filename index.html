@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.166">
-<link rel="manifest" href="manifest.json?v=4.166">
+<meta name="agente-web-version" content="4.167">
+<link rel="manifest" href="manifest.json?v=4.167">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2796,6 +2796,17 @@ function cajaUsage(u){
       (rep.porque ? '<span class="g por">' + esc(rep.porque) + "</span>" : "") + "</div>");
   cuentas.forEach(function(cu){
     var nota = (cu.nota === null || cu.nota === undefined) ? "" : cu.nota + "x";
+    // sin login propio en esta maquina (o el mismo login que otra: el symlink del server): se dice,
+    // no se pintan barras. antes se repetian los numeros de la otra cuenta como si estuviera medida.
+    if(cu.sin_login){
+      html += '<div class="bloque">' +
+              it({tipo: "cuenta", tema: "tools", d: cu, completo: cu.motivo || ""},
+                 '<span class="cta"><span class="nom">' + esc(cu.nombre) + "</span>" +
+                 '<span class="r b">sin login</span>' +
+                 (cu.motivo ? '<span class="g por">' + esc(cu.motivo) + "</span>" : "") + "</span>") +
+              "</div>";
+      return;
+    }
     html += '<div class="bloque">' +
             it({tipo: "cuenta", tema: "tools", d: cu},
                '<span class="cta"><span class="nom">' + esc(cu.nombre) + "</span>" +
@@ -2808,6 +2819,7 @@ function cajaUsage(u){
   });
   // dato esencial: por cuenta, el limite mas cerca de la linea (el `peor` que ya calcula el reparto)
   var ese = cuentas.map(function(cu){
+    if(cu.sin_login) return '<span class="b">' + esc(cu.nombre) + '</span> <span class="r">sin login</span>';
     // `peor` es el NOMBRE de la barra (5h / week / fable) que calcula reparto_cuentas; si no vino,
     // la de ratio mas alto (la mas pasada de la linea).
     var bs = cu.barras || [];
