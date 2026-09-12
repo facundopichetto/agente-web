@@ -696,3 +696,35 @@ nada y lo dice; la url ademas va **sola en su propio aviso**.
 
 pruebas: `recetas/prueba_web_tabs` (el link entero con su `&state=`, el punto final afuera, el
 markdown link, y el aviso sin cortar ni puntos suspensivos).
+
+## github frenado: un solo escritor y el mensaje no se pierde (2026-09-12)
+
+paso 16:01-16:04: el daemon subia 6 `chat/*.json` + `widgets.json` por vuelta desde dos hilos y
+reintentaba cada 409 en caliente. github bloqueo el token por **"secondary rate limit / content
+creation"** (403) y, como el token es el mismo, el POST del mensaje de facundo desde la web tambien
+rebotaba. la web mostraba "vuelvo a intentar en 900 s" porque tomaba el `x-ratelimit-reset`, que es del
+limite **primario**.
+
+**daemon** (`recetas/buzon.py`, `BUZON` en `daemon.py`):
+
+- **un solo escritor** con cola: `_web_poner` encola archivos y `web_enviar` encola comentarios; un hilo
+  los manda. un archivo que cambia 3 veces en un minuto se sube una vez (`CADA_RUTA` 60 s, con el ultimo
+  contenido). los comentarios salen primero y en orden.
+- **tope**: `TOPE_MIN` 20 escrituras por minuto y `TOPE_HORA` 400, contando todo lo que escribe el daemon
+  (tambien el PATCH del estado). los archivos dejan `RESERVA` 4 por minuto para los comentarios.
+- **403/429 de limite**: respeta `retry-after`; secundario sin retry-after = 60 s. frena **todas** las
+  escrituras, tambien las de otros procesos (`.buzon-freno.json`). nada se pierde: queda en la cola.
+- **409/422** (sha viejo): no se reintenta en caliente; se olvida el sha y va en la proxima pasada (20 s).
+- `widgets.json` solo si cambio el hash, y como mucho cada 60 s.
+
+**web** (`limiteGithub()`, `frenar()`, `salida`):
+
+- secundario sin `retry-after` = reintento a los 60 s. el reset de `x-ratelimit` solo vale si
+  `x-ratelimit-remaining` es 0 (primario). un 403 de limite al guardar pestañas ya no se toma como
+  "el token no tiene permiso".
+- el mensaje que github freno **no vuelve a la caja**: queda en `salida` (localStorage `agente_salida`,
+  sobrevive a recargar), el chat dice "tu mensaje quedó guardado y se manda solo en ~N s" y `tick()` lo
+  manda apenas pasa el freno. con github frenado, un mensaje nuevo ni se intenta: va directo a la salida.
+
+probar: `python3 -m recetas.prueba_buzon_403` (cero red: coalesce, tormenta, tope, 403 con y sin
+retry-after, 409) y `recetas/prueba_web_tabs` (punto 12b).

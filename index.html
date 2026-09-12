@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.172">
-<link rel="manifest" href="manifest.json?v=4.172">
+<meta name="agente-web-version" content="4.173">
+<link rel="manifest" href="manifest.json?v=4.173">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1184,13 +1184,13 @@ function ponerTabs(reintento){
         if(firmaLayout(layoutActual()) === antes) return ponerTabs(true);   // si gane yo, reintento
       });
     }
-    if(r.status === 429 || r.headers.get("x-ratelimit-remaining") === "0"){
-      var reint = parseInt(r.headers.get("retry-after"), 10);
-      frenar(reint > 0 ? reint + 5 : 60, r.status + " al guardar las pestañas");
-      return;
-    }
-    if(r.status === 403 || r.status === 404) return r.json().catch(function(){ return {}; })
-      .then(function(j){ sinSync((j && j.message) || ("http " + r.status)); });
+    if(r.status === 403 || r.status === 404 || r.status === 429) return r.json().catch(function(){ return {}; })
+      .then(function(j){
+        var msg = (j && j.message) || ("http " + r.status);
+        var lim = limiteGithub(r.status, r.headers, msg);
+        if(lim){ frenar(lim.seg + 5, r.status + " al guardar las pestañas"); return; }   // no es permiso
+        sinSync(msg);
+      });
   }).catch(function(){});                                 // sin red: queda el cache y se reintenta solo
 }
 function temaActivo(){ return activo; }
@@ -1295,6 +1295,8 @@ var token = null;
 var vistos = {};
 var urlSucia = null;    // el token llego por la url (mala idea): lo saco y aviso
 var frenoHasta = 0;     // rate limit: no toco la api hasta este timestamp
+// mensajes de facundo que github freno: quedan aca (y en localStorage) y salen solos al levantar el freno
+var salida = (function(){ try{ return JSON.parse(localStorage.getItem("agente_salida") || "[]"); }catch(x){ return []; } })();
 var avisoFreno = 0;        // id de comentario -> true
 // el historial de cada pestaña ya no sale de los comentarios: lo publica el daemon entero por tema
 // (`chat/<tema>.json`). el poll de comentarios solo cubre la franja reciente -lo que todavia no se
@@ -1660,12 +1662,29 @@ function sistema(t, clase){
 }
 
 // ---------- api ----------
-function frenar(seg, motivo){
+// cuanto frenar ante un 403/429 de github (0 = no es limite, ej un 403 de permisos). el limite
+// SECUNDARIO ("secondary rate limit", "content creation") sin retry-after se reintenta a los 60 s: el
+// `x-ratelimit-reset` es del primario y mandaba a esperar 900 s (2026-09-12 16:04).
+function limiteGithub(status, headers, msg){
+  if(status !== 403 && status !== 429) return null;
+  var resta = headers.get("x-ratelimit-remaining");
+  var reset = parseInt(headers.get("x-ratelimit-reset"), 10);
+  var reint = parseInt(headers.get("retry-after"), 10);
+  var secundario = /secondary rate limit|content creation|abuse/i.test(msg || "");
+  if(!secundario && resta !== "0" && !(reint > 0) && status !== 429) return null;
+  var seg = reint > 0 ? reint
+          : (!secundario && resta === "0" && reset) ? reset - Math.floor(Date.now() / 1000)
+          : 60;
+  return {seg: seg, secundario: secundario || resta !== "0"};
+}
+function frenar(seg, motivo, callado){   // callado: el que llama avisa (el envio dice "quedó guardado")
   seg = Math.max(20, Math.min(Math.round(seg), 900));
   frenoHasta = Date.now() + seg * 1000;
-  if(Date.now() - avisoFreno > 60000){
+  if(!callado && Date.now() - avisoFreno > 60000){
     avisoFreno = Date.now();
-    sistema("github frenó (" + motivo + "). vuelvo a intentar en " + seg + " s.", "error");
+    sistema("github frenó las escrituras de este token (" + motivo + "): muchas escrituras seguidas al buzón. " +
+            "vuelvo a intentar en " + seg + " s" +
+            (salida.length ? "; tu mensaje quedó guardado y se manda solo." : "."), "error");
   }
   reprogramar();
 }
@@ -1698,12 +1717,10 @@ function api(metodo, ruta, cuerpo, etag, accept){
           throw new Error("401");
         }
         // 403 puede ser rate limit (frena) o falta de permisos (el token no sirve para este repo)
-        var resta = r.headers.get("x-ratelimit-remaining");
-        var reset = parseInt(r.headers.get("x-ratelimit-reset"), 10);
-        var reint = parseInt(r.headers.get("retry-after"), 10);
-        if(r.status === 429 || resta === "0" || reint > 0 || /rate limit|abuse|secondary/i.test(msg)){
-          var seg = reint > 0 ? reint : (reset ? reset - Math.floor(Date.now() / 1000) : 60);
-          frenar(seg + 5, r.status + " " + (resta === "0" ? "sin cuota" : "rate limit"));
+        var lim = limiteGithub(r.status, r.headers, msg);
+        if(lim){
+          frenar(lim.seg + 5, r.status + " " + (lim.secundario ? "límite secundario" : "sin cuota"),
+                 metodo === "POST" && /\/comments$/.test(ruta));
           throw new Error("freno");
         }
         pedirToken("el token no tiene permiso sobre " + REPO + " (403): " + msg);
@@ -1888,6 +1905,7 @@ function chatDeTab(tema){
 }
 
 function tick(){
+  vaciarSalida();   // lo que github freno sale solo apenas levanta el freno
   Promise.all([cargarEstado(), cargarComentarios(false)])
     .catch(function(e){ if(ruidoso(e)) sistema("error: " + e.message, "error"); });
   // los widgets y las pestañas van a 10 s a la vista (antes 30) y 120 s en background: abrir el
@@ -2045,6 +2063,12 @@ function mandar(texto, tema, crudo){
   var cuerpo = cuerpoMsg(texto, tema, crudo);
   var caja = temaCaja;
   ultimoTexto = texto; ultimoTs = Date.now();
+  if(Date.now() < frenoHasta){                                   // github frenado: ni lo intento, queda guardado
+    if(txt.value.trim() === texto){ txt.value = ""; txt.style.height = ""; }
+    borrarBorrador(tema); if(caja && caja !== tema) borrarBorrador(caja);
+    guardarSalida(texto, tema, cuerpo);
+    return Promise.resolve();
+  }
   enviando++;
   $("mandar").disabled = true;
   if(txt.value.trim() === texto){ txt.value = ""; txt.style.height = ""; }   // la caja se vacia ya
@@ -2061,10 +2085,46 @@ function mandar(texto, tema, crudo){
     })
     .catch(function(e){
       ultimoTexto = ""; ultimoTs = 0;                           // fallo: se puede reintentar igual
+      if(e && e.message === "freno"){ guardarSalida(texto, tema, cuerpo); return; }   // sale solo al levantar
       if(!txt.value.trim()){ ponerCaja(texto); guardarBorrador(caja || tema, texto, true); }
       if(ruidoso(e)) sistema("no se pudo mandar: " + e.message, "error");
     })
     .then(function(){ enviando = Math.max(0, enviando - 1); $("mandar").disabled = false; });
+}
+// github frenado (403 secondary rate limit, 2026-09-12): el mensaje no vuelve a la caja ni se pierde.
+// queda en `salida` (localStorage `agente_salida`, sobrevive a recargar) y `vaciarSalida` lo manda solo
+// desde `tick` apenas pasa `frenoHasta`, en orden y de a uno.
+var saliendo = false;
+function guardarSalida(texto, tema, cuerpo){
+  salida.push({texto: texto, tema: tema, cuerpo: cuerpo, ts: Date.now()});
+  try{ localStorage.setItem("agente_salida", JSON.stringify(salida)); }catch(x){}
+  var seg = Math.max(1, Math.round((frenoHasta - Date.now()) / 1000));
+  sistema("github frenó las escrituras de este token (límite secundario: muchas escrituras seguidas al buzón). " +
+          "tu mensaje quedó guardado y se manda solo en ~" + seg + " s" +
+          (salida.length > 1 ? " (" + salida.length + " en espera)." : "."), "error");
+  avisoFreno = Date.now();
+  reprogramar();
+}
+function vaciarSalida(){
+  if(saliendo || !salida.length || Date.now() < frenoHasta) return Promise.resolve();   // sin token: api() da 401 callado
+  saliendo = true;
+  var m = salida[0];
+  return api("POST", "/repos/" + REPO + "/issues/" + ISSUE + "/comments", {body: m.cuerpo})
+    .then(function(r){
+      salida.shift();
+      try{ localStorage.setItem("agente_salida", JSON.stringify(salida)); }catch(x){}
+      if(r.json && !vistos[r.json.id]){
+        vistos[r.json.id] = true;
+        var y = {id: r.json.id, clase: "yo", quien: "facundo", texto: m.texto, iso: r.json.created_at,
+                 explicito: true, tema: m.tema};
+        msgsCom.push(y); msgs.push(y); pintarMsg(y, false); alFinal();
+      }
+      etagCom = null;
+      saliendo = false;
+      if(!salida.length) sistema("github volvió: salió lo que estaba guardado.");
+      return vaciarSalida();
+    })
+    .catch(function(e){ saliendo = false; if(ruidoso(e)) sistema("no se pudo mandar lo guardado: " + e.message, "error"); });
 }
 // un mensaje partido sale como varios mensajes, uno por tema, **en orden** y cada uno con su
 // `tema x:` a su pestaña (la abre si no estaba). el foco queda en la del ultimo fragmento.
@@ -3876,6 +3936,10 @@ if(urlSucia) sistema("el token venía en la url: lo guardé acá y limpié la di
 // el clasificador de la web da lo mismo que la receta de python y que cada mensaje cae en su pestaña.
 window.__agente = {
   clasificar: clasificar, partir: partir,
+  // 403 secondary rate limit: freno de 60 s y el mensaje frenado sale solo (prueba_web_tabs lo chequea)
+  limiteGithub: limiteGithub, frenar: frenar, guardarSalida: guardarSalida, vaciarSalida: vaciarSalida,
+  salida: function(){ return salida.slice(); },
+  freno: function(v){ if(v !== undefined) frenoHasta = v; return frenoHasta; },
   // urls: enteras y clickeables, en el chat y en los widgets (prueba_web_tabs lo chequea)
   enlaces: enlaces, resaltar: resaltar,
   // enter en el celu hace salto de linea, no manda (prueba_web_tabs lo chequea)
