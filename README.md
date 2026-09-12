@@ -382,8 +382,13 @@ facundo: "y esa caja de input deberia sugerir respuestas".
 > "se puede poner una función tipo cámara acá? como en whatsapp"
 
 - **boton `[◉]`** al lado del input (mismo look terminal que `>_`), y un `<input type="file"
-  accept="image/*" capture="environment">` escondido: en el celu abre la camara o la galeria, en
-  escritorio el selector de archivos.
+  accept="image/*">` escondido: en el celu el sistema ofrece **camara o galeria**, en escritorio el
+  selector de archivos. **sin `capture`** (facundo, 2026-09-11: con `capture="environment"` ios y
+  android saltaban directo a la camara y no dejaban elegir una foto ya sacada).
+- **pegar y arrastrar** (desktop): un `ctrl+v` con una imagen en el portapapeles, o arrastrar un
+  archivo de imagen sobre el panel de chat (se resalta con `#panel-chat.soltar-img`), entran por el
+  **mismo camino** que la camara (`imagenDe(dataTransfer)` -> `mandarFoto`). texto pegado sigue
+  normal y el arrastre de pestañas no se toca (solo reacciona a `dataTransfer.types` con `Files`).
 - **la foto se achica antes de subir**: canvas a `FOTO_LADO` (1600 px de lado mayor) y jpeg con
   calidad decreciente hasta entrar en `FOTO_TOPE` (2 mb). si el navegador no puede decodificarla
   (heic) y el archivo ya entra, se sube tal cual.
@@ -595,3 +600,31 @@ dejaste en el celu. `localStorage` (`agente_tabs`) queda de cache offline.
 lo prueba `recetas/prueba_web_tabs` (cero tokens): que cada caja tenga su header con los dos botones,
 el dato esencial de cada una, que plegar quede guardado y viaje en `tabs.json`, que el modal liste las
 settings, que filtrar y recortar filas cambie lo que se pinta, y que el `[↻]` tire el etag.
+
+## la vista mobile entra por forma, no solo por ancho (facundo, 2026-09-11)
+
+facundo: "si es mas alta que ancho tiene que tener la view de mobile. me refiero a el toggle chat
+widgets".
+
+antes la vista de una-sola-cosa-a-la-vez se decidia por **ancho fijo** (`max-width:899px` en el css,
+`innerWidth < 900` desperdigado por el js), asi que una ventana angosta pero de mas de 900px, o el
+celu de pie, caia en los dos paneles y quedaba ilegible.
+
+- **un solo media query, en los dos lados**: `(max-width:899px), (max-aspect-ratio: 1/1)`. esta en
+  el css (los dos bloques `@media`) y en el js como la constante `MQ_MOBILE`.
+- **una sola funcion decide**: `esVistaMobile()` (`window.matchMedia(MQ_MOBILE).matches`, con
+  fallback a `innerWidth`/`innerHeight` para navegadores sin `matchMedia`). `anchoDesktop()` es
+  `!esVistaMobile()` y **ningun otro lugar del js lee `innerWidth` para decidir layout**.
+- **reacciona sin recargar**: `sincronizarVista()` corre en `resize`, en `orientationchange` y en el
+  evento `change` del propio media query (que ademas avisa cuando cambia el alto sin un `resize`
+  util: teclado de ios, ventana partida, zoom). ahi se acomoda lo que el css no puede: el foco no
+  queda en un panel que no se ve, una vista `lado` sin panel al lado vuelve al chat, y el `pct` del
+  separador se recorta a los minimos.
+- **la vista elegida se recuerda**: girar a apaisado muestra los dos paneles (el css ignora las
+  clases `ver-widgets` / `ver-lado` fuera de mobile) y al volver a vertical se cae donde estabas.
+- **el separador** (`#sep`) sigue siendo solo de desktop: en vista mobile no se pinta y el `flex`
+  elegido en la compu no le toca el layout, aunque la ventana sea ancha.
+- se prueba en `recetas/prueba_web_tabs` con `Emulation.setDeviceMetricsOverride`: `1000x1400` tiene
+  que dar toggle y una vista a la vez, `1400x1000` los dos paneles y el separador, `600x900` y
+  `844x390` (celu de pie y acostado) mobile las dos, y girar ida y vuelta con el panel de al lado
+  abierto no deja ninguna vista vacia.

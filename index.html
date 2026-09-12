@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.164">
-<link rel="manifest" href="manifest.json?v=4.164">
+<meta name="agente-web-version" content="4.165">
+<link rel="manifest" href="manifest.json?v=4.165">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -293,8 +293,11 @@
   }
   #vistas button.on{color:var(--verde);border-color:var(--verde)}
   body.sinlogin #cabecera,body.sinlogin #cuerpo{display:none}
-  /* angosto (celu): una vista a la vez, la elige la barra de arriba. puro css, sin js de layout */
-  @media (max-width:899px){
+  /* vista mobile: una vista a la vez, la elige la barra de arriba. puro css, sin js de layout.
+     entra cuando la ventana es angosta (celu) O cuando es mas alta que ancha (facundo, 2026-09-11:
+     una ventana vertical en la compu, o el celu de pie, tambien quieren el toggle chat | widgets).
+     el mismo media query vive en el js como `MQ_MOBILE`: si cambia uno, cambia el otro. */
+  @media (max-width:899px), (max-aspect-ratio: 1/1){
     #vistas{display:flex}
     /* dedo: los botones del header de cada widget con area tactil de 40px (facundo, 2026-09-12) */
     .caja > .tit > .wacc .wbtn{min-width:40px;min-height:40px;font-size:13px;padding:0}
@@ -369,6 +372,14 @@
     background:rgba(0,255,120,.10);box-shadow:0 0 12px rgba(0,255,120,.35) inset;
   }
   #tabs.soltar{background:rgba(0,255,120,.08);box-shadow:0 0 10px rgba(0,255,120,.25) inset}
+  /* soltar una imagen sobre el chat (desktop, facundo 2026-09-11) */
+  #panel-chat.soltar-img{position:relative}
+  #panel-chat.soltar-img::after{
+    content:"soltar la imagen acá";position:absolute;inset:6px;z-index:55;pointer-events:none;
+    display:flex;align-items:center;justify-content:center;
+    border:1px dashed var(--verde);border-radius:6px;background:rgba(0,255,120,.10);
+    color:var(--verde);font-size:11px;letter-spacing:.04em;
+  }
   /* la pestaña fantasma que sigue al dedo o al mouse */
   #fantasma-tab{
     position:fixed;z-index:61;pointer-events:none;background:#060606;color:var(--verde);
@@ -479,8 +490,8 @@
   /* cita de un mensaje anterior (`> ...`), la que deja "responder" */
   .cita{color:#7e8f86}
 
-  @media (max-width:899px){
-    /* en el celu el modal ocupa toda la pantalla */
+  @media (max-width:899px), (max-aspect-ratio: 1/1){
+    /* en la vista mobile el modal ocupa toda la pantalla */
     #modal{
       left:0;top:0;transform:none;width:100vw;max-width:none;height:100dvh;max-height:none;
       border:none;border-radius:0;padding-bottom:env(safe-area-inset-bottom);
@@ -527,7 +538,7 @@
     <span id="grabinfo" aria-live="polite"></span>
     <button id="grabar" type="button" title="mantené apretado para grabar un audio" aria-label="grabar audio">[&#9679;]</button>
     <button id="camara" type="button" title="foto (camara o galeria)" aria-label="foto">[&#9673;]</button>
-    <input id="foto" type="file" accept="image/*" capture="environment">
+    <input id="foto" type="file" accept="image/*">
     <button id="mandar" type="button" title="mandar" aria-label="mandar">&gt;_</button>
   </div>
 </div>
@@ -764,9 +775,20 @@ function guardarLayout(){
   publicarTabs();
 }
 
+// ---------- vista mobile: una vista a la vez (facundo, 2026-09-11) ----------
+// el mismo media query que el css: angosta (celu) O mas alta que ancha (ventana vertical en la
+// compu, celu de pie). todo el js decide el layout por aca, nunca leyendo `innerWidth` suelto.
+var MQ_MOBILE = "(max-width:899px), (max-aspect-ratio: 1/1)";
+var mqMobile = null;
+try{ mqMobile = window.matchMedia ? window.matchMedia(MQ_MOBILE) : null; }catch(x){ mqMobile = null; }
+function esVistaMobile(){
+  if(mqMobile) return !!mqMobile.matches;
+  return window.innerWidth < 900 || window.innerHeight >= window.innerWidth;   // navegador viejo
+}
+
 // ---------- separador arrastrable entre chat y widgets (facundo, 2026-09-11) ----------
-// solo en escritorio: en el celu las vistas van de a una y el separador ni se pinta.
-function anchoDesktop(){ return window.innerWidth >= 900; }
+// solo en escritorio: en la vista mobile las vistas van de a una y el separador ni se pinta.
+function anchoDesktop(){ return !esVistaMobile(); }
 function splitPct(){ return split && typeof split.pct === "number" ? split.pct : null; }
 function splitLimpio(){ return split ? {pct: Math.round(split.pct * 100) / 100, ts: +split.ts || 0} : null; }
 // el pct que pidieron, recortado para que ningun panel baje de SPLIT_MIN px
@@ -1268,14 +1290,14 @@ function splitCon(tema){
   foco = 1;
   pintarTabs(); render(); irDonde();
   chatDeTab(tema);
-  if(window.innerWidth < 900) verPanel("lado");
+  if(esVistaMobile()) verPanel("lado");
 }
 function unPanel(){
   paneles = [paneles[0]];
   foco = 0;
   document.body.classList.remove("ver-lado");
   pintarTabs(); render(); irDonde();
-  if(window.innerWidth < 900) verPanel("chat");   // en el celu la vista vuelve al chat
+  if(esVistaMobile()) verPanel("chat");   // en el celu la vista vuelve al chat
 }
 function focoEn(j){
   if(j >= paneles.length || foco === j) return;
@@ -2573,6 +2595,55 @@ function cargarAudios(nodo){
 }
 
 
+// pegar o arrastrar una imagen (desktop, facundo 2026-09-11): el mismo camino que la camara.
+// `capture` salio del input (en el celu forzaba la camara y no dejaba elegir de la galeria).
+function imagenDe(dt){
+  if(!dt) return null;
+  var fs = dt.files || [];
+  for(var i = 0; i < fs.length; i++) if((fs[i].type || "").indexOf("image/") === 0) return fs[i];
+  var it = dt.items || [];
+  for(var j = 0; j < it.length; j++)
+    if(it[j].kind === "file" && (it[j].type || "").indexOf("image/") === 0){
+      var f = it[j].getAsFile();
+      if(f) return f;
+    }
+  return null;
+}
+document.addEventListener("paste", function(e){
+  var f = imagenDe(e.clipboardData);
+  if(!f) return;                                  // texto pegado: comportamiento normal
+  e.preventDefault();
+  mandarFoto(f);
+});
+(function(){
+  var chat = $("panel-chat"), dentro = 0;
+  function resaltar(on){ chat.classList.toggle("soltar-img", !!on); }
+  chat.addEventListener("dragenter", function(e){
+    if(!imagenArrastrada(e)) return;
+    e.preventDefault(); dentro++; resaltar(true);
+  });
+  chat.addEventListener("dragover", function(e){
+    if(!imagenArrastrada(e)) return;
+    e.preventDefault(); e.dataTransfer.dropEffect = "copy"; resaltar(true);
+  });
+  chat.addEventListener("dragleave", function(){
+    if(--dentro <= 0){ dentro = 0; resaltar(false); }
+  });
+  chat.addEventListener("drop", function(e){
+    var f = imagenDe(e.dataTransfer);
+    dentro = 0; resaltar(false);
+    if(!f) return;                                 // una pestaña arrastrada no es una imagen
+    e.preventDefault();
+    mandarFoto(f);
+  });
+  // solo los arrastres que traen un archivo: el de pestañas usa su propio dataTransfer
+  function imagenArrastrada(e){
+    var t = (e.dataTransfer && e.dataTransfer.types) || [];
+    for(var i = 0; i < t.length; i++) if(t[i] === "Files") return true;
+    return false;
+  }
+})();
+
 alfinal.addEventListener("click", abajo);
 $("mandar").addEventListener("click", function(){ enviarMensaje(txt.value); txt.focus(); });
 txt.addEventListener("focus", function(){ setTimeout(abajo, 250); });
@@ -3215,7 +3286,7 @@ function hablar(o, contexto){
   if(temaActivo() !== tema) abrirTab(tema);
   ponerCaja("sobre " + contexto + ": ");
   guardarBorrador(temaActivo(), txt.value, true);
-  if(window.innerWidth < 900) verPanel(foco === 1 ? "lado" : "chat");
+  if(esVistaMobile()) verPanel(foco === 1 ? "lado" : "chat");
   txt.focus();
 }
 function accHablar(o, contexto){
@@ -3658,17 +3729,31 @@ $("tabs").addEventListener("click", function(e){
   var t = e.target.closest("[data-tema]");
   if(t){
     focoEn(0); abrirTab(t.dataset.tema); txt.focus();
-    if(window.innerWidth < 900) verPanel("chat");   // la pestaña que se toca es la que se ve
+    if(esVistaMobile()) verPanel("chat");   // la pestaña que se toca es la que se ve
   }
 });
-// celu: si la vista es el chat, ahi se escribe (el foco no puede quedar en un panel que no se ve)
-window.addEventListener("resize", function(){
-  if(window.innerWidth < 900 && foco === 1 && !document.body.classList.contains("ver-lado")) focoEn(0);
-  // la ventana cambio de ancho: el pct sigue valiendo, pero hay que recortarlo si algun panel
-  // quedaria abajo del minimo (y en celu el separador desaparece y mandan los anchos de siempre)
+// la ventana cambio de forma (ancho, alto, girar el celu): el css ya cambio de vista solo, aca
+// se acomoda lo que el css no puede. sin recargar y sin leer `innerWidth` por su cuenta.
+function sincronizarVista(){
+  if(esVistaMobile()){
+    // el foco no puede quedar en un panel que no se ve: si la vista es el chat, ahi se escribe
+    if(foco === 1 && !document.body.classList.contains("ver-lado")) focoEn(0);
+    // vista `lado` sin panel al lado (quedo de antes): no se veria nada, vuelve al chat
+    if(document.body.classList.contains("ver-lado") && paneles.length < 2) verPanel("chat");
+  }
+  // el pct sigue valiendo, pero hay que recortarlo si algun panel quedaria abajo del minimo
+  // (y en la vista mobile el separador desaparece y mandan los anchos de siempre)
   if(splitPct() !== null){ var p = limitarPct(splitPct()); if(p !== null) split.pct = p; }
   aplicarSplit();
-});
+}
+window.addEventListener("resize", sincronizarVista);
+window.addEventListener("orientationchange", sincronizarVista);
+// el salto de vista lo avisa el propio media query: asi tambien reacciona si cambia el zoom o la
+// altura sin que haya un `resize` util (ios al abrir el teclado, pip, ventana partida)
+if(mqMobile){
+  if(mqMobile.addEventListener) mqMobile.addEventListener("change", sincronizarVista);
+  else if(mqMobile.addListener) mqMobile.addListener(sincronizarVista);
+}
 // arrastrar el separador: pointer events, asi anda igual con mouse y con dedo en tablet.
 // mientras se arrastra solo se pinta; el ancho se guarda y se publica al soltar.
 (function(){
@@ -3778,7 +3863,7 @@ window.addEventListener("resize", function(){
       limpiar();
       if(paneles.length === 2 && paneles[1] === tema) unPanel();
       focoEn(0); abrirTab(tema);
-      if(window.innerWidth < 900) verPanel("chat");
+      if(esVistaMobile()) verPanel("chat");
       return;
     }
     limpiar();
@@ -3935,6 +4020,12 @@ window.__agente = {
   clasificar: clasificar, partir: partir,
   // enter en el celu hace salto de linea, no manda (prueba_web_tabs lo chequea)
   esTactil: esTactil, ajustarCaja: ajustarCaja, topeLineas: TOPE_LINEAS,
+  esVistaMobile: esVistaMobile, sincronizarVista: sincronizarVista, mqMobile: MQ_MOBILE,
+  vistaActual: function(){ var b = document.body.classList; return {
+    mobile: esVistaMobile(), toggle: document.getElementById('vistas').offsetHeight > 0,
+    ve: b.contains('ver-widgets') ? 'widgets' : (b.contains('ver-lado') ? 'lado' : 'chat'),
+    chatVisible: document.getElementById('panel-chat').offsetWidth > 0,
+    widgetsVisible: document.getElementById('panel-widgets').offsetWidth > 0}; },
   estado: function(){ return {tabs: tabs, paneles: paneles, foco: foco, ts: layoutTs,
                               sync: tabsSync, dispositivo: DISPOSITIVO}; },
   aplicarLayout: aplicarLayout, sanearLayout: sanearLayout, recibirTabs: recibirTabs,
@@ -3981,6 +4072,7 @@ window.__agente = {
             sepVisible: sep.offsetWidth > 0};
   },
   guardarSplit: guardarSplit, recibirSplit: recibirSplit, aplicarSplit: aplicarSplit,
+  verPanel: verPanel,
   limitarPct: limitarPct, splitMin: SPLIT_MIN,
   guardarVista: guardarVista, recibirVistas: recibirVistas, aplicarVista: aplicarVista,
   restaurarVistas: restaurarVistas, anclaDe: anclaDe,
@@ -4008,6 +4100,7 @@ window.__agente = {
   mandarFoto: mandarFoto, comprimirFoto: comprimirFoto, nombreFoto: nombreFoto, sha12: sha12,
   stubFoto: function(f){ fotoStub = f || null; },
   tocarCamara: function(){ $("camara").click(); },
+  imagenDe: imagenDe,
   fotoTope: FOTO_TOPE,
   // audios: `prueba_web_audio` graba sin microfono (manda el blob a mano) y chequea los [▶]
   mandarAudio: mandarAudio, nombreAudio: nombreAudio, extAudio: extAudio, mimeAudio: mimeAudio,
