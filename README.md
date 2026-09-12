@@ -240,6 +240,28 @@ Nada de presupuesto, horario laboral ni costo (los datos siguen en el json, no s
 - se prueba con `python3 -m recetas.prueba_web_tabs` (cero tokens): seis barras, el ancho es el `%`,
   el tick esta en la linea, los tres colores, y que entre sin scroll horizontal.
 
+## widget `server` (facundo, 2026-09-11)
+
+> "haceme un widget dedicado al server, que diga todo lo que importa"
+
+La **primera caja**, arriba de `usage`. El dato lo arma `w_server()` de `recetas/widgets_json.py`
+(cero tokens, clave `server` de `widgets.json`); la web solo pinta (`cajaServer()` en `index.html`).
+
+- **una sola ssh de 3 s** a la geekom (`f@192.168.1.80` con `~/.claudio/server/id_claudio`): uptime,
+  `/proc/stat`, `/proc/meminfo`, `df`, la temperatura del hwmon **`k10temp`** (no `acpitz`, que miente),
+  `/proc/net/dev`, `hostname -I`, `tailscale ip -4` y si el daemon corre como el usuario `agente`.
+- **cpu % y bytes/s son deltas** contra la corrida anterior, cacheada en `agente/.server.json`: sin
+  `sleep` remoto, el script de 60 s no se frena. El **throughput mac->server** (20 mb empujados por ssh
+  a `cat > /dev/null`) se mide como mucho cada 10 min y tambien se cachea.
+- **si no contesta la caja no desaparece**: dice `apagado / sin red` (o `sin ssh` si el ping anda),
+  apaga las barras (`.usage.off`) y deja las ultimas metricas con el `visto hace`.
+- ademas de las metricas: la **etapa** (`EN CURSO` de `~/.claudio/server/ESTADO.md`), las ordenes de
+  `tema server` de la cola, lo que **espera a Facundo** y las ultimas lineas de `log.md` con "server".
+- tres barras `.ub` (cpu / ram / disco) con color por umbral (`75` amarillo, `90` rojo), sin tick: aca
+  no hay linea de presupuesto. Tocar la caja abre el modal `server`, en la pestaña `server`.
+- se prueba con `python3 -m recetas.prueba_web_tabs` (cero tokens), con el server vivo y caido; para
+  simular el caido a mano: `CLAUDIO_SERVER_IP=192.168.1.234 python3 recetas/widgets_json.py`.
+
 ## separador arrastrable entre chat y widgets (facundo, 2026-09-11)
 
 > "tendria que haber un cursor resize horizontal entre chat y widgets y tendria que poder yo correr
