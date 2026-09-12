@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.159">
-<link rel="manifest" href="manifest.json?v=4.159">
+<meta name="agente-web-version" content="4.160">
+<link rel="manifest" href="manifest.json?v=4.160">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -231,6 +231,9 @@
   .usage .cta{display:flex;align-items:center;gap:6px;margin:0 0 4px 0}
   .usage .cta + .ub{margin-top:0}
   .usage .cta .nom{color:var(--cian);font-weight:600;letter-spacing:.04em}
+  .usage .rep{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 6px 0;padding-bottom:5px;border-bottom:1px solid var(--linea)}
+  .usage .rep .nom{color:var(--cian);font-weight:600;letter-spacing:.04em}
+  .usage .rep .por{flex:1 1 100%;opacity:.8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .usage .bloque + .bloque{margin-top:9px;padding-top:8px;border-top:1px solid var(--linea)}
   .ub{display:flex;align-items:center;gap:6px;margin:0 0 5px 0}
   .ub-n{flex:0 0 34px;color:var(--gris);font-size:10px;letter-spacing:.04em}
@@ -2652,15 +2655,28 @@ function cajaServer(s){
 
 // facundo (2026-09-11): el widget muestra SOLO las barras, tres por cuenta (5h, week, fable).
 // presupuesto, horario laboral y costo siguen en el json pero no se pintan aca.
+// facundo (2026-09-12, mitad y mitad): arriba dice QUE CUENTA esta eligiendo el agente y POR QUE
+// (`u.reparto`, lo calcula `recetas/reparto_cuentas.py` sin gastar tokens), y la elegida queda marcada.
 function cajaUsage(u){
-  var cuentas = u.cuentas || [], html = "";
+  var cuentas = u.cuentas || [], rep = u.reparto || {}, html = "";
   if(!cuentas.length && (u.barras || []).length)
     cuentas = [{nombre: "cuenta", activa: true, barras: u.barras}];
+  if(rep.elegida)
+    html += it({tipo: "cuenta", tema: "tools", d: rep, completo: rep.porque || ""},
+      '<div class="rep"><span class="g">usa</span> <span class="nom">' + esc(rep.elegida) + "</span> " +
+      '<span class="' + (rep.reparto ? "a" : "g") + '">' +
+      (rep.reparto ? "reparto" : (rep.modo === "auto" ? "auto, espera el corte" : "fija")) + "</span>" +
+      (rep.porque ? '<span class="g por">' + esc(rep.porque) + "</span>" : "") + "</div>");
   cuentas.forEach(function(cu){
+    var nota = (cu.nota === null || cu.nota === undefined) ? "" : cu.nota + "x";
     html += '<div class="bloque">' +
             it({tipo: "cuenta", tema: "tools", d: cu},
                '<span class="cta"><span class="nom">' + esc(cu.nombre) + "</span>" +
-               (cu.activa ? '<span class="v">activa</span>' : "") + "</span>") +
+               (cu.elegida ? '<span class="v b">&larr; usa</span>' : "") +
+               (cu.activa && !cu.elegida ? '<span class="v">activa</span>' : "") +
+               (nota ? '<span class="g">peor ' + esc(String(cu.peor || "")) + " " + esc(nota) + "</span>" : "") +
+               (cu.usable === false ? '<span class="r b">' + esc(cu.motivo || "al tope") + "</span>" : "") +
+               "</span>") +
             (cu.barras || []).map(barraUso).join("") + "</div>";
   });
   return caja("usage", "", '<div class="usage">' + (html || vacio("sin datos")) + "</div>");

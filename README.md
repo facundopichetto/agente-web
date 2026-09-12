@@ -516,3 +516,33 @@ escrito.
 
 se prueba con `python3 -m recetas.prueba_web_audio` (cero tokens, chrome headless, sin microfono: el
 blob se manda a mano y la subida va contra un stub) y corre tambien dentro de `recetas/prueba_web`.
+
+## claudio sigue contestando aunque claude no tenga tokens (facundo, 2026-09-12)
+
+facundo mando cuatro mensajes seguidos y en los cuatro leyo lo mismo: `You've hit your session limit ·
+resets 1:20am`. eso era el texto crudo de `claude -p` pasado tal cual como respuesta. su pedido: "yo hablo
+con claudio, si claudio ve que claude se queda sin tokens tiene que poder hacer cosas, explicarme a mi por
+lo pronto eso", y tener los guards puestos de antemano.
+
+**la web no cambia**: el guard vive del lado del daemon (`recetas/sin_tokens.py`, cero tokens) y lo que llega
+a la pestaña es un mensaje normal, con el tag `[tema]` de siempre y el cuerpo arrancando en `[sin modelo]`.
+lo que se ve en el chat cuando claude no esta:
+
+- **una explicacion, no un error**: que paso (limite de 5 h, limite semanal, limite del modelo, oauth
+  vencido, api sobrecargada, red, binario, timeout), **hasta cuando** (la hora del `resets_at` con cuanto
+  falta), como viene cada limite de la cuenta activa contra su linea, y que otra cuenta tiene margen.
+- **un menu a/b/c** al final, para contestar con una letra desde el celu: `a` esperar el reset, `b` pasar a
+  la cuenta con margen (`cuenta <nombre>`), `c` seguir con el modelo gratis (`eco: ...`).
+- **comandos que andan sin claude**: `status`, `cola`, `usage`, `cuenta`, `log`, `avisos`, `propuestas`,
+  `pendientes`, `pausa`, `segui`, `ayuda`. `usage` imprime los tres limites (5h / week / modelo) de cada
+  cuenta contra su linea, en texto, desde el cache: sirve igual con el widget caido.
+- **el mensaje no se pierde**: lo que escribio queda en `preguntas-sin-tokens.jsonl` y cuando claude vuelve
+  aparece un mensaje en la pestaña listando lo que quedo sin contestar (`pendientes` lo muestra antes).
+- **el aviso llega antes del corte**: cuando un limite de la cuenta activa pasa el 90%, el daemon deja un
+  aviso al celu y un mensaje en la pestaña `tools`, una sola vez por ventana.
+
+las letras `a` / `b` / `c` sueltas se interceptan **solo** cuando claude de verdad no esta; si claude
+contesto un menu a/b/c, la letra le sigue llegando al modelo como siempre.
+
+probar sin gastar tokens: `python3 -m recetas.prueba_sin_tokens -v` (simula los nueve fallos y muestra el
+texto de cada uno) y `python3 -m recetas.sin_tokens --estado` (que ve claudio ahora mismo).
