@@ -232,13 +232,19 @@ Nada de presupuesto, horario laboral ni costo (los datos siguen en el json, no s
 - **el color sale del ratio**, no del porcentaje: `ratio = pct / max(linea, 1)`.
   `<= 0.8` verde, `<= 1.1` amarillo, `<= 1.5` naranja, arriba de eso **rojo fuerte** (con glow).
   Renovo hace 20 min y ya gasto casi todo = rojo; renueva recien y uso poco = verde.
-- **lo calcula python, no el html**: `recetas/widgets_json.py` -> `barra()` deja `linea`, `ratio`,
+- **arriba, que cuenta esta usando y por que** (facundo, 2026-09-12: "vamos mitad y mitad"): la fila
+  `.rep` dice `usa <cuenta>` + `reparto` / `auto, espera el corte` / `fija` y el motivo en gris. Sale de
+  la clave `reparto` del json (`recetas/reparto_cuentas.py`, cero tokens): gana la cuenta con el **ratio
+  peor mas bajo**, o sea la mas lejos de sus lineas. Cada cuenta suma su **nota** (`peor <limite> 1.25x`),
+  la elegida queda marcada con `&larr; usa` y la que esta al tope (>= 97%) lo dice en rojo.
+- **lo calcula python, no el html**: `recetas/reparto_cuentas.py` -> `barra()` (la usa `widgets_json`) deja `linea`, `ratio`,
   `nivel` (`ok` / `cerca` / `sobre` / `mal`) y `falta_s` en cada barra. La web solo pinta
   (`barraUso()` en `index.html`, clases `.ub`, `.ub-pista`, `.ub-lleno`, `.ub-tick`).
   La barra de `fable` sale del `weekly_scoped` de **esa** cuenta, no del plan global.
 - tocar el nombre de una cuenta abre el modal de siempre, ahora con `linea` y `reset en ...`.
 - se prueba con `python3 -m recetas.prueba_web_tabs` (cero tokens): seis barras, el ancho es el `%`,
-  el tick esta en la linea, los tres colores, y que entre sin scroll horizontal.
+  el tick esta en la linea, los tres colores, la fila del reparto (cuenta elegida y motivo), y que entre
+  sin scroll horizontal. La decision en si se prueba con `python3 -m recetas.prueba_reparto_cuentas`.
 
 ## widget `server` (facundo, 2026-09-11)
 
