@@ -347,3 +347,47 @@ facundo: "y esa caja de input deberia sugerir respuestas".
   `draggable`, arrastre real con `Input.dispatchMouseEvent` hasta la zona (fantasma, zona resaltada,
   panel abierto, todo limpio al soltar), vuelta a la barra, y el gesto con dedo (`PointerEvent` con
   `pointerType: touch`) tanto el que scrollea como el que arrastra. gancho: `window.__arrastre`.
+
+## camara: una foto desde el celu o la compu (facundo, 2026-09-11)
+
+> "se puede poner una función tipo cámara acá? como en whatsapp"
+
+- **boton `[◉]`** al lado del input (mismo look terminal que `>_`), y un `<input type="file"
+  accept="image/*" capture="environment">` escondido: en el celu abre la camara o la galeria, en
+  escritorio el selector de archivos.
+- **la foto se achica antes de subir**: canvas a `FOTO_LADO` (1600 px de lado mayor) y jpeg con
+  calidad decreciente hasta entrar en `FOTO_TOPE` (2 mb). si el navegador no puede decodificarla
+  (heic) y el archivo ya entra, se sube tal cual.
+- **se sube al mismo repo del buzon** que `widgets.json` / `tabs.json`, por la contents api y con el
+  mismo token, como `img/<hash12>-<nombre>` (hash sha-256 del contenido: la misma foto no se sube dos
+  veces; un 422 se toma como "ya esta"). `fetch` propio y no `api()`: un 403 de escritura no puede
+  desloguear a facundo del chat.
+- **sale como un mensaje normal de la pestaña activa**, con su `tema x:`: lo que hubiera en la caja
+  como pie, mas `![<nombre>](img/<hash>-<nombre>)`. la web lo pinta inline con el mismo camino que
+  las imagenes que manda el daemon (`conImagenes` / `bajarImagen`), sin volver a bajarla (el blob ya
+  subido queda en `imgUrls`).
+- **del otro lado**: `daemon.py` (`web_imagenes_entrantes`) llama a
+  `recetas/mostrar_imagen.recibir_web()`, que baja `img/...` del buzon a `tmp/img/` y deja en el
+  mensaje la **ruta local**, que es lo unico que `claude -p` puede abrir. solo rutas `img/<archivo>`
+  del propio buzon, con extension de imagen y menos de 8 mb; si falla, el mensaje va igual.
+- se prueba en `recetas/prueba_web_tabs` (cero tokens, cero red: `window.__agente.stubFoto()` y un
+  `File` de juguete) y en `python3 -m recetas.mostrar_imagen --probar` (la bajada, con un bajador falso).
+
+## el gap de abajo del input y la barra de flechas de ios (facundo, 2026-09-11)
+
+> "hay un gap abajo de la línea del input y un coso de flechas con un tilde en el teclado de mac,
+> pero arriba. parece venir del ios, sácalo"
+
+- **el gap**: `#pie` reserva `env(safe-area-inset-bottom)` para el home indicator, y con el **teclado
+  abierto** ios lo sigue reservando: queda una franja negra entre el input y el teclado. ahora
+  `ajustarAlto()` (visualViewport) marca `body.teclado` cuando el viewport visible pierde mas de
+  120 px, y `body.teclado #pie{padding-bottom:4px}` lo pega abajo. con el teclado cerrado el
+  safe-area vuelve.
+- **la fila de chips** ya no ocupa alto ni margen cuando esta vacia (`#chips.oculta,#chips:empty`).
+- **la barra de flechas + "listo"** que aparece arriba del teclado es la **accesoria del sistema** de
+  ios (el mismo teclado la pinta para cualquier campo de texto): **no se puede sacar desde una web**,
+  ni en safari ni en pwa; no hay api. lo que si esta hecho: el `manifest.json` ya declara
+  `display: standalone` (agregando la web a la pantalla de inicio se gana la barra de safari, no la
+  del teclado), y el textarea va con `enterkeyhint="enter"`, `inputmode="text"` y `autocomplete="off"`
+  para que el teclado no sume nada mas (autocorreccion y mayusculas de oracion quedan **prendidas** a
+  proposito: no tienen nada que ver con esa barra y facundo escribe mejor con ellas).
