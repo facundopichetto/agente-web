@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.184">
-<link rel="manifest" href="manifest.json?v=4.184">
+<meta name="agente-web-version" content="4.185">
+<link rel="manifest" href="manifest.json?v=4.185">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -260,6 +260,17 @@
   .wbtn:hover{color:var(--verde)}
   .wbtn:active{color:var(--verde)}
   .wbtn.girando{color:var(--verde)}
+  /* ---------- arrastrar los widgets (facundo, 2026-09-12) ----------
+     se agarran del header: en desktop con el mouse, en el celu con tap and hold. */
+  .caja > .tit{cursor:grab}
+  .caja.arrastrando{
+    opacity:.95;border-color:var(--verde);box-shadow:0 6px 18px rgba(0,0,0,.6);
+    pointer-events:none;cursor:grabbing;
+  }
+  .caja.fantasma{border-style:dashed;border-color:var(--verde);background:#0d1411}
+  body.arrastrando-w{user-select:none;-webkit-user-select:none}
+  body.arrastrando-w #panel-widgets{overflow:hidden}
+  .wbtn.oc{color:var(--cian);padding:1px 4px}
   .caja.plegada > .cuerpo{display:none}
   .caja .cuerpo{white-space:pre-wrap;word-break:break-word;font-size:11px;line-height:1.5}
   .caja .cuerpo.tabla{white-space:pre;overflow-x:auto;-webkit-overflow-scrolling:touch}
@@ -899,11 +910,15 @@ var WSETS = {
   podcast:     [{k: "abierto", et: "abierto por default", tipo: "bool", def: false}],
   dj:          [{k: "cola", et: "mostrar la cola", tipo: "bool", def: true}],
   mail:        [{k: "pendientes", et: "mostrar los pendientes", tipo: "bool", def: true}],
-  que_ver:     [{k: "falta_login", et: "avisar que fuente falta", tipo: "bool", def: true}],
+  que_ver:     [{k: "fuentes", et: "fuentes", tipo: "opciones", def: "todas", ops: ["todas"]},
+                {k: "por_fuente", et: "cu\u00e1ntas por fuente", tipo: "opciones", def: 2, ops: [1, 2, 3]},
+                {k: "solo_nuevos", et: "solo lo nuevo", tipo: "bool", def: false},
+                {k: "falta_login", et: "avisar que fuente falta", tipo: "bool", def: true}],
   verificaciones: [], decided: [], sombra: []
 };
 var WSETS_COMUNES = [{k: "plegado", et: "plegado por default", tipo: "bool", def: false},
-                     {k: "filas", et: "filas visibles", tipo: "opciones", def: 0, ops: [0, 3, 5, 8, 12]}];
+                     {k: "filas", et: "filas visibles", tipo: "opciones", def: 0, ops: [0, 3, 5, 8, 12]},
+                     {k: "oculto", et: "ocultar este widget", tipo: "bool", def: false}];
 // la lista entera de un widget: las dos comunes primero, despues la suya
 function setsDe(clave){
   return WSETS_COMUNES.concat(WSETS[clave] || []).map(function(s){
@@ -911,6 +926,7 @@ function setsDe(clave){
     if(s.k === "cuentas") o.ops = ["todas"].concat(cuentasConocidas());
     if(s.k === "estado" && clave === "tickets") o.ops = ["todos"].concat(estadosConocidos());
     if(s.k === "tema" && clave === "propuestas") o.ops = ["todos"].concat(temasPropuestas());
+    if(s.k === "fuentes" && clave === "que_ver") o.ops = ["todas"].concat(fuentesQueVer());
     return o;
   });
 }
@@ -954,6 +970,67 @@ function recibirWsets(rem){
   });
   if(cambio){ guardarCache(); repintarWidgets(); }
   return cambio;
+}
+
+// ---------- orden de los widgets, arrastrables (facundo, 2026-09-12) ----------
+// cada caja se arrastra por su header y el orden viaja en `tabs.json` como `orden_widgets`
+// (`{ids, ts}`, gana el `ts` mas nuevo, igual que el split), asi el celu y la compu ven las cajas
+// en el mismo orden. un widget nuevo que no este en la lista va al final, nunca se pierde.
+// las pestañas del chat NO se arrastran (regla del 2026-09-12: el chat es un panel unico).
+var ordenW = {ids: [], ts: 0};
+var clavesW = [];                 // las claves del ultimo repintado, ya ordenadas (incluye las ocultas)
+function ordenLimpio(){ return ordenW.ids.length ? {ids: ordenW.ids.slice(), ts: +ordenW.ts || 0} : null; }
+function guardarOrden(ids, ya){
+  ordenW = {ids: ids.slice(), ts: Math.max(Date.now(), (+ordenW.ts || 0) + 1)};
+  guardarCache();
+  publicarTabs(ya, WSETS_DEBOUNCE);
+  repintarWidgets();
+}
+// llego el orden del buzon (o del cache): gana el `ts` mas nuevo. una lista pelada (formato viejo)
+// se acepta con el `ts` mas bajo posible.
+function recibirOrden(rem){
+  if(!rem) return false;
+  if(Array.isArray(rem)) rem = {ids: rem, ts: 1};
+  if(!Array.isArray(rem.ids)) return false;
+  if((+rem.ts || 0) <= (+ordenW.ts || 0)) return false;
+  var ids = [];
+  rem.ids.forEach(function(c){ if(typeof c === "string" && c && ids.indexOf(c) < 0) ids.push(c); });
+  ordenW = {ids: ids, ts: +rem.ts || 0};
+  guardarCache(); repintarWidgets();
+  return true;
+}
+// el orden de ahora: primero lo guardado (lo que siga existiendo), despues las cajas nuevas en su
+// orden de fabrica
+function ordenarClaves(claves){
+  var res = [];
+  ordenW.ids.forEach(function(c){ if(claves.indexOf(c) >= 0 && res.indexOf(c) < 0) res.push(c); });
+  claves.forEach(function(c){ if(res.indexOf(c) < 0) res.push(c); });
+  return res;
+}
+function ocultoW(clave){ return !!wset(clave, "oculto"); }
+// `subir` / `bajar` del modal: la alternativa sin arrastrar. salta las cajas ocultas, si no mover
+// una vez no cambiaria nada.
+function moverWidget(clave, delta){
+  var ids = ordenarClaves(clavesW.slice());
+  var i = ids.indexOf(clave);
+  if(i < 0) return false;
+  var j = i + delta;
+  while(j >= 0 && j < ids.length && ocultoW(ids[j])) j += delta;
+  if(j < 0 || j >= ids.length) return false;
+  ids.splice(i, 1);
+  ids.splice(j, 0, clave);
+  guardarOrden(ids, true);
+  return true;
+}
+// el orden que quedo en el dom despues de arrastrar: las ocultas se quedan donde estaban
+function mezclarOcultas(vis){
+  var prev = ordenarClaves(clavesW.slice()), q = vis.slice(), res = [];
+  prev.forEach(function(c){
+    if(ocultoW(c) || vis.indexOf(c) < 0){ res.push(c); return; }
+    if(q.length) res.push(q.shift());
+  });
+  q.forEach(function(c){ res.push(c); });
+  return res.filter(function(c, i, a){ return a.indexOf(c) === i; });
 }
 
 // ---------- borrador del input, continuable en cualquier dispositivo (facundo, 2026-09-11) ----------
@@ -2979,6 +3056,13 @@ function estadosConocidos(){
   });
   return vs;
 }
+function fuentesQueVer(){
+  var vs = [];
+  (((widDatos || {}).que_ver || {}).fuentes || []).forEach(function(f){
+    if(f.ok && vs.indexOf(f.nombre) < 0) vs.push(f.nombre);
+  });
+  return vs;
+}
 function temasPropuestas(){
   var vs = [];
   ((widDatos || {}).propuestas || []).forEach(function(p){
@@ -3465,11 +3549,34 @@ function cajaMail(p){
   return caja("mail", extra, limFilas("mail", filas).join("\n"), false, "mail");
 }
 
+// que filas se ven segun el `[⚙]`: fuente, cuantas por fuente y "solo lo nuevo". el json trae
+// `candidatos` (todo lo que hay), asi que cambiar una setting no vuelve a pedirle nada a nadie.
+function filasQueVer(p){
+  var cand = p.candidatos || p.items || [];
+  var fu = wset("que_ver", "fuentes"), porF = +wset("que_ver", "por_fuente") || 2;
+  var nuevos = !!wset("que_ver", "solo_nuevos"), tope = +p.tope || 5;
+  var libres = cand.filter(function(i){
+    if(fu && fu !== "todas" && i.nombre !== fu) return false;
+    if(nuevos && String(i.porque || "").indexOf("nuevo") !== 0) return false;
+    return true;
+  });
+  if(fu === "todas" && porF === 2 && !nuevos && (p.items || []).length) return p.items;
+  var out = [], cuenta = {};
+  [porF, tope].forEach(function(lim){
+    libres.forEach(function(i){
+      if(out.length >= tope || out.indexOf(i) >= 0) return;
+      if((cuenta[i.fuente] || 0) >= lim) return;
+      out.push(i); cuenta[i.fuente] = (cuenta[i.fuente] || 0) + 1;
+    });
+  });
+  return out;
+}
+
 function cajaQueVer(p){
   // `que ver` (facundo, 2026-09-12): 5 cosas para poner ahora, con link directo al titulo. lo arma
   // `recetas/que_ver.py` con las sesiones de facundo (youtube y prime por cookies; plex, disney+,
   // max y flow atan la sesion a tokens y necesitan login aca). tocar una fila abre el modal a/b/c.
-  var its = p.items || [];
+  var its = filasQueVer(p);
   if(!its.length) return caja("que ver", '<span class="g">sin nada</span>',
     '<span class="g">' + esc(p.error || p.texto || "sin nada para recomendar") + "</span>" +
     ((p.falta_login || []).length ? '\n<span class="a">falta login: ' + esc(p.falta_login.join(", ")) + "</span>" : ""),

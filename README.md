@@ -862,7 +862,9 @@ cuentas!). idealmente el widget deberia llevarme al contenido".
   (`que ver otra prime`) y **no me interesa** (`que ver no <id>`, queda en `.que_ver-descartes.json`
   y no vuelve a salir). los dos ultimos son **comandos crudos que contesta el daemon sin modelo**
   (`es_cmd_que_ver` / `que_ver_cmd`), igual que `dale N` y `op N X`.
-- settings del `[⚙]`: las dos comunes (plegado, filas) mas "avisar que fuente falta".
+- settings del `[⚙]`: las dos comunes (plegado, filas) mas **fuentes** (solo una, o todas),
+  **cuantas por fuente** (1/2/3), **solo lo nuevo** y "avisar que fuente falta". se resuelven en la
+  web sobre `candidatos` (todo lo que trajo la receta), asi que cambiar una no vuelve a pedir nada.
 - en el chat, sin gastar un token: `que ver`, `que ver fresco`, `que ver otra <fuente>`,
   `que ver no <n>`, `que ver login` (que falta loguear y donde).
 - probar: `python3 -m recetas.prueba_que_ver` (cero tokens, cero red) y el bloque `que ver` de
