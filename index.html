@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.178">
-<link rel="manifest" href="manifest.json?v=4.178">
+<meta name="agente-web-version" content="4.179">
+<link rel="manifest" href="manifest.json?v=4.179">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -297,7 +297,10 @@
   .btn.voto{color:var(--verde);border-color:#1f3a14}
   .btn.dale{color:var(--verde);border-color:var(--verde)}
   /* selector de nodos (facundo, 2026-09-12): donde puede vivir claudio. arriba a la izquierda,
-     antes del toggle chat | widgets. el nodo de guardia va marcado: la web habla con ese. */
+     en el lugar donde antes decia "claudio board". SERVER | MAC | CLOUD (el tercer nombre lo pone
+     el daemon). el color lo manda `recetas/nodos.py` y significa una sola cosa, quien publica:
+     verde el que esta de guardia (la web le habla a ese), amarillo el respaldo vivo que contesta
+     pero no manda, gris el que no existe o no responde. */
   #nodos{display:flex;gap:6px;flex:1 1 auto;min-width:0;overflow-x:auto;scrollbar-width:none}
   #nodos::-webkit-scrollbar{display:none}
   #nodos button{
@@ -3311,7 +3314,7 @@ function cajaDj(p){
 }
 
 // ---------- selector de nodos (facundo, 2026-09-12) ----------
-// SERVER (la geekom, main), MBP (la mac) y NUBE (todavia no existe: gris). los datos salen de
+// SERVER (la geekom, main), MAC (la macbook) y CLOUD (todavia no existe: gris). los datos salen de
 // `widgets.json` (clave `nodos`, la arma `recetas/nodos.py` sin gastar un token). tocar un nodo abre
 // el modal de siempre con sus acciones: revivir y poner de guardia.
 var nodosEl = null;
@@ -3366,7 +3369,7 @@ function pintarWidgets(d, err){
   var y = $("panel-widgets").scrollTop;
   widgetsEl.innerHTML = partes.join("");
   $("panel-widgets").scrollTop = y;
-  pintarNodos(d.nodos);         // la barra de arriba: SERVER | MBP | NUBE, con quien esta de guardia
+  pintarNodos(d.nodos);         // la barra de arriba: SERVER | MAC | CLOUD, con quien esta de guardia
   pintarChips();                // los chips `op N X` usan las opciones reales de este json
 }
 
@@ -3612,7 +3615,10 @@ function modalDe(o){
     m.titulo = "nodo " + (d.nombre || d.id) + " \u00b7 " + (d.detalle || "");
     var color = d.nivel === "bien" ? "v" : d.nivel === "medio" ? "a" : d.nivel === "mal" ? "r" : "g";
     m.cuerpo = '<span class="' + color + ' b">' + esc(d.estado || "?") + "</span>" +
-      (d.guardia ? '  <span class="v">\u25c9 de guardia</span>' : '  <span class="g">no esta de guardia</span>') +
+      (d.guardia ? '  <span class="v">\u25c9 de guardia</span>' +
+          (d.publica_hace_s !== null && d.publica_hace_s !== undefined
+            ? ' <span class="g">publica en el buz\u00f3n hace</span> ' + haceSeg(d.publica_hace_s) : "")
+        : '  <span class="g">no publica (respaldo)</span>') +
       (d.aqui ? '  <span class="g">(el chat corre aca)</span>' : "") +
       (d.senal_hace_s !== null && d.senal_hace_s !== undefined
         ? '\n<span class="g">ultima se\u00f1al</span> hace ' + haceSeg(d.senal_hace_s) : "") +
