@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.39">
-<link rel="manifest" href="manifest.json?v=4.39">
+<meta name="agente-web-version" content="4.40">
+<link rel="manifest" href="manifest.json?v=4.40">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -224,6 +224,8 @@
   .ub.n-sobre .ub-p{color:var(--naranja)}
   .ub.n-mal .ub-lleno{background:var(--rojo);box-shadow:0 0 7px var(--rojo)}
   .ub.n-mal .ub-p{color:var(--rojo);font-weight:700}
+  .usage.off{opacity:.45}
+  .ub.n-sin .ub-lleno{background:#333}
   .v{color:var(--verde)} .r{color:var(--rojo)} .a{color:var(--amarillo)}
   .c{color:var(--cian)} .m{color:var(--magenta)} .g{color:var(--gris)}
   .b{font-weight:500}
@@ -2262,6 +2264,90 @@ function barraUso(b){
          '<span class="ub-p">' + (pct === null ? "?" : Math.round(pct)) + "%</span>" +
          '<span class="ub-r">' + esc(faltaTxt(b.falta_s)) + "</span></div>";
 }
+// ---------- server (la geekom `claudio`) ----------
+// facundo (2026-09-11): un widget dedicado, arriba de usage. si no contesta muestra "apagado / sin red"
+// con la ultima vez que se lo vio; las metricas que se pintan son las cacheadas de esa ultima vez.
+function bytes(n){
+  if(n === null || n === undefined) return "?";
+  var u = ["b", "kb", "mb", "gb", "tb"], i = 0;
+  while(n >= 1024 && i < u.length - 1){ n /= 1024; i++; }
+  return (n >= 100 || i === 0 ? Math.round(n) : n.toFixed(1)) + " " + u[i];
+}
+function nivelPct(p, cerca, mal){
+  if(p === null || p === undefined) return "sin";
+  return p >= (mal || 90) ? "mal" : p >= (cerca || 75) ? "cerca" : "ok";
+}
+function barraPct(nombre, pct, txt){
+  return '<div class="ub n-' + nivelPct(pct) + '"><span class="ub-n">' + esc(nombre) + "</span>" +
+         '<span class="ub-pista"><span class="ub-lleno" style="width:' + (pct || 0) + '%"></span></span>' +
+         '<span class="ub-p">' + (pct === null || pct === undefined ? "?" : Math.round(pct)) + "%</span>" +
+         '<span class="ub-r">' + esc(txt || "") + "</span></div>";
+}
+function upTxt(s){
+  if(!s) return "?";
+  var d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60);
+  return d ? d + "d" + h + "h" : h ? h + "h" + m + "m" : m + "m";
+}
+function cajaServer(s){
+  if(!s || !s.host) return caja("server", "", vacio("sin datos del server"));
+  var on = !!s.online, filas = [];
+  var cab = on ? '<span class="v b">' + esc(s.estado || "ok") + "</span>"
+               : '<span class="r b">apagado</span> <span class="g">' + esc(s.estado || "") +
+                 (s.visto_hace_s !== null && s.visto_hace_s !== undefined
+                    ? " · visto hace " + haceSeg(s.visto_hace_s) : " · nunca visto") + "</span>";
+  var barras = barraPct("cpu", s.cpu, s.temp ? s.temp + "\u00b0" : "") +
+               barraPct("ram", (s.ram || {}).pct, s.ram ? bytes(s.ram.usado) : "") +
+               barraPct("disco", (s.disco || {}).pct, s.disco ? bytes(s.disco.total - s.disco.usado) + " libre" : "");
+  filas.push(it({tipo: "server", tema: "server", d: s},
+    '<div class="usage' + (on ? "" : " off") + '">' + barras + "</div>" +
+    '<span class="g">up</span> <span class="b">' + esc(upTxt(s.uptime_s)) + "</span>" +
+    '  <span class="g">lan</span> <span class="c">' + esc(s.ip_lan || s.ip || "?") + "</span>" +
+    '  <span class="g">ts</span> <span class="c">' + esc(s.ip_tailscale || "?") + "</span>" +
+    (s.ping_ms !== null && s.ping_ms !== undefined ? '  <span class="g">ping</span> <span class="b">' + s.ping_ms + "ms</span>" : "")));
+  var red = s.red || {}, thr = s.throughput || {};
+  filas.push('<span class="g">red</span> ' +
+    '<span class="v">&darr;' + bytes(red.rx_s) + "/s</span> " +
+    '<span class="c">&uarr;' + bytes(red.tx_s) + "/s</span>" +
+    (thr.mbps ? '  <span class="g">mac&rarr;server</span> <span class="m b">' + thr.mbps + " mbps</span>" : ""));
+  filas.push('<span class="g">agente</span> ' +
+    (s.agente ? '<span class="v b">corriendo</span>' : '<span class="r b">parado</span>') +
+    (s.throughput && s.throughput.ts ? '  <span class="g">medido hace ' + hace(s.throughput.ts) + "</span>" : ""));
+  var e = s.etapa || {};
+  if(e.titulo){
+    filas.push(it({tipo: "server", tema: "server", d: s},
+      '<span class="a b">' + esc(e.titulo) + "</span>"));
+    (e.puntos || []).forEach(function(p){
+      filas.push('<span class="g">·</span> ' + esc(String(p).slice(0, 110)));
+    });
+  }
+  var o = s.ordenes || {};
+  (o.corriendo || []).forEach(function(t){
+    filas.push(it({tipo: "tarea", estado: "corriendo", tema: "server", d: t},
+      '<span class="a">&gt;</span> <span class="m b">' + esc(t.modelo) + '</span> <span class="g">' +
+      (t.min === null || t.min === undefined ? "?" : t.min) + "m</span> " + esc(String(t.texto || "").slice(0, 90))));
+  });
+  (o.cola || []).forEach(function(t){
+    filas.push(it({tipo: "tarea", estado: "cola", tema: "server", d: t},
+      '<span class="a">[ ]</span> ' + esc(String(t.texto || "").slice(0, 90))));
+  });
+  (o.hechas || []).forEach(function(t){
+    filas.push(it({tipo: "tarea", estado: "hecha", tema: "server", d: t},
+      '<span class="g">' + esc((t.fecha || "").slice(11, 16) || "--:--") + "</span> " +
+      (t.ok ? '<span class="v">ok</span>' : '<span class="r">!!</span>') + " " +
+      esc(String(t.texto || "").slice(0, 80))));
+  });
+  if(!(o.corriendo || []).length && !(o.cola || []).length && !(o.hechas || []).length)
+    filas.push(vacio("sin ordenes de server"));
+  (s.esperando || []).forEach(function(p){
+    filas.push(it({tipo: "server", tema: "server", d: s},
+      '<span class="a b">?</span> ' + esc(String(p).slice(0, 100))));
+  });
+  (s.log || []).slice(0, 3).forEach(function(l){
+    filas.push('<span class="g">' + esc(String(l).slice(0, 110)) + "</span>");
+  });
+  return caja("server", cab, filas.join("\n"));
+}
+
 // facundo (2026-09-11): el widget muestra SOLO las barras, tres por cuenta (5h, week, fable).
 // presupuesto, horario laboral y costo siguen en el json pero no se pintan aca.
 function cajaUsage(u){
@@ -2472,6 +2558,7 @@ function pintarWidgets(d, err){
   itemsW = {}; itemN = 0;            // los items del repintado anterior ya no existen
   var edad = haceSeg((Date.now() - fecha(d.ts)) / 1000);
   var partes = [
+    cajaServer(d.server || {}),
     cajaUsage(d.usage || {}),
     cajaAgente(d.agente || {}),
     cajaVerif(d.verificaciones || {}),
@@ -2670,6 +2757,26 @@ function modalDe(o){
       m.acciones.push(["pasar el agente a esta cuenta", function(){ actuar(tema, "cuenta " + d.nombre, true); }, true]);
     m.acciones.push(["ver el uso ahora", function(){ actuar(tema, "status", true); }]);
     m.acciones.push(accHablar(o, "la cuenta " + d.nombre));
+  } else if(o.tipo === "server"){
+    m.titulo = "server · " + (d.host || "claudio");
+    m.cuerpo = (d.online ? '<span class="v">vivo</span>' : '<span class="r">apagado / ' + esc(d.estado || "") + "</span>") +
+      '  <span class="g">up</span> ' + esc(upTxt(d.uptime_s)) +
+      '\n<span class="g">lan</span> ' + esc(d.ip_lan || d.ip || "?") +
+      '  <span class="g">tailscale</span> ' + esc(d.ip_tailscale || "?") +
+      (d.ping_ms ? '  <span class="g">ping</span> ' + d.ping_ms + "ms" : "") +
+      '\n<span class="g">cpu</span> ' + (d.cpu === null || d.cpu === undefined ? "?" : d.cpu + "%") +
+      '  <span class="g">temp</span> ' + (d.temp ? d.temp + "\u00b0C" : "?") +
+      '  <span class="g">ram</span> ' + bytes((d.ram || {}).usado) + " / " + bytes((d.ram || {}).total) +
+      '  <span class="g">disco</span> ' + bytes((d.disco || {}).usado) + " / " + bytes((d.disco || {}).total) +
+      '\n<span class="g">red</span> \u2193' + bytes((d.red || {}).rx_s) + "/s \u2191" + bytes((d.red || {}).tx_s) + "/s" +
+      ((d.throughput || {}).mbps ? '  <span class="g">mac\u2192server</span> ' + d.throughput.mbps + " mbps" : "") +
+      '  <span class="g">agente</span> ' + (d.agente ? "corriendo" : "parado") +
+      ((d.etapa || {}).titulo ? '\n\n<span class="a">' + esc(d.etapa.titulo) + "</span>\n" +
+        (d.etapa.puntos || []).map(function(x){ return "· " + esc(x); }).join("\n") : "") +
+      ((d.esperando || []).length ? '\n\n<span class="g">esperando a facundo</span>\n' +
+        d.esperando.map(function(x){ return "? " + esc(x); }).join("\n") : "");
+    m.acciones.push(["ver el estado del server en el chat", function(){ actuar("server", "status", true); }]);
+    m.acciones.push(accHablar(o, "el server"));
   } else if(o.tipo === "verif"){
     m.titulo = "verification agent";
     m.cuerpo = "verify " + d.verify + " · mine " + d.mine + " · unassigned " + d.unassigned +
