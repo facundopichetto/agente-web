@@ -376,8 +376,13 @@ facundo: "y esa caja de input deberia sugerir respuestas".
 > "se puede poner una función tipo cámara acá? como en whatsapp"
 
 - **boton `[◉]`** al lado del input (mismo look terminal que `>_`), y un `<input type="file"
-  accept="image/*" capture="environment">` escondido: en el celu abre la camara o la galeria, en
-  escritorio el selector de archivos.
+  accept="image/*">` escondido: en el celu el sistema ofrece **camara o galeria**, en escritorio el
+  selector de archivos. **sin `capture`** (facundo, 2026-09-11: con `capture="environment"` ios y
+  android saltaban directo a la camara y no dejaban elegir una foto ya sacada).
+- **pegar y arrastrar** (desktop): un `ctrl+v` con una imagen en el portapapeles, o arrastrar un
+  archivo de imagen sobre el panel de chat (se resalta con `#panel-chat.soltar-img`), entran por el
+  **mismo camino** que la camara (`imagenDe(dataTransfer)` -> `mandarFoto`). texto pegado sigue
+  normal y el arrastre de pestañas no se toca (solo reacciona a `dataTransfer.types` con `Files`).
 - **la foto se achica antes de subir**: canvas a `FOTO_LADO` (1600 px de lado mayor) y jpeg con
   calidad decreciente hasta entrar en `FOTO_TOPE` (2 mb). si el navegador no puede decodificarla
   (heic) y el archivo ya entra, se sube tal cual.

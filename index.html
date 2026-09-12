@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.41">
-<link rel="manifest" href="manifest.json?v=4.41">
+<meta name="agente-web-version" content="4.42">
+<link rel="manifest" href="manifest.json?v=4.42">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -316,6 +316,14 @@
     background:rgba(0,255,120,.10);box-shadow:0 0 12px rgba(0,255,120,.35) inset;
   }
   #tabs.soltar{background:rgba(0,255,120,.08);box-shadow:0 0 10px rgba(0,255,120,.25) inset}
+  /* soltar una imagen sobre el chat (desktop, facundo 2026-09-11) */
+  #panel-chat.soltar-img{position:relative}
+  #panel-chat.soltar-img::after{
+    content:"soltar la imagen acá";position:absolute;inset:6px;z-index:55;pointer-events:none;
+    display:flex;align-items:center;justify-content:center;
+    border:1px dashed var(--verde);border-radius:6px;background:rgba(0,255,120,.10);
+    color:var(--verde);font-size:11px;letter-spacing:.04em;
+  }
   /* la pestaña fantasma que sigue al dedo o al mouse */
   #fantasma-tab{
     position:fixed;z-index:61;pointer-events:none;background:#060606;color:var(--verde);
@@ -441,7 +449,7 @@
     <span id="prompt">facundo&gt;</span>
     <textarea id="txt" rows="1" placeholder="orden o comando" enterkeyhint="enter" inputmode="text" autocomplete="off" autocapitalize="sentences" autocorrect="on" spellcheck="true"></textarea>
     <button id="camara" type="button" title="foto (camara o galeria)" aria-label="foto">[&#9673;]</button>
-    <input id="foto" type="file" accept="image/*" capture="environment">
+    <input id="foto" type="file" accept="image/*">
     <button id="mandar" type="button" title="mandar" aria-label="mandar">&gt;_</button>
   </div>
 </div>
@@ -2162,6 +2170,55 @@ $("foto").addEventListener("change", function(e){
   if(f) mandarFoto(f);
 });
 
+// pegar o arrastrar una imagen (desktop, facundo 2026-09-11): el mismo camino que la camara.
+// `capture` salio del input (en el celu forzaba la camara y no dejaba elegir de la galeria).
+function imagenDe(dt){
+  if(!dt) return null;
+  var fs = dt.files || [];
+  for(var i = 0; i < fs.length; i++) if((fs[i].type || "").indexOf("image/") === 0) return fs[i];
+  var it = dt.items || [];
+  for(var j = 0; j < it.length; j++)
+    if(it[j].kind === "file" && (it[j].type || "").indexOf("image/") === 0){
+      var f = it[j].getAsFile();
+      if(f) return f;
+    }
+  return null;
+}
+document.addEventListener("paste", function(e){
+  var f = imagenDe(e.clipboardData);
+  if(!f) return;                                  // texto pegado: comportamiento normal
+  e.preventDefault();
+  mandarFoto(f);
+});
+(function(){
+  var chat = $("panel-chat"), dentro = 0;
+  function resaltar(on){ chat.classList.toggle("soltar-img", !!on); }
+  chat.addEventListener("dragenter", function(e){
+    if(!imagenArrastrada(e)) return;
+    e.preventDefault(); dentro++; resaltar(true);
+  });
+  chat.addEventListener("dragover", function(e){
+    if(!imagenArrastrada(e)) return;
+    e.preventDefault(); e.dataTransfer.dropEffect = "copy"; resaltar(true);
+  });
+  chat.addEventListener("dragleave", function(){
+    if(--dentro <= 0){ dentro = 0; resaltar(false); }
+  });
+  chat.addEventListener("drop", function(e){
+    var f = imagenDe(e.dataTransfer);
+    dentro = 0; resaltar(false);
+    if(!f) return;                                 // una pestaña arrastrada no es una imagen
+    e.preventDefault();
+    mandarFoto(f);
+  });
+  // solo los arrastres que traen un archivo: el de pestañas usa su propio dataTransfer
+  function imagenArrastrada(e){
+    var t = (e.dataTransfer && e.dataTransfer.types) || [];
+    for(var i = 0; i < t.length; i++) if(t[i] === "Files") return true;
+    return false;
+  }
+})();
+
 alfinal.addEventListener("click", abajo);
 $("mandar").addEventListener("click", function(){ enviarMensaje(txt.value); txt.focus(); });
 txt.addEventListener("focus", function(){ setTimeout(abajo, 250); });
@@ -3187,6 +3244,7 @@ window.__agente = {
   mandarFoto: mandarFoto, comprimirFoto: comprimirFoto, nombreFoto: nombreFoto, sha12: sha12,
   stubFoto: function(f){ fotoStub = f || null; },
   tocarCamara: function(){ $("camara").click(); },
+  imagenDe: imagenDe,
   fotoTope: FOTO_TOPE,
   gapInput: function(){          // px entre el borde de abajo del input y el borde de abajo del pie
     var f = $("fila").getBoundingClientRect(), p = $("pie").getBoundingClientRect();
