@@ -474,3 +474,45 @@ se prueba en `recetas/prueba_web_tabs` (bloque 15): `window.__agente.menuEn(sele
 gesto, `menuInfo()` devuelve titulo, opciones y si el menu quedo adentro de la pantalla, y `tocarMenu(t)`
 elige una opcion. la cita y la edicion se cruzan ahi mismo con el `marcas_chat` de `daemon.py`, para que
 las dos puntas no se separen.
+
+## audios: mandarlos como en whatsapp y escuchar las respuestas (facundo, 2026-09-11)
+
+> "estaria bueno poder mandarte audios como en whatsapp, implementalo. y tus respuestas tienen que
+> tener un play para que me los lea daniela en un formato que ocupe lo menos posible de audio."
+
+**entrantes.** el boton `[●]`, al lado del de camara, graba con **tap and hold** (pointer, asi vale el
+dedo y el mouse): apretado graba y el boton late en rojo con el reloj al lado, soltar manda, arrastrar
+el dedo afuera cancela y un toque de menos de `AUDIO_MIN_MS` (600 ms) no manda nada. el formato lo
+elige el navegador entre `MIMES` (opus en webm donde se puede, mp4 en safari) a 24 kbps. el archivo se
+sube al **mismo repo del buzon** que las fotos (`audio/<hash>.<ext>`, contents api, mismo token,
+`subirBuzon`) y sale como un mensaje normal de la pestaña activa con su `tema x:` y el marcador
+`[audio](audio/<hash>.webm)`.
+
+el daemon lo baja a `tmp/audio-entrante/` y lo transcribe **local y sin tokens** con faster-whisper
+`small` en cpu int8 (`recetas/transcribir_audio.py`, venv en `~/.claudio/tools/stt`), asi que al modelo
+le llega el texto con la marca `(audio de facundo, transcripto): ...`. el enganche esta en
+`atender_mensaje`, que es por donde pasan **todos** los canales: web, cola y telegram lo heredan.
+
+**el microfono se suelta siempre** (`soltarMicro`, en todos los caminos y en `pagehide`): un micro
+abierto en el celu es la ventana que mas se nota.
+
+**salientes.** el daemon renderiza cada respuesta con daniela (piper, el mismo `tts/render.py` y el
+mismo `pronunciacion.json` del podcast) en un **hilo aparte**: el texto sale primero y el audio aparece
+despues, sin trabar nada. se publica como `audio/r-<hash>.m4a` y el hash sale del texto **ya limpio**,
+asi que la misma respuesta no se renderiza ni se sube dos veces. la fila de `chat/<tema>.json` lleva el
+campo `audio` y aca se pinta un `[▶]` con look terminal al lado del `[tema]`; el tick refresca el
+historial cada 10 s (etag, 304 casi siempre), asi que el play llega solo, sin volver al foco.
+
+**formato: aac mono 32 kbps en `.m4a`.** medido con la misma frase: opus 24k en ogg 10,6 kb, opus en
+caf 10,5 kb, aac 32k en m4a 16,4 kb (3,68 s). el opus ocupa 1,5 veces menos, pero **ogg/webm opus solo
+lo reproduce safari 17.5 para arriba** y facundo escucha del celu: un play que no suena no sirve. m4a
+lo reproduce todo y sigue dando ~250 kb por minuto. se cambia en `FORMATO`, una linea, en
+`recetas/audio_respuesta.py`.
+
+lo que **no** se lee en voz alta (`limpiar()`): bloques de codigo, imagenes, urls (quedan como "un
+link"), rutas largas (queda el nombre del archivo), los signos del markdown y los separadores de tabla.
+tope de 3 minutos por respuesta: se corta en la ultima oracion que entra y avisa que el resto esta
+escrito.
+
+se prueba con `python3 -m recetas.prueba_web_audio` (cero tokens, chrome headless, sin microfono: el
+blob se manda a mano y la subida va contra un stub) y corre tambien dentro de `recetas/prueba_web`.
