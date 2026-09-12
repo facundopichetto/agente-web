@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.181">
-<link rel="manifest" href="manifest.json?v=4.181">
+<meta name="agente-web-version" content="4.182">
+<link rel="manifest" href="manifest.json?v=4.182">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -121,6 +121,26 @@
      input y el teclado (facundo, 2026-09-11: "hay un gap abajo de la linea del input"). mientras el
      teclado esta arriba el pie va pegado: lo marca `body.teclado` (visualViewport). */
   body.teclado #pie{padding-bottom:4px}
+  /* adjunto pendiente (facundo, 2026-09-12: "cuando suba una foto tengo que poder borrarla o escribir
+     algo, es decir que no se mande automaticamente el mensaje"). la foto o el audio quedan aca arriba
+     del input hasta que facundo toca enviar; la `×` los descarta y no se sube nada. */
+  #adjunto{
+    display:flex;align-items:center;gap:7px;padding:4px 0 3px 0;margin:0;
+    border-top:1px dashed var(--linea);
+  }
+  #adjunto.oculta{display:none}
+  #adjunto img{
+    width:44px;height:44px;object-fit:cover;border:1px solid var(--linea-clara);
+    border-radius:4px;background:#000;flex:0 0 auto
+  }
+  #adjunto .adj-info{flex:1 1 auto;min-width:0;color:var(--gris);font-size:10px;line-height:1.35}
+  #adjunto .adj-info .n{color:var(--cian);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #adjunto .adj-play{flex:0 0 auto}
+  #adjunto .adj-x{
+    flex:0 0 auto;background:#000;color:var(--rojo);border:1px solid transparent;border-radius:4px;
+    font:inherit;font-size:12px;line-height:1.3;padding:2px 5px;cursor:pointer;letter-spacing:0;
+  }
+  #adjunto .adj-x:hover{border-color:var(--rojo)}
   /* la fila de comandos rapidos se saco (facundo, 2026-09-11): esos comandos quedan en el widget `agent` */
   /* sugerencias de respuesta: salen de la ultima respuesta del daemon en esta pestaña (cero tokens) */
   /* pegados a la caja de texto: sin padding ni margen abajo (facundo, 2026-09-12: "entre el input
@@ -514,6 +534,7 @@
 </div>
 
 <div id="pie">
+  <div id="adjunto" class="oculta" aria-live="polite"></div>
   <div id="chips" class="oculta"></div>
   <div id="fila">
     <span id="prompt">facundo&gt;</span>
@@ -2229,6 +2250,9 @@ function mandarPartido(trozos){
 // - si no hay pistas, se queda en la pestaña donde esta.
 function enviarMensaje(texto){
   texto = (texto || "").trim();
+  // adjunto pendiente (foto o audio): sale un solo mensaje con el archivo y el texto, sin clasificar
+  // ni preguntar por tema (siempre a la pestaña activa, como antes de que fuera pendiente).
+  if(adjunto) return mandarAdjunto(texto);
   if(!texto) return;
   if(RE_CRUDO.test(texto)){ mandar(texto, temaActivo(), true); return; }
   var activo = temaActivo(), c = clasificar(texto);
@@ -2466,7 +2490,7 @@ function subirBuzon(ruta, b64, mensaje){
 }
 function subirFoto(ruta, b64){ return subirBuzon(ruta, b64, "foto"); }
 // el camino entero: comprimir -> hash -> subir -> mandar el mensaje de la pestaña activa.
-function mandarFoto(file){
+function mandarFoto(file, pieTexto){
   if(!file) return Promise.resolve();
   if(subiendoFoto) return Promise.resolve();
   if(!token && !fotoStub){ sistema("no se puede subir la foto sin token", "error"); return Promise.resolve(); }
@@ -2485,21 +2509,110 @@ function mandarFoto(file){
     });
   }).then(function(){
     imgUrls[ruta] = URL.createObjectURL(blob);    // ya la tengo: no la bajo de nuevo para pintarla
-    var pie = (txt.value || "").trim();
+    var pie = (pieTexto !== undefined ? pieTexto : txt.value || "").trim();
     txt.value = ""; txt.style.height = "";
     return mandar((pie ? pie + "\n" : "") + "![" + (file.name || "foto") + "](" + ruta + ")",
                   temaActivo());
   }).catch(function(e){
     sistema("no pude subir la foto: " + e.message, "error");
+    ruta = null;                                  // fallo: el que la mando la puede volver a adjuntar
   }).then(function(){
     subiendoFoto = false; $("camara").disabled = false; $("foto").value = "";
+    return ruta;
   });
 }
 $("camara").addEventListener("click", function(){ $("foto").click(); });
 $("foto").addEventListener("change", function(e){
   var f = (e.target.files || [])[0];
-  if(f) mandarFoto(f);
+  if(f) adjuntarFoto(f);
+  $("foto").value = "";                          // asi elegir dos veces la misma foto vuelve a disparar
 });
+
+// ---------- adjunto pendiente: la foto o el audio no se mandan solos (facundo, 2026-09-12) ----------
+// "cuando suba una foto tengo que poder borrarla o escribir algo. es decir que no se mande
+// automaticamente el mensaje". al elegir una imagen (camara, galeria, pegar, arrastrar) o al soltar
+// el `[●]`, el archivo queda **pendiente** arriba del input: miniatura (o duracion + play) con una `×`
+// que lo descarta. el input sigue editable y recien al tocar enviar (o enter en desktop) se sube al
+// buzon y sale **un solo mensaje** con el `![](...)` / `[audio](...)` mas el texto que escribio.
+// vive solo en memoria: no viaja en el borrador de `tabs.json` (un adjunto no se continua en otro
+// dispositivo, el archivo no esta ahi).
+var adjunto = null;      // {tipo:"img"|"aud", file|blob, mime, nombre, url, ms}
+
+function pintarAdjunto(){
+  var caja = $("adjunto");
+  caja.innerHTML = "";
+  if(!adjunto){ caja.classList.add("oculta"); return; }
+  caja.classList.remove("oculta");
+  var info = document.createElement("span");
+  info.className = "adj-info";
+  var n = document.createElement("span");
+  n.className = "n";
+  if(adjunto.tipo === "img"){
+    var im = document.createElement("img");
+    im.src = adjunto.url; im.alt = adjunto.nombre;
+    caja.appendChild(im);
+    n.textContent = adjunto.nombre;
+    info.appendChild(n);
+    info.appendChild(document.createTextNode("foto lista, escribí algo y mandá"));
+  }else{
+    caja.appendChild(reproductor(adjunto.url, "escuchar antes de mandar"));
+    n.textContent = "audio " + mmss(Math.round((adjunto.ms || 0) / 1000));
+    info.appendChild(n);
+    info.appendChild(document.createTextNode("audio listo, escribí algo y mandá"));
+  }
+  caja.appendChild(info);
+  var x = document.createElement("button");
+  x.type = "button"; x.className = "adj-x"; x.textContent = "×";
+  x.title = "descartar"; x.setAttribute("aria-label", "descartar el adjunto");
+  x.addEventListener("click", function(){ descartarAdjunto(); txt.focus(); });
+  caja.appendChild(x);
+  ajustarCaja();
+}
+function descartarAdjunto(){
+  if(adjunto && adjunto.url && /^blob:/.test(adjunto.url)){
+    try{ URL.revokeObjectURL(adjunto.url); }catch(e){}
+  }
+  adjunto = null;
+  pintarAdjunto();
+}
+function adjuntarFoto(file){
+  if(!file) return null;
+  if(subiendoFoto || subiendoAudio) return null;
+  descartarAdjunto();                            // uno a la vez: el nuevo reemplaza al anterior
+  adjunto = {tipo: "img", file: file, mime: file.type || "image/jpeg",
+             nombre: file.name || "foto.jpg", url: URL.createObjectURL(file)};
+  pintarAdjunto();
+  txt.focus();
+  return adjunto;
+}
+function adjuntarAudio(blob, mime, ms){
+  if(!blob || !blob.size) return null;
+  if(subiendoFoto || subiendoAudio) return null;
+  descartarAdjunto();
+  adjunto = {tipo: "aud", blob: blob, mime: mime || blob.type || "audio/webm",
+             nombre: "audio", ms: ms || 0, url: URL.createObjectURL(blob)};
+  pintarAdjunto();
+  return adjunto;
+}
+// enviar con adjunto: sube y manda **un solo** mensaje con el texto de la caja adentro.
+function mandarAdjunto(texto){
+  if(!adjunto) return Promise.resolve();
+  var a = adjunto, pie = (texto || "").trim();
+  adjunto = null;                                // se saca del pie ya: no se manda dos veces
+  pintarAdjunto();
+  txt.value = ""; txt.style.height = "";
+  borrarBorrador(temaCaja || temaActivo());
+  var p = a.tipo === "img" ? mandarFoto(a.file, pie) : mandarAudio(a.blob, a.mime, pie);
+  return Promise.resolve(p).then(function(r){
+    if(r){                                       // salio: recien ahi se suelta el object url
+      if(a.url && /^blob:/.test(a.url)){ try{ URL.revokeObjectURL(a.url); }catch(e){} }
+      return r;
+    }
+    if(!adjunto){ adjunto = a; pintarAdjunto(); } // fallo la subida: vuelve al pie, no se pierde
+    if(pie && !txt.value.trim()){ ponerCaja(pie); }
+    return null;
+  });
+}
 
 // ---------- audios: mandarlos como en whatsapp y escuchar las respuestas (facundo, 2026-09-11) ----------
 // "estaria bueno poder mandarte audios como en whatsapp, y tus respuestas tienen que tener un play para
@@ -2583,12 +2696,13 @@ function terminarGrabacion(enviar){
   }).then(function(blob){
     soltarMicro();
     if(!enviar || !blob || !blob.size) return null;
-    return mandarAudio(blob, mime);
+    // no se manda al soltar (facundo, 2026-09-12): queda como adjunto pendiente con play y `×`
+    return adjuntarAudio(blob, mime, ms);
   }, function(){ soltarMicro(); return null; });
 }
 function nombreAudio(hash, mime){ return "audio/" + hash + "." + extAudio(mime); }
 // el camino entero: blob -> hash -> subir al buzon -> mandar el mensaje de la pestaña activa.
-function mandarAudio(blob, mime){
+function mandarAudio(blob, mime, pieTexto){
   if(subiendoAudio) return Promise.resolve(null);
   if(!token && !fotoStub){ sistema("no se puede subir el audio sin token", "error"); return Promise.resolve(null); }
   if(blob.size > AUDIO_TOPE){
@@ -2605,11 +2719,12 @@ function mandarAudio(blob, mime){
     });
   }).then(function(){
     audioUrls[ruta] = URL.createObjectURL(blob);      // ya lo tengo: no lo bajo para reproducirlo
-    var pie = (txt.value || "").trim();
+    var pie = (pieTexto !== undefined ? pieTexto : txt.value || "").trim();
     txt.value = ""; txt.style.height = "";
     return mandar((pie ? pie + "\n" : "") + "[audio](" + ruta + ")", temaActivo());
   }).catch(function(e){
     sistema("no pude subir el audio: " + (e && e.message || e), "error");
+    ruta = null;                                  // fallo: el audio vuelve a quedar pendiente
   }).then(function(){
     subiendoAudio = false; $("grabar").disabled = false;
     return ruta;
@@ -2734,7 +2849,7 @@ document.addEventListener("paste", function(e){
   var f = imagenDe(e.clipboardData);
   if(!f) return;                                  // texto pegado: comportamiento normal
   e.preventDefault();
-  mandarFoto(f);
+  adjuntarFoto(f);                                // queda pendiente arriba del input, no se manda sola
 });
 (function(){
   var chat = $("panel-chat"), dentro = 0;
@@ -2755,7 +2870,7 @@ document.addEventListener("paste", function(e){
     dentro = 0; resaltar(false);
     if(!f) return;                                 // una pestaña arrastrada no es una imagen
     e.preventDefault();
-    mandarFoto(f);
+    adjuntarFoto(f);                               // pendiente arriba del input, se manda con enviar
   });
   // solo los arrastres que traen un archivo: el de pestañas usa su propio dataTransfer
   function imagenArrastrada(e){
@@ -4205,6 +4320,22 @@ window.__agente = {
   cuerpoMsg: cuerpoMsg, deEstaTab: deEstaTab, enviarMensaje: enviarMensaje, mandar: mandar,
   // camara: `prueba_web_tabs` enchufa un `fetch` falso y manda un File de juguete
   mandarFoto: mandarFoto, comprimirFoto: comprimirFoto, nombreFoto: nombreFoto, sha12: sha12,
+  // adjunto pendiente: la foto y el audio no se mandan solos, esperan a enviar (prueba_web_tabs)
+  adjuntarFoto: adjuntarFoto, adjuntarAudio: adjuntarAudio, mandarAdjunto: mandarAdjunto,
+  descartarAdjunto: descartarAdjunto,
+  adjunto: function(){
+    if(!adjunto) return null;
+    var c = $("adjunto");
+    return {tipo: adjunto.tipo, nombre: adjunto.nombre, ms: adjunto.ms || 0,
+            visible: !c.classList.contains("oculta"),
+            mini: !!c.querySelector("img"), play: !!c.querySelector(".play"),
+            texto: (c.querySelector(".adj-info") || {}).textContent || ""};
+  },
+  tocarAdjuntoX: function(){
+    var b = $("adjunto").querySelector(".adj-x");
+    if(!b) return false;
+    b.click(); return true;
+  },
   stubFoto: function(f){ fotoStub = f || null; },
   tocarCamara: function(){ $("camara").click(); },
   imagenDe: imagenDe,
