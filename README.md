@@ -427,3 +427,50 @@ facundo: "sacame la linea esa que ahora dice status cola y la de arriba tambien"
 - **los comandos no se perdieron**: el widget `agent` mantiene su fila `pausa` / `cola` / `status`,
   que manda los mismos mensajes crudos.
 - `recetas/prueba_web_tabs` chequea que `#rapidos` ya no exista y que los chips no traigan fijos.
+
+## menu contextual: responder, copiar, editar (facundo, 2026-09-11)
+
+"quiero poder hacer tap and hold o click derecho en cualquier mensaje del chat (o cualquier cosa de la ui,
+a tu criterio) y que salga un menu contextual".
+
+**el gesto**: `contextmenu` en desktop (con `preventDefault`, asi no sale el del navegador) y **tap and hold
+de 500 ms** en el celu. el hold se cancela si el dedo se mueve mas de 10 px (era un scroll) o si levanta
+antes, y los listeners de touch son `passive`: el scroll de la pagina no se toca. el menu abre con un
+fondo (`#ctxfondo`) que **se come el click que viene atras del hold**, asi el tap no cambia de pestaña ni
+abre el modal; ese fondo ignora los clicks de los primeros 400 ms por la misma razon.
+
+**sobre que**, delegado en el contenedor (los mensajes se repintan enteros en cada `render()`, por eso el
+mensaje viaja en el nodo como `div.__msg`):
+
+| donde | opciones |
+|---|---|
+| un mensaje del chat | `responder`, `copiar`; y si es de facundo, `editar` y `mandar a otra pestaña` |
+| una fila de un widget | `ver y decidir (a/b/c)` (abre el modal que ya existia) y `copiar` |
+| una pestaña | `mandar al lado de los widgets`, `renombrar tema`, `cerrar la pestaña` |
+
+la pestaña **general** (`auto`) solo ofrece cerrar: no se renombra nunca ni se manda al lado.
+
+**responder** pone en el input un bloque de cita y una linea vacia abajo (queda como borrador de la
+pestaña, asi que se puede terminar de escribir desde el otro dispositivo):
+
+```
+> facundo: agrega un widget al daemon
+
+```
+
+hasta 3 lineas, cada una recortada a 120 chars. el daemon la separa del pedido (`marcas_chat` en
+`daemon.py`) y se la pasa al modelo como **contexto** (`## a que esta contestando`), no como parte de lo
+que facundo pide.
+
+**editar** carga el mensaje en la caja con el prefijo `edicion del mensaje de <hh:mm>: `. al mandarlo, el
+daemon lo guarda en `logs/chat-<tema>.jsonl` como `edita_ts` y le dice al modelo que **corrige** al
+mensaje anterior, no que es un pedido nuevo suelto; en la charla previa de esa pestaña aparece como
+`facundo (corrige lo de las 14:32): ...`.
+
+**copiar** usa `navigator.clipboard` y cae en `execCommand("copy")` si no esta (file:// y http).
+
+el menu se cierra con `esc`, tocando afuera o al scrollear (`scroll` con captura, que no burbujea).
+se prueba en `recetas/prueba_web_tabs` (bloque 15): `window.__agente.menuEn(selector, n)` dispara el
+gesto, `menuInfo()` devuelve titulo, opciones y si el menu quedo adentro de la pantalla, y `tocarMenu(t)`
+elige una opcion. la cita y la edicion se cruzan ahi mismo con el `marcas_chat` de `daemon.py`, para que
+las dos puntas no se separen.

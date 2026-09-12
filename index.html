@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.41">
-<link rel="manifest" href="manifest.json?v=4.41">
+<meta name="agente-web-version" content="4.158">
+<link rel="manifest" href="manifest.json?v=4.158">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -150,6 +150,32 @@
   #camara:active{background:#001a1a}
   #camara:disabled{color:var(--gris)}
   #foto{display:none}
+  /* grabar un audio (facundo, 2026-09-11: "estaria bueno poder mandarte audios como en whatsapp").
+     tap and hold como whatsapp: se aprieta y graba, se suelta y manda. */
+  #grabar{
+    flex:0 0 auto;background:#000;color:var(--magenta);border:1px solid transparent;
+    border-radius:6px;padding:5px 6px;font:inherit;font-size:12px;line-height:1.4;cursor:pointer;
+    touch-action:none;user-select:none;-webkit-user-select:none;
+  }
+  #grabar.grabando{color:#000;background:var(--rojo);animation:lat 1s steps(2,start) infinite}
+  #grabar:disabled{color:var(--gris)}
+  @keyframes lat{50%{opacity:.55}}
+  #grabinfo{
+    flex:0 0 auto;color:var(--rojo);font-size:10.5px;padding-bottom:7px;user-select:none;display:none;
+  }
+  #grabinfo.viendo{display:block}
+  /* el [▶] de daniela al lado del [tema] de cada respuesta, y el player de los audios de facundo.
+     look terminal: un boton de texto, nada de controles nativos grises. */
+  .play{
+    background:#000;color:var(--verde);border:1px solid transparent;border-radius:4px;
+    font:inherit;font-size:10px;line-height:1.3;padding:0 3px;cursor:pointer;letter-spacing:0;
+  }
+  .play:disabled{color:var(--gris);cursor:default}
+  .play.sonando{color:var(--amarillo)}
+  .msg .play{margin-left:6px}
+  .cuerpo .aud{display:inline-flex;align-items:center;gap:6px;color:var(--cian)}
+  .cuerpo .aud .play{color:var(--cian)}
+  .cuerpo .aud .dur{color:var(--gris);font-size:10px}
   #mandar:disabled{color:var(--gris);border-color:transparent}
   #alfinal{
     position:absolute;right:12px;bottom:8px;z-index:5;display:none;
@@ -395,6 +421,37 @@
   #modal .macc button:active{background:#111}
   #modal .macc button.principal{color:var(--verde);border-color:var(--verde)}
   #modal .macc .let{color:var(--verde);font-weight:600;margin-right:6px}
+
+  /* ---------- menu contextual (facundo, 2026-09-11) ----------
+     tap and hold en el celu, click derecho en desktop, sobre un mensaje del chat, una fila de widget
+     o una pestaña. mismo look terminal que el modal, pero pegado a donde se toco. */
+  #ctxfondo{position:fixed;inset:0;z-index:31}
+  #ctxfondo.oculta,#ctx.oculta{display:none}
+  #ctx{
+    position:fixed;z-index:32;min-width:180px;max-width:min(300px,calc(100vw - 16px));
+    background:#000;border:1px solid var(--verde);border-radius:5px;padding:4px;
+    display:flex;flex-direction:column;gap:2px;
+    box-shadow:0 0 0 1px #06210a,0 8px 28px rgba(0,0,0,.85);
+  }
+  #ctx .ctit{
+    color:var(--gris);font-size:9px;text-transform:uppercase;letter-spacing:.06em;padding:3px 6px 4px 6px;
+    border-bottom:1px solid var(--linea);margin-bottom:2px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  #ctx button{
+    background:#000;color:var(--cian);border:1px solid transparent;border-radius:4px;
+    padding:8px 9px;font:inherit;font-size:11.5px;cursor:pointer;text-align:left;
+  }
+  #ctx button:hover{border-color:var(--linea);background:#0d1410}
+  #ctx button:active{background:#111}
+  /* lo que se toco queda marcado mientras el menu esta abierto */
+  .msg.marcado,#widgets .it.marcado,#tabs .tab.marcado{outline:1px dotted var(--verde);outline-offset:1px}
+  /* el hold no tiene que disparar el menu de ios ("copiar / buscar"): el nuestro lo reemplaza */
+  .msg .cuerpo,#tabs .tab{-webkit-touch-callout:none}
+  body.sinsel,body.sinsel *{-webkit-user-select:none;user-select:none}
+  /* cita de un mensaje anterior (`> ...`), la que deja "responder" */
+  .cita{color:#7e8f86}
+
   @media (max-width:899px){
     /* en el celu el modal ocupa toda la pantalla */
     #modal{
@@ -440,6 +497,8 @@
   <div id="fila">
     <span id="prompt">facundo&gt;</span>
     <textarea id="txt" rows="1" placeholder="orden o comando" enterkeyhint="enter" inputmode="text" autocomplete="off" autocapitalize="sentences" autocorrect="on" spellcheck="true"></textarea>
+    <span id="grabinfo" aria-live="polite"></span>
+    <button id="grabar" type="button" title="mantené apretado para grabar un audio" aria-label="grabar audio">[&#9679;]</button>
     <button id="camara" type="button" title="foto (camara o galeria)" aria-label="foto">[&#9673;]</button>
     <input id="foto" type="file" accept="image/*" capture="environment">
     <button id="mandar" type="button" title="mandar" aria-label="mandar">&gt;_</button>
@@ -459,6 +518,9 @@
 
 <div id="ddfondo" class="oculta"></div>
 <div id="dd" class="oculta"></div>
+
+<div id="ctxfondo" class="oculta"></div>
+<div id="ctx" class="oculta" role="menu"></div>
 
 <div id="mfondo" class="oculta"></div>
 <div id="modal" class="oculta" role="dialog" aria-modal="true">
@@ -1329,6 +1391,8 @@ function esSepFila(l){ return esFila(l) && /^[\s|:-]+$/.test(l) && l.indexOf("-"
 function resaltar(t){
   var lineas = esc(t).split("\n"), datos = 0;
   return lineas.map(function(l, i){
+    var aud = conAudios(l);
+    if(aud !== null) return aud;
     var img = conImagenes(l);
     if(img !== null) return img;
     var tarea = /^(\s*[-*]\s*)\[( |x|X|!|&gt;)\]/.exec(l);
@@ -1344,6 +1408,7 @@ function resaltar(t){
       datos++;
       return '<span class="tfila' + (datos % 2 === 0 ? " par" : "") + '">' + enLinea(l) + "</span>";
     }
+    if(/^\s*&gt;\s?\S/.test(l)) return '<span class="cita">' + enLinea(l) + "</span>";
     if(/^\s*#{1,6}\s+\S/.test(l)) return '<span class="tit">' + enLinea(l) + "</span>";
     if(/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(l)) return '<span class="sep">' + l + "</span>";
     if(/^\s*(ORDEN|PROPUESTA|AVISO|PREGUNTA):/.test(l)) return '<span class="orden">' + enLinea(l) + "</span>";
@@ -1432,11 +1497,16 @@ function nodoMsg(m){
   cab.innerHTML = '<span class="quien"></span> <span class="ts"></span>';
   cab.querySelector(".quien").textContent = m.quien + ">";
   cab.querySelector(".ts").textContent = desde(m.iso || new Date().toISOString());
+  // el [▶] de daniela: solo en las respuestas que el daemon ya renderizo (campo `audio` de la fila).
+  // el texto sale primero y el audio aparece en el poll siguiente, asi que el boton llega despues.
+  if(m.audio) cab.appendChild(reproductor(m.audio, "escuchar la respuesta"));
   var b = document.createElement("div");
   b.className = "cuerpo";
   b.innerHTML = resaltar(m.texto);
   div.appendChild(cab); div.appendChild(b);
+  div.__msg = m;          // el menu contextual (delegado) lee el mensaje del nodo
   cargarImagenes(b);
+  cargarAudios(b);
   return div;
 }
 function pintarMsg(m, arriba){
@@ -1623,6 +1693,7 @@ function cargarComentarios(reemplazar){
 // `chat/<tema>.json` con TODA la charla de ese tema (`logs/chat-<tema>.jsonl`) y `chat/index.json`
 // con `{tema: {ts, n}}`; cada pestaña baja la suya de una sola pasada, sin "cargar mas viejo".
 var CHAT_INDEX = "chat/index.json";
+var chatUlt = 0;           // ultima bajada del historial por el tick (el sync al abrir lo resetea)
 var chatIndex = null;      // {tema: {ts, n}}
 var etagChat = {};         // etag por archivo del buzon
 function archivoChat(tema){ return "chat/" + normTema(tema).replace(/\//g, "-") + ".json"; }
@@ -1631,7 +1702,9 @@ function crudo(ruta, etag){
              "application/vnd.github.raw+json");
 }
 // el archivo de un tema convertido en mensajes: cada fila del log es pregunta + respuesta completa.
+var chatCambio = false;    // `recibirChat` la prende: el tick solo repinta si de verdad llego algo
 function recibirChat(tema, d){
+  chatCambio = true;
   var t = normTema(tema), filas = (d && d.filas) || [], out = [], resp = {};
   filas.forEach(function(f, i){
     var base = t + "-" + i;
@@ -1644,7 +1717,7 @@ function recibirChat(tema, d){
     if(r && !resp[k]){
       resp[k] = true;
       out.push({id: "h:" + base + ":r", clase: "agente", quien: "agente", texto: r, iso: f.ts,
-                tema: t, explicito: true, tag: t});
+                tema: t, explicito: true, tag: t, audio: f.audio || null});
     }
   });
   msgsHist[t] = out;
@@ -1716,6 +1789,19 @@ function tick(){
   if(tabsSync && Date.now() - tabsUlt > cada){
     cargarTabs().catch(function(e){ if(ruidoso(e)) sistema("pestañas: " + e.message, "error"); });
   }
+  // y el historial tambien: el daemon republica `chat/<tema>.json` cuando termina de renderizar el
+  // audio de una respuesta, asi que el `[▶]` aparece a los pocos segundos sin volver al foco.
+  // con etag esto es un 304 y no gasta rate limit; solo repinta si `recibirChat` trajo algo.
+  if(token && Date.now() - chatUlt > cada){
+    chatUlt = Date.now();
+    chatCambio = false;
+    cargarChat().then(function(){
+      if(!chatCambio) return;
+      var pego = pegadoAbajo();
+      mezclar(); render();
+      if(pego) alFinal(); else restaurarVistas();
+    }).catch(function(e){ if(ruidoso(e)) sistema("chat: " + e.message, "error"); });
+  }
 }
 
 // ---------- sincronizacion al abrir y al volver al foco (facundo, 2026-09-11) ----------
@@ -1739,7 +1825,7 @@ function sincronizar(primera){
   if(!token) return Promise.resolve();
   if(syncEnVuelo) return syncEnVuelo;
   syncUlt = Date.now();
-  widUlt = 0; tabsUlt = 0;            // que el tick no las saltee por cadencia
+  widUlt = 0; tabsUlt = 0; chatUlt = Date.now();   // que el tick no las saltee (ni repita el chat)
   var cartel = setTimeout(function(){ pintarSync("sync"); }, primera ? 0 : 250);
   syncEnVuelo = Promise.all([
     cargarEstado(),
@@ -2114,18 +2200,19 @@ function nombreFoto(hash, file){
 // sube al repo del buzon con el mismo token. fetch propio (no `api()`): un 403 de escritura no tiene
 // que desloguear a facundo del chat, igual que en `ponerTabs`.
 var fotoStub = null;     // `prueba_web_tabs` lo enchufa para probar la subida sin tocar github
-function subirFoto(ruta, b64){
+function subirBuzon(ruta, b64, mensaje){
   if(fotoStub) return Promise.resolve(fotoStub(ruta, b64)).then(function(){ return ruta; });
   return fetch(API + "/repos/" + REPO + "/contents/" + ruta, {
     method: "PUT", cache: "no-store",
     headers: {"authorization": "Bearer " + token, "accept": "application/vnd.github+json",
               "content-type": "application/json"},
-    body: JSON.stringify({message: "foto " + DISPOSITIVO, content: b64})
+    body: JSON.stringify({message: mensaje + " " + DISPOSITIVO, content: b64})
   }).then(function(r){
-    if(r.ok || r.status === 422) return ruta;     // 422 = ya existe con ese hash: es la misma foto
+    if(r.ok || r.status === 422) return ruta;     // 422 = ya existe con ese hash: es el mismo archivo
     return r.text().then(function(t){ throw new Error("http " + r.status + " " + t.slice(0, 80)); });
   });
 }
+function subirFoto(ruta, b64){ return subirBuzon(ruta, b64, "foto"); }
 // el camino entero: comprimir -> hash -> subir -> mandar el mensaje de la pestaña activa.
 function mandarFoto(file){
   if(!file) return Promise.resolve();
@@ -2161,6 +2248,221 @@ $("foto").addEventListener("change", function(e){
   var f = (e.target.files || [])[0];
   if(f) mandarFoto(f);
 });
+
+// ---------- audios: mandarlos como en whatsapp y escuchar las respuestas (facundo, 2026-09-11) ----------
+// "estaria bueno poder mandarte audios como en whatsapp, y tus respuestas tienen que tener un play para
+// que me los lea daniela en un formato que ocupe lo menos posible de audio".
+//
+// entrantes: tap and hold en `[●]` graba con MediaRecorder (opus si el navegador puede, mp4 en safari),
+// al soltar se sube al **mismo repo del buzon** que las fotos (`audio/<hash>.<ext>`, contents api, mismo
+// token) y sale como un mensaje normal de la pestaña activa con su `tema x:`, con el marcador
+// `[audio](audio/<hash>.webm)`. el daemon lo baja y lo transcribe local con whisper
+// (`recetas/transcribir_audio.py`), asi que al modelo le llega texto y no gasta un token de mas.
+//
+// salientes: el daemon renderiza cada respuesta con daniela (piper) y publica `audio/r-<hash>.m4a`;
+// la fila del chat trae el campo `audio` y aca se pinta un `[▶]` al lado del `[tema]`.
+var AUDIO_TOPE = 8 * 1024 * 1024;      // 8 mb: son ~25 minutos de opus a 24 kbps
+var AUDIO_MAX_MS = 10 * 60 * 1000;     // y un corte duro a 10 min, por las dudas
+var AUDIO_MIN_MS = 600;                // menos que esto fue un toque sin querer, no un audio
+var MIMES = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/aac", "audio/ogg;codecs=opus"];
+var grabador = null, trozosAudio = [], stream = null, desdeGrab = 0, relojGrab = null, cortarGrab = null;
+var subiendoAudio = false;
+
+function mimeAudio(){
+  if(typeof MediaRecorder === "undefined") return null;
+  for(var i = 0; i < MIMES.length; i++)
+    if(!MediaRecorder.isTypeSupported || MediaRecorder.isTypeSupported(MIMES[i])) return MIMES[i];
+  return "";                            // el navegador elige solo
+}
+function extAudio(mime){
+  if(/mp4|aac/.test(mime || "")) return "m4a";
+  if(/ogg/.test(mime || "")) return "ogg";
+  return "webm";
+}
+function hayGrabacion(){
+  return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && mimeAudio() !== null);
+}
+// **lo que abro lo cierro**: el microfono se suelta siempre, aunque la subida falle (si no queda el
+// punto rojo prendido en el celu). va en el `finally` de todos los caminos.
+function soltarMicro(){
+  if(relojGrab){ clearInterval(relojGrab); relojGrab = null; }
+  if(cortarGrab){ clearTimeout(cortarGrab); cortarGrab = null; }
+  if(stream){ (stream.getTracks() || []).forEach(function(t){ try{ t.stop(); }catch(e){} }); stream = null; }
+  grabador = null;
+  $("grabar").classList.remove("grabando");
+  $("grabinfo").classList.remove("viendo");
+  $("grabinfo").textContent = "";
+}
+function relojTexto(ms){
+  var s = Math.floor(ms / 1000);
+  return "● " + Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2);
+}
+function empezarGrabacion(){
+  if(grabador || subiendoAudio) return Promise.resolve(false);
+  if(!hayGrabacion()){ sistema("este navegador no graba audio", "error"); return Promise.resolve(false); }
+  return navigator.mediaDevices.getUserMedia({audio: true}).then(function(st){
+    stream = st;
+    var mime = mimeAudio();
+    grabador = new MediaRecorder(st, mime ? {mimeType: mime, audioBitsPerSecond: 24000} : {});
+    trozosAudio = [];
+    grabador.ondataavailable = function(e){ if(e.data && e.data.size) trozosAudio.push(e.data); };
+    grabador.start();
+    desdeGrab = Date.now();
+    $("grabar").classList.add("grabando");
+    $("grabinfo").classList.add("viendo");
+    $("grabinfo").textContent = relojTexto(0);
+    relojGrab = setInterval(function(){ $("grabinfo").textContent = relojTexto(Date.now() - desdeGrab); }, 500);
+    cortarGrab = setTimeout(function(){ terminarGrabacion(true); }, AUDIO_MAX_MS);
+    return true;
+  }).catch(function(e){
+    soltarMicro();
+    sistema("no pude usar el microfono: " + (e && e.message || e), "error");
+    return false;
+  });
+}
+// soltar manda; `enviar=false` (arrastrar el dedo afuera, o un toque de menos de AUDIO_MIN_MS) descarta.
+function terminarGrabacion(enviar){
+  if(!grabador) return Promise.resolve(null);
+  var g = grabador, ms = Date.now() - desdeGrab, mime = g.mimeType || mimeAudio() || "audio/webm";
+  if(enviar && ms < AUDIO_MIN_MS){ enviar = false; sistema("mantené apretado para grabar", "sistema"); }
+  return new Promise(function(res){
+    g.onstop = function(){ res(new Blob(trozosAudio, {type: mime})); };
+    try{ g.stop(); }catch(e){ res(null); }
+  }).then(function(blob){
+    soltarMicro();
+    if(!enviar || !blob || !blob.size) return null;
+    return mandarAudio(blob, mime);
+  }, function(){ soltarMicro(); return null; });
+}
+function nombreAudio(hash, mime){ return "audio/" + hash + "." + extAudio(mime); }
+// el camino entero: blob -> hash -> subir al buzon -> mandar el mensaje de la pestaña activa.
+function mandarAudio(blob, mime){
+  if(subiendoAudio) return Promise.resolve(null);
+  if(!token && !fotoStub){ sistema("no se puede subir el audio sin token", "error"); return Promise.resolve(null); }
+  if(blob.size > AUDIO_TOPE){
+    sistema("el audio pesa " + Math.round(blob.size / 1024) + " kb, es mucho", "error");
+    return Promise.resolve(null);
+  }
+  subiendoAudio = true; $("grabar").disabled = true;
+  sistema("subiendo el audio...", "sistema");
+  var ruta;
+  return blob.arrayBuffer().then(function(buf){
+    return sha12(buf).then(function(h){
+      ruta = nombreAudio(h, mime);
+      return subirBuzon(ruta, bytesAb64(new Uint8Array(buf)), "audio");
+    });
+  }).then(function(){
+    audioUrls[ruta] = URL.createObjectURL(blob);      // ya lo tengo: no lo bajo para reproducirlo
+    var pie = (txt.value || "").trim();
+    txt.value = ""; txt.style.height = "";
+    return mandar((pie ? pie + "\n" : "") + "[audio](" + ruta + ")", temaActivo());
+  }).catch(function(e){
+    sistema("no pude subir el audio: " + (e && e.message || e), "error");
+  }).then(function(){
+    subiendoAudio = false; $("grabar").disabled = false;
+    return ruta;
+  });
+}
+// tap and hold: pointer para que valga igual el dedo y el mouse. soltar manda, salirse cancela.
+(function(){
+  var b = $("grabar"), apretado = false;
+  b.addEventListener("pointerdown", function(e){
+    e.preventDefault();
+    apretado = true;
+    if(b.setPointerCapture && e.pointerId != null){ try{ b.setPointerCapture(e.pointerId); }catch(err){} }
+    empezarGrabacion();
+  });
+  function soltar(enviar){
+    return function(e){
+      if(!apretado) return;
+      apretado = false;
+      if(e){ e.preventDefault(); }
+      terminarGrabacion(enviar);
+    };
+  }
+  b.addEventListener("pointerup", soltar(true));
+  b.addEventListener("pointercancel", soltar(false));
+  b.addEventListener("pointerleave", soltar(false));
+  b.addEventListener("contextmenu", function(e){ e.preventDefault(); });   // el hold del celu no abre el menu
+})();
+// si te vas de la pagina en el medio de una grabacion, el micro se suelta igual
+window.addEventListener("pagehide", function(){ if(grabador) terminarGrabacion(false); });
+
+// ---------- reproducir: un [▶] con look terminal, uno solo sonando a la vez ----------
+var audioUrls = {};          // ruta del buzon -> object url (una sola bajada por archivo)
+var sonando = null;
+function bajarAudio(src){
+  if(/^(https?:|blob:|data:)/i.test(src)) return Promise.resolve(src);
+  if(audioUrls[src]) return Promise.resolve(audioUrls[src]);
+  if(!token) return Promise.reject(new Error("401"));
+  var ruta = API + "/repos/" + REPO + "/contents/" + src.split("/").map(encodeURIComponent).join("/");
+  return fetch(ruta, {headers: {"authorization": "Bearer " + token, "accept": "application/vnd.github.raw"}})
+    .then(function(r){
+      if(!r.ok) throw new Error("http " + r.status);
+      return r.blob();
+    }).then(function(b){
+      audioUrls[src] = URL.createObjectURL(b);
+      return audioUrls[src];
+    });
+}
+function mmss(seg){
+  seg = Math.max(0, Math.round(seg || 0));
+  return Math.floor(seg / 60) + ":" + ("0" + (seg % 60)).slice(-2);
+}
+// devuelve el boton. `etiqueta` es lo que dice al lado (la duracion cuando se sabe).
+function reproductor(src, titulo){
+  var b = document.createElement("button");
+  b.type = "button"; b.className = "play"; b.textContent = "[▶]";
+  b.title = titulo || "escuchar";
+  b.dataset.src = src;
+  var au = null;
+  function parar(){
+    if(au){ au.pause(); }
+    b.textContent = "[▶]"; b.classList.remove("sonando");
+    if(sonando === b) sonando = null;
+  }
+  b.__parar = parar;
+  b.addEventListener("click", function(e){
+    e.stopPropagation();
+    if(sonando && sonando !== b && sonando.__parar) sonando.__parar();
+    if(au && !au.paused){ parar(); return; }
+    b.disabled = true; b.textContent = "[…]";
+    bajarAudio(src).then(function(url){
+      if(!au){
+        au = new Audio(url);
+        au.addEventListener("ended", parar);
+        au.addEventListener("error", function(){ b.textContent = "[x]"; b.title = "no se pudo reproducir"; });
+      }
+      sonando = b;
+      b.classList.add("sonando"); b.textContent = "[■]";
+      return au.play();
+    }).catch(function(err){
+      b.textContent = "[x]"; b.title = "no pude bajar el audio (" + (err && err.message) + ")";
+    }).then(function(){ b.disabled = false; });
+  });
+  return b;
+}
+// los audios que mando facundo viven en el cuerpo del mensaje como `[audio](audio/<hash>.webm)`:
+// `resaltar` los deja como un hueco y aca se les enchufa el reproductor.
+var RE_AUD = /!?\[([^\]\n]*)\]\(\s*(audio\/[\w][\w.@%+-]*)\s*\)/g;
+function conAudios(l){
+  RE_AUD.lastIndex = 0;
+  if(l.indexOf("](audio/") < 0 || !RE_AUD.test(l)) return null;
+  RE_AUD.lastIndex = 0;
+  return l.replace(RE_AUD, function(m0, alt, src){
+    return '<span class="aud" data-src="' + att(src) + '"><span class="dur">audio</span></span>';
+  });
+}
+function cargarAudios(nodo){
+  var spans = nodo.querySelectorAll ? nodo.querySelectorAll(".aud[data-src]") : [];
+  Array.prototype.forEach.call(spans, function(sp){
+    if(sp.dataset.listo) return;
+    sp.dataset.listo = "1";
+    var src = sp.dataset.src;
+    sp.insertBefore(reproductor(src, "escuchar el audio"), sp.firstChild);
+  });
+}
+
 
 alfinal.addEventListener("click", abajo);
 $("mandar").addEventListener("click", function(){ enviarMensaje(txt.value); txt.focus(); });
@@ -2548,6 +2850,21 @@ function cajaPodcast(p){
   return caja("podcast", extra, filas.join("\n"));
 }
 
+function cajaDj(p){
+  // motor `fuzzer/dj`: la cola nocturna de spotify. orden fijo, huecos aleatorios.
+  if(!p.plan) return caja("dj", '<span class="g">fuzzer</span>',
+    '<span class="g">' + esc(p.texto || "sin plan") + "</span>");
+  var extra = '<span class="a b">' + p.hechos + "/" + p.bloques + "</span>";
+  var filas = ['<span class="g">noche ' + esc(p.noche) + " · " + p.reproducciones + " reproducciones</span>"];
+  if(p.sonando) filas.push('<span class="v b">suena</span> ' + esc(p.sonando));
+  else if(p.proximo) filas.push('<span class="g">proximo bloque</span> ' + esc(p.proximo));
+  if(!p.listo) filas.push('<span class="r">falta el oauth de spotify (premium)</span>');
+  (p.top || []).forEach(function(t){
+    filas.push('  <span class="g">' + esc(t.tema) + "</span> " + t.n + "×");
+  });
+  return caja("dj", extra, filas.join("\n"));
+}
+
 function pintarWidgets(d, err){
   if(!d && !widDatos){
     widgetsEl.innerHTML = caja("widgets", "", err ? '<span class="r">' + esc(err) + "</span>" : vacio("cargando..."));
@@ -2569,6 +2886,7 @@ function pintarWidgets(d, err){
     cajaPropuestas(d.propuestas || []),
     cajaAvisos(d.avisos || []),
     cajaPodcast(d.podcast || {}),
+    cajaDj(d.dj || {}),
     '<div class="caja"><div class="cuerpo g">datos de hace ' + edad +
       (err ? ' · <span class="r">' + esc(err) + "</span>" : "") + "</div></div>"
   ];
@@ -2830,6 +3148,181 @@ function cerrarModal(){
 $("mfondo").addEventListener("click", cerrarModal);
 $("mcerrar").addEventListener("click", cerrarModal);
 
+// ---------- menu contextual (facundo, 2026-09-11) ----------
+// tap and hold (~500 ms, sin disparar el scroll ni la seleccion) en el celu y click derecho en desktop:
+// sobre un mensaje del chat (responder / copiar / editar / mandar a otra pestaña), sobre una fila de un
+// widget (abre el modal a/b/c que ya existe, o copiar) y sobre una pestaña (cerrar / renombrar / al lado
+// de los widgets). se cierra con esc, tocando afuera o al scrollear.
+var HOLD_MS = 500;      // cuanto hay que mantener el dedo apoyado
+var HOLD_PX = 10;       // si se mueve mas que esto, era un scroll: no hay menu
+var MENU_MS = 400;      // el click que viene atras del hold no cierra el menu recien abierto
+var CITA_LINEAS = 3, CITA_CHARS = 120;
+var menuAbierto = null, menuTs = 0, menuNodo = null;
+
+function cerrarMenu(){
+  menuAbierto = null;
+  $("ctx").classList.add("oculta"); $("ctx").innerHTML = "";
+  $("ctxfondo").classList.add("oculta");
+  document.body.classList.remove("sinsel");
+  if(menuNodo){ menuNodo.classList.remove("marcado"); menuNodo = null; }
+}
+// `opciones` es [texto, funcion]. (x, y) es donde se toco: el menu se acomoda para no salirse.
+function menu(x, y, titulo, opciones, nodo){
+  cerrarMenu();
+  var d = $("ctx");
+  if(titulo){
+    var t = document.createElement("div");
+    t.className = "ctit"; t.textContent = titulo;
+    d.appendChild(t);
+  }
+  opciones.forEach(function(o){
+    var b = document.createElement("button");
+    b.type = "button"; b.textContent = o[0];
+    b.addEventListener("click", function(){ cerrarMenu(); o[1](); });
+    d.appendChild(b);
+  });
+  menuAbierto = {titulo: titulo || "", opciones: opciones.map(function(o){ return o[0]; })};
+  menuTs = Date.now();
+  d.classList.remove("oculta");
+  $("ctxfondo").classList.remove("oculta");
+  document.body.classList.add("sinsel");
+  d.style.left = "0px"; d.style.top = "0px";
+  var r = d.getBoundingClientRect();
+  d.style.left = Math.max(6, Math.min(x, window.innerWidth - r.width - 6)) + "px";
+  d.style.top = Math.max(6, Math.min(y, window.innerHeight - r.height - 6)) + "px";
+  if(nodo && nodo.classList){ nodo.classList.add("marcado"); menuNodo = nodo; }
+  return true;
+}
+// el gesto, delegado en el contenedor (los mensajes se repintan enteros en cada render).
+// `pedir(target, x, y)` devuelve true si abrio un menu.
+function gestos(el, pedir){
+  if(!el) return;
+  el.addEventListener("contextmenu", function(e){
+    if(pedir(e.target, e.clientX, e.clientY)) e.preventDefault();
+  });
+  var t = null, x0 = 0, y0 = 0, blanco = null;
+  function cancelar(){ if(t){ clearTimeout(t); t = null; } }
+  el.addEventListener("touchstart", function(e){
+    cancelar();
+    if(e.touches.length !== 1) return;
+    blanco = e.target; x0 = e.touches[0].clientX; y0 = e.touches[0].clientY;
+    t = setTimeout(function(){
+      t = null;
+      if(pedir(blanco, x0, y0)){ try{ if(navigator.vibrate) navigator.vibrate(8); }catch(x){} }
+    }, HOLD_MS);
+  }, {passive: true});
+  el.addEventListener("touchmove", function(e){
+    var p = e.touches[0];
+    if(!t || !p) return;
+    if(Math.abs(p.clientX - x0) > HOLD_PX || Math.abs(p.clientY - y0) > HOLD_PX) cancelar();
+  }, {passive: true});
+  ["touchend", "touchcancel"].forEach(function(ev){ el.addEventListener(ev, cancelar, {passive: true}); });
+}
+
+function copiarViejo(texto, listo){
+  var a = document.createElement("textarea");
+  a.value = texto; a.style.position = "fixed"; a.style.top = "-1000px"; a.style.opacity = "0";
+  document.body.appendChild(a); a.focus(); a.select();
+  var pudo = false;
+  try{ pudo = document.execCommand("copy"); }catch(x){}
+  document.body.removeChild(a);
+  if(pudo) listo(); else sistema("no pude copiar", "error");
+}
+function copiar(texto){
+  texto = texto || "";
+  var listo = function(){ sistema("copiado: " + corto(texto, 60)); };
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText)
+      return navigator.clipboard.writeText(texto).then(listo, function(){ copiarViejo(texto, listo); });
+  }catch(x){}
+  copiarViejo(texto, listo);
+}
+
+// el bloque de cita que deja "responder" en la caja: `> <quien>: <primeras lineas>` y una linea vacia.
+// el daemon la reconoce (`marcas_chat`) y se la pasa al modelo como contexto, no como parte del pedido.
+function citaDe(m){
+  var ls = String(m.texto || "").split("\n").filter(function(x){ return x.trim() !== ""; });
+  ls = ls.slice(0, CITA_LINEAS);
+  if(!ls.length) ls = [""];
+  return ls.map(function(x, i){
+    x = x.replace(/\s+/g, " ").trim();
+    if(x.length > CITA_CHARS) x = x.slice(0, CITA_CHARS - 1) + "…";
+    return "> " + (i === 0 ? (m.quien || "facundo") + ": " : "") + x;
+  }).join("\n") + "\n\n";
+}
+function responderA(m){
+  var cita = citaDe(m), resto = txt.value;
+  ponerCaja(resto.indexOf(cita) === 0 ? resto : cita + resto);
+  guardarBorrador(temaCaja || temaActivo(), txt.value, true);
+  txt.focus();
+}
+// editar un mensaje propio: sale con el prefijo que el daemon guarda como `edita_ts` y el modelo
+// trata como aclaracion del anterior, no como un pedido nuevo suelto.
+function editarMsg(m){
+  ponerCaja("edicion del mensaje de " + desde(m.iso) + ": " + (m.texto || ""));
+  guardarBorrador(temaCaja || temaActivo(), txt.value, true);
+  txt.focus();
+}
+function aOtraPestana(m){
+  var ops = [];
+  TEMAS.forEach(function(t){
+    if(t !== m.tema) ops.push([t + (tabs.indexOf(t) < 0 ? " (abre la pestaña)" : ""), t]);
+  });
+  dd("mandar este mensaje a...", ops, function(t){ abrirTab(t); mandar(m.texto, t); });
+}
+function menuMsg(nodo, x, y){
+  var m = nodo.__msg;
+  if(!m) return false;
+  var ops = [["responder", function(){ responderA(m); }],
+             ["copiar", function(){ copiar(m.texto); }]];
+  if(m.clase === "yo"){
+    ops.push(["editar", function(){ editarMsg(m); }]);
+    ops.push(["mandar a otra pestaña", function(){ aOtraPestana(m); }]);
+  }
+  return menu(x, y, (m.quien || "") + " " + desde(m.iso) + " · " + corto(m.texto, 40), ops, nodo);
+}
+function menuItem(nodo, x, y){
+  var o = itemsW[nodo.dataset.it];
+  if(!o) return false;
+  return menu(x, y, o.tipo || "item", [
+    ["ver y decidir (a/b/c)", function(){ abrirModal(o); }],
+    ["copiar", function(){ copiar((nodo.textContent || "").replace(/\s+/g, " ").trim()); }]
+  ], nodo);
+}
+function menuTab(nodo, x, y){
+  var t = nodo.dataset.tema;
+  if(!t) return false;
+  var ops = [];
+  if(t !== AUTO){          // la general no se renombra nunca ni se manda al lado (es la puerta de entrada)
+    ops.push(["mandar al lado de los widgets", function(){ splitCon(t); }]);
+    ops.push(["renombrar tema", function(){
+      var op = [];
+      TEMAS.forEach(function(otro){ if(otro !== t) op.push([otro, otro]); });
+      dd("renombrar «" + (ETIQUETA[t] || t) + "» a...", op, function(n){ renombrarTab(t, n); });
+    }]);
+  }
+  ops.push(["cerrar la pestaña", function(){ cerrarTab(t); }]);
+  return menu(x, y, "pestaña " + (ETIQUETA[t] || t), ops, nodo);
+}
+function pedirMenuMsg(target, x, y){
+  var n = target && target.closest && target.closest(".msg");
+  return n ? menuMsg(n, x, y) : false;
+}
+gestos(lista, pedirMenuMsg);
+gestos($("lista1"), pedirMenuMsg);
+gestos($("widgets"), function(target, x, y){
+  var n = target && target.closest && target.closest("[data-it]");
+  return n ? menuItem(n, x, y) : false;
+});
+gestos($("tabs"), function(target, x, y){
+  var n = target && target.closest && target.closest("[data-tema]");
+  return n ? menuTab(n, x, y) : false;
+});
+$("ctxfondo").addEventListener("click", function(){ if(Date.now() - menuTs > MENU_MS) cerrarMenu(); });
+$("ctxfondo").addEventListener("contextmenu", function(e){ e.preventDefault(); cerrarMenu(); });
+// scroll no burbujea: con captura se ve el de cualquier panel
+document.addEventListener("scroll", function(){ if(menuAbierto) cerrarMenu(); }, true);
+
 // celu: una vista a la vez (chat | widgets | la pestaña de al lado, si esta partido).
 // en desktop (>= 900px) los paneles se ven juntos y esta barra no aparece.
 function verPanel(cual){
@@ -3044,7 +3537,7 @@ $("lado-cerrar").addEventListener("click", function(e){ e.stopPropagation(); unP
 $("envoltorio").addEventListener("click", function(){ focoEn(0); });
 $("ddfondo").addEventListener("click", cerrarDd);
 document.addEventListener("keydown", function(e){
-  if(e.key === "Escape"){ cerrarDd(); cerrarModal(); return; }
+  if(e.key === "Escape"){ cerrarMenu(); cerrarDd(); cerrarModal(); return; }
   // con el modal abierto, a/b/c dispara la accion de esa letra
   if(!modalAbierto || e.metaKey || e.ctrlKey || e.altKey) return;
   var j = LETRAS.indexOf((e.key || "").toLowerCase());
@@ -3188,6 +3681,19 @@ window.__agente = {
   stubFoto: function(f){ fotoStub = f || null; },
   tocarCamara: function(){ $("camara").click(); },
   fotoTope: FOTO_TOPE,
+  // audios: `prueba_web_audio` graba sin microfono (manda el blob a mano) y chequea los [▶]
+  mandarAudio: mandarAudio, nombreAudio: nombreAudio, extAudio: extAudio, mimeAudio: mimeAudio,
+  conAudios: conAudios, reproductor: reproductor, audioTope: AUDIO_TOPE, audioMinMs: AUDIO_MIN_MS,
+  empezarGrabacion: empezarGrabacion, terminarGrabacion: terminarGrabacion,
+  grabando: function(){ return {grabando: !!grabador, micro: !!stream,
+                                marcado: $("grabar").classList.contains("grabando"),
+                                reloj: $("grabinfo").textContent}; },
+  plays: function(){        // los [▶] que hay pintados ahora, con de donde sale cada uno
+    return [].map.call(document.querySelectorAll(".play"), function(b){
+      return {src: b.dataset.src, donde: b.parentNode.className.indexOf("aud") >= 0 ? "cuerpo" : "cabecera"};
+    });
+  },
+  stubAudioUrl: function(src, url){ if(url) audioUrls[src] = url; else delete audioUrls[src]; },
   gapInput: function(){          // px entre el borde de abajo del input y el borde de abajo del pie
     var f = $("fila").getBoundingClientRect(), p = $("pie").getBoundingClientRect();
     return Math.round(p.bottom - f.bottom);
@@ -3208,6 +3714,34 @@ window.__agente = {
     return {titulo: $("mtitulo").textContent, cuerpo: $("mcuerpo").textContent, tema: modalAbierto.tema,
             acciones: [].map.call($("macc").querySelectorAll("button"), function(b){ return b.textContent; })};
   },
+  // menu contextual: `recetas/prueba_web_tabs` pide el menu sobre un mensaje y lee lo que quedo
+  menu: menu, cerrarMenu: cerrarMenu, citaDe: citaDe, holdMs: HOLD_MS,
+  menuInfo: function(){
+    if(!menuAbierto) return null;
+    return {titulo: $("ctx").querySelector(".ctit") ? $("ctx").querySelector(".ctit").textContent : "",
+            opciones: [].map.call($("ctx").querySelectorAll("button"), function(b){ return b.textContent; }),
+            visible: !$("ctx").classList.contains("oculta"),
+            dentro: (function(){ var r = $("ctx").getBoundingClientRect();
+                                 return r.left >= 0 && r.top >= 0 &&
+                                        r.right <= window.innerWidth && r.bottom <= window.innerHeight; })()};
+  },
+  // dispara el gesto como lo haria el click derecho (el hold del celu termina en lo mismo)
+  menuEn: function(sel, n){
+    var ns = document.querySelectorAll(sel);
+    var nodo = ns[n || 0];
+    if(!nodo) return false;
+    var r = nodo.getBoundingClientRect();
+    nodo.dispatchEvent(new MouseEvent("contextmenu", {bubbles: true, cancelable: true,
+                                                      clientX: Math.round(r.left + 5),
+                                                      clientY: Math.round(r.top + 5)}));
+    return !!menuAbierto;
+  },
+  tocarMenu: function(texto){
+    var bs = $("ctx").querySelectorAll("button");
+    for(var i = 0; i < bs.length; i++)
+      if((bs[i].textContent || "").indexOf(texto) >= 0){ bs[i].click(); return true; }
+    return false;
+  },
   tocarItem: function(sel){          // click sobre la n-esima fila tocable de los widgets
     var ns = document.querySelectorAll("#widgets [data-it]");
     if(typeof sel === "number") return ns[sel] ? (ns[sel].click(), true) : false;
@@ -3225,7 +3759,7 @@ window.__agente = {
   cargarChat: cargarChat, cargarChatTema: cargarChatTema, recibirChat: recibirChat, render: render,
   temasACargar: temasACargar, archivoChat: archivoChat, mezclar: mezclar, claveMsg: claveMsg,
   hist: function(t){ return (msgsHist[normTema(t)] || []).map(function(m){
-    return {id: m.id, tema: m.tema, clase: m.clase, texto: m.texto, iso: m.iso}; }); },
+    return {id: m.id, tema: m.tema, clase: m.clase, texto: m.texto, iso: m.iso, audio: m.audio || null}; }); },
   charla: function(){ return msgs.map(function(m){
     return {id: m.id, tema: m.tema, clase: m.clase, texto: m.texto, iso: m.iso}; }); },
   chatIndex: function(){ return chatIndex; },
