@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.180">
-<link rel="manifest" href="manifest.json?v=4.180">
+<meta name="agente-web-version" content="4.181">
+<link rel="manifest" href="manifest.json?v=4.181">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -877,6 +877,7 @@ var WSETS = {
   avisos:      [{k: "solo_hoy", et: "solo los de hoy", tipo: "bool", def: false}],
   podcast:     [{k: "abierto", et: "abierto por default", tipo: "bool", def: false}],
   dj:          [{k: "cola", et: "mostrar la cola", tipo: "bool", def: true}],
+  mail:        [{k: "pendientes", et: "mostrar los pendientes", tipo: "bool", def: true}],
   verificaciones: [], decided: [], sombra: []
 };
 var WSETS_COMUNES = [{k: "plegado", et: "plegado por default", tipo: "bool", def: false},
@@ -3332,6 +3333,22 @@ function cajaDj(p){
   return caja("dj", extra, limFilas("dj", filas).join("\n"), false, "dj");
 }
 
+function cajaMail(p){
+  // el chequeo del mail: adaptativo (facundo, 2026-09-12). 15 min de base, 2 min con conversacion
+  // abierta, y vuelve a 15 al enfriarse. lo decide `recetas/mail_fuzzer.py` (`intervalo()`).
+  if(!p.intervalo_min) return caja("mail", '<span class="g">sin datos</span>',
+    '<span class="g">' + esc(p.error || "sin datos del mail") + "</span>", false, "mail");
+  var cal = !!p.caliente;
+  var extra = '<span class="' + (cal ? "v b" : "g") + '">cada ' + p.intervalo_min + " min</span>" +
+              (p.pendientes ? ' <span class="a b">' + p.pendientes + " pend</span>" : "");
+  var filas = ['<span class="' + (cal ? "v" : "g") + '">' + esc(p.motivo || "") + "</span>"];
+  if(p.ultima) filas.push('<span class="g">ultima pasada ' + esc(p.ultima) + "</span>");
+  if(p.pendientes && wset("mail", "pendientes"))
+    filas.push('<span class="a">' + p.pendientes + " pedido(s) esperando que decidas</span> " +
+               '<span class="g">(`mail` en el chat)</span>');
+  return caja("mail", extra, limFilas("mail", filas).join("\n"), false, "mail");
+}
+
 // ---------- selector de nodos (facundo, 2026-09-12) ----------
 // SERVER (la geekom, main), MAC (la macbook) y CLOUD (todavia no existe: gris). los datos salen de
 // `widgets.json` (clave `nodos`, la arma `recetas/nodos.py` sin gastar un token). tocar un nodo abre
@@ -3382,6 +3399,7 @@ function pintarWidgets(d, err){
     cajaAvisos(d.avisos || []),
     cajaPodcast(d.podcast || {}),
     cajaDj(d.dj || {}),
+    cajaMail(d.mail || {}),
     '<div class="caja"><div class="cuerpo g">datos de hace ' + edad +
       (err ? ' · <span class="r">' + esc(err) + "</span>" : "") + "</div></div>"
   ];
