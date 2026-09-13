@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.202">
-<link rel="manifest" href="manifest.json?v=4.202">
+<meta name="agente-web-version" content="4.203">
+<link rel="manifest" href="manifest.json?v=4.203">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -3895,6 +3895,12 @@ function cajaUsage(u){
       '<span class="g por">' + esc((ca.episodios || []).map(function(e){
         return e.desde + "-" + e.hasta + " " + e.causa + (e.abierta ? " (sigue)" : "");
       }).join(" \u00b7 ")) + "</span></div>");
+  // eta del chat (2026-09-13): lo aprende `recetas/eta_chat.py` sin tokens; el error es el de las ultimas 24 h
+  var et = u.eta_chat;
+  if(et && et.texto)
+    html += '<div class="rep"><span class="g">eta chat</span> <span class="nom">~' + esc(String(Math.round(et.eta_s || 0))) +
+      ' s</span><span class="g por">' + esc(et.error_pct === null || et.error_pct === undefined ? "sin datos todavia" :
+      "error " + et.error_pct + "%" + (et.n_24h ? "" : " (semana)")) + "</span></div>";
   if(rep.elegida)
     html += it({tipo: "cuenta", tema: "tools", d: rep, completo: rep.porque || ""},
       '<div class="rep"><span class="g">usa</span> <span class="nom">' + esc(rep.elegida) + "</span> " +
