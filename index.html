@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.187">
-<link rel="manifest" href="manifest.json?v=4.187">
+<meta name="agente-web-version" content="4.188">
+<link rel="manifest" href="manifest.json?v=4.188">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -55,10 +55,15 @@
     padding-top:calc(8px + env(safe-area-inset-top));background:#000;
     display:flex;gap:8px;align-items:center;justify-content:flex-end;
   }
-  #salir{
-    flex:0 0 auto;background:#000;color:var(--gris);border:1px solid var(--linea);
-    border-radius:4px;padding:4px 8px;font:inherit;font-size:9px;cursor:pointer;
+  /* `.bb` = boton de la barra de arriba. los seis (SERVER | MAC | CLOUD y chat | widgets | salir)
+     usan esta misma clase: mismo alto, padding, fuente y borde (facundo, 2026-09-12). */
+  .bb{
+    flex:0 0 auto;box-sizing:border-box;background:#000;color:var(--gris);
+    border:1px solid var(--linea);border-radius:4px;padding:4px 8px;margin:0;
+    font:inherit;font-size:9px;line-height:14px;height:24px;cursor:pointer;white-space:nowrap;
+    display:inline-flex;align-items:center;justify-content:center;gap:5px;
   }
+  .bb:active{background:#111}
   #salir.confirmar{color:var(--rojo);border-color:var(--rojo)}
   #hist{
     flex:1 1 auto;min-height:0;overflow-y:auto;padding:10px 12px;
@@ -330,30 +335,22 @@
   /* selector de nodos (facundo, 2026-09-12): donde puede vivir claudio. arriba a la izquierda,
      en el lugar donde antes decia "claudio board". SERVER | MAC | CLOUD (el tercer nombre lo pone
      el daemon). el color lo manda `recetas/nodos.py` (failover en cadena, 2026-09-12): verde el
-     que publica o un relevo listo de respaldo, rojo el que deberia publicar y no publica (server
-     caido o tomado por otro), amarillo advertencia, gris el que no existe o no responde. */
+     que publica o un relevo listo de backup, rojo el server caido, amarillo advertencia (el texto
+     de cual va en el title), gris el que no existe o no responde. el `↻` de la derecha (accion)
+     aparece solo en amarillo, rojo o gris: en verde no hay nada que tocar. el tamaño es el de `.bb`. */
   #nodos{display:flex;gap:6px;flex:1 1 auto;min-width:0;overflow-x:auto;scrollbar-width:none}
   #nodos::-webkit-scrollbar{display:none}
-  #nodos button{
-    background:#000;color:var(--gris);border:1px solid var(--linea);border-radius:4px;
-    padding:4px 8px;font:inherit;font-size:9px;cursor:pointer;white-space:nowrap;flex:0 0 auto;
-    display:flex;align-items:center;gap:5px;
-  }
-  #nodos button:active{background:#111}
   #nodos button.guardia{color:var(--blanco);border-color:var(--verde-tenue)}
   #nodos button.gris{opacity:.5;cursor:default}
   #nodos button.mal{color:var(--rojo);border-color:var(--rojo)}
-  #nodos button.medio{border-color:var(--amarillo)}
+  #nodos button.medio{color:var(--amarillo);border-color:var(--amarillo)}
+  #nodos .acc{color:var(--cian)}
   #nodos .luz{width:6px;height:6px;border-radius:50%;background:var(--gris);flex:0 0 auto}
   #nodos .luz.bien{background:var(--verde)}
   #nodos .luz.medio{background:var(--amarillo)}
   #nodos .luz.mal{background:var(--rojo)}
   #nodos .marca{color:var(--verde);font-size:8px}
   #vistas{display:none;gap:6px;flex:0 0 auto}
-  #vistas button{
-    background:#000;color:var(--gris);border:1px solid var(--linea);border-radius:4px;
-    padding:4px 9px;font:inherit;font-size:9px;cursor:pointer;
-  }
   #vistas button.on{color:var(--verde);border-color:var(--verde)}
   body.sinlogin #cabecera,body.sinlogin #cuerpo{display:none}
   /* vista mobile: una vista a la vez, la elige la barra de arriba. puro css, sin js de layout.
@@ -362,8 +359,10 @@
      el mismo media query vive en el js como `MQ_MOBILE`: si cambia uno, cambia el otro. */
   @media (max-width:899px), (max-aspect-ratio: 1/1){
     #vistas{display:flex}
-    /* dedo: los nodos de la barra tambien se tocan con el pulgar */
-    #nodos button{min-height:32px;padding:4px 10px}
+    /* dedo: los seis botones de la barra se tocan con el pulgar, todos del mismo alto */
+    .bb{height:32px;padding:4px 6px;gap:4px}
+    #nodos,#vistas{gap:5px}
+    #cabecera{gap:6px}
     /* dedo: los botones del header de cada widget con area tactil de 40px (facundo, 2026-09-12) */
     .caja > .tit > .wacc .wbtn{min-width:40px;min-height:40px;font-size:13px;padding:0}
     .caja > .tit{min-height:40px}
@@ -521,10 +520,10 @@
 <div id="cabecera">
   <div id="nodos"></div>
   <div id="vistas">
-    <button id="ver-chat" class="on" type="button">chat</button>
-    <button id="ver-widgets" type="button">widgets</button>
+    <button id="ver-chat" class="bb on" type="button">chat</button>
+    <button id="ver-widgets" class="bb" type="button">widgets</button>
   </div>
-  <button id="salir" type="button">salir</button>
+  <button id="salir" class="bb" type="button">salir</button>
 </div>
 
 <div id="login">
@@ -3614,10 +3613,13 @@ function pintarNodos(n){
   if(!ns.length){ nodosEl.innerHTML = '<span class="g" style="font-size:9px">nodos…</span>'; return; }
   nodosEl.innerHTML = ns.map(function(x, i){
     var nv = x.nivel === "gris" || x.nivel === "mal" || x.nivel === "medio" ? x.nivel : "";
-    return '<button type="button" data-nodo="' + i + '" class="' + (x.publica ? "guardia " : "") +
-      nv + '" title="' + esc((x.detalle || "") + " · " + (x.estado || "")) + '">' +
+    // el boton de accion solo cuando hay algo que arreglar (amarillo, rojo o gris con acciones)
+    var acc = x.nivel !== "bien" && (x.acciones || []).length;
+    return '<button type="button" data-nodo="' + i + '" class="bb ' + (x.publica ? "guardia " : "") +
+      nv + '" title="' + esc((x.detalle || "") + " · " + (x.advertencia || x.estado || "")) + '">' +
       '<span class="luz ' + esc(x.nivel || "") + '"></span>' + esc(x.nombre || x.id || "?") +
-      (x.guardia ? '<span class="marca">\u25c9</span>' : "") + "</button>";
+      (x.guardia ? '<span class="marca">\u25c9</span>' : "") +
+      (acc ? '<span class="acc">\u21bb</span>' : "") + "</button>";
   }).join("");
 }
 $("nodos").addEventListener("click", function(e){
