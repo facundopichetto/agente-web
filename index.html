@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.189">
-<link rel="manifest" href="manifest.json?v=4.189">
+<meta name="agente-web-version" content="4.190">
+<link rel="manifest" href="manifest.json?v=4.190">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -350,6 +350,8 @@
   #nodos .luz.medio{background:var(--amarillo)}
   #nodos .luz.mal{background:var(--rojo)}
   #nodos .marca{color:var(--verde);font-size:8px}
+  /* el nodo que atiende el chat sin publicar todo (cloud, 2026-09-12): la palabra `chat` en verde en vez de la luz */
+  #nodos .chatw{color:var(--verde);font-size:8px;letter-spacing:.5px;flex:0 0 auto}
   #vistas{display:none;gap:6px;flex:0 0 auto}
   #vistas button.on{color:var(--verde);border-color:var(--verde)}
   body.sinlogin #cabecera,body.sinlogin #cuerpo{display:none}
@@ -3759,7 +3761,8 @@ function pintarNodos(n){
     var acc = x.nivel !== "bien" && (x.acciones || []).length;
     return '<button type="button" data-nodo="' + i + '" class="bb ' + (x.publica ? "guardia " : "") +
       nv + '" title="' + esc((x.detalle || "") + " · " + (x.advertencia || x.estado || "")) + '">' +
-      '<span class="luz ' + esc(x.nivel || "") + '"></span>' + esc(x.nombre || x.id || "?") +
+      (x.chat && x.nivel === "bien" ? '<span class="chatw">chat</span>' : '<span class="luz ' + esc(x.nivel || "") + '"></span>') +
+      esc(x.nombre || x.id || "?") +
       (x.guardia ? '<span class="marca">\u25c9</span>' : "") +
       (acc ? '<span class="acc">\u21bb</span>' : "") + "</button>";
   }).join("");
