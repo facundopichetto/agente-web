@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.194">
-<link rel="manifest" href="manifest.json?v=4.194">
+<meta name="agente-web-version" content="4.195">
+<link rel="manifest" href="manifest.json?v=4.195">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -601,8 +601,8 @@ var alfinal = $("alfinal"), envoltorio = $("envoltorio");
 // una copia GENERADA de esa receta: se actualiza con `python3 -m recetas.clasificar_tema --sync-web`
 // y `recetas/prueba_web` falla si quedo vieja. no editarla a mano.
 /* TEMAS-JS: generado por `python3 -m recetas.clasificar_tema --sync-web`, no editar a mano */
-var TEMAS = ["tools", "awtomic", "awtomic/qa", "flabs", "fuzzer", "juegos", "plata", "server", "personal", "podcast"];
-var PRIORIDAD = ["awtomic/qa", "flabs", "podcast", "server", "juegos", "plata", "fuzzer", "awtomic", "tools"];
+var TEMAS = ["tools", "awtomic", "awtomic/qa", "flabs", "fuzzer", "juegos", "plata", "server", "personal", "podcast", "claudio"];
+var PRIORIDAD = ["awtomic/qa", "flabs", "podcast", "server", "juegos", "plata", "fuzzer", "awtomic", "claudio", "tools"];
 var ALIAS = {"awtomic-qa": "awtomic/qa"};
 var RE_CORTE_SRC = "(\\n+)|([.;!?]\\s+)|(^|[\\s,;:])(?:y\\s+otra\\s+cosa|otra\\s+cosa|aparte|adem[a\u00e1]s|tambi[e\u00e9]n)(?!\\w)";
 var PALABRAS = {
@@ -614,6 +614,7 @@ var PALABRAS = {
   "server": ["server", "mini ?pc", "minipc", "pendrive", "iso", "autoinstall", "bootstrap", "tailscale", "xubuntu", "migraci\\wn", "ubuntu", "nuc"],
   "flabs": ["flabs", "flabsdev"],
   "podcast": ["podcast", "podcasts", "episodio", "episodios", "cap\\wtulo", "cap\\wtulos", "daniela", "player", "guion", "PROXIMO\\.md"],
+  "claudio": ["filosof\\wa", "principio", "principios", "a futuro", "ideas? a futuro", "visi\\wn", "claudio en general"],
   "tools": ["claude", "iterm", "fish", "chrome", "tui", "consola", "daemon", "agente", "receta", "recetas", "skill", "terminal", "tmux", "widget", "widgets", "web terminal", "mision", "modelo", "tokens", "cola", "launchd", "pesta[\u00f1n]a", "pesta[\u00f1n]as", "interfaz", "chat"],
 };
 /* /TEMAS-JS */
