@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.203">
-<link rel="manifest" href="manifest.json?v=4.203">
+<meta name="agente-web-version" content="4.204">
+<link rel="manifest" href="manifest.json?v=4.204">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1388,8 +1388,21 @@ function ponerTabs(reintento){
   if(pushLeido) L.push_leido = pushLeido;
   var cuerpo = {message: "tabs " + DISPOSITIVO, content: textoAb64(JSON.stringify(L))};
   if(shaTabs) cuerpo.sha = shaTabs;
+  // con el endpoint del server vivo, las pestañas se guardan ahi (anda sin github; el daemon las sube despues).
+  // si el endpoint no contesta, el PUT de siempre al buzon.
+  var ruta = "/repos/" + REPO + "/contents/" + TABS_ARCHIVO;
+  if(lan.base && !reintento){
+    return lanFetch(lan.base + ruta, {method: "PUT", cache: "no-store", keepalive: true,
+      headers: {"authorization": "Bearer " + token, "content-type": "application/json"},
+      body: JSON.stringify(cuerpo)
+    }).then(function(r){
+      if(!r.ok) throw new Error("http " + r.status);
+      return r.json().then(function(j){ shaTabs = ((j || {}).content || {}).sha || null; etagTabs = null; });
+    }).catch(function(){ return ponerTabs(true); });
+  }
+  if(shaTabs && /^lan-/.test(shaTabs)){ delete cuerpo.sha; }
   // fetch propio y no `api()`: un 403 de escritura NO tiene que desloguear a facundo del chat
-  return fetch(API + "/repos/" + REPO + "/contents/" + TABS_ARCHIVO, {
+  return fetch(API + ruta, {
     method: "PUT", cache: "no-store", keepalive: true,   // que sobreviva al cierre de la pagina
     headers: {"authorization": "Bearer " + token, "accept": "application/vnd.github+json",
               "content-type": "application/json"},
@@ -2159,9 +2172,10 @@ function lanAnuncio(d){
 function pintarVia(){
   var n = $("via");
   if(!n) return;
-  n.textContent = lan.base ? lan.via : "buzón";
+  n.textContent = lan.base ? lan.via + (lan.sinGithub ? " (sin github)" : "") : "buzón";
   n.className = "via" + (lan.base ? " directo" : "");
-  n.title = lan.base ? "el board habla directo con el server (" + lan.base + ")"
+  n.title = lan.base ? "el board habla directo con el server (" + lan.base + ")" +
+                       (lan.sinGithub ? ". github no contesta: el chat sigue por acá, el buzón se pone al día solo" : "")
                      : "el board va por el buzón de github (no alcanza al server por lan ni por tailscale)";
 }
 function lanPoner(x){
@@ -2220,6 +2234,13 @@ function apiLan(metodo, ruta, cuerpo, etag, accept){
   if(etag) h["if-none-match"] = etag;
   return lanFetch(url, opts).then(function(r){
     if(r.status === 304) return {status: 304};
+    // modo minimo (orden 1096): el server vive pero github no contesta. no es la lan caida: "nada nuevo" y se
+    // sigue por el endpoint (widgets, charla y envio no dependen de github)
+    if(r.status === 503 && r.headers && r.headers.get && r.headers.get("x-claudio-sin-github")){
+      if(!lan.sinGithub){ lan.sinGithub = true; pintarVia(); }
+      return {status: 304, sinGithub: true};
+    }
+    if(lan.sinGithub && r.ok && metodo === "GET" && /\/issues\//.test(ruta)){ lan.sinGithub = false; pintarVia(); }
     if(!r.ok) throw caido("http " + r.status);
     return r.json().then(function(j){
       if(lid && j && j.lid) lanMsgs[j.lid] = true;
@@ -5529,6 +5550,10 @@ window.__agente = {
   stubApi: function(f){ apiStub = f || null; },
   // lan primero (prueba_web_tabs simula el endpoint vivo y caido)
   stubLan: function(f){ lanStub = f || null; }, probarLan: probarLan, lanPoner: lanPoner, lanCandidatos: lanCandidatos,
+  // la prueba corre sin login: un token de mentira solo mientras se arma el PUT (el stub de la lan no lo mira)
+  ponerTabs: function(){ var t0 = token; token = token || "t-prueba"; tabsListo = true; tabsSync = true;
+                         frenoHasta = 0; var p = ponerTabs(false); token = t0; return p; },
+  sinGithub: function(){ return !!lan.sinGithub; },
   lan: function(){ return {base: lan.base, via: lan.via, texto: ($("via") || {}).textContent}; },
   subirBuzon: subirBuzon, cargarComentarios: cargarComentarios, cargarWidgets: cargarWidgets, bajarBlob: bajarBlob,
   normTema: normTema, padreTema: padreTema,
