@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.201">
-<link rel="manifest" href="manifest.json?v=4.201">
+<meta name="agente-web-version" content="4.202">
+<link rel="manifest" href="manifest.json?v=4.202">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -393,6 +393,12 @@
   #nodos .marca{color:var(--verde);font-size:8px}
   /* el nodo que atiende el chat sin publicar todo (cloud, 2026-09-12): la palabra `chat` en verde en vez de la luz */
   #nodos .chatw{color:var(--verde);font-size:8px;letter-spacing:.5px;flex:0 0 auto}
+  /* a la derecha del nodo de guardia, un boton `chat` (facundo, 2026-09-13): look de la caja A (fondo negro, letra
+     y borde verdes). es un span y no un <button> para no anidar ni sumar al conteo de botones de la barra. */
+  #nodos .irchat{display:inline-flex;align-items:center;box-sizing:border-box;background:#000;color:var(--verde);
+    border:1px solid var(--verde);border-radius:4px;padding:0 8px;font-size:10px;cursor:pointer;flex:0 0 auto;
+    user-select:none;-webkit-user-select:none}
+  #nodos .irchat:active{background:var(--verde);color:#000}
   /* por donde habla el board (facundo, 2026-09-13, lan primero): lan / tailscale en verde, buzón en gris */
   #via{font-size:9px;letter-spacing:.5px;padding:0 4px;flex:0 0 auto;color:var(--gris);white-space:nowrap}
   #via.directo{color:var(--verde)}
@@ -4297,10 +4303,17 @@ function pintarNodos(n){
       (x.chat && x.nivel === "bien" ? '<span class="chatw">chat</span>' : '<span class="luz ' + esc(x.nivel || "") + '"></span>') +
       esc(x.nombre || x.id || "?") +
       (x.guardia ? '<span class="marca">\u25c9</span>' : "") +
-      (acc ? '<span class="acc">\u21bb</span>' : "") + "</button>";
+      (acc ? '<span class="acc">\u21bb</span>' : "") + "</button>" +
+      (x.guardia ? '<span class="irchat" role="button" tabindex="0" title="ir al chat">chat</span>' : "");
   }).join("");
 }
+// el `chat` del nodo de guardia: en el celu salta a la vista chat, en desktop pone el foco en el input
+function irAlChat(){
+  if(esVistaMobile()) verPanel("chat");
+  txt.focus();
+}
 $("nodos").addEventListener("click", function(e){
+  if(e.target.closest(".irchat")){ irAlChat(); return; }
   var b = e.target.closest("button[data-nodo]");
   if(!b) return;
   var n = ((widDatos || {}).nodos || {}).nodos || [];
