@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.192">
-<link rel="manifest" href="manifest.json?v=4.192">
+<meta name="agente-web-version" content="4.193">
+<link rel="manifest" href="manifest.json?v=4.193">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -3450,11 +3450,18 @@ function cajaAgente(a){
   var filas = [];
   var est = a.pausa ? '<span class="r b">PAUSA</span>'
           : (a.corriendo || []).length ? '<span class="a b">trabajando</span>' : '<span class="v">idle</span>';
-  filas.push('cola <span class="c b">' + a.pendientes + "</span> pendientes  " + est);
+  // cola en paralelo por recursos: `hilos N/M` y el escalon del tope (bajo / medio / alto segun el 5h y la ram)
+  var hi = a.hilos || {};
+  var hilos = hi.tope ? 'hilos <span class="c b">' + (a.corriendo || []).length + "/" + hi.tope + "</span> " +
+              '<span class="' + (hi.escalon === "alto" ? "r" : hi.escalon === "medio" ? "a" : "g") + '">' +
+              esc(hi.escalon || "") + "</span>  " : "";
+  filas.push('cola <span class="c b">' + a.pendientes + "</span> pendientes  " + hilos + est);
   (a.corriendo || []).forEach(function(t){
+    var rec = (t.recursos || []).slice(0, 2).join(", ");
     filas.push(it({tipo: "tarea", estado: "corriendo", tema: t.tema, d: t},
                '<span class="a">&gt;</span> <span class="m b">' + esc(t.modelo) + '</span> <span class="g">' +
-               (t.min === null ? "?" : t.min) + "m</span> " + esc(String(t.texto || "").slice(0, 120))));
+               (t.min === null ? "?" : t.min) + "m</span> " +
+               (rec ? '<span class="g">[' + esc(rec) + "]</span> " : "") + esc(String(t.texto || "").slice(0, 120))));
   });
   filas.push(a.horas + "h  ok <span class=\"v b\">" + a.ok + '</span>  fallo <span class="r b">' + a.fallo +
              '</span>  <span class="g">chat ' + a.chat + "</span>");
