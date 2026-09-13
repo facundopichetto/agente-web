@@ -1,11 +1,12 @@
 {
-  "version": "4.197",
+  "version": "4.198",
   "name": "claudio board",
   "short_name": "claudio board",
   "description": "claudio board, la interfaz principal de claudio",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
   "orientation": "portrait",
   "background_color": "#000000",
   "theme_color": "#000000",

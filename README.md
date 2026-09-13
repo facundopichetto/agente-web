@@ -846,7 +846,7 @@ compensaba `vv.offsetTop`, asi que lo que se habia ido en `window.scrollY` queda
 
 ## selector de nodos: SERVER | MBP | NUBE (facundo, 2026-09-12)
 
-arriba a la izquierda de la barra (antes del toggle `chat | widgets` y de `salir`) hay tres botones,
+arriba a la izquierda de la barra (antes del toggle `chat | widgets` y del `[⚙]` del board, donde vive `salir`) hay tres botones,
 uno por maquina donde puede vivir claudio:
 
 | nodo | que es | hoy |
@@ -978,3 +978,14 @@ header que nodo y que modelo contesto". el criterio del daemon esta en `recetas/
   canal (`.chat-duraciones.json`). el bloque se va cuando llega la respuesta, o 15 s despues de `listo`.
 - probar: `python3 -m recetas.chat_estado --probar`, `python3 -m recetas.chat_nodo --probar` y los bloques
   `estado en vivo` de `recetas/prueba_web_tabs`.
+
+## pwa de escritorio sin barra de titulo (facundo, 2026-09-13)
+
+- `manifest.json` pide `"display_override": ["window-controls-overlay", "standalone"]`: la app instalada en la
+  mac esconde la barra de titulo y la fila `SERVER MAC CLOUD` sube a esa franja (`env(titlebar-area-*)`, con
+  fallback a 0), al lado de los semaforos. la barra arrastra la ventana (`-webkit-app-region: drag`); botones
+  y pestañas no (`no-drag`). en el celu y en el navegador comun no hay overlay y todo queda igual.
+- `salir` salio de la barra: vive en el `[⚙]` del board (ultimo boton de la barra), con la misma confirmacion
+  en rojo (`borrar token?`, 4 s para el segundo toque).
+- una app ya instalada toma el manifest nuevo sola en unas horas; si no, se reinstala desde chrome (menu ⋮ >
+  instalar claudio board). chrome tambien deja volver a la barra clasica con el chevron de la franja.
