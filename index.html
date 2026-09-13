@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.196">
-<link rel="manifest" href="manifest.json?v=4.196">
+<meta name="agente-web-version" content="4.197">
+<link rel="manifest" href="manifest.json?v=4.197">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1660,17 +1660,22 @@ function conImagenes(l){
   });
 }
 var imgUrls = {};        // src -> object url (una sola bajada por imagen)
+function srcBuzon(src){  // ruta local vieja del server (`/home/.../tmp/img/x.png`) -> `img/x.png` del buzon
+  return /^[\/~]/.test(src) ? "img/" + src.split("/").pop() : src;
+}
 function bajarImagen(src){
   if(/^(https?:|data:)/i.test(src)) return Promise.resolve(src);
+  var repo = srcBuzon(src);
   if(imgUrls[src]) return Promise.resolve(imgUrls[src]);
+  if(imgUrls[repo]) return Promise.resolve(imgUrls[src] = imgUrls[repo]);
   if(!token) return Promise.reject(new Error("401"));
-  var ruta = API + "/repos/" + REPO + "/contents/" + src.split("/").map(encodeURIComponent).join("/");
+  var ruta = API + "/repos/" + REPO + "/contents/" + repo.split("/").map(encodeURIComponent).join("/");
   return fetch(ruta, {headers: {"authorization": "Bearer " + token, "accept": "application/vnd.github.raw"}})
     .then(function(r){
       if(!r.ok) throw new Error("http " + r.status);
       return r.blob();
     }).then(function(b){
-      imgUrls[src] = URL.createObjectURL(b);
+      imgUrls[repo] = imgUrls[src] = URL.createObjectURL(b);
       return imgUrls[src];
     });
 }
@@ -1689,6 +1694,7 @@ function cargarImagenes(nodo){
       pie.className = "pie"; pie.textContent = alt;
       sp.appendChild(im); sp.appendChild(pie);
     }).catch(function(e){
+      if(sp.querySelector("img")) return;   // ya estaba pintada bien: una re-bajada que falla no la pisa
       sp.innerHTML = '<span class="rota"></span>';
       sp.firstChild.textContent = "no pude bajar la imagen (" + (e && e.message) + "): " + alt;
     });
@@ -4989,6 +4995,7 @@ iniciarPush();
 })();
 
 window.__agente = {
+  srcBuzon: srcBuzon, cargarImagenes: cargarImagenes,   // imagenes: ruta local vieja -> img/ (prueba_web_tabs)
   // notificaciones push (prueba_web_tabs lo chequea con un navegador simulado)
   pushEstado: pushEstado, pushTexto: pushTexto, activarPush: activarPush, pushVisto: pushVisto,
   irTemaPush: irTemaPush, pushSoportado: pushSoportado,
