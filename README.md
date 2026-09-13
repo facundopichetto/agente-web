@@ -640,7 +640,7 @@ en el momento y el modal se queda abierto:
 
 | widget | comunes | propia |
 |---|---|---|
-| todos | `plegado por default`, `filas visibles` (todas / 3 / 5 / 8 / 12) | |
+| todos | `plegado por default`, `filas visibles` (todas / 3 / 5 / 8 / 12), `ocultar este widget`, `subir`, `bajar` | |
 | `server` | | `mostrar el log` |
 | `usage` | | `cuentas` (todas o una) |
 | `agent` | | `mostrar la cola` |
@@ -659,6 +659,37 @@ dejaste en el celu. `localStorage` (`agente_tabs`) queda de cache offline.
 lo prueba `recetas/prueba_web_tabs` (cero tokens): que cada caja tenga su header con los dos botones,
 el dato esencial de cada una, que plegar quede guardado y viaje en `tabs.json`, que el modal liste las
 settings, que filtrar y recortar filas cambie lo que se pinta, y que el `[↻]` tire el etag.
+
+## los widgets se ordenan arrastrandolos (facundo, 2026-09-12)
+
+facundo: "los widgets tienen que poder ordenarse con drag and drop".
+
+- **se agarran del header**, no del cuerpo: en la **compu** con el mouse (arranca despues de mover
+  5 px, asi un click sigue siendo un click) y en el **celu** con **tap and hold de 500 ms** y despues
+  el dedo. mientras dura el arrastre la caja va `position: fixed`, queda un **fantasma punteado**
+  donde va a caer y el panel **no scrollea** (el `touchmove` del arrastre es `preventDefault`).
+- **no pisa nada de lo que ya andaba**: `[↻]` y `[⚙]` siguen siendo botones, tocar el titulo sigue
+  plegando (el click que viene atras de un arrastre se ignora por 300 ms), el hold del **menu
+  contextual** solo se pide sobre las filas (`[data-it]`), no sobre el header, y tocar una fila sigue
+  abriendo el modal a/b/c.
+- **las pestañas del chat siguen SIN drag** (regla del 2026-09-12: el chat es un panel unico). el
+  reorden es solo de widgets.
+
+**donde vive**: en `tabs.json` como **`orden_widgets`** (`{ids: [claves], ts}`), al lado de `wsets`,
+los borradores y el split, resuelto **por su propio `ts`** (gana el mas nuevo), con `localStorage` de
+cache offline. asi el celu y la compu muestran las cajas en el mismo orden. una clave que ya no
+existe se ignora y un **widget nuevo que no este en la lista va al final**: nunca desaparece.
+
+**sin drag**: el modal `[⚙]` de cada caja trae `subir` y `bajar` (saltan las cajas ocultas, si no
+mover una vez no cambiaria nada) y dice en que posicion esta ("caja 3 de 14"). `ocultar este widget`
+la saca de la lista; las ocultas se listan en el **pie** del panel (`ocultos: dj mail`) y se vuelven a
+mostrar tocando su nombre, que es el unico lugar desde donde se pueden recuperar.
+
+lo prueba `recetas/prueba_web_tabs` (cero tokens): arrastrar la ultima caja hasta arriba con eventos
+de mouse de verdad y con **tap and hold** tactil, que un dedo que se mueve antes de los 500 ms sea un
+scroll y no un arrastre, que el orden sobreviva al repintado de `widgets.json`, que viaje en
+`tabs.json` y se resuelva por `ts`, que `subir` / `bajar` muevan, y que ocultar y volver a mostrar
+desde el pie funcione.
 
 ## la vista mobile entra por forma, no solo por ancho (facundo, 2026-09-11)
 

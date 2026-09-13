@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.185">
-<link rel="manifest" href="manifest.json?v=4.185">
+<meta name="agente-web-version" content="4.186">
+<link rel="manifest" href="manifest.json?v=4.186">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -813,7 +813,7 @@ function guardarCache(){
     localStorage.setItem("agente_tabs", JSON.stringify(
       {tabs: tabs, activo: activo, ts: layoutTs, origen: DISPOSITIVO,
        borradores: borradoresLimpios(), vistas: vistasLimpias(), split: splitLimpio(),
-       wsets: wsetsLimpias()}));
+       wsets: wsetsLimpias(), orden_widgets: ordenLimpio()}));
   }catch(x){}
 }
 // cambio local: sube el reloj, guarda el cache y encola la publicacion. si el layout quedo igual
@@ -1236,6 +1236,7 @@ function borrarBorrador(tema){
     if(L && L.vistas) recibirVistas(L.vistas);
     if(L && L.split) recibirSplit(L.split);
     if(L && L.wsets) recibirWsets(L.wsets);
+    if(L && L.orden_widgets) recibirOrden(L.orden_widgets);
   }catch(x){}
   aplicarSplit();
   layoutFirma = firmaLayout(layoutActual());
@@ -1293,9 +1294,11 @@ function recibirTabs(L){
   var sp = recibirSplit(L.split);
   // idem las settings de cada widget: una por una, gana el `ts` de esa caja
   var ws = recibirWsets(L.wsets);
+  // idem el orden de los widgets: por su propio `ts`
+  var orw = recibirOrden(L.orden_widgets);
   if(ts > layoutTs){ aplicarLayout(L, ts); return "remoto"; }
   if(layoutTs > ts && L.origen !== DISPOSITIVO){ publicarTabs(true); return "mio"; }
-  if(borr || vis || sp || ws) publicarTabs();   // mezcle los dos lados: que el otro vea el resultado
+  if(borr || vis || sp || ws || orw) publicarTabs();   // mezcle los dos lados: que el otro vea el resultado
   return "igual";
 }
 // agrupa los cambios seguidos (abrir una pestaña, cambiar de pestaña, mover el separador) en una
@@ -1316,6 +1319,7 @@ function ponerTabs(reintento){
   L.vistas = vistasLimpias();
   L.split = splitLimpio();
   L.wsets = wsetsLimpias();
+  L.orden_widgets = ordenLimpio();
   var cuerpo = {message: "tabs " + DISPOSITIVO, content: textoAb64(JSON.stringify(L))};
   if(shaTabs) cuerpo.sha = shaTabs;
   // fetch propio y no `api()`: un 403 de escritura NO tiene que desloguear a facundo del chat
@@ -3632,26 +3636,38 @@ function pintarWidgets(d, err){
   var t0 = fecha(d.ts);
   var edad = t0 ? haceSeg((Date.now() - t0) / 1000) : "?";
   widEdad = t0 ? edad : "";          // el header de cada caja dice `hace Xs` (si el json trae `ts`)
+  // cada caja con su clave: el orden lo pone `orden_widgets` (arrastrando el header) y las que
+  // tengan la setting `oculto` no se pintan, pero se pueden volver a mostrar desde el pie.
   var partes = [
-    cajaServer(d.server || {}),
-    cajaUsage(d.usage || {}),
-    cajaAgente(d.agente || {}),
-    cajaVerif(d.verificaciones || {}),
-    cajaTickets(d.tickets || {}),
-    cajaOportunidades(d.oportunidades || {}),
-    cajaDecididas(d.oportunidades || {}),
-    cajaSombra(d.sombra || {}),
-    cajaPropuestas(d.propuestas || []),
-    cajaAvisos(d.avisos || []),
-    cajaPodcast(d.podcast || {}),
-    cajaDj(d.dj || {}),
-    cajaMail(d.mail || {}),
-    cajaQueVer(d.que_ver || {}),
-    '<div class="caja"><div class="cuerpo g">datos de hace ' + edad +
-      (err ? ' · <span class="r">' + esc(err) + "</span>" : "") + "</div></div>"
+    ["server", cajaServer(d.server || {})],
+    ["usage", cajaUsage(d.usage || {})],
+    ["agent", cajaAgente(d.agente || {})],
+    ["verificaciones", cajaVerif(d.verificaciones || {})],
+    ["tickets", cajaTickets(d.tickets || {})],
+    ["oportunidades", cajaOportunidades(d.oportunidades || {})],
+    ["decided", cajaDecididas(d.oportunidades || {})],
+    ["sombra", cajaSombra(d.sombra || {})],
+    ["propuestas", cajaPropuestas(d.propuestas || [])],
+    ["avisos", cajaAvisos(d.avisos || [])],
+    ["podcast", cajaPodcast(d.podcast || {})],
+    ["dj", cajaDj(d.dj || {})],
+    ["mail", cajaMail(d.mail || {})],
+    ["que_ver", cajaQueVer(d.que_ver || {})]
   ];
+  var mapa = {}, hay = [];
+  partes.forEach(function(pa){ if(pa[1]){ mapa[pa[0]] = pa[1]; hay.push(pa[0]); } });
+  clavesW = ordenarClaves(hay);
+  var ocultas = clavesW.filter(ocultoW);
+  var html = clavesW.filter(function(c){ return !ocultoW(c); })
+                    .map(function(c){ return mapa[c]; }).join("");
+  html += '<div class="caja pie"><div class="cuerpo g">datos de hace ' + edad +
+          (err ? ' · <span class="r">' + esc(err) + "</span>" : "") +
+          (ocultas.length ? " · ocultos: " + ocultas.map(function(c){
+            return '<button class="wbtn oc" type="button" data-mostrar="' + esc(c) + '" ' +
+                   'title="volver a mostrarlo">' + esc(c) + "</button>";
+          }).join(" ") : "") + "</div></div>";
   var y = $("panel-widgets").scrollTop;
-  widgetsEl.innerHTML = partes.join("");
+  widgetsEl.innerHTML = html;
   $("panel-widgets").scrollTop = y;
   pintarNodos(d.nodos);         // la barra de arriba: SERVER | MAC | CLOUD, con quien esta de guardia
   pintarChips();                // los chips `op N X` usan las opciones reales de este json
@@ -3686,7 +3702,128 @@ function cargarWidgets(){
   });
 }
 
+// ---------- arrastrar una caja para reordenarla (facundo, 2026-09-12) ----------
+// se agarra del header (no de los botones `[↻]` `[⚙]`, que siguen funcionando): en la compu con el
+// mouse (arranca al mover ARR_PX), en el celu con tap and hold de HOLD_MS, el mismo del menu
+// contextual, que en el header no se pide. mientras se arrastra el panel no scrollea. el orden que
+// queda se guarda en `tabs.json` (`orden_widgets`).
+var ARR_PX = 5;
+var arrW = null, arrUlt = 0, arrHold = null, arrTocado = null;
+function cajaDeHeader(target){
+  if(!target || !target.closest) return null;
+  if(target.closest(".wbtn")) return null;
+  var t = target.closest(".caja > .tit");
+  if(!t) return null;
+  var c = t.parentNode;
+  return c && c.dataset && c.dataset.w ? c : null;
+}
+function arrEmpezar(nodo, y){
+  if(arrW) return;
+  var r = nodo.getBoundingClientRect();
+  var ph = document.createElement("div");
+  ph.className = "caja fantasma";
+  ph.style.height = r.height + "px";
+  nodo.parentNode.insertBefore(ph, nodo);
+  nodo.classList.add("arrastrando");
+  nodo.style.position = "fixed";
+  nodo.style.left = r.left + "px";
+  nodo.style.top = r.top + "px";
+  nodo.style.width = r.width + "px";
+  nodo.style.zIndex = "60";
+  arrW = {clave: nodo.dataset.w, nodo: nodo, ph: ph, dy: y - r.top};
+  document.body.classList.add("arrastrando-w");
+}
+// donde caeria: la primera caja cuyo centro queda abajo del dedo
+function arrMover(y){
+  if(!arrW) return;
+  arrW.nodo.style.top = (y - arrW.dy) + "px";
+  var cs = [].filter.call(widgetsEl.children, function(c){
+    return c !== arrW.nodo && c !== arrW.ph && c.dataset && c.dataset.w;
+  });
+  for(var i = 0; i < cs.length; i++){
+    var r = cs[i].getBoundingClientRect();
+    if(y < r.top + r.height / 2){
+      if(arrW.ph.nextSibling !== cs[i]) widgetsEl.insertBefore(arrW.ph, cs[i]);
+      return;
+    }
+  }
+  if(cs.length) widgetsEl.insertBefore(arrW.ph, cs[cs.length - 1].nextSibling);
+}
+function arrSoltar(){
+  if(!arrW) return;
+  var a = arrW; arrW = null; arrUlt = Date.now();
+  document.body.classList.remove("arrastrando-w");
+  a.nodo.classList.remove("arrastrando");
+  a.nodo.removeAttribute("style");
+  a.ph.parentNode.insertBefore(a.nodo, a.ph);
+  a.ph.parentNode.removeChild(a.ph);
+  var vis = [].map.call(widgetsEl.children, function(c){ return (c.dataset || {}).w || ""; })
+              .filter(function(x){ return x; });
+  guardarOrden(mezclarOcultas(vis), true);
+}
+function arrCancelarHold(){ if(arrHold){ clearTimeout(arrHold); arrHold = null; } arrTocado = null; }
+
+widgetsEl.addEventListener("pointerdown", function(e){
+  if(e.pointerType === "touch" || e.button !== 0) return;    // el celu va por touchstart (hold)
+  var c = cajaDeHeader(e.target);
+  if(!c) return;
+  var y0 = e.clientY, listo = false;
+  function mover(ev){
+    if(!listo){
+      if(Math.abs(ev.clientY - y0) < ARR_PX) return;
+      listo = true;
+      arrEmpezar(c, y0);
+    }
+    arrMover(ev.clientY);
+    ev.preventDefault();
+  }
+  function fin(){
+    document.removeEventListener("pointermove", mover);
+    document.removeEventListener("pointerup", fin);
+    document.removeEventListener("pointercancel", fin);
+    if(listo) arrSoltar();
+  }
+  document.addEventListener("pointermove", mover);
+  document.addEventListener("pointerup", fin);
+  document.addEventListener("pointercancel", fin);
+});
+
+widgetsEl.addEventListener("touchstart", function(e){
+  arrCancelarHold();
+  if(e.touches.length !== 1 || arrW) return;
+  var c = cajaDeHeader(e.target);
+  if(!c) return;
+  var t = e.touches[0];
+  arrTocado = {nodo: c, x: t.clientX, y: t.clientY};
+  arrHold = setTimeout(function(){
+    arrHold = null;
+    if(!arrTocado) return;
+    arrEmpezar(arrTocado.nodo, arrTocado.y);
+    try{ if(navigator.vibrate) navigator.vibrate(8); }catch(x){}
+  }, HOLD_MS);
+}, {passive: true});
+// no pasivo a proposito: una vez que agarro la caja, el dedo la mueve y no scrollea el panel
+widgetsEl.addEventListener("touchmove", function(e){
+  var p = e.touches[0];
+  if(!p) return;
+  if(arrHold && arrTocado &&
+     (Math.abs(p.clientX - arrTocado.x) > HOLD_PX || Math.abs(p.clientY - arrTocado.y) > HOLD_PX)){
+    arrCancelarHold();       // era un scroll, no un arrastre
+    return;
+  }
+  if(arrW){ arrMover(p.clientY); e.preventDefault(); }
+}, {passive: false});
+["touchend", "touchcancel"].forEach(function(ev){
+  widgetsEl.addEventListener(ev, function(){
+    arrCancelarHold();
+    if(arrW) arrSoltar();
+  }, {passive: true});
+});
+
 widgetsEl.addEventListener("click", function(e){
+  if(Date.now() - arrUlt < 300){ e.stopPropagation(); return; }   // el click que viene atras del arrastre
+  var ver = e.target.closest("button[data-mostrar]");      // el pie: volver a mostrar una caja oculta
+  if(ver){ guardarWset(ver.dataset.mostrar, "oculto", false); return; }
   var ref = e.target.closest("button[data-ref]");         // [↻] volver a bajar widgets.json
   if(ref){ refrescarWidgets(ref.dataset.ref); return; }
   var set = e.target.closest("button[data-set]");         // [⚙] settings de ese widget
@@ -3960,7 +4097,7 @@ function modalDe(o){
   return m;
 }
 
-var LETRAS = "abcdefgh";
+var LETRAS = "abcdefghij";
 var modalAbierto = null;
 function abrirModal(o){ pintarModal(modalDe(o)); }
 
@@ -3975,8 +4112,11 @@ function valorTxt(v){
 }
 function modalSets(clave){
   var ls = setsDe(clave);
+  var pos = ordenarClaves(clavesW.slice()).indexOf(clave);
   var m = {titulo: "settings \u00b7 " + clave, tema: "tools", acciones: [],
-           cuerpo: '<span class="g">se guardan en el buz\u00f3n: las ves igual en el celu y en la compu.</span>'};
+           cuerpo: '<span class="g">se guardan en el buz\u00f3n: las ves igual en el celu y en la compu.' +
+                   (pos >= 0 ? " caja " + (pos + 1) + " de " + clavesW.length +
+                               " (se arrastra del header).</span>" : "</span>")};
   ls.forEach(function(st){
     var v = wset(clave, st.k);
     m.acciones.push([st.et + ": " + valorTxt(v), function(){
@@ -3991,6 +4131,13 @@ function modalSets(clave){
       pintarModal(modalSets(clave));      // el modal se queda abierto con el valor nuevo
     }, false]);
   });
+  // la alternativa sin arrastrar (facundo, 2026-09-12: "por si el drag no va")
+  m.acciones.push(["subir", function(){
+    moverWidget(clave, -1); pintarModal(modalSets(clave));
+  }, false]);
+  m.acciones.push(["bajar", function(){
+    moverWidget(clave, 1); pintarModal(modalSets(clave));
+  }, false]);
   m.acciones.push(["volver a los valores de f\u00e1brica", function(){
     wsets[clave] = {ts: Math.max(Date.now(), (+((wsets[clave] || {}).ts) || 0) + 1)};
     guardarCache(); publicarTabs(false, WSETS_DEBOUNCE); repintarWidgets();
@@ -4398,13 +4545,43 @@ window.__agente = {
   guardarLayout: guardarLayout, layoutRemoto: function(){
     var L = layoutActual(); L.v = 1; L.ts = layoutTs; L.origen = DISPOSITIVO;
     L.borradores = borradoresLimpios(); L.vistas = vistasLimpias(); L.split = splitLimpio();
-    L.wsets = wsetsLimpias(); return L;
+    L.wsets = wsetsLimpias(); L.orden_widgets = ordenLimpio(); return L;
   },
   abrirTab: abrirTab, renombrarTab: renombrarTab,
   // header de cada widget: [↻] actualizar, [⚙] settings, plegar tocando el titulo
   wsets: function(){ return wsetsLimpias(); },
   wset: wset, setsDe: setsDe, guardarWset: guardarWset, recibirWsets: recibirWsets,
   abrirSets: abrirSets, refrescarWidgets: refrescarWidgets,
+  // orden de los widgets: arrastrarlos por el header, `subir`/`bajar` y `ocultar` del modal
+  ordenWidgets: function(){
+    return [].map.call(document.querySelectorAll("#widgets > .caja[data-w]"), function(c){
+      return c.dataset.w;
+    });
+  },
+  ordenGuardado: ordenLimpio, guardarOrden: guardarOrden, recibirOrden: recibirOrden,
+  moverWidget: moverWidget, ocultoW: ocultoW, clavesW: function(){ return clavesW.slice(); },
+  // arrastrar `clave` hasta la posicion `i` de las visibles, como lo haria el mouse
+  arrastrarWidget: function(clave, i){
+    var nodo = document.querySelector('#widgets .caja[data-w="' + clave + '"] > .tit');
+    var cajas = [].filter.call(document.querySelectorAll("#widgets > .caja[data-w]"), function(c){
+      return c.dataset.w !== clave;
+    });
+    if(!nodo || i < 0) return false;
+    var r0 = nodo.getBoundingClientRect();
+    var destino = cajas[Math.min(i, cajas.length - 1)];
+    var rd = destino.getBoundingClientRect();
+    var y = i >= cajas.length ? rd.bottom - 2 : rd.top + 2;
+    function ptr(tipo, cy){
+      return new PointerEvent(tipo, {bubbles: true, cancelable: true, clientX: r0.left + 4,
+                                     clientY: cy, button: 0, pointerType: "mouse"});
+    }
+    nodo.dispatchEvent(ptr("pointerdown", r0.top + 4));
+    document.dispatchEvent(ptr("pointermove", r0.top + 4 + ARR_PX + 2));
+    document.dispatchEvent(ptr("pointermove", y));
+    document.dispatchEvent(ptr("pointerup", y));
+    return true;
+  },
+  arrastrando: function(){ return !!arrW; },
   refrescos: function(){ return refrescos; }, etagWid: function(){ return etagWid; },
   headers: function(){
     return [].map.call(document.querySelectorAll("#widgets > .caja"), function(c){
