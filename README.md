@@ -961,14 +961,14 @@ header que nodo y que modelo contesto". el criterio del daemon esta en `recetas/
   del chat vuelve a mirar el lock antes del modelo y antes de publicar: si el chat paso a otro nodo, la respuesta
   se suelta (`chat: suelto la respuesta` en `log.md`). en la web, `sinDobles()` esconde la repetida: dos
   respuestas al mismo mensaje, mismo `[tema]`, menos de 3 min, y una de `cloud` -> se ve solo la de cloud.
-- **nodo y modelo en el header**: el daemon manda `<!--agente-->` + `<!--nodo:cloud modelo:fable dur:12
+- **nodo en el header**: el daemon manda `<!--agente-->` + `<!--nodo:cloud modelo:fable dur:12
   cuello:modelo-->` + el cuerpo. `leerMeta()` lo saca del cuerpo (tambien el `[cloud]` viejo) y el header queda
-  `agente> 12:46 · cloud · fable`. en `chat/<tema>.json` las filas nuevas traen `nodo`, `modelo`, `duracion_s` y
+  `claudio · 12:46 · cloud` (facundo, 2026-09-13: el modelo viaja en el json pero **no se pinta**). en `chat/<tema>.json` las filas nuevas traen `nodo`, `modelo`, `duracion_s` y
   `cuello`; una fila vieja sin `nodo` no pinta nada.
 - **mini estado**: antes del `[▶]`, en gris, `12 s · modelo` = ida y vuelta real (desde que github creo el
   comentario hasta que sale la respuesta) y la fase mas lenta (`cola`, `audio`, `historial`, `oauth`, `modelo`,
   `buzón`).
-- **en vuelo**: al mandar, abajo del mensaje aparece `agente> hh:mm` con un spinner `- \ | /` (120 ms), la fase y
+- **en vuelo**: al mandar, abajo del mensaje aparece `claudio · hh:mm` con un spinner `- \ | /` (120 ms), la fase y
   la cuenta regresiva hasta la **respuesta completa** (`~8 s`, `~7 s`... y `+3 s` si se paso del estimado, contada
   desde `ts_inicio`). la fase la publica el daemon en `chat/estado-<clave>.json` (`{fase, palabra, ts, ts_inicio,
   eta_respuesta_s, eta_s, canal, tema, nodo}`; clave = tema del prefijo `tema x:` o `auto`) y la web la mira cada 1 s solo mientras hay
@@ -1030,3 +1030,27 @@ sigue por el buzón; el script `chat_lan` (cada 10 min) engancha `tailscale serv
 
 probar: `python3 -m recetas.prueba_chat_lan` (el endpoint real con github falso) y el bloque `lan` de
 `recetas/prueba_web_tabs` (endpoint vivo, caído y de vuelta). estado: `python3 -m recetas.chat_lan --estado`.
+
+## nombres, input y cajas a/b/c (facundo, 2026-09-13)
+
+- **nombres que se ven**: el agente es `claudio` y facundo es `f` (en verde), en la cabecera de cada mensaje, el
+  historial del buzon, el `f>` del input y la cita de `responder` (`> f: ...`). las claves del jsonl y del buzon
+  no cambian (`QUIEN_F` / `QUIEN_AGENTE` en `index.html`). la tui pinta `f` en verde igual.
+- **fila del input**: `f>`, la caja y los tres iconos centrados a la misma altura (`align-items:center`); la
+  caja y el pie sin borde ni fondo propio. iconos svg de linea (`.ico`, 18 px, caja de 32 px y 40 px en el
+  celu): microfono (tap and hold, rojo mientras graba), camara (foto o galeria) y avion de papel (mandar). ids y
+  handlers de siempre (`grabar`, `camara`, `foto`, `mandar`).
+- **cajas a/b/c**: el chat del daemon cierra con `OPCION A: ...` / `OPCION B: ...` / `OPCION C: ...` (1 a 3
+  lineas) cuando necesita algo de facundo. A = lo que haria claudio (verde), B = la segura (celeste), C = la
+  transgresora (fucsia); el texto nunca dice cual recomienda. el daemon las guarda en el jsonl y en
+  `chat/<tema>.json` como `opciones: [{letra, texto}]` (`opciones_de` en `daemon.py`); la web usa ese campo o
+  parsea las lineas del comentario (`opcionesDe`), y no las pinta como texto.
+  - sin elegir: fondo negro, letra y borde del color. elegida: fondo del color, letra negra.
+  - primer tap elige (se puede cambiar), segundo tap sobre la elegida **manda** `A: <texto>` como mensaje
+    normal de la pestaña (con su `tema x:`). si el mensaje nombra una oportunidad (`op N`) con opciones reales
+    en `widgets.json`, las cajas mandan `op N X` crudo.
+  - drag o scroll por encima no elige: `pointerdown`/`pointerup` con umbral de 10 px (`OPC_UMBRAL`).
+  - despues de mandar quedan deshabilitadas con la elegida marcada (`localStorage.agente_opciones`); al recargar,
+    si hay un mensaje de f posterior en la pestaña, quedan cerradas y marcan la letra si ese mensaje empieza con
+    `X:` u `op N X`. facundo siempre puede contestar escribiendo.
+  - lo prueba `recetas/prueba_web_tabs` (pinta, drag que no elige, elige B, cambia, manda con el segundo tap).

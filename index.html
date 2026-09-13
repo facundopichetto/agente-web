@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.200">
-<link rel="manifest" href="manifest.json?v=4.200">
+<meta name="agente-web-version" content="4.201">
+<link rel="manifest" href="manifest.json?v=4.201">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -98,6 +98,26 @@
   .yo .quien{color:var(--verde)}   /* `f` en verde (facundo, 2026-09-13) */
   .yo .cuerpo{color:var(--yo)}
   .error .cuerpo{color:var(--rojo)}
+  /* cajas a/b/c debajo de una respuesta (facundo, 2026-09-13): A verde (la que haria claudio), B celeste (la
+     segura), C fucsia (la transgresora). sin elegir: fondo negro, letra y borde del color. elegida: fondo del
+     color, letra negra. primer tap elige, segundo tap sobre la misma manda. en fila; si no entran, apiladas. */
+  .opciones{display:flex;gap:6px;margin:6px 0 2px 0;white-space:normal}
+  .opciones .opc{
+    flex:1 1 0;min-width:0;box-sizing:border-box;background:#000;border:1px solid;border-radius:4px;
+    padding:6px 8px;font:inherit;font-size:11px;line-height:1.35;text-align:left;cursor:pointer;
+    min-height:40px;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
+    touch-action:pan-y;word-break:break-word;
+  }
+  .opciones .opc .l{font-weight:600;margin-right:5px}
+  .opciones .opc.A{color:var(--verde);border-color:var(--verde)}
+  .opciones .opc.B{color:var(--cian);border-color:var(--cian)}
+  .opciones .opc.C{color:var(--magenta);border-color:var(--magenta)}
+  .opciones .opc.A.sel{background:var(--verde);color:#000}
+  .opciones .opc.B.sel{background:var(--cian);color:#000}
+  .opciones .opc.C.sel{background:var(--magenta);color:#000}
+  .opciones.hecho .opc{cursor:default}
+  .opciones.hecho .opc:not(.sel){opacity:.45}
+  @media (max-width:380px){ .opciones{flex-direction:column} }
   .sistema .cuerpo{color:var(--gris)}
   /* los mensajes se muestran siempre enteros: no hay plegado (facundo, 2026-09-10) */
   .cuerpo .ok{color:var(--verde)}
@@ -195,10 +215,10 @@
   .ico{
     flex:0 0 auto;box-sizing:border-box;background:transparent;border:0;border-radius:6px;
     width:32px;height:32px;padding:0;margin:0;display:inline-flex;align-items:center;justify-content:center;
-    font:inherit;cursor:pointer;letter-spacing:0;
+    font:inherit;font-size:12px;line-height:1.4;cursor:pointer;letter-spacing:0;
   }
   .ico svg{width:18px;height:18px;display:block;pointer-events:none}
-  #mandar{color:var(--verde)}
+  #mandar{color:var(--verde);font-size:12px}
   #mandar:active{background:#0a1a06}
   /* camara (facundo, 2026-09-11: "se puede poner una funcion tipo camara aca? como en whatsapp").
      mismo look terminal que el boton de mandar; el input file de verdad esta escondido. */
@@ -403,6 +423,8 @@
     #login input,#clave,#tok{font-size:16px}
     /* dedo: los tres iconos del input con area de toque de 40px (facundo, 2026-09-13) */
     .ico{width:40px;height:40px}
+    /* la caja mide lo mismo que los iconos: el texto queda centrado y los chips siguen pegados arriba */
+    #txt{min-height:40px;padding:11px 4px}
   }
   #login button{
     background:#000;color:var(--verde);border:1px solid var(--verde);border-radius:4px;
@@ -610,6 +632,9 @@
 "use strict";
 
 var REPO = "facundopichetto/agente-buzon";
+// los nombres que se pintan (facundo, 2026-09-13): el agente es `claudio` y facundo es `f`. las claves del
+// jsonl y del buzon no cambian, solo lo que se ve.
+var QUIEN_F = "f", QUIEN_AGENTE = "claudio";
 var ISSUE = 1;
 var MARCA = "<!--agente-->";
 var API = "https://api.github.com";
@@ -1909,14 +1934,128 @@ function nodoMsg(m){
   if(m.audio) cab.appendChild(reproductor(m.audio, "escuchar la respuesta"));
   var b = document.createElement("div");
   b.className = "cuerpo";
-  b.innerHTML = resaltar(m.texto);
+  var ops = m.clase === "agente" ? cajasDe(m) : null;
+  b.innerHTML = resaltar(ops && ops.cuerpo !== null ? ops.cuerpo : m.texto);
   div.appendChild(cab); div.appendChild(b);
+  if(ops && ops.lista.length) div.appendChild(nodoCajas(m, ops.lista));
   div.__msg = m;          // el menu contextual (delegado) lee el mensaje del nodo
   cargarImagenes(b);
   cargarAudios(b);
   return div;
 }
+// ---------- cajas a/b/c (facundo, 2026-09-13) ----------
+// el chat del daemon cierra con `OPCION A: ...` / `OPCION B: ...` / `OPCION C: ...` (1 a 3) cuando necesita
+// algo de facundo, y guarda `opciones: [{letra, texto}]` en el jsonl y en `chat/<tema>.json`. las lineas
+// OPCION no se pintan como texto: se ven como cajas. si la respuesta nombra una oportunidad (`op N`) con
+// opciones reales en widgets.json, las cajas mandan `op N X` crudo (lo resuelve el daemon sin modelo).
+var RE_OPCION = /^\s*(?:[-*]\s+)?\**OPCI[OÓ]N\s+([ABC])\**\s*[:)\.]\**\s*(\S.*)$/i;
+var OPC_UMBRAL = 10;     // px: un dedo que se mueve mas que esto esta scrolleando, no eligiendo
+var opcSel = {}, opcHecho = {};
+try{ opcHecho = JSON.parse(localStorage.getItem("agente_opciones") || "{}") || {}; }catch(x){ opcHecho = {}; }
+function opcionesDe(texto){
+  var lista = [], fuera = [], vistas = {};
+  String(texto || "").split("\n").forEach(function(l){
+    var mm = RE_OPCION.exec(l);
+    if(mm && !vistas[mm[1].toUpperCase()]){
+      vistas[mm[1].toUpperCase()] = 1;
+      lista.push({letra: mm[1].toUpperCase(), texto: mm[2].replace(/\*\*$/, "").trim()});
+    }else fuera.push(l);
+  });
+  lista.sort(function(a, b){ return a.letra < b.letra ? -1 : 1; });
+  return {lista: lista, cuerpo: lista.length ? fuera.join("\n").replace(/\s+$/, "") : null};
+}
+function cajasDe(m){
+  var o = opcionesDe(m.texto);
+  if(m.opciones && m.opciones.length){
+    o.lista = m.opciones.filter(function(x){ return x && /^[ABC]$/i.test(x.letra || ""); })
+      .map(function(x){ return {letra: String(x.letra).toUpperCase(), texto: String(x.texto || "")}; });
+  }
+  if(!o.lista.length){          // oportunidad nombrada con sus opciones reales: `op N X`
+    var ch = chipsOp(String(m.texto || "")), ids = {};
+    ch.forEach(function(c){ ids[c.cmd.split(" ")[1]] = 1; });
+    if(ch.length && Object.keys(ids).length === 1){
+      o.lista = ch.filter(function(c){ return /^[ABC]$/.test(c.cmd.split(" ")[2]); })
+        .map(function(c){ return {letra: c.cmd.split(" ")[2], texto: c.texto, cmd: c.cmd}; });
+    }
+  }
+  return o;
+}
+function claveCajas(m){ return String(m.id || (m.iso + "|" + String(m.texto || "").slice(0, 40))); }
+// la respuesta a esas cajas: el primer mensaje de f posterior en la misma pestaña (null si no hay)
+function respuestaA(m){
+  var i = msgs.indexOf(m);
+  if(i < 0) return null;
+  for(var j = i + 1; j < msgs.length; j++){
+    var x = msgs[j];
+    if(x.clase === "yo" && deEstaTab(x.tema, m.tema || temaActivo())) return x;
+  }
+  return null;
+}
+function marcarHecho(caja, letra){
+  caja.classList.add("hecho");
+  [].forEach.call(caja.querySelectorAll(".opc"), function(b){
+    b.disabled = true;
+    b.classList.toggle("sel", !!letra && b.dataset.letra === letra);
+  });
+}
+function nodoCajas(m, lista){
+  var k = claveCajas(m), caja = document.createElement("div");
+  caja.className = "opciones";
+  caja.dataset.clave = k;
+  lista.forEach(function(o){
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "opc " + o.letra; b.dataset.letra = o.letra;
+    b.innerHTML = '<span class="l"></span><span class="t"></span>';
+    b.querySelector(".l").textContent = o.letra;
+    b.querySelector(".t").textContent = o.texto;
+    b.title = o.cmd || (o.letra + ": " + o.texto);
+    if(opcSel[k] === o.letra) b.classList.add("sel");
+    var ini = null;
+    b.addEventListener("pointerdown", function(e){ ini = {x: e.clientX, y: e.clientY, mov: false}; });
+    b.addEventListener("pointermove", function(e){
+      if(ini && Math.abs(e.clientX - ini.x) + Math.abs(e.clientY - ini.y) > OPC_UMBRAL) ini.mov = true;
+    });
+    b.addEventListener("pointercancel", function(){ ini = null; });
+    b.addEventListener("pointerup", function(e){
+      var t = ini; ini = null;
+      if(!t || t.mov || Math.abs(e.clientX - t.x) + Math.abs(e.clientY - t.y) > OPC_UMBRAL) return;
+      tocarCaja(m, caja, o);
+    });
+    // teclado (enter / espacio): click sin puntero
+    b.addEventListener("click", function(e){ if(e.detail === 0) tocarCaja(m, caja, o); });
+    caja.appendChild(b);
+  });
+  // ya respondida: elegida marcada (si se sabe) y todo deshabilitado
+  var r = respuestaA(m), hecha = opcHecho[k];
+  if(!hecha && r){
+    var mm = /^\s*([ABC])\s*:/.exec(r.texto || "") || /^\s*op\s+\d+\s+([ABC])\s*$/i.exec(r.texto || "");
+    hecha = mm ? mm[1].toUpperCase() : "-";
+  }
+  if(hecha) marcarHecho(caja, hecha === "-" ? null : hecha);
+  return caja;
+}
+function tocarCaja(m, caja, o){
+  if(caja.classList.contains("hecho")) return;
+  var k = caja.dataset.clave;
+  if(opcSel[k] !== o.letra){                       // primer tap: elige (se puede cambiar)
+    opcSel[k] = o.letra;
+    [].forEach.call(caja.querySelectorAll(".opc"), function(b){ b.classList.toggle("sel", b.dataset.letra === o.letra); });
+    return;
+  }
+  // segundo tap sobre la elegida: manda, como un mensaje normal de esa pestaña
+  opcHecho[k] = o.letra;
+  try{ localStorage.setItem("agente_opciones", JSON.stringify(opcHecho)); }catch(x){}
+  marcarHecho(caja, o.letra);
+  var tema = m.tema || temaActivo();
+  if(o.cmd) mandar(o.cmd, tema, true);
+  else mandar(o.letra + ": " + o.texto, tema, false);
+}
 function pintarMsg(m, arriba){
+  if(!arriba && m.clase === "yo" && lista)          // f contesto: las cajas de antes quedan cerradas
+    [].forEach.call(lista.querySelectorAll(".opciones:not(.hecho)"), function(c){
+      var s = c.querySelector(".opc.sel");
+      marcarHecho(c, opcHecho[c.dataset.clave] || (s && /^\s*[ABC]\s*:/.test(m.texto || "") ? s.dataset.letra : null));
+    });
   if(deEstaTab(m.tema, temaActivo()) && lista){
     if(arriba) lista.insertBefore(nodoMsg(m), lista.firstChild); else lista.appendChild(nodoMsg(m));
   }
@@ -2275,7 +2414,8 @@ function recibirChat(tema, d){
       out.push({id: "h:" + base + ":r", clase: "agente", quien: QUIEN_AGENTE, texto: r, iso: f.ts,
                 tema: t, explicito: true, tag: t, audio: f.audio || null, nodo: nodo,
                 modelo: f.nodo && f.modelo ? modeloCorto(f.modelo) : null,
-                duracion_s: f.duracion_s !== undefined ? f.duracion_s : null, cuello: f.cuello || null});
+                duracion_s: f.duracion_s !== undefined ? f.duracion_s : null, cuello: f.cuello || null,
+                opciones: f.opciones || null});
     }
   });
   msgsHist[t] = out;
@@ -4517,12 +4657,12 @@ function modalDe(o){
       (d.opciones || []).map(function(op){
         return '\n\n<span class="' + (op.letra === d.voto ? "v" : "c") + ' b">' + esc(op.letra) + ")</span> " +
                esc(op.texto) + (op.tiempo ? ' <span class="g">(' + esc(op.tiempo) + ")</span>" : "") +
-               (op.letra === d.voto ? ' <span class="v">← mi voto</span>' : "") +
+               (op.letra === d.voto ? ' <span class="v">←</span>' : "") +
                (op.orden ? '\n<span class="g">' + esc(corto(op.orden, 220)) + "</span>" : "");
       }).join("");
     (d.opciones || []).forEach(function(op){
       m.acciones.push([op.letra + ") " + corto(op.texto, 80) + (op.tiempo ? " (" + op.tiempo + ")" : "") +
-                       (op.letra === d.voto ? "  ← mi voto" : ""),
+                       (op.letra === d.voto ? "  ←" : ""),
                        function(){ actuar("tools", "op " + d.id + " " + op.letra, true); },
                        op.letra === d.voto]);
     });
@@ -5163,6 +5303,18 @@ iniciarPush();
 })();
 
 window.__agente = {
+  // cajas a/b/c: `prueba_web_tabs` las pinta, elige, manda y chequea que un drag no elija
+  opcionesDe: opcionesDe,
+  cajas: function(){
+    return [].map.call(document.querySelectorAll("#lista .opciones"), function(c){
+      return {clave: c.dataset.clave, hecho: c.classList.contains("hecho"),
+              opc: [].map.call(c.querySelectorAll(".opc"), function(b){
+                var cs = getComputedStyle(b);
+                return {letra: b.dataset.letra, sel: b.classList.contains("sel"), disabled: b.disabled,
+                        texto: b.textContent, bg: cs.backgroundColor, color: cs.color, top: Math.round(b.getBoundingClientRect().top)};
+              })};
+    });
+  },
   srcBuzon: srcBuzon, cargarImagenes: cargarImagenes,   // imagenes: ruta local vieja -> img/ (prueba_web_tabs)
   // notificaciones push (prueba_web_tabs lo chequea con un navegador simulado)
   pushEstado: pushEstado, pushTexto: pushTexto, activarPush: activarPush, pushVisto: pushVisto,
