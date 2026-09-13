@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.195">
-<link rel="manifest" href="manifest.json?v=4.195">
+<meta name="agente-web-version" content="4.196">
+<link rel="manifest" href="manifest.json?v=4.196">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -71,6 +71,12 @@
   }
   .msg{margin:0 0 14px 0;white-space:pre-wrap;word-break:break-word;font-size:12px}
   .msg .ts{color:var(--gris);font-size:10px}
+  /* nodo · modelo y mini estado de cada respuesta (2026-09-13) */
+  .msg .nodo,.msg .mini{color:var(--gris);font-size:10px;user-select:none}
+  .msg .mini{margin-left:6px}
+  /* mensaje en vuelo: spinner de texto, fase y eta mientras contesta el agente */
+  .msg.vuelo .cuerpo{color:var(--gris)}
+  .msg.vuelo .giro{color:var(--verde);display:inline-block;width:1ch}
   .msg .quien,.msg .ts{user-select:none}
   .msg .quien{color:var(--magenta)}
   .agente .quien{color:var(--verde)}
@@ -1799,9 +1805,62 @@ function mezclar(){
     return !(c && c.some(function(t){ return Math.abs(t - ts) < CERCA; }));
   });
   if(sueltos.length) listas.push(sueltos);
-  msgs = mezclarOrdenadas(listas);
+  msgs = sinDobles(mezclarOrdenadas(listas));
   recalcularTemas();
   return msgs.length;
+}
+// dos respuestas al mismo mensaje (facundo, 2026-09-13): si contestaron el server y cloud, se ve solo la de
+// cloud. mismo mensaje de facundo, mismo `[tema]` y menos de 3 min entre las dos. un aviso (sin tag) no cuenta.
+var DOBLE_MS = 180000;
+function sinDobles(l){
+  var ultYo = null, grupos = {}, fuera = {};
+  l.forEach(function(m, i){
+    if(m.clase === "yo"){ ultYo = i; return; }
+    if(m.clase !== "agente" || ultYo === null || !m.tag) return;
+    var k = ultYo + "|" + m.tag;
+    (grupos[k] = grupos[k] || []).push(i);
+  });
+  Object.keys(grupos).forEach(function(k){
+    var g = grupos[k], nube = g.filter(function(i){ return l[i].nodo === "cloud"; });
+    if(g.length < 2 || !nube.length) return;
+    g.forEach(function(i){
+      if(l[i].nodo === "cloud") return;
+      var t = fecha(l[i].iso);
+      if(nube.some(function(j){ return Math.abs(fecha(l[j].iso) - t) < DOBLE_MS; })) fuera[i] = true;
+    });
+  });
+  return l.filter(function(m, i){ return !fuera[i]; });
+}
+// nodo y modelo de cada respuesta (2026-09-13): el daemon los manda en `<!--nodo:cloud modelo:fable dur:12
+// cuello:modelo-->` abajo de la marca, y en `chat/<tema>.json` como campos. la misma logica que
+// `recetas/chat_estado.leer_meta` (tambien entiende el `[cloud]` viejo en el cuerpo).
+var RE_META = /^\s*<!--nodo:([^>]*?)-->\s*\n?/, RE_NODO_VIEJO = /^((?:\s*\[[\w\/-]+\])?)\s*\[(mac|cloud|nube)\]\s*/i;
+function leerMeta(cuerpo){
+  cuerpo = String(cuerpo || "");
+  var meta = {}, m = RE_META.exec(cuerpo);
+  if(m){
+    ("nodo:" + m[1]).split(/\s+/).forEach(function(p){
+      var i = p.indexOf(":");
+      if(i > 0 && p.slice(i + 1)) meta[p.slice(0, i)] = p.slice(i + 1).replace(/_/g, " ");
+    });
+    if(meta.dur !== undefined){ meta.dur = parseInt(meta.dur, 10); if(isNaN(meta.dur)) delete meta.dur; }
+    return {meta: meta, cuerpo: cuerpo.slice(m[0].length)};
+  }
+  var v = RE_NODO_VIEJO.exec(cuerpo);
+  if(v){
+    meta.nodo = /nube/i.test(v[2]) ? "cloud" : v[2].toLowerCase();
+    var tg = (v[1] || "").trim();
+    cuerpo = (tg ? tg + " " : "") + cuerpo.slice(v[0].length);
+  }
+  return {meta: meta, cuerpo: cuerpo};
+}
+function modeloCorto(s){
+  s = String(s || "").trim();
+  var b = s.toLowerCase(), ks = ["fable", "opus", "sonnet", "haiku"];
+  for(var i = 0; i < ks.length; i++) if(b.indexOf(ks[i]) >= 0) return ks[i];
+  if(!s) return "";
+  if(b.indexOf("sin modelo") === 0) return "sin modelo";
+  return s.split(/[\/:\s]/)[0].slice(0, 20);
 }
 function nodoMsg(m){
   var div = document.createElement("div");
@@ -1811,6 +1870,20 @@ function nodoMsg(m){
   cab.innerHTML = '<span class="quien"></span> <span class="ts"></span>';
   cab.querySelector(".quien").textContent = m.quien + ">";
   cab.querySelector(".ts").textContent = desde(m.iso || new Date().toISOString());
+  // `agente> 12:46 · cloud · fable`: que nodo y que modelo contesto, en la misma linea (mensajes viejos: nada)
+  var info = [m.nodo, m.modelo].filter(function(x){ return !!x; });
+  if(info.length){
+    var sp = document.createElement("span");
+    sp.className = "nodo"; sp.textContent = " · " + info.join(" · ");
+    cab.appendChild(sp);
+  }
+  // mini estado antes del [▶]: cuanto tardo la ida y vuelta y que fue lo mas lento
+  if(m.duracion_s !== undefined && m.duracion_s !== null && m.duracion_s !== ""){
+    var mi = document.createElement("span");
+    mi.className = "mini";
+    mi.textContent = Math.round(+m.duracion_s) + " s" + (m.cuello ? " · " + m.cuello : "");
+    cab.appendChild(mi);
+  }
   // el [▶] de daniela: solo en las respuestas que el daemon ya renderizo (campo `audio` de la fila).
   // el texto sale primero y el audio aparece en el poll siguiente, asi que el boton llega despues.
   if(m.audio) cab.appendChild(reproductor(m.audio, "escuchar la respuesta"));
@@ -1828,11 +1901,13 @@ function pintarMsg(m, arriba){
     if(arriba) lista.insertBefore(nodoMsg(m), lista.firstChild); else lista.appendChild(nodoMsg(m));
   }
   if(!arriba && m.clase === "agente") pintarChips();   // contesto el daemon: sugerencias nuevas
+  if(!arriba && vuelo) pintarVuelo();                   // el bloque en vuelo queda siempre al final
 }
 function render(){
   if(lista) lista.innerHTML = "";
   msgs.forEach(function(m){ pintarMsg(m, false); });
   pintarChips();
+  if(!vueloContestado()) pintarVuelo();
 }
 function alFinal(){ abajo(); }
 // abrir la web, volver al foco o cambiar de pestaña te deja **donde estabas**, no al final (facundo,
@@ -1965,9 +2040,13 @@ function agregar(c, arriba){
   vistos[c.id] = true;
   var b = c.body || "", m;
   if(b.indexOf(MARCA) === 0){
-    var cuerpo = b.slice(MARCA.length).replace(/^\n/, ""), mt = /^\[([\w\/-]+)\]\s*/.exec(cuerpo), tag = null;
+    // `<!--nodo:cloud modelo:fable dur:12 cuello:modelo-->` va al header, no al cuerpo
+    var lm = leerMeta(b.slice(MARCA.length).replace(/^\n/, "")), mm = lm.meta;
+    var cuerpo = lm.cuerpo, mt = /^\[([\w\/-]+)\]\s*/.exec(cuerpo), tag = null;
     if(mt && esTema(mt[1])){ tag = normTema(mt[1]); cuerpo = cuerpo.slice(mt[0].length); }
-    m = {id: c.id, clase: "agente", quien: "agente", texto: cuerpo, iso: c.created_at, tag: tag};
+    m = {id: c.id, clase: "agente", quien: "agente", texto: cuerpo, iso: c.created_at, tag: tag,
+         nodo: mm.nodo || null, modelo: mm.modelo ? modeloCorto(mm.modelo) : null,
+         duracion_s: mm.dur !== undefined ? mm.dur : null, cuello: mm.cuello || null};
   }else{
     var sd = sacarDesde(b), tg = null, texto = sd.texto;
     var mp = RE_TEMA.exec(texto);
@@ -2034,12 +2113,17 @@ function recibirChat(tema, d){
                              iso: f.ts, tema: t, explicito: true});
     var r = String(f.respuesta || ""), mt = /^\s*\[([\w\/-]+)\]\s*/.exec(r);
     if(mt && esTema(mt[1])) r = r.slice(mt[0].length);   // el `[tema]` ya lo dice la pestaña
+    var lm = leerMeta(r), nodo = f.nodo || lm.meta.nodo || null;   // el `[cloud]` viejo sale del cuerpo
+    r = lm.cuerpo;
     // un mensaje partido en dos temas tuvo UNA sola respuesta: no se pinta dos veces
     var k = f.ts + "|" + r.slice(0, 80);
     if(r && !resp[k]){
       resp[k] = true;
+      // nodo, modelo y mini estado solo en las filas que los traen (las viejas no tienen `nodo`: no se pinta nada)
       out.push({id: "h:" + base + ":r", clase: "agente", quien: "agente", texto: r, iso: f.ts,
-                tema: t, explicito: true, tag: t, audio: f.audio || null});
+                tema: t, explicito: true, tag: t, audio: f.audio || null, nodo: nodo,
+                modelo: f.nodo && f.modelo ? modeloCorto(f.modelo) : null,
+                duracion_s: f.duracion_s !== undefined ? f.duracion_s : null, cuello: f.cuello || null});
     }
   });
   msgsHist[t] = out;
@@ -2181,7 +2265,8 @@ window.addEventListener("pageshow", alVolver);
 function reprogramar(){
   if(timer) clearInterval(timer);
   if(!token) return;
-  var ms = document.hidden ? 30000 : 5000;
+  // con un mensaje en vuelo los comentarios van cada 3 s: la respuesta aparece apenas sale
+  var ms = document.hidden ? 30000 : (vuelo ? 3000 : 5000);
   if(Date.now() < frenoHasta) ms = Math.min(Math.max(frenoHasta - Date.now() + 500, ms), 60000);
   timer = setInterval(tick, ms);
 }
@@ -2246,6 +2331,89 @@ function cuerpoMsg(texto, tema, crudo){
 // idempotente: mientras hay un envio en vuelo no sale nada nuevo, la caja se vacia **al toque** (y con
 // ella el borrador, que si no lo resucita el `tabs.json` del otro dispositivo), y un texto identico al
 // ultimo enviado hace menos de REPE_MS se ignora. si el POST falla, el texto vuelve a la caja.
+// ---------- mensaje en vuelo (facundo, 2026-09-13: "ver que pasa mientras espero") ----------
+// al mandar, abajo del mensaje aparece `agente> hh:mm` con un spinner de texto, la fase que publica el daemon
+// en `chat/estado-<clave>.json` (clave = el tema del prefijo `tema x:` o `auto`, igual que
+// `recetas/chat_estado.clave_archivo`) y `~N s` de eta. mientras hay uno en vuelo el estado se mira cada 1 s y
+// los comentarios cada 3 s. llega la respuesta (o el estado dice `listo` y pasan 15 s): el bloque se va.
+var GIRO = ["-", "\\", "|", "/"], VUELO_MAX_MS = 600000, VUELO_LISTO_MS = 15000;
+var vuelo = null, vueloGiro = null, vueloPoll = null, etagEstado = null;
+function claveEstado(cuerpo){
+  var m = /^\s*tema\s+([\w\/-]+)\s*:/i.exec(cuerpo || "");
+  return m ? m[1].toLowerCase().replace(/\//g, "-") : "auto";
+}
+function vueloIniciar(m, cuerpo){
+  vuelo = {id: m.id, tema: m.tema, iso: m.iso, t: fecha(m.iso) || Date.now(), clave: claveEstado(cuerpo),
+           palabra: "enviado", eta: null, giro: 0, listo: 0};
+  etagEstado = null;
+  if(vueloGiro) clearInterval(vueloGiro);
+  if(vueloPoll) clearInterval(vueloPoll);
+  vueloGiro = setInterval(vueloGirar, 120);
+  vueloPoll = setInterval(vueloMirar, 1000);
+  pintarVuelo(); reprogramar();
+}
+function vueloTerminar(){
+  vuelo = null;
+  if(vueloGiro){ clearInterval(vueloGiro); vueloGiro = null; }
+  if(vueloPoll){ clearInterval(vueloPoll); vueloPoll = null; }
+  var n = document.getElementById("vuelo");
+  if(n) n.remove();
+  reprogramar();
+}
+function pintarVuelo(){
+  var n = document.getElementById("vuelo");
+  if(!vuelo || !lista || !deEstaTab(vuelo.tema, temaActivo())){ if(n) n.remove(); return; }
+  if(!n){
+    n = document.createElement("div");
+    n.id = "vuelo"; n.className = "msg agente vuelo";
+    n.innerHTML = '<div><span class="quien">agente&gt;</span> <span class="ts"></span></div>' +
+                  '<div class="cuerpo"><span class="giro"></span> <span class="fase"></span><span class="eta"></span></div>';
+  }
+  if(n.parentNode !== lista || lista.lastChild !== n) lista.appendChild(n);
+  n.querySelector(".ts").textContent = desde(vuelo.iso);
+  n.querySelector(".giro").textContent = GIRO[vuelo.giro % GIRO.length];
+  n.querySelector(".fase").textContent = vuelo.palabra;
+  n.querySelector(".eta").textContent = vuelo.eta ? " ~" + vuelo.eta + " s" : "";
+}
+function vueloGirar(){
+  if(!vuelo) return;
+  vuelo.giro++;
+  var g = document.querySelector("#vuelo .giro");
+  if(g) g.textContent = GIRO[vuelo.giro % GIRO.length];
+}
+// lo que publica el daemon. un estado de un intercambio anterior (ts_inicio viejo) no se pinta
+function recibirEstado(e){
+  if(!vuelo || !e) return false;
+  if(e.ts_inicio && e.ts_inicio * 1000 < vuelo.t - 15000) return false;
+  vuelo.palabra = e.palabra || e.fase || vuelo.palabra;
+  if(e.eta_s) vuelo.eta = e.eta_s;
+  if((e.fase === "listo" || e.fase === "sin claude") && !vuelo.listo) vuelo.listo = Date.now();
+  pintarVuelo();
+  return true;
+}
+function vueloMirar(){
+  if(!vuelo) return;
+  if(Date.now() - vuelo.t > VUELO_MAX_MS || (vuelo.listo && Date.now() - vuelo.listo > VUELO_LISTO_MS)){
+    vueloTerminar(); return;
+  }
+  if(!token) return;
+  crudo("chat/estado-" + vuelo.clave + ".json", etagEstado).then(function(r){
+    if(!r || r.status === 304) return;
+    etagEstado = r.etag;
+    recibirEstado(r.json);
+  }).catch(function(){});
+}
+// llego la respuesta: un mensaje del agente despues del que esta en vuelo, con `[tema]` (un aviso suelto no
+// cuenta) o sin tag si el daemon ya dijo `listo` (los comandos sin modelo contestan sin tema)
+function vueloContestado(){
+  if(!vuelo) return false;
+  for(var i = msgs.length - 1; i >= 0; i--){
+    var m = msgs[i];
+    if(m.clase !== "agente" || fecha(m.iso) < vuelo.t - 2000) continue;
+    if(m.tag || vuelo.listo){ vueloTerminar(); return true; }
+  }
+  return false;
+}
 var REPE_MS = 2000;
 var ultimoTexto = "", ultimoTs = 0;
 function mandar(texto, tema, crudo){
@@ -2273,7 +2441,9 @@ function mandar(texto, tema, crudo){
         vistos[r.json.id] = true;
         var m = {id: r.json.id, clase: "yo", quien: "facundo", texto: texto, iso: r.json.created_at,
                  explicito: true, tema: tema};
-        msgsCom.push(m); msgs.push(m); pintarMsg(m, false); alFinal();
+        msgsCom.push(m); msgs.push(m); pintarMsg(m, false);
+        vueloIniciar(m, cuerpo);   // spinner + fase + eta hasta que llegue la respuesta
+        alFinal();
       }
       etagCom = null;
     })
@@ -5073,7 +5243,11 @@ window.__agente = {
   limpiarChat: function(){ msgsHist = {}; msgsCom = []; chatIndex = null; etagChat = {};
                            msgs = []; render(); },
   // el chat es un panel unico: `enPanel()` cuenta los mensajes pintados en la pestaña activa
-  enPanel: function(){ return lista ? lista.querySelectorAll(".msg").length : -1; }
+  enPanel: function(){ return lista ? lista.querySelectorAll(".msg:not(.vuelo)").length : -1; },
+  // estado en vivo y una sola respuesta por mensaje (2026-09-13, prueba_web_tabs lo chequea)
+  leerMeta: leerMeta, modeloCorto: modeloCorto, sinDobles: sinDobles, claveEstado: claveEstado,
+  vueloIniciar: vueloIniciar, vueloTerminar: vueloTerminar, recibirEstado: recibirEstado,
+  vuelo: function(){ return vuelo ? {clave: vuelo.clave, palabra: vuelo.palabra, eta: vuelo.eta, giro: vuelo.giro} : null; }
 };
 
 })();

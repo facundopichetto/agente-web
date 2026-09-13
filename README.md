@@ -949,3 +949,32 @@ celu, con el numero en el icono.
   (`probar` manda un push REAL y lo anota en `log.md`).
 - **pruebas**: `python3 -m recetas.prueba_push` (sin red, suscripcion falsa, 410, badge) y el bloque push de
   `recetas/prueba_web_tabs` (sw registrado, boton, safari sin pwa, flujo simulado, sin errores).
+
+## estado en vivo, una sola respuesta y nodo en el header (facundo, 2026-09-13)
+
+"quiero ida y vuelta casi instantanea, ver que pasa mientras espero, una sola respuesta por mensaje y ver en el
+header que nodo y que modelo contesto". el criterio del daemon esta en `recetas/chat_estado.py` (cero tokens).
+
+- **una sola respuesta**: el server recien reiniciado arrancaba con el lock `chat.json` en `libre` sin haberlo
+  leido y contestaba lo mismo que cloud (13:00). ahora `atiendo_chat` lo lee antes de decidir
+  (`chat_nodo.atiendo_con_lock`), el server retoma con relevo si lo ultimo que vio era un lock ajeno, y el hilo
+  del chat vuelve a mirar el lock antes del modelo y antes de publicar: si el chat paso a otro nodo, la respuesta
+  se suelta (`chat: suelto la respuesta` en `log.md`). en la web, `sinDobles()` esconde la repetida: dos
+  respuestas al mismo mensaje, mismo `[tema]`, menos de 3 min, y una de `cloud` -> se ve solo la de cloud.
+- **nodo y modelo en el header**: el daemon manda `<!--agente-->` + `<!--nodo:cloud modelo:fable dur:12
+  cuello:modelo-->` + el cuerpo. `leerMeta()` lo saca del cuerpo (tambien el `[cloud]` viejo) y el header queda
+  `agente> 12:46 · cloud · fable`. en `chat/<tema>.json` las filas nuevas traen `nodo`, `modelo`, `duracion_s` y
+  `cuello`; una fila vieja sin `nodo` no pinta nada.
+- **mini estado**: antes del `[▶]`, en gris, `12 s · modelo` = ida y vuelta real (desde que github creo el
+  comentario hasta que sale la respuesta) y la fase mas lenta (`cola`, `audio`, `historial`, `oauth`, `modelo`,
+  `buzón`).
+- **en vuelo**: al mandar, abajo del mensaje aparece `agente> hh:mm` con un spinner `- \ | /` (120 ms), la fase y
+  `~N s` de eta. la fase la publica el daemon en `chat/estado-<clave>.json` (`{fase, palabra, ts, ts_inicio, eta_s,
+  canal, tema, nodo}`; clave = tema del prefijo `tema x:` o `auto`) y la web la mira cada 1 s solo mientras hay
+  un mensaje en vuelo (los comentarios pasan a 3 s). fases: `recibido`, `audio`, `clasificando`, `cuenta`,
+  `historial`, `modelo` (dice `fable` / `opus`), `guardando`, `listo`, `sin claude`; una fase nueva sin palabra se
+  registra sola. el estado lo sube **solo el nodo que atiende el chat**, coalescido (una subida cada 1,5 s como
+  mucho) y respetando el freno y el tope del buzon. eta = promedio de los ultimos 20 intercambios con modelo del
+  canal (`.chat-duraciones.json`). el bloque se va cuando llega la respuesta, o 15 s despues de `listo`.
+- probar: `python3 -m recetas.chat_estado --probar`, `python3 -m recetas.chat_nodo --probar` y los bloques
+  `estado en vivo` de `recetas/prueba_web_tabs`.
