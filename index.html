@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.190">
-<link rel="manifest" href="manifest.json?v=4.190">
+<meta name="agente-web-version" content="4.191">
+<link rel="manifest" href="manifest.json?v=4.191">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -3376,6 +3376,13 @@ function cajaUsage(u){
       '<span class="' + (rep.reparto ? "a" : "g") + '">' +
       (rep.reparto ? "reparto" : (rep.modo === "auto" ? "auto, espera el corte" : "fija")) + "</span>" +
       (rep.porque ? '<span class="g por">' + esc(rep.porque) + "</span>" : "") + "</div>");
+  // por modelo (facundo, 2026-09-13): opus no mira la barra fable, asi que cada modelo puede salir con
+  // otra cuenta. una linea por modelo: "opus -> facu: week 80%, resetea mie 18:00".
+  (rep.modelos || []).forEach(function(mo){
+    html += it({tipo: "cuenta", tema: "tools", d: mo, completo: mo.porque || mo.linea || ""},
+      '<div class="rep modelo"><span class="g">' + esc(mo.modelo || "") + '</span> <span class="nom">' +
+      esc(mo.elegida || "") + '</span><span class="g por">' + esc(mo.linea || "") + "</span></div>");
+  });
   cuentas.forEach(function(cu){
     var nota = (cu.nota === null || cu.nota === undefined) ? "" : cu.nota + "x";
     // sin login propio en esta maquina (o el mismo login que otra: el symlink del server): se dice,
