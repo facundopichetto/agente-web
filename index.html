@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.188">
-<link rel="manifest" href="manifest.json?v=4.188">
+<meta name="agente-web-version" content="4.189">
+<link rel="manifest" href="manifest.json?v=4.189">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1297,6 +1297,8 @@ function recibirTabs(L){
   var ws = recibirWsets(L.wsets);
   // idem el orden de los widgets: por su propio `ts`
   var orw = recibirOrden(L.orden_widgets);
+  // la ultima vez que facundo miro el board (el daemon lo usa para poner el badge en 0): gana el mayor
+  if(+L.push_leido > pushLeido) pushLeido = +L.push_leido;
   if(ts > layoutTs){ aplicarLayout(L, ts); return "remoto"; }
   if(layoutTs > ts && L.origen !== DISPOSITIVO){ publicarTabs(true); return "mio"; }
   if(borr || vis || sp || ws || orw) publicarTabs();   // mezcle los dos lados: que el otro vea el resultado
@@ -1321,6 +1323,7 @@ function ponerTabs(reintento){
   L.split = splitLimpio();
   L.wsets = wsetsLimpias();
   L.orden_widgets = ordenLimpio();
+  if(pushLeido) L.push_leido = pushLeido;
   var cuerpo = {message: "tabs " + DISPOSITIVO, content: textoAb64(JSON.stringify(L))};
   if(shaTabs) cuerpo.sha = shaTabs;
   // fetch propio y no `api()`: un 403 de escritura NO tiene que desloguear a facundo del chat
@@ -2179,7 +2182,7 @@ document.addEventListener("visibilitychange", function(){
   reprogramar();
   // el borrador viaja en los dos sentidos: al irme publico lo que escribi, al volver releo el del otro
   if(document.hidden) soltarBorrador();   // publica el borrador y la vista antes de irse
-  else alVolver();
+  else{ alVolver(); pushVisto(); }
 });
 // cerrar la pestaña / bloquear el telefono no puede perder lo escrito: el PUT va con `keepalive`
 function soltarBorrador(){
@@ -2572,6 +2575,141 @@ function subirBuzon(ruta, b64, mensaje){
   });
 }
 function subirFoto(ruta, b64){ return subirBuzon(ruta, b64, "foto"); }
+
+// ---------- notificaciones push al iphone (facundo, 2026-09-12) ----------
+// ios 16.4+ solo manda push a la pwa agregada a inicio y solo pide permiso dentro de un toque. la
+// suscripcion se publica en el buzon como `push/<hash>.json` (una por dispositivo) y el daemon manda con
+// `recetas/push.py`. el badge lo pone el sw con el numero del payload; al abrir o volver al foco se
+// limpia y `push_leido` viaja en `tabs.json` para que el daemon arranque de 0. detalle en README.md.
+var swReg = null, pushSub = null, pushLeido = 0;
+var PUSH_LEIDO_MIN = 60000;     // como mucho una publicacion de `push_leido` por minuto
+var pushStub = null;            // `prueba_web_tabs` lo enchufa para simular un navegador con push
+function esIOS(){
+  return /iPhone|iPad|iPod/.test(navigator.userAgent) ||
+         (navigator.platform === "MacIntel" && (navigator.maxTouchPoints || 0) > 1);
+}
+function pushSoportado(){
+  if(pushStub) return !!pushStub.soportado;
+  return !!(window.isSecureContext && location.protocol !== "file:" && "serviceWorker" in navigator &&
+            "PushManager" in window && "Notification" in window);
+}
+// "activas" | "apagadas" | "bloqueadas" | "sin_pwa" (safari sin agregar a inicio) | "sin_soporte"
+function pushEstado(){
+  if(!pushSoportado()) return esIOS() && !esStandalone() ? "sin_pwa" : "sin_soporte";
+  var perm = pushStub ? pushStub.perm : Notification.permission;
+  if(perm === "denied") return "bloqueadas";
+  return perm === "granted" && pushSub ? "activas" : "apagadas";
+}
+function pushTexto(){
+  return {activas: "activas en este dispositivo", apagadas: "activar",
+          bloqueadas: "bloqueadas (ajustes > notificaciones > claudio board)",
+          sin_pwa: "agregá a inicio para activar", sin_soporte: "este navegador no tiene push"}[pushEstado()];
+}
+function b64uABytes(s){
+  var b = atob(String(s).replace(/-/g, "+").replace(/_/g, "/") + "===".slice((String(s).length + 3) % 4));
+  var u = new Uint8Array(b.length);
+  for(var i = 0; i < b.length; i++) u[i] = b.charCodeAt(i);
+  return u;
+}
+function mismaClave(sub, clave){
+  try{
+    var a = new Uint8Array(sub.options.applicationServerKey), b = b64uABytes(clave);
+    if(a.length !== b.length) return false;
+    for(var i = 0; i < a.length; i++) if(a[i] !== b[i]) return false;
+    return true;
+  }catch(x){ return true; }      // sin `options` (safari viejo) no se puede comparar: se deja
+}
+// la suscripcion al buzon, una sola vez por endpoint (localStorage recuerda el hash ya publicado)
+function publicarSub(s){
+  var j = s.toJSON ? s.toJSON() : s;
+  return sha12(new TextEncoder().encode(j.endpoint)).then(function(h){
+    try{ if(localStorage.getItem("agente_push_pub") === h) return h; }catch(x){}
+    var cuerpo = {endpoint: j.endpoint, keys: j.keys, dispositivo: DISPOSITIVO,
+                  ua: navigator.userAgent.slice(0, 160), ts: Date.now()};
+    return subirBuzon("push/" + h + ".json", textoAb64(JSON.stringify(cuerpo)), "push").then(function(){
+      try{ localStorage.setItem("agente_push_pub", h); }catch(x){}
+      return h;
+    });
+  });
+}
+function iniciarPush(){
+  if(!pushSoportado() || pushStub) return;
+  navigator.serviceWorker.register("sw.js").then(function(reg){
+    swReg = reg;
+    return reg.pushManager.getSubscription();
+  }).then(function(s){
+    pushSub = s || null;
+    if(s && Notification.permission === "granted" && token) publicarSub(s).catch(function(){});
+    if(s) pushVisto();
+    repintarWidgets();
+  }).catch(function(){});
+  navigator.serviceWorker.addEventListener("message", function(e){
+    var d = e.data || {};
+    if(d.tipo === "abrir") irTemaPush(d.tema);
+    if(d.tipo === "push" && !document.hidden) pushVisto(true);
+  });
+}
+// el boton: pedir permiso (dentro del toque), suscribirse con la clave vapid y publicar
+function activarPush(){
+  var e = pushEstado();
+  if(e === "sin_pwa"){
+    sistema("las notificaciones en iphone andan solo con el board agregado a inicio: en safari, compartir > " +
+            "agregar a inicio, abrilo desde el ícono y tocá de nuevo [activar notificaciones].");
+    return Promise.resolve(e);
+  }
+  if(e === "sin_soporte"){ sistema("este navegador no soporta notificaciones push.", "error"); return Promise.resolve(e); }
+  if(e === "activas"){ sistema("las notificaciones ya están activas en este dispositivo."); return Promise.resolve(e); }
+  var clave = ((widDatos || {}).push || {}).publica;
+  if(!clave){
+    sistema("todavía no llegó la clave del server (widgets.json): probá de nuevo en un minuto.", "error");
+    return Promise.resolve("sin_clave");
+  }
+  var S = pushStub || {
+    permiso: function(){ return Notification.requestPermission(); },
+    registro: function(){ return navigator.serviceWorker.register("sw.js").then(function(){ return navigator.serviceWorker.ready; }); }
+  };
+  return Promise.resolve(S.permiso()).then(function(p){
+    if(p !== "granted") throw new Error(p === "denied" ? "las bloqueaste: se destraban en ajustes > notificaciones > claudio board"
+                                                       : "no diste permiso");
+    return S.registro();
+  }).then(function(reg){
+    swReg = reg;
+    return reg.pushManager.getSubscription().then(function(s){
+      if(s && !mismaClave(s, clave)) return s.unsubscribe().then(function(){ return null; });
+      return s;
+    }).then(function(s){
+      return s || reg.pushManager.subscribe({userVisibleOnly: true, applicationServerKey: b64uABytes(clave)});
+    });
+  }).then(function(s){
+    pushSub = s;
+    try{ localStorage.removeItem("agente_push_pub"); }catch(x){}   // suscripcion nueva: se publica si o si
+    return publicarSub(s);
+  }).then(function(){
+    sistema("notificaciones activas en este dispositivo: te llegan los avisos y las respuestas, con el número en el ícono.");
+    repintarWidgets();
+    return "activas";
+  }).catch(function(x){
+    sistema("no pude activar las notificaciones: " + ((x && x.message) || x), "error");
+    return "error";
+  });
+}
+// facundo esta mirando el board: badge en 0 y `push_leido` al buzon (una vez por minuto)
+function pushVisto(ya){
+  try{ if(navigator.clearAppBadge) navigator.clearAppBadge().catch(function(){}); }catch(x){}
+  if(!pushSub) return false;
+  var ahora = Date.now();
+  if(!ya && ahora - pushLeido < PUSH_LEIDO_MIN) return false;
+  pushLeido = ahora;
+  publicarTabs();
+  return true;
+}
+// tocar la notificacion: el sw abre `./?tema=x` o le avisa a la ventana abierta
+function irTemaPush(tema){
+  if(!tema || !esTema(normTema(tema))) return false;
+  abrirTab(tema);
+  try{ verPanel("chat"); }catch(x){}
+  return true;
+}
 // el camino entero: comprimir -> hash -> subir -> mandar el mensaje de la pestaña activa.
 function mandarFoto(file, pieTexto){
   if(!file) return Promise.resolve();
@@ -3464,7 +3602,11 @@ function cajaAvisos(av){
     av = av.filter(function(l){ return String(l).slice(0, 10) === d; });
   }
   var ese = '<span class="c b">' + av.length + "</span> " +
-            '<span class="g">' + (wset("avisos", "solo_hoy") ? "hoy" : "en total") + "</span>";
+            '<span class="g">' + (wset("avisos", "solo_hoy") ? "hoy" : "en total") + "</span>" +
+            // notificaciones push al iphone: el boton se ve mientras no esten activas en este dispositivo
+            (pushEstado() === "activas" ? ' <span class="g">· push on</span>'
+                                        : ' <button class="wbtn" type="button" data-push="1" title="' +
+                                          esc(pushTexto()) + '">[activar notificaciones]</button>');
   if(!av.length) return caja("avisos", ese, vacio(wset("avisos", "solo_hoy") ? "sin avisos hoy" : "sin avisos"),
                              false, "avisos");
   return caja("avisos", ese, limFilas("avisos", av.map(function(l){
@@ -3829,6 +3971,8 @@ widgetsEl.addEventListener("click", function(e){
   if(Date.now() - arrUlt < 300){ e.stopPropagation(); return; }   // el click que viene atras del arrastre
   var ver = e.target.closest("button[data-mostrar]");      // el pie: volver a mostrar una caja oculta
   if(ver){ guardarWset(ver.dataset.mostrar, "oculto", false); return; }
+  var pbtn = e.target.closest("button[data-push]");       // activar notificaciones (gesto de facundo)
+  if(pbtn){ activarPush(); return; }
   var escw = e.target.closest("button[data-esc]");        // [✎] escribir en el chat sobre este widget
   if(escw){ escribirWidget(escw.dataset.esc); return; }
   var ref = e.target.closest("button[data-ref]");         // [↻] volver a bajar widgets.json
@@ -4200,6 +4344,12 @@ function modalSets(clave){
       pintarModal(modalSets(clave));      // el modal se queda abierto con el valor nuevo
     }, false]);
   });
+  if(clave === "avisos"){
+    // ios pide permiso solo dentro de un toque: la accion llama directo a activarPush
+    m.acciones.push(["notificaciones: " + pushTexto(), function(){
+      activarPush().then(function(){ pintarModal(modalSets(clave)); });
+    }, false]);
+  }
   // la alternativa sin arrastrar (facundo, 2026-09-12: "por si el drag no va")
   m.acciones.push(["subir", function(){
     moverWidget(clave, -1); pintarModal(modalSets(clave));
@@ -4586,7 +4736,22 @@ if(urlSucia) sistema("el token venía en la url: lo guardé acá y limpié la di
 
 // gancho de prueba: `recetas/prueba_web` (chrome headless, cero tokens) usa esto para chequear que
 // el clasificador de la web da lo mismo que la receta de python y que cada mensaje cae en su pestaña.
+// push: registrar el sw (si hay soporte) y, si se abrio desde una notificacion, ir a la pestaña del tema
+iniciarPush();
+(function(){
+  var q = new URLSearchParams(location.search), t = q.get("tema");
+  if(!t) return;
+  irTemaPush(t);
+  q.delete("tema");
+  try{ history.replaceState(null, "", location.pathname + (q.toString() ? "?" + q.toString() : "")); }catch(x){}
+})();
+
 window.__agente = {
+  // notificaciones push (prueba_web_tabs lo chequea con un navegador simulado)
+  pushEstado: pushEstado, pushTexto: pushTexto, activarPush: activarPush, pushVisto: pushVisto,
+  irTemaPush: irTemaPush, pushSoportado: pushSoportado,
+  stubPush: function(s){ pushStub = s; }, ponerPushSub: function(s){ pushSub = s; },
+  pushLeido: function(){ return pushLeido; },
   pintarNodos: function(n){ pintarNodos(n); },
   nodos: function(){ return ((widDatos || {}).nodos || {}).nodos || []; },
   clasificar: clasificar, partir: partir,

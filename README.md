@@ -917,3 +917,30 @@ cuentas!). idealmente el widget deberia llevarme al contenido".
   `logs/chat-<tema>.jsonl` y al modelo le llega como "desde que widget escribe", no como parte del pedido.
 - pruebas: `recetas/prueba_web_tabs` (`tocarHeader(clave, 'esc')`, `headers()[i].escribir`) y
   `recetas/prueba_chat_tema`.
+
+## notificaciones push al iphone, con badge (facundo, 2026-09-12)
+
+cada aviso de `avisos.md` y cada respuesta del chat llegan como **notificacion real** a la pantalla del
+celu, con el numero en el icono.
+
+- **paso unico de facundo**: abrir el board **desde el icono de inicio** (compartir > agregar a inicio en
+  safari) y tocar **`[activar notificaciones]`** en el header del widget `avisos` (o `[⚙]` de avisos >
+  `notificaciones`). ios 16.4+ solo manda push a la pwa de inicio y solo pide permiso dentro de un toque.
+  en safari a secas el boton dice "agregá a inicio para activar".
+- **web**: `sw.js` (sin cache, `VERSION` la reescribe `bump_web`) muestra la notificacion, pone el badge con
+  `setAppBadge(n)` y al tocarla abre `./?tema=<tema>` (o le avisa a la ventana abierta). `activarPush()`
+  pide permiso, se suscribe con la clave vapid publica de `widgets.json` (clave `push`) y publica
+  `push/<hash del endpoint>.json` en el buzon (`{endpoint, keys, dispositivo, ua, ts}`), uno por dispositivo.
+  al abrir o volver al foco `pushVisto()` limpia el badge y deja `push_leido` (ms) en `tabs.json`.
+- **daemon**: `push_al_toque()` (hilo, nunca frena) en `despachar_avisos` (titulo `aviso`) y en
+  `chat_guardar` (titulo `[tema]`, cuerpo 120 chars; un mensaje partido suena una vez). por abajo,
+  `recetas/push.py`: claves en `secretos/vapid.json` (600), cifrado aes128gcm + jwt es256 con
+  `cryptography` (el daemon corre con `/usr/bin/python3`; `pywebpush` esta en el venv y la prueba lo usa
+  para validar el cifrado). badge = pushes desde el ultimo `push_leido`.
+- **guards**: una suscripcion que contesta 404/410 se borra sola del buzon (DELETE con sha, respeta el
+  freno del escritor); sin suscripciones no se manda nada y el aviso sigue por buzon/telegram; github o
+  apple caidos quedan en `log.md` y no rompen nada.
+- **cli**: `python3 -m recetas.push listar | clave | mandar "<texto>" [--tema x] [--badge n] | probar`
+  (`probar` manda un push REAL y lo anota en `log.md`).
+- **pruebas**: `python3 -m recetas.prueba_push` (sin red, suscripcion falsa, 410, badge) y el bloque push de
+  `recetas/prueba_web_tabs` (sw registrado, boton, safari sin pwa, flujo simulado, sin errores).
