@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.207">
-<link rel="manifest" href="manifest.json?v=4.207">
+<meta name="agente-web-version" content="4.208">
+<link rel="manifest" href="manifest.json?v=4.208">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -820,22 +820,48 @@ function navCorto(){
   else if(/safari/.test(ua)) nav = "safari";
   return [os, nav].filter(Boolean).join("/") || "otro";
 }
+// el dispositivo corto de la cabecera `f · hh:mm · iphone` (1140): iphone e ipad por userAgent, y el ipados
+// que se hace pasar por mac (userAgent `Macintosh`) por los puntos tactiles; si el userAgent no lo dice, el
+// tamaño de pantalla (lado corto >= 700 = ipad).
+var DISPOSITIVOS = ["iphone", "ipad", "mac", "android", "pc"];
+function dispActual(ua, toques, lado){
+  ua = String(ua === undefined ? navigator.userAgent || "" : ua).toLowerCase();
+  toques = toques === undefined ? (navigator.maxTouchPoints || 0) : toques;
+  if(lado === undefined){ try{ lado = Math.min(screen.width, screen.height); }catch(x){ lado = 0; } }
+  if(/ipad/.test(ua)) return "ipad";
+  if(/iphone|ipod/.test(ua)) return lado >= 700 ? "ipad" : "iphone";
+  if(/android/.test(ua)) return "android";
+  if(/mac os x|macintosh/.test(ua)) return toques > 1 ? "ipad" : "mac";
+  return "pc";
+}
+// lo mismo desde un `desde` guardado (filas del historial, mensajes de otros dispositivos): el `disp` que
+// mando la web gana; las marcas viejas sin `disp` se deducen por celu/compu + os. sin marca: "".
+function dispDe(d){
+  if(!d) return "";
+  if(d.disp) return String(d.disp);
+  var os = String(d.nav || "").split("/")[0], celu = d.tipo === "celu";
+  if(os === "ios") return celu ? "iphone" : "ipad";
+  if(os === "mac") return celu ? "ipad" : "mac";
+  if(os === "android") return "android";
+  return celu || !os ? "" : "pc";
+}
 function desdeActual(){
-  return {tipo: esTactil() ? "celu" : "compu", id: DISPOSITIVO, nav: navCorto()};
+  return {tipo: esTactil() ? "celu" : "compu", id: DISPOSITIVO, nav: navCorto(), disp: dispActual()};
 }
 function marcaDesde(){
   var d = desdeActual();
-  return "[desde: " + d.tipo + " " + d.id + " " + d.nav + "]";
+  return "[desde: " + d.tipo + " " + d.id + " " + d.nav + " " + d.disp + "]";
 }
 // la forma es cerrada (celu|compu + id + navegador): un mensaje que termine en "[desde: casa]" es
 // texto de facundo y no se toca. misma regex que `RE_DESDE` de daemon.py.
-var RE_DESDE = /\s*\[desde:\s*(celu|compu)\s+([\w.-]{1,24})(?:\s+([\w./+-]{1,32}))?\]\s*$/i;
+var RE_DESDE = /\s*\[desde:\s*(celu|compu)\s+([\w.-]{1,24})(?:\s+([\w./+-]{1,32}))?(?:\s+(iphone|ipad|mac|android|pc))?\]\s*$/i;
 // saca la marca del texto que se muestra: {texto, desde}
 function sacarDesde(t){
   var m = RE_DESDE.exec(t || "");
   if(!m) return {texto: t || "", desde: null};
-  return {texto: (t || "").slice(0, m.index).replace(/\s+$/, ""),
-          desde: {tipo: m[1].toLowerCase(), id: m[2], nav: m[3] || ""}};
+  var d = {tipo: m[1].toLowerCase(), id: m[2], nav: m[3] || ""};
+  if(m[4]) d.disp = m[4].toLowerCase();
+  return {texto: (t || "").slice(0, m.index).replace(/\s+$/, ""), desde: d};
 }
 
 // {tabs, activo} saneado: solo temas conocidos, sin repetidos, la activa dentro de tabs.
@@ -1935,7 +1961,8 @@ function nodoMsg(m){
   cab.querySelector(".ts").textContent = " · " + desde(m.iso || new Date().toISOString());
   // `claudio · 12:46 · cloud`: que nodo contesto (facundo, 2026-09-13: el modelo viaja en el json pero no se
   // pinta). mensajes viejos sin nodo: nada.
-  var info = [m.nodo].filter(function(x){ return !!x; });
+  // `f · 12:46 · iphone`: desde que dispositivo escribio facundo (1140). mensajes viejos sin `desde`: nada.
+  var info = [m.clase === "yo" ? m.disp : m.nodo].filter(function(x){ return !!x; });
   if(info.length){
     var sp = document.createElement("span");
     sp.className = "nodo"; sp.textContent = " · " + info.join(" · ");
@@ -2368,7 +2395,7 @@ function agregar(c, arriba){
     var mp = RE_TEMA.exec(texto);
     if(mp && esTema(mp[1])){ tg = normTema(mp[1]); texto = texto.slice(mp[0].length); }
     m = {id: c.id, clase: "yo", quien: QUIEN_F, texto: texto, iso: c.created_at, tag: tg,
-         desde: sd.desde};
+         desde: sd.desde, disp: dispDe(sd.desde) || null};
   }
   if(arriba) msgsCom.unshift(m); else msgsCom.push(m);
   return m;
@@ -2430,7 +2457,7 @@ function recibirChat(tema, d){
     // `(aviso de claudio)`, `(tarea 12: ...)`, `(menu de claudio)`: filas que escribe el agente solo, no son de f
     var propia = /^\((aviso de claudio|menu de claudio|turno nocturno|tarea \d+:)/.test(String(f.pregunta || ""));
     if(f.pregunta && !propia) out.push({id: "h:" + base + ":q", clase: "yo", quien: QUIEN_F, texto: f.pregunta,
-                             iso: f.ts, tema: t, explicito: true});
+                             iso: f.ts, tema: t, explicito: true, disp: dispDe(f.desde) || null});
     var r = String(f.respuesta || ""), mt = /^\s*\[([\w\/-]+)\]\s*/.exec(r);
     if(mt && esTema(mt[1])) r = r.slice(mt[0].length);   // el `[tema]` ya lo dice la pestaña
     var lm = leerMeta(r), nodo = f.nodo || lm.meta.nodo || null;   // el `[cloud]` viejo sale del cuerpo
@@ -2781,7 +2808,7 @@ function mandar(texto, tema, crudo){
       if(r.json && !vistos[r.json.id]){
         vistos[r.json.id] = true;
         var m = {id: r.json.id, clase: "yo", quien: QUIEN_F, texto: texto, iso: r.json.created_at,
-                 explicito: true, tema: tema};
+                 explicito: true, tema: tema, disp: dispDe(sacarDesde(cuerpo).desde) || null};
         msgsCom.push(m); msgs.push(m); pintarMsg(m, false);
         vueloIniciar(m, cuerpo);   // spinner + fase + eta hasta que llegue la respuesta
         alFinal();
@@ -2821,7 +2848,7 @@ function vaciarSalida(){
       if(r.json && !vistos[r.json.id]){
         vistos[r.json.id] = true;
         var y = {id: r.json.id, clase: "yo", quien: QUIEN_F, texto: m.texto, iso: r.json.created_at,
-                 explicito: true, tema: m.tema};
+                 explicito: true, tema: m.tema, disp: dispDe(sacarDesde(m.cuerpo).desde) || null};
         msgsCom.push(y); msgs.push(y); pintarMsg(y, false); alFinal();
       }
       etagCom = null;
@@ -5420,6 +5447,8 @@ window.__agente = {
   esStandalone: esStandalone, marcarStandalone: marcarStandalone,
   // de donde se escribe: viaja como `[desde: celu abc123 ios/safari]` al final del mensaje
   desde: desdeActual, marcaDesde: marcaDesde, sacarDesde: sacarDesde, cuerpoMsg: cuerpoMsg,
+  // `f · hh:mm · iphone` (1140): dispositivo corto por userAgent/toques/pantalla y desde un `desde` guardado
+  dispActual: dispActual, dispDe: dispDe, nodoMsg: nodoMsg,
   esVistaMobile: esVistaMobile, sincronizarVista: sincronizarVista, mqMobile: MQ_MOBILE,
   vistaActual: function(){ var b = document.body.classList; return {
     mobile: esVistaMobile(), toggle: document.getElementById('vistas').offsetHeight > 0,
