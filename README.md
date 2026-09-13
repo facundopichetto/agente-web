@@ -59,7 +59,7 @@ mecanismo que `widgets.json`:
 - **pintar sin cambios no toca el `ts`**: abrir la pagina no pisa lo que dejo el otro dispositivo.
 - `localStorage` queda **solo como cache offline** (`agente_tabs`, mas `agente_dispositivo` con el id
   corto de este telefono/mac).
-- el poll va al mismo ritmo que los widgets: **10 s a la vista**, 120 s en background.
+- el poll va al mismo ritmo que los widgets: **30 s a la vista**, 120 s en background.
 - **el token necesita `Contents: read and write`** sobre `agente-buzon`. si el PUT da 403/404, la web
   avisa una sola vez y sigue andando con las pestañas locales: **un 403 de escritura no desloguea**
   (por eso el PUT usa `fetch` propio y no `api()`).
@@ -111,8 +111,13 @@ polls de 30 s a la vista y 120 s en background. ahora:
   copia local` (modo offline) y se sigue con lo cacheado.
 - **al volver al foco** (`visibilitychange`, `focus`, `pageshow`) se dispara una sincronizacion ya,
   con un piso de 1,2 s para que un alt-tab no haga una bajada por segundo, y una sola en vuelo a la vez.
-- **poll a 10 s a la vista** para widgets y pestañas (antes 30 s); el chat sigue en 5 s. en background
+- **poll a 30 s a la vista** para widgets y pestañas (2026-09-13; estuvo en 10 s, pero el daemon publica
+  `widgets.json` cada 60 s y pedir mas seguido traia el mismo archivo); el chat sigue en 5 s. en background
   quedan los 120 s de siempre.
+- **edad de los widgets en el header** (facundo, 2026-09-13): con el `ts` del json fresco (< 5 min) no se
+  muestra nada; pasados 5 min `hace N min` en ambar (`.wage-vieja`) y pasados 30 en rojo (`.wage-muy`).
+  la calcula `edadWid()` y un reloj de 1 s (`refrescarEdad`) reescribe solo los `.wedad`, sin repintar,
+  asi que avanza sola aunque no llegue un json nuevo. lo chequea `recetas/prueba_web_tabs`.
 - los `chat-<tema>.jsonl` del daemon **no viven en el buzon**: la fuente del chat de la web son los
   comentarios del issue, y `recalcularTemas()` los reparte por pestaña. el log por tema es lo que lee
   el daemon para armar el contexto del modelo, no la web.

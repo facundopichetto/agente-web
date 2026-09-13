@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.191">
-<link rel="manifest" href="manifest.json?v=4.191">
+<meta name="agente-web-version" content="4.192">
+<link rel="manifest" href="manifest.json?v=4.192">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -258,6 +258,8 @@
   }
   .caja > .tit > .wacc{flex:0 0 auto;display:flex;align-items:center;gap:4px}
   .caja > .tit > .wacc .wage{color:#4a4a4a;font-size:8.5px;letter-spacing:0;text-transform:none}
+  .caja > .tit > .wacc .wage.wage-vieja{color:var(--amarillo)}
+  .caja > .tit > .wacc .wage.wage-muy{color:var(--rojo)}
   .wbtn{
     background:transparent;color:var(--gris);border:none;border-radius:4px;
     font:inherit;font-size:10px;line-height:1;padding:3px 6px;cursor:pointer;
@@ -1481,7 +1483,7 @@ var horas = parseFloat(qs.get("h")) || 3;
 var ultimoIso = null;   // created_at del comentario mas nuevo cargado (el poll pide desde ahi)
 var etagCom = null, etagIssue = null, etagWid = null;
 var widUlt = 0, widDatos = null;
-var widEdad = "";            // `hace Xs` del header de cada caja (la edad del widgets.json que se ve)
+var widTs = 0;               // `ts` (ms) del widgets.json que se ve: la edad del header la recalcula un reloj de 1 s
 var enPausa = false;
 var timer = null;
 
@@ -2097,13 +2099,14 @@ function tick(){
   vaciarSalida();   // lo que github freno sale solo apenas levanta el freno
   Promise.all([cargarEstado(), cargarComentarios(false)])
     .catch(function(e){ if(ruidoso(e)) sistema("error: " + e.message, "error"); });
-  // los widgets y las pestañas van a 10 s a la vista (antes 30) y 120 s en background: abrir el
-  // celu y ver datos de hace medio minuto se sentia viejo (facundo, 2026-09-11)
-  var cada = document.hidden ? 120000 : 10000;
+  // los widgets y las pestañas van a 30 s a la vista y 120 s en background (facundo, 2026-09-13):
+  // el daemon publica `widgets.json` cada 60 s (`widgets_web`), pedir cada 10 s traia el mismo archivo.
+  // al abrir o volver al foco se sincroniza aparte, asi que el celu no ve datos viejos por esto.
+  var cada = document.hidden ? 120000 : 30000;
   if(Date.now() - widUlt > cada){
     cargarWidgets().catch(function(e){ if(ruidoso(e)) pintarWidgets(null, e.message); });
   }
-  // las pestañas van al mismo ritmo: si las cambiaste en el celu, el desktop las ve en <= 10 s
+  // las pestañas van al mismo ritmo: si las cambiaste en el celu, el desktop las ve en <= 30 s
   if(tabsSync && Date.now() - tabsUlt > cada){
     cargarTabs().catch(function(e){ if(ruidoso(e)) sistema("pestañas: " + e.message, "error"); });
   }
@@ -3157,6 +3160,22 @@ function haceSeg(s){
   if(s < 86400) return Math.round(s / 3600) + "h";
   return Math.round(s / 86400) + "d";
 }
+// la edad del widgets.json en el header de cada caja (facundo, 2026-09-13): con menos de 5 min no se
+// muestra nada (el daemon publica cada 60 s, un `hace 40s` es ruido); pasados los 5 min `hace N min` en
+// ambar, y pasados los 30 en rojo: el dato esta viejo, algo pasa. el reloj de 1 s (`refrescarEdad`)
+// solo reescribe los `.wedad`, sin repintar las cajas.
+function edadWid(){
+  if(!widTs) return "";
+  var min = Math.floor((Date.now() - widTs) / 60000);
+  if(min < 5) return "";
+  var txt = min < 120 ? min + " min" : haceSeg(min * 60);
+  return '<span class="wage ' + (min >= 30 ? "wage-muy" : "wage-vieja") + '">hace ' + esc(txt) + "</span>";
+}
+function refrescarEdad(){
+  var h = edadWid(), els = document.querySelectorAll("#widgets .wedad");
+  for(var i = 0; i < els.length; i++) if(els[i].innerHTML !== h) els[i].innerHTML = h;
+}
+setInterval(refrescarEdad, 1000);
 function pad(t, n, der){
   t = String(t === null || t === undefined ? "" : t);
   if(t.length > n) t = t.slice(0, n);
@@ -3176,7 +3195,7 @@ function caja(tit, extra, cuerpo, tabla, clave){
          '<div class="tit"><span class="wtit" data-fold="' + esc(clave) + '" title="' +
          (pleg ? "desplegar" : "plegar") + '">' + esc(tit) + "</span>" +
          '<span class="wesc">' + (extra || "") + "</span>" +
-         '<span class="wacc">' + (widEdad ? '<span class="wage">hace ' + esc(widEdad) + "</span>" : "") +
+         '<span class="wacc"><span class="wedad">' + edadWid() + "</span>" +
          '<button class="wbtn" type="button" data-esc="' + esc(clave) + '" title="escribir sobre este widget">✎</button>' +
          '<button class="wbtn" type="button" data-ref="' + esc(clave) + '" title="actualizar">\u21bb</button>' +
          '<button class="wbtn" type="button" data-set="' + esc(clave) + '" title="settings">\u2699</button>' +
@@ -3792,7 +3811,7 @@ function pintarWidgets(d, err){
   itemsW = {}; itemN = 0;            // los items del repintado anterior ya no existen
   var t0 = fecha(d.ts);
   var edad = t0 ? haceSeg((Date.now() - t0) / 1000) : "?";
-  widEdad = t0 ? edad : "";          // el header de cada caja dice `hace Xs` (si el json trae `ts`)
+  widTs = t0 || 0;                   // el header de cada caja lo lee `edadWid()` (si el json trae `ts`)
   // cada caja con su clave: el orden lo pone `orden_widgets` (arrastrando el header) y las que
   // tengan la setting `oculto` no se pintan, pero se pueden volver a mostrar desde el pie.
   var partes = [
@@ -4950,7 +4969,7 @@ window.__agente = {
   envios: function(){ return {enviando: enviando, ultimo: ultimoTexto, repeMs: REPE_MS}; },
   stubApi: function(f){ apiStub = f || null; },
   normTema: normTema, padreTema: padreTema,
-  resaltar: resaltar, pintarWidgets: pintarWidgets,
+  resaltar: resaltar, pintarWidgets: pintarWidgets, refrescarEdad: refrescarEdad,
   // modal de items de widget: `recetas/prueba_web_tabs` lo abre y lee lo que quedo pintado
   abrirModal: abrirModal, cerrarModal: cerrarModal, modalDe: modalDe,
   items: function(){ return itemsW; },
