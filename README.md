@@ -900,3 +900,20 @@ cuentas!). idealmente el widget deberia llevarme al contenido".
   `que ver no <n>`, `que ver login` (que falta loguear y donde).
 - probar: `python3 -m recetas.prueba_que_ver` (cero tokens, cero red) y el bloque `que ver` de
   `recetas/prueba_web_tabs`.
+
+## escribir desde un widget: `[✎]` (facundo, 2026-09-12)
+
+"los widgets tienen que tener una opcion que sea escribir, asi te puedo decir algo ahi y ya tenes el contexto".
+
+- **header**: `[✎]` a la izquierda de `[↻]` y `[⚙]`. lleva a la pestaña del tema del widget (`TEMA_WIDGET`:
+  `server` -> server, `usage`/`agent`/`avisos`/`propuestas` -> tools, `tickets` -> awtomic, `verificaciones` ->
+  awtomic/qa, `podcast` -> podcast, `dj`/`mail` -> fuzzer, `que_ver` -> personal; lo que no esta, tools) y deja
+  `> widget <nombre>: <dato esencial del header>` + linea vacia, cursor al final. **no manda nada**. tocarlo de
+  nuevo no apila otra cita.
+- **modal de una fila**: ultima accion `escribir sobre esto`, a la pestaña del tema del item, con
+  `> widget <nombre> / <titulo de la fila>: <cuerpo en una linea, 300 chars>`.
+- en el celu pasa sola a la vista chat.
+- **daemon**: la cita `>` la separa `marcas_chat` (la misma de `responder`), queda como `cita` en
+  `logs/chat-<tema>.jsonl` y al modelo le llega como "desde que widget escribe", no como parte del pedido.
+- pruebas: `recetas/prueba_web_tabs` (`tocarHeader(clave, 'esc')`, `headers()[i].escribir`) y
+  `recetas/prueba_chat_tema`.

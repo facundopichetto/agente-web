@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.186">
-<link rel="manifest" href="manifest.json?v=4.186">
+<meta name="agente-web-version" content="4.187">
+<link rel="manifest" href="manifest.json?v=4.187">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -329,9 +329,9 @@
   .btn.dale{color:var(--verde);border-color:var(--verde)}
   /* selector de nodos (facundo, 2026-09-12): donde puede vivir claudio. arriba a la izquierda,
      en el lugar donde antes decia "claudio board". SERVER | MAC | CLOUD (el tercer nombre lo pone
-     el daemon). el color lo manda `recetas/nodos.py` y significa una sola cosa, quien publica:
-     verde el que esta de guardia (la web le habla a ese), amarillo el respaldo vivo que contesta
-     pero no manda, gris el que no existe o no responde. */
+     el daemon). el color lo manda `recetas/nodos.py` (failover en cadena, 2026-09-12): verde el
+     que publica o un relevo listo de respaldo, rojo el que deberia publicar y no publica (server
+     caido o tomado por otro), amarillo advertencia, gris el que no existe o no responde. */
   #nodos{display:flex;gap:6px;flex:1 1 auto;min-width:0;overflow-x:auto;scrollbar-width:none}
   #nodos::-webkit-scrollbar{display:none}
   #nodos button{
@@ -342,6 +342,8 @@
   #nodos button:active{background:#111}
   #nodos button.guardia{color:var(--blanco);border-color:var(--verde-tenue)}
   #nodos button.gris{opacity:.5;cursor:default}
+  #nodos button.mal{color:var(--rojo);border-color:var(--rojo)}
+  #nodos button.medio{border-color:var(--amarillo)}
   #nodos .luz{width:6px;height:6px;border-radius:50%;background:var(--gris);flex:0 0 auto}
   #nodos .luz.bien{background:var(--verde)}
   #nodos .luz.medio{background:var(--amarillo)}
@@ -3036,6 +3038,7 @@ function caja(tit, extra, cuerpo, tabla, clave){
          (pleg ? "desplegar" : "plegar") + '">' + esc(tit) + "</span>" +
          '<span class="wesc">' + (extra || "") + "</span>" +
          '<span class="wacc">' + (widEdad ? '<span class="wage">hace ' + esc(widEdad) + "</span>" : "") +
+         '<button class="wbtn" type="button" data-esc="' + esc(clave) + '" title="escribir sobre este widget">✎</button>' +
          '<button class="wbtn" type="button" data-ref="' + esc(clave) + '" title="actualizar">\u21bb</button>' +
          '<button class="wbtn" type="button" data-set="' + esc(clave) + '" title="settings">\u2699</button>' +
          "</span></div>" +
@@ -3610,9 +3613,9 @@ function pintarNodos(n){
   var ns = (n && n.nodos) || [];
   if(!ns.length){ nodosEl.innerHTML = '<span class="g" style="font-size:9px">nodos…</span>'; return; }
   nodosEl.innerHTML = ns.map(function(x, i){
-    var gris = x.nivel === "gris";
-    return '<button type="button" data-nodo="' + i + '" class="' + (x.guardia ? "guardia " : "") +
-      (gris ? "gris" : "") + '" title="' + esc((x.detalle || "") + " · " + (x.estado || "")) + '">' +
+    var nv = x.nivel === "gris" || x.nivel === "mal" || x.nivel === "medio" ? x.nivel : "";
+    return '<button type="button" data-nodo="' + i + '" class="' + (x.publica ? "guardia " : "") +
+      nv + '" title="' + esc((x.detalle || "") + " · " + (x.estado || "")) + '">' +
       '<span class="luz ' + esc(x.nivel || "") + '"></span>' + esc(x.nombre || x.id || "?") +
       (x.guardia ? '<span class="marca">\u25c9</span>' : "") + "</button>";
   }).join("");
@@ -3824,6 +3827,8 @@ widgetsEl.addEventListener("click", function(e){
   if(Date.now() - arrUlt < 300){ e.stopPropagation(); return; }   // el click que viene atras del arrastre
   var ver = e.target.closest("button[data-mostrar]");      // el pie: volver a mostrar una caja oculta
   if(ver){ guardarWset(ver.dataset.mostrar, "oculto", false); return; }
+  var escw = e.target.closest("button[data-esc]");        // [✎] escribir en el chat sobre este widget
+  if(escw){ escribirWidget(escw.dataset.esc); return; }
   var ref = e.target.closest("button[data-ref]");         // [↻] volver a bajar widgets.json
   if(ref){ refrescarWidgets(ref.dataset.ref); return; }
   var set = e.target.closest("button[data-set]");         // [⚙] settings de ese widget
@@ -3879,6 +3884,64 @@ function hablar(o, contexto){
 }
 function accHablar(o, contexto){
   return ["hablar de esto en el chat", function(){ hablar(o, contexto); }];
+}
+
+// ---------- escribir desde un widget (facundo, 2026-09-12) ----------
+// "los widgets tienen que tener una opcion que sea escribir, asi te puedo decir algo ahi y ya tenes el
+// contexto": el `[✎]` del header (y `escribir` en el modal de cada fila) lleva a la pestaña del tema
+// del widget y deja una cita `> widget <nombre>: ...` + linea vacia en el input, sin mandar nada. el
+// daemon la separa del pedido con `marcas_chat` (igual que `responder`) y se la pasa al modelo.
+var TEMA_WIDGET = {server: "server", usage: "tools", agent: "tools", cola: "tools", verificaciones: "awtomic/qa",
+                   tickets: "awtomic", oportunidades: "tools", decided: "tools", sombra: "tools",
+                   avisos: "tools", propuestas: "tools", podcast: "podcast", dj: "fuzzer", mail: "fuzzer",
+                   que_ver: "personal"};
+var ESC_CHARS = 300;
+function temaWidget(clave){
+  var t = TEMA_WIDGET[clave] || "tools";
+  return esTema(t) ? normTema(t) : "tools";
+}
+function unaLinea(t, n){
+  t = String(t || "").replace(/\s+/g, " ").trim();
+  return n && t.length > n ? t.slice(0, n - 1) + "…" : t;
+}
+function escribirEn(tema, cita){
+  cerrarModal();
+  if(temaActivo() !== tema) abrirTab(tema);
+  var resto = txt.value;
+  if(/^> widget /.test(resto)) resto = resto.replace(/^(>[^\n]*\n)+\n?/, "");   // una sola cita de widget
+  ponerCaja(cita + "\n\n" + resto);
+  guardarBorrador(temaCaja || temaActivo(), txt.value, true);
+  if(esVistaMobile()) verPanel("chat");
+  txt.focus();
+}
+function escribirWidget(clave){
+  var c = document.querySelector('#widgets .caja[data-w="' + clave + '"]');
+  var tit = c && c.querySelector(".wtit"), ese = c && c.querySelector(".wesc");
+  var nombre = tit ? tit.textContent : clave;
+  var dato = unaLinea(ese ? ese.textContent : "", ESC_CHARS);
+  escribirEn(temaWidget(clave), "> widget " + nombre + ":" + (dato ? " " + dato : ""));
+}
+// la clave del widget donde esta pintada una fila (el item no la sabe: se busca en el dom)
+function claveDeItem(o){
+  for(var id in itemsW){
+    if(itemsW[id] !== o) continue;
+    var c = document.querySelector('#widgets [data-it="' + id + '"]');
+    c = c && c.closest(".caja[data-w]");
+    return c ? c.dataset.w : "";
+  }
+  return "";
+}
+function accEscribir(o, m){
+  var clave = claveDeItem(o);
+  var c = clave && document.querySelector('#widgets .caja[data-w="' + clave + '"] .wtit');
+  var nombre = c ? c.textContent : (clave || o.tipo || "widget");
+  var d = document.createElement("div");
+  d.innerHTML = m.cuerpo || "";
+  var completo = unaLinea(d.textContent || (o.d || {}).completo || (o.d || {}).texto || "", ESC_CHARS);
+  var tema = esTema(m.tema) ? normTema(m.tema) : temaWidget(clave);
+  return ["escribir sobre esto", function(){
+    escribirEn(tema, "> widget " + nombre + " / " + unaLinea(m.titulo, 80) + ": " + completo);
+  }];
 }
 
 function modalDe(o){
@@ -4099,7 +4162,11 @@ function modalDe(o){
 
 var LETRAS = "abcdefghij";
 var modalAbierto = null;
-function abrirModal(o){ pintarModal(modalDe(o)); }
+function abrirModal(o){
+  var m = modalDe(o);
+  m.acciones.push(accEscribir(o, m));
+  pintarModal(m);
+}
 
 // ---------- settings de un widget (facundo, 2026-09-12) ----------
 // el `[⚙]` del header abre el MISMO modal con look terminal: una accion por setting, que la cambia
@@ -4589,6 +4656,7 @@ window.__agente = {
       return {clave: c.dataset.w || "", titulo: ((t.querySelector && t.querySelector(".wtit")) || {}).textContent || "",
               esencial: ((t.querySelector && t.querySelector(".wesc")) || {}).textContent || "",
               refrescar: !!(t.querySelector && t.querySelector("[data-ref]")),
+              escribir: !!(t.querySelector && t.querySelector("[data-esc]")),
               settings: !!(t.querySelector && t.querySelector("[data-set]")),
               plegada: c.classList.contains("plegada"),
               filas: ((c.querySelector(".cuerpo") || {}).textContent || "").split("\n").length};
@@ -4596,7 +4664,7 @@ window.__agente = {
   },
   tocarHeader: function(clave, que){
     var n = document.querySelector('#widgets .caja[data-w="' + clave + '"] ' +
-      (que === "fold" ? "[data-fold]" : que === "set" ? "[data-set]" : "[data-ref]"));
+      (que === "fold" ? "[data-fold]" : que === "set" ? "[data-set]" : que === "esc" ? "[data-esc]" : "[data-ref]"));
     if(!n) return false;
     n.click(); return true;
   },
