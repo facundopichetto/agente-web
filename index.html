@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.199">
-<link rel="manifest" href="manifest.json?v=4.199">
+<meta name="agente-web-version" content="4.200">
+<link rel="manifest" href="manifest.json?v=4.200">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -93,9 +93,9 @@
   .msg.vuelo .giro{color:var(--verde);display:inline-block;width:1ch}
   .msg .quien,.msg .ts{user-select:none}
   .msg .quien{color:var(--magenta)}
-  .agente .quien{color:var(--verde)}
+  .agente .quien{color:var(--magenta)}
   .agente .cuerpo{color:var(--blanco)}
-  .yo .quien{color:var(--cian)}
+  .yo .quien{color:var(--verde)}   /* `f` en verde (facundo, 2026-09-13) */
   .yo .cuerpo{color:var(--yo)}
   .error .cuerpo{color:var(--rojo)}
   .sistema .cuerpo{color:var(--gris)}
@@ -139,7 +139,7 @@
   #visor img{max-width:100%;height:auto}
   #visor .cerrar{position:fixed;top:8px;right:12px;color:var(--verde);font-size:13px}
   #pie{
-    flex:0 0 auto;border-top:1px solid var(--linea);background:#000;
+    flex:0 0 auto;border-top:0;background:transparent;
     padding:4px 10px calc(4px + env(safe-area-inset-bottom)) 10px;
   }
   /* con el teclado abierto ios deja igual el safe-area de abajo y queda una franja negra entre el
@@ -181,41 +181,40 @@
   #chips button .l{color:var(--amarillo)}
   #chips button:hover{color:var(--blanco);border-color:#2a2a2a}
   #chips button:active{background:#111}
-  #fila{display:flex;gap:6px;align-items:flex-end}
-  #prompt{color:var(--magenta);padding-bottom:7px;flex:0 0 auto;user-select:none}
+  /* la fila del input (facundo, 2026-09-13, desde el celu): `f>`, la caja y los tres iconos a la misma altura,
+     centrados entre si (align-items:center), y la caja sin borde ni fondo propio: se funde con el panel. */
+  #fila{display:flex;gap:4px;align-items:center}
+  #prompt{color:var(--verde);flex:0 0 auto;user-select:none;line-height:1.4;font-size:12px}
   #txt{
-    flex:1 1 auto;background:#000;color:var(--blanco);border:1px solid #1a1a1a;
-    border-radius:6px;padding:5px 8px;font:inherit;font-size:12px;line-height:1.4;
-    resize:none;max-height:28dvh;min-height:28px;
+    flex:1 1 auto;background:transparent;color:var(--blanco);border:0;
+    border-radius:0;padding:5px 4px;font:inherit;font-size:12px;line-height:1.4;
+    resize:none;max-height:28dvh;min-height:28px;box-sizing:border-box;align-self:center;
   }
-  #txt:focus{outline:none;border-color:#2a2a2a}
-  #mandar{
-    flex:0 0 auto;background:#000;color:var(--verde);border:1px solid transparent;
-    border-radius:6px;padding:5px 8px;font:inherit;font-size:12px;line-height:1.4;
-    cursor:pointer;letter-spacing:0;
+  #txt:focus{outline:none;border:0}
+  /* los tres iconos: svg de linea en el color del tema, mismo tamaño (18px) y misma caja (32px, 40px en el celu) */
+  .ico{
+    flex:0 0 auto;box-sizing:border-box;background:transparent;border:0;border-radius:6px;
+    width:32px;height:32px;padding:0;margin:0;display:inline-flex;align-items:center;justify-content:center;
+    font:inherit;cursor:pointer;letter-spacing:0;
   }
+  .ico svg{width:18px;height:18px;display:block;pointer-events:none}
+  #mandar{color:var(--verde)}
   #mandar:active{background:#0a1a06}
   /* camara (facundo, 2026-09-11: "se puede poner una funcion tipo camara aca? como en whatsapp").
      mismo look terminal que el boton de mandar; el input file de verdad esta escondido. */
-  #camara{
-    flex:0 0 auto;background:#000;color:var(--cian);border:1px solid transparent;
-    border-radius:6px;padding:5px 6px;font:inherit;font-size:12px;line-height:1.4;cursor:pointer;
-  }
+  #camara{color:var(--cian)}
   #camara:active{background:#001a1a}
   #camara:disabled{color:var(--gris)}
   #foto{display:none}
   /* grabar un audio (facundo, 2026-09-11: "estaria bueno poder mandarte audios como en whatsapp").
      tap and hold como whatsapp: se aprieta y graba, se suelta y manda. */
-  #grabar{
-    flex:0 0 auto;background:#000;color:var(--magenta);border:1px solid transparent;
-    border-radius:6px;padding:5px 6px;font:inherit;font-size:12px;line-height:1.4;cursor:pointer;
-    touch-action:none;user-select:none;-webkit-user-select:none;
-  }
-  #grabar.grabando{color:#000;background:var(--rojo);animation:lat 1s steps(2,start) infinite}
+  #grabar{color:var(--magenta);touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+  /* mientras graba el microfono se pinta rojo (tap and hold) */
+  #grabar.grabando{color:var(--rojo);background:#1a0000;animation:lat 1s steps(2,start) infinite}
   #grabar:disabled{color:var(--gris)}
   @keyframes lat{50%{opacity:.55}}
   #grabinfo{
-    flex:0 0 auto;color:var(--rojo);font-size:10.5px;padding-bottom:7px;user-select:none;display:none;
+    flex:0 0 auto;color:var(--rojo);font-size:10.5px;user-select:none;display:none;
   }
   #grabinfo.viendo{display:block}
   /* el [▶] de daniela al lado del [tema] de cada respuesta, y el player de los audios de facundo.
@@ -402,6 +401,8 @@
        viewport, asi que el input del chat va chico como el resto del chat. los de login
        quedan en 16 (se tocan una vez y ahi no molesta). */
     #login input,#clave,#tok{font-size:16px}
+    /* dedo: los tres iconos del input con area de toque de 40px (facundo, 2026-09-13) */
+    .ico{width:40px;height:40px}
   }
   #login button{
     background:#000;color:var(--verde);border:1px solid var(--verde);border-radius:4px;
@@ -577,13 +578,13 @@
   <div id="adjunto" class="oculta" aria-live="polite"></div>
   <div id="chips" class="oculta"></div>
   <div id="fila">
-    <span id="prompt">facundo&gt;</span>
+    <span id="prompt">f&gt;</span>
     <textarea id="txt" rows="1" placeholder="orden o comando" enterkeyhint="enter" inputmode="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
     <span id="grabinfo" aria-live="polite"></span>
-    <button id="grabar" type="button" title="mantené apretado para grabar un audio" aria-label="grabar audio">[&#9679;]</button>
-    <button id="camara" type="button" title="foto (camara o galeria)" aria-label="foto">[&#9673;]</button>
+    <button id="grabar" class="ico" type="button" title="mantené apretado para grabar un audio" aria-label="grabar audio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg></button>
+    <button id="camara" class="ico" type="button" title="foto (camara o galeria)" aria-label="foto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
     <input id="foto" type="file" accept="image/*">
-    <button id="mandar" type="button" title="mandar" aria-label="mandar">&gt;_</button>
+    <button id="mandar" class="ico" type="button" title="mandar" aria-label="mandar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 3 10 14"/><path d="M21 3 14 21l-4-7-7-4z"/></svg></button>
   </div>
 </div>
 </div><!-- /panel-chat -->
@@ -1420,7 +1421,7 @@ function pintarTabs(){
   barra.appendChild(btnBarra("+", "nueva_tab"));
   var r = document.createElement("span"); r.className = "relleno";
   barra.appendChild(r);
-  $("prompt").textContent = "facundo>";
+  $("prompt").textContent = "f>";
   guardarLayout();
   cajaDeTema(temaActivo());     // cada pestaña se lleva su borrador y trae el suyo
   pintarChips();                // y sus sugerencias, que salen de la ultima respuesta de esa pestaña
@@ -1885,11 +1886,12 @@ function nodoMsg(m){
   div.className = "msg " + m.clase;
   if(m.id) div.dataset.id = m.id;
   var cab = document.createElement("div");
-  cab.innerHTML = '<span class="quien"></span> <span class="ts"></span>';
-  cab.querySelector(".quien").textContent = m.quien + ">";
-  cab.querySelector(".ts").textContent = desde(m.iso || new Date().toISOString());
-  // `agente> 12:46 · cloud · fable`: que nodo y que modelo contesto, en la misma linea (mensajes viejos: nada)
-  var info = [m.nodo, m.modelo].filter(function(x){ return !!x; });
+  cab.innerHTML = '<span class="quien"></span><span class="ts"></span>';
+  cab.querySelector(".quien").textContent = m.quien;
+  cab.querySelector(".ts").textContent = " · " + desde(m.iso || new Date().toISOString());
+  // `claudio · 12:46 · cloud`: que nodo contesto (facundo, 2026-09-13: el modelo viaja en el json pero no se
+  // pinta). mensajes viejos sin nodo: nada.
+  var info = [m.nodo].filter(function(x){ return !!x; });
   if(info.length){
     var sp = document.createElement("span");
     sp.className = "nodo"; sp.textContent = " · " + info.join(" · ");
@@ -2192,14 +2194,14 @@ function agregar(c, arriba){
     var lm = leerMeta(b.slice(MARCA.length).replace(/^\n/, "")), mm = lm.meta;
     var cuerpo = lm.cuerpo, mt = /^\[([\w\/-]+)\]\s*/.exec(cuerpo), tag = null;
     if(mt && esTema(mt[1])){ tag = normTema(mt[1]); cuerpo = cuerpo.slice(mt[0].length); }
-    m = {id: c.id, clase: "agente", quien: "agente", texto: cuerpo, iso: c.created_at, tag: tag,
+    m = {id: c.id, clase: "agente", quien: QUIEN_AGENTE, texto: cuerpo, iso: c.created_at, tag: tag,
          nodo: mm.nodo || null, modelo: mm.modelo ? modeloCorto(mm.modelo) : null,
          duracion_s: mm.dur !== undefined ? mm.dur : null, cuello: mm.cuello || null};
   }else{
     var sd = sacarDesde(b), tg = null, texto = sd.texto;
     var mp = RE_TEMA.exec(texto);
     if(mp && esTema(mp[1])){ tg = normTema(mp[1]); texto = texto.slice(mp[0].length); }
-    m = {id: c.id, clase: "yo", quien: "facundo", texto: texto, iso: c.created_at, tag: tg,
+    m = {id: c.id, clase: "yo", quien: QUIEN_F, texto: texto, iso: c.created_at, tag: tg,
          desde: sd.desde};
   }
   if(arriba) msgsCom.unshift(m); else msgsCom.push(m);
@@ -2259,7 +2261,7 @@ function recibirChat(tema, d){
   var t = normTema(tema), filas = (d && d.filas) || [], out = [], resp = {};
   filas.forEach(function(f, i){
     var base = t + "-" + i;
-    if(f.pregunta) out.push({id: "h:" + base + ":q", clase: "yo", quien: "facundo", texto: f.pregunta,
+    if(f.pregunta) out.push({id: "h:" + base + ":q", clase: "yo", quien: QUIEN_F, texto: f.pregunta,
                              iso: f.ts, tema: t, explicito: true});
     var r = String(f.respuesta || ""), mt = /^\s*\[([\w\/-]+)\]\s*/.exec(r);
     if(mt && esTema(mt[1])) r = r.slice(mt[0].length);   // el `[tema]` ya lo dice la pestaña
@@ -2270,7 +2272,7 @@ function recibirChat(tema, d){
     if(r && !resp[k]){
       resp[k] = true;
       // nodo, modelo y mini estado solo en las filas que los traen (las viejas no tienen `nodo`: no se pinta nada)
-      out.push({id: "h:" + base + ":r", clase: "agente", quien: "agente", texto: r, iso: f.ts,
+      out.push({id: "h:" + base + ":r", clase: "agente", quien: QUIEN_AGENTE, texto: r, iso: f.ts,
                 tema: t, explicito: true, tag: t, audio: f.audio || null, nodo: nodo,
                 modelo: f.nodo && f.modelo ? modeloCorto(f.modelo) : null,
                 duracion_s: f.duracion_s !== undefined ? f.duracion_s : null, cuello: f.cuello || null});
@@ -2518,27 +2520,37 @@ function pintarVuelo(){
   if(!n){
     n = document.createElement("div");
     n.id = "vuelo"; n.className = "msg agente vuelo";
-    n.innerHTML = '<div><span class="quien">agente&gt;</span> <span class="ts"></span></div>' +
+    n.innerHTML = '<div><span class="quien">claudio</span><span class="ts"></span></div>' +
                   '<div class="cuerpo"><span class="giro"></span> <span class="fase"></span><span class="eta"></span></div>';
   }
   if(n.parentNode !== lista || lista.lastChild !== n) lista.appendChild(n);
-  n.querySelector(".ts").textContent = desde(vuelo.iso);
+  n.querySelector(".ts").textContent = " · " + desde(vuelo.iso);
   n.querySelector(".giro").textContent = GIRO[vuelo.giro % GIRO.length];
   n.querySelector(".fase").textContent = vuelo.palabra;
-  n.querySelector(".eta").textContent = vuelo.eta ? " ~" + vuelo.eta + " s" : "";
+  n.querySelector(".eta").textContent = etaTexto();
+}
+// `eta_respuesta_s` = segundos hasta la respuesta completa, contados desde `ts_inicio` (cuando github creo el
+// comentario): cuenta regresiva `~8 s`, `~7 s`... y si se paso del estimado `+3 s`
+function etaTexto(){
+  if(!vuelo || !vuelo.eta) return "";
+  var fin = (vuelo.inicio || vuelo.t) + vuelo.eta * 1000, falta = (fin - Date.now()) / 1000;
+  return falta > 0 ? " ~" + Math.ceil(falta) + " s" : " +" + Math.floor(-falta) + " s";
 }
 function vueloGirar(){
   if(!vuelo) return;
   vuelo.giro++;
   var g = document.querySelector("#vuelo .giro");
   if(g) g.textContent = GIRO[vuelo.giro % GIRO.length];
+  var e = document.querySelector("#vuelo .eta"), t = etaTexto();
+  if(e && e.textContent !== t) e.textContent = t;
 }
 // lo que publica el daemon. un estado de un intercambio anterior (ts_inicio viejo) no se pinta
 function recibirEstado(e){
   if(!vuelo || !e) return false;
   if(e.ts_inicio && e.ts_inicio * 1000 < vuelo.t - 15000) return false;
   vuelo.palabra = e.palabra || e.fase || vuelo.palabra;
-  if(e.eta_s) vuelo.eta = e.eta_s;
+  if(e.eta_respuesta_s || e.eta_s) vuelo.eta = e.eta_respuesta_s || e.eta_s;
+  if(e.ts_inicio) vuelo.inicio = e.ts_inicio * 1000;
   if((e.fase === "listo" || e.fase === "sin claude") && !vuelo.listo) vuelo.listo = Date.now();
   pintarVuelo();
   return true;
@@ -2591,7 +2603,7 @@ function mandar(texto, tema, crudo){
     .then(function(r){
       if(r.json && !vistos[r.json.id]){
         vistos[r.json.id] = true;
-        var m = {id: r.json.id, clase: "yo", quien: "facundo", texto: texto, iso: r.json.created_at,
+        var m = {id: r.json.id, clase: "yo", quien: QUIEN_F, texto: texto, iso: r.json.created_at,
                  explicito: true, tema: tema};
         msgsCom.push(m); msgs.push(m); pintarMsg(m, false);
         vueloIniciar(m, cuerpo);   // spinner + fase + eta hasta que llegue la respuesta
@@ -2631,7 +2643,7 @@ function vaciarSalida(){
       try{ localStorage.setItem("agente_salida", JSON.stringify(salida)); }catch(x){}
       if(r.json && !vistos[r.json.id]){
         vistos[r.json.id] = true;
-        var y = {id: r.json.id, clase: "yo", quien: "facundo", texto: m.texto, iso: r.json.created_at,
+        var y = {id: r.json.id, clase: "yo", quien: QUIEN_F, texto: m.texto, iso: r.json.created_at,
                  explicito: true, tema: m.tema};
         msgsCom.push(y); msgs.push(y); pintarMsg(y, false); alFinal();
       }
@@ -4889,7 +4901,7 @@ function citaDe(m){
   return ls.map(function(x, i){
     x = x.replace(/\s+/g, " ").trim();
     if(x.length > CITA_CHARS) x = x.slice(0, CITA_CHARS - 1) + "…";
-    return "> " + (i === 0 ? (m.quien || "facundo") + ": " : "") + x;
+    return "> " + (i === 0 ? (m.quien || QUIEN_F) + ": " : "") + x;
   }).join("\n") + "\n\n";
 }
 function responderA(m){

@@ -969,13 +969,15 @@ header que nodo y que modelo contesto". el criterio del daemon esta en `recetas/
   comentario hasta que sale la respuesta) y la fase mas lenta (`cola`, `audio`, `historial`, `oauth`, `modelo`,
   `buzón`).
 - **en vuelo**: al mandar, abajo del mensaje aparece `agente> hh:mm` con un spinner `- \ | /` (120 ms), la fase y
-  `~N s` de eta. la fase la publica el daemon en `chat/estado-<clave>.json` (`{fase, palabra, ts, ts_inicio, eta_s,
-  canal, tema, nodo}`; clave = tema del prefijo `tema x:` o `auto`) y la web la mira cada 1 s solo mientras hay
+  la cuenta regresiva hasta la **respuesta completa** (`~8 s`, `~7 s`... y `+3 s` si se paso del estimado, contada
+  desde `ts_inicio`). la fase la publica el daemon en `chat/estado-<clave>.json` (`{fase, palabra, ts, ts_inicio,
+  eta_respuesta_s, eta_s, canal, tema, nodo}`; clave = tema del prefijo `tema x:` o `auto`) y la web la mira cada 1 s solo mientras hay
   un mensaje en vuelo (los comentarios pasan a 3 s). fases: `recibido`, `audio`, `clasificando`, `cuenta`,
   `historial`, `modelo` (dice `fable` / `opus`), `guardando`, `listo`, `sin claude`; una fase nueva sin palabra se
   registra sola. el estado lo sube **solo el nodo que atiende el chat**, coalescido (una subida cada 1,5 s como
-  mucho) y respetando el freno y el tope del buzon. eta = promedio de los ultimos 20 intercambios con modelo del
-  canal (`.chat-duraciones.json`). el bloque se va cuando llega la respuesta, o 15 s despues de `listo`.
+  mucho) y respetando el freno y el tope del buzon. `eta_respuesta_s` = promedio del `duracion_s` de los ultimos 20
+  intercambios del mismo canal, nodo y modelo en `logs/chat-*.jsonl` (`chat_estado.eta_respuesta`; sin muestras cae
+  a canal + nodo y a canal), reestimado cuando la fase `modelo` dice el modelo real. el bloque se va cuando llega la respuesta, o 15 s despues de `listo`.
 - probar: `python3 -m recetas.chat_estado --probar`, `python3 -m recetas.chat_nodo --probar` y los bloques
   `estado en vivo` de `recetas/prueba_web_tabs`.
 
