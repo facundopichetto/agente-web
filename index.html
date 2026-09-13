@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.211">
-<link rel="manifest" href="manifest.json?v=4.211">
+<meta name="agente-web-version" content="4.212">
+<link rel="manifest" href="manifest.json?v=4.212">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -407,6 +407,8 @@
     /* dedo: los seis botones de la barra se tocan con el pulgar, todos del mismo alto */
     .bb{height:32px;padding:4px 6px;gap:4px}
     #nodos .nodo{min-height:32px}   /* dedo: el label se toca aunque no parezca boton */
+    #notis .noti,#notis .nmas{min-height:34px;font-size:12px}   /* dedo: cada aviso se toca con el pulgar */
+    #mcuerpo textarea.nresp{font-size:16px}   /* ios no zoomea al enfocar */
     #nodos,#vistas{gap:5px}
     #cabecera{gap:6px}
     /* dedo: los botones del header de cada widget con area tactil de 40px (facundo, 2026-09-12) */
@@ -456,6 +458,22 @@
   }
   #tabs .barrabtn:active{background:#111}
   #tabs .relleno{flex:1 1 auto;min-width:8px}
+  /* ---------- notificaciones (facundo, 2026-09-13, orden 1162) ----------
+     las lineas de avisos.md sin leer, debajo de las pestañas: una linea por aviso (hora + primeras palabras,
+     la mas nueva arriba), sin look de boton como la barra de nodos. mas de 3: se pliega. tocar abre el detalle. */
+  #notis{flex:0 0 auto;display:flex;flex-direction:column;border-bottom:1px solid var(--linea);padding:2px 10px;
+    max-height:40vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  #notis.oculta{display:none}
+  #notis .noti,#notis .nmas{display:flex;align-items:center;gap:6px;min-width:0;background:none;border:0;padding:0;margin:0;
+    color:var(--blanco);font-size:10px;line-height:18px;cursor:pointer;white-space:nowrap;
+    user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+  #notis .luz{width:7px;height:7px;border-radius:50%;background:var(--amarillo);flex:0 0 auto}
+  #notis .nh{color:var(--gris);flex:0 0 auto}
+  #notis .nt{overflow:hidden;text-overflow:ellipsis;min-width:0}
+  #notis .nmas{color:var(--gris);gap:12px}
+  #notis .nmas span{cursor:pointer}
+  #mcuerpo textarea.nresp{display:block;width:100%;box-sizing:border-box;margin-top:10px;background:#000;color:var(--blanco);
+    border:1px solid var(--linea);border-radius:4px;padding:6px;font:inherit;resize:vertical;min-height:60px}
   /* ---------- sincronizando (facundo, 2026-09-11) ----------
      al abrir la web o al volver al foco, el cache de localStorage no se pinta como si fuera el
      estado real: mientras baja el buzon se ve esta linea y lo cacheado queda apagado. */
@@ -590,6 +608,7 @@
 <div id="cuerpo">
 <div id="panel-chat">
 <div id="tabs"></div>
+<div id="notis" class="oculta" aria-live="polite"></div>
 <div id="sync" class="oculta">sincronizando…</div>
 <div id="envoltorio">
   <div id="hist"><div id="lista"></div></div>
@@ -776,6 +795,10 @@ var enviando = 0;                 // hay un mensaje saliendo: ese texto ya no es
 // pantalla no coinciden entre celu y desktop. se guarda el **id del comentario** que quedo arriba de
 // la vista, y al restaurar se scrollea hasta ese mensaje.
 var vistas = {};
+// notificaciones leidas o cerradas (1162): `{id: ts}`. viajan en el mismo `tabs.json` y se **suman** entre
+// dispositivos (una leida no vuelve a no leida), asi lo que cerraste en el celu no reaparece en la mac.
+var avLeidos = {};
+var AVL_TOPE = 400;               // ids guardados como mucho (los mas nuevos): avisos.md se poda solo
 // ancho de los dos paneles (chat | widgets): el porcentaje de #cuerpo que ocupa el chat, elegido
 // arrastrando el separador
 // (facundo, 2026-09-11). viaja en el mismo `tabs.json` y se resuelve **por su propio `ts`**, como los
@@ -895,7 +918,7 @@ function guardarCache(){
     localStorage.setItem("agente_tabs", JSON.stringify(
       {tabs: tabs, activo: activo, ts: layoutTs, origen: DISPOSITIVO,
        borradores: borradoresLimpios(), vistas: vistasLimpias(), split: splitLimpio(),
-       wsets: wsetsLimpias(), orden_widgets: ordenLimpio()}));
+       wsets: wsetsLimpias(), orden_widgets: ordenLimpio(), avisos_leidos: leidosLimpios()}));
   }catch(x){}
 }
 // cambio local: sube el reloj, guarda el cache y encola la publicacion. si el layout quedo igual
@@ -1320,6 +1343,7 @@ function borrarBorrador(tema){
     if(L && L.split) recibirSplit(L.split);
     if(L && L.wsets) recibirWsets(L.wsets);
     if(L && L.orden_widgets) recibirOrden(L.orden_widgets);
+    if(L && L.avisos_leidos) recibirLeidos(L.avisos_leidos);
   }catch(x){}
   aplicarSplit();
   layoutFirma = firmaLayout(layoutActual());
@@ -1379,11 +1403,13 @@ function recibirTabs(L){
   var ws = recibirWsets(L.wsets);
   // idem el orden de los widgets: por su propio `ts`
   var orw = recibirOrden(L.orden_widgets);
+  // las notificaciones leidas se suman: si el otro tiene alguna que yo no, se la agrego; si yo tengo de mas, publico
+  var avl = recibirLeidos(L.avisos_leidos);
   // la ultima vez que facundo miro el board (el daemon lo usa para poner el badge en 0): gana el mayor
   if(+L.push_leido > pushLeido) pushLeido = +L.push_leido;
   if(ts > layoutTs){ aplicarLayout(L, ts); return "remoto"; }
   if(layoutTs > ts && L.origen !== DISPOSITIVO){ publicarTabs(true); return "mio"; }
-  if(borr || vis || sp || ws || orw) publicarTabs();   // mezcle los dos lados: que el otro vea el resultado
+  if(borr || vis || sp || ws || orw || avl === "mio") publicarTabs();   // mezcle los dos lados: que el otro vea el resultado
   return "igual";
 }
 // agrupa los cambios seguidos (abrir una pestaña, cambiar de pestaña, mover el separador) en una
@@ -1405,6 +1431,7 @@ function ponerTabs(reintento){
   L.split = splitLimpio();
   L.wsets = wsetsLimpias();
   L.orden_widgets = ordenLimpio();
+  L.avisos_leidos = leidosLimpios();
   if(pushLeido) L.push_leido = pushLeido;
   var cuerpo = {message: "tabs " + DISPOSITIVO, content: textoAb64(JSON.stringify(L))};
   if(shaTabs) cuerpo.sha = shaTabs;
@@ -4423,6 +4450,139 @@ $("nodos").addEventListener("keydown", function(e){
   if(e.key === "Enter" || e.key === " "){ e.preventDefault(); abrirNodo(e); }
 });
 
+// ---------- notificaciones: los avisos sin leer debajo de las pestañas (facundo, 2026-09-13, orden 1162) ----------
+// "los avisos tienen que aparecer arriba como notificaciones, debajo de las pestañas del chat, y si toco puedo leerlo
+// detallado y responder (o no)". los datos salen de `widgets.json` (clave `notificaciones`, `widgets_json.w_notificaciones`:
+// id estable, texto, fecha, tema). responder o cerrar marca el id en `avLeidos`, que viaja en `tabs.json`.
+var NOTIS_VISIBLES = 3;
+var notisAbierta = false;          // la tira plegada muestra 3; esto la despliega (solo en este dispositivo)
+var notisPor = {};                 // id -> aviso, lo ultimo pintado
+function leidosLimpios(){
+  var ids = Object.keys(avLeidos);
+  if(!ids.length) return null;
+  ids.sort(function(a, b){ return (+avLeidos[b] || 0) - (+avLeidos[a] || 0); });
+  var o = {};
+  ids.slice(0, AVL_TOPE).forEach(function(i){ o[i] = +avLeidos[i] || 0; });
+  return o;
+}
+// llego la lista de leidas del buzon (o del cache): se suman. "remoto" = sume alguna del otro, "mio" = yo tengo
+// alguna que el otro no (hay que publicar), "igual" = nada nuevo. false si no vino nada.
+function recibirLeidos(rem){
+  if(!rem || typeof rem !== "object") return false;
+  var sume = false, tengo = false;
+  Object.keys(rem).forEach(function(i){
+    var t = +rem[i] || 1;
+    if(!avLeidos[i]){ avLeidos[i] = t; sume = true; }
+  });
+  Object.keys(avLeidos).forEach(function(i){ if(!(i in rem)) tengo = true; });
+  if(sume){ guardarCache(); pintarNotis(); }
+  return tengo ? "mio" : sume ? "remoto" : "igual";   // con alguna mia de mas se publica: los dos quedan con la suma
+}
+function marcarLeidos(ids){
+  var ahora = Date.now(), cambio = false;
+  (ids || []).forEach(function(i){ if(i && !avLeidos[i]){ avLeidos[i] = ahora; cambio = true; } });
+  if(!cambio) return false;
+  guardarCache();
+  publicarTabs(true);
+  pintarNotis();
+  return true;
+}
+function notisNoLeidas(){
+  var ns = ((widDatos || {}).notificaciones);
+  if(!Array.isArray(ns)) return [];
+  return ns.filter(function(n){ return n && n.id && !avLeidos[n.id]; })
+           .sort(function(a, b){ return (+b.ts || 0) - (+a.ts || 0); });
+}
+// `hh:mm` si es de hoy, `dd/mm hh:mm` si no
+function horaNoti(n){
+  var f = String(n.fecha || "");
+  if(!/^\d{4}-\d\d-\d\d \d\d:\d\d/.test(f)) return "";
+  var hoy = new Date(), d = hoy.getFullYear() + "-" + pad2(hoy.getMonth() + 1) + "-" + pad2(hoy.getDate());
+  return f.slice(0, 10) === d ? f.slice(11, 16) : f.slice(8, 10) + "/" + f.slice(5, 7) + " " + f.slice(11, 16);
+}
+function temaNoti(n){ return n && n.tema && esTema(n.tema) ? normTema(n.tema) : "tools"; }
+var notisEl = null;
+function pintarNotis(){
+  if(!notisEl) notisEl = $("notis");
+  if(!notisEl) return;
+  var ns = notisNoLeidas();
+  notisPor = {};
+  ns.forEach(function(n){ notisPor[n.id] = n; });
+  if(!ns.length){ notisEl.innerHTML = ""; notisEl.classList.add("oculta"); return; }
+  var ver = notisAbierta || ns.length <= NOTIS_VISIBLES ? ns : ns.slice(0, NOTIS_VISIBLES);
+  var html = ver.map(function(n){
+    return '<span class="noti" role="button" tabindex="0" data-noti="' + esc(n.id) + '" title="' +
+      esc(unaLinea(n.texto, 200)) + '"><span class="luz"></span><span class="nh">' + esc(horaNoti(n)) +
+      '</span><span class="nt">' + esc(unaLinea(n.texto, 160)) + "</span></span>";
+  }).join("");
+  if(ns.length > NOTIS_VISIBLES)
+    html += '<span class="nmas">' + (notisAbierta
+      ? '<span data-notis="menos">menos</span><span data-notis="todas">cerrar todas (' + ns.length + ")</span>"
+      : '<span data-notis="mas">+' + (ns.length - NOTIS_VISIBLES) + " más</span>") + "</span>";
+  notisEl.innerHTML = html;
+  notisEl.classList.remove("oculta");
+}
+// la cita que lleva la respuesta: `> aviso hh:mm: <texto>` + linea vacia (el daemon la separa con `marcas_chat`)
+function citaNoti(n){
+  return "> aviso " + (n.fecha || "").slice(0, 16) + ": " + unaLinea(n.texto, ESC_CHARS) + "\n\n";
+}
+function responderNoti(n, texto){
+  texto = String(texto || "").trim();
+  if(!n || !texto) return false;
+  if(enviando){ sistema("hay un mensaje saliendo: tocá responder de nuevo en un segundo."); return false; }
+  var tema = temaNoti(n);
+  cerrarModal();
+  marcarLeidos([n.id]);
+  if(tabs.indexOf(tema) < 0 || temaActivo() !== tema) abrirTab(tema);
+  if(esVistaMobile()) verPanel("chat");
+  mandar(citaNoti(n) + texto, tema);
+  return true;
+}
+function abrirNoti(id){
+  var n = notisPor[id];
+  if(!n) return false;
+  var tema = temaNoti(n);
+  var conUrl = RE_URL.test(n.texto || "");
+  RE_URL.lastIndex = 0;
+  pintarModal({titulo: "aviso · " + horaNoti(n), tema: tema, noti: n.id, acciones: [
+    ["responder", function(){
+      var c = $("notiresp");
+      if(!responderNoti(n, c && c.value) && c) c.focus();
+    }, true],
+    ["cerrar sin responder", function(){ cerrarModal(); marcarLeidos([n.id]); }, false]
+  ], cuerpo: (conUrl ? enlaces(esc(n.texto || "")) : esc(n.texto || "")) +
+    '\n\n<span class="g">' + esc(n.fecha || "") + '</span> <span class="g">tema</span> <span class="c">' + esc(tema) +
+    (n.tema ? "" : " (sin tema)") + "</span>" +
+    '<textarea id="notiresp" class="nresp" rows="3" placeholder="responder (opcional)" enterkeyhint="send" ' +
+    'autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>'});
+  return true;
+}
+function tocarNotis(e){
+  var b = e.target.closest("[data-notis]");
+  if(b){
+    var q = b.dataset.notis;
+    if(q === "mas") notisAbierta = true;
+    else if(q === "menos") notisAbierta = false;
+    else if(q === "todas"){ notisAbierta = false; marcarLeidos(notisNoLeidas().map(function(n){ return n.id; })); }
+    pintarNotis();
+    return;
+  }
+  var r = e.target.closest(".noti[data-noti]");
+  if(r) abrirNoti(r.dataset.noti);
+}
+$("notis").addEventListener("click", tocarNotis);
+$("notis").addEventListener("keydown", function(e){
+  if(e.key === "Enter" || e.key === " "){ e.preventDefault(); tocarNotis(e); }
+});
+// en la caja de respuesta: cmd/ctrl+enter manda (enter solo hace salto, como en el celu)
+document.addEventListener("keydown", function(e){
+  if(e.target && e.target.id === "notiresp" && e.key === "Enter" && (e.metaKey || e.ctrlKey)){
+    e.preventDefault();
+    var bs = $("macc").querySelectorAll("button");
+    if(bs[0]) bs[0].click();
+  }
+});
+
 function pintarWidgets(d, err){
   if(!d && !widDatos){
     widgetsEl.innerHTML = caja("widgets", "", err ? '<span class="r">' + esc(err) + "</span>" : vacio("cargando..."));
@@ -4470,6 +4630,7 @@ function pintarWidgets(d, err){
   widgetsEl.innerHTML = html;
   $("panel-widgets").scrollTop = y;
   pintarNodos(d.nodos);         // la barra de arriba: SERVER | MAC | CLOUD, con quien esta de guardia
+  pintarNotis();                // los avisos sin leer, debajo de las pestañas
   pintarChips();                // los chips `op N X` usan las opciones reales de este json
 }
 
@@ -5319,6 +5480,7 @@ document.addEventListener("keydown", function(e){
   if(e.key === "Escape"){ cerrarMenu(); cerrarDd(); cerrarModal(); return; }
   // con el modal abierto, a/b/c dispara la accion de esa letra
   if(!modalAbierto || e.metaKey || e.ctrlKey || e.altKey) return;
+  if(e.target && /^(TEXTAREA|INPUT)$/.test(e.target.tagName || "")) return;   // escribiendo (la respuesta de un aviso)
   var j = LETRAS.indexOf((e.key || "").toLowerCase());
   var bs = $("macc").querySelectorAll("button");
   if(j >= 0 && j < bs.length){ e.preventDefault(); bs[j].click(); }
@@ -5443,6 +5605,24 @@ window.__agente = {
   stubPush: function(s){ pushStub = s; }, ponerPushSub: function(s){ pushSub = s; },
   pushLeido: function(){ return pushLeido; },
   pintarNodos: function(n){ pintarNodos(n); },
+  // notificaciones (1162): la tira, el detalle, responder y las leidas sincronizadas
+  pintarNotis: pintarNotis, abrirNoti: abrirNoti, responderNoti: responderNoti, citaNoti: citaNoti,
+  marcarLeidos: marcarLeidos, recibirLeidos: recibirLeidos,
+  leidos: function(){ return JSON.parse(JSON.stringify(avLeidos)); },
+  borrarLeidos: function(){ avLeidos = {}; notisAbierta = false; guardarCache(); pintarNotis(); },
+  notis: function(){
+    var el = $("notis");
+    return {visible: !el.classList.contains("oculta") && el.offsetHeight > 0,
+            filas: [].map.call(el.querySelectorAll(".noti"), function(b){
+              var r = b.getBoundingClientRect();
+              return {id: b.dataset.noti, hora: (b.querySelector(".nh") || {}).textContent,
+                      texto: (b.querySelector(".nt") || {}).textContent, tag: b.tagName, alto: Math.round(r.height)};
+            }),
+            mas: (el.querySelector(".nmas") || {}).textContent || "",
+            debajoTabs: (function(){ var t = $("tabs").getBoundingClientRect(), n = el.getBoundingClientRect(),
+                                         h = $("hist").getBoundingClientRect();
+                                     return n.top >= t.bottom - 1 && n.bottom <= h.top + 1; })()};
+  },
   nodos: function(){ return ((widDatos || {}).nodos || {}).nodos || []; },
   clasificar: clasificar, partir: partir,
   // 403 secondary rate limit: freno de 60 s y el mensaje frenado sale solo (prueba_web_tabs lo chequea)
