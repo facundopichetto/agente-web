@@ -989,3 +989,42 @@ header que nodo y que modelo contesto". el criterio del daemon esta en `recetas/
   en rojo (`borrar token?`, 4 s para el segundo toque).
 - una app ya instalada toma el manifest nuevo sola en unas horas; si no, se reinstala desde chrome (menu ⋮ >
   instalar claudio board). chrome tambien deja volver a la barra clasica con el chevron de la franja.
+
+## lan primero, el buzón de respaldo (facundo, 2026-09-13)
+
+"siempre que haya una comunicación que sea en lan, intentar hacerla por lan primero. ejemplo, envío una
+screenshot, eso no debería viajar por internet al pedo si se puede evitar". antes todo (mensaje, foto, audio,
+respuesta, widgets) iba mac -> github -> server -> github -> mac con las dos máquinas en la misma red.
+
+**el endpoint** (`recetas/chat_lan.py`, adentro del daemon del server, puerto `8781`, en `127.0.0.1` y en la
+ip `192.168.x`): `GET /ping`, `GET /repos/<repo>/contents/...` (widgets, `chat/<tema>.json` y
+`chat/estado-*.json` salen de lo que el daemon ya tiene; lo demás por proxy al buzón con cache y etag
+compartidos), `GET /repos/<repo>/issues/1[/comments]` (proxy), `GET /img/...` y `/audio/...` (del disco si
+llegaron por la lan), `POST /subir?ruta=img/...` (bytes crudos), `POST /msg` (`{body, lid}` o multipart con
+`adjunto`), y el board mismo en `/` sin auth. todo lo demás pide `Authorization: Bearer <token de github>`,
+verificado una vez contra `/user` (hash cacheado 12 h, nunca el token). cors `*` + `allow-private-network`.
+
+**la web** prueba al cargar, en cada sync y cada 60 s (1 s por candidato): el https de `tailscale serve`
+(`https://claudio.taile8a6a7.ts.net`, más los `lan.endpoints` que anuncia `widgets.json`) y, si se abrió por
+http desde el server (`http://192.168.1.80:8781/`), ese mismo origen. el http de la lan **no** se prueba desde
+github pages: es mixed content y el navegador lo bloquea. si contesta, `api()` manda por ahí el poll
+(comentarios, estado, widgets, chat), el envío, la subida de fotos y audios (`subirBuzon`, bytes sin base64) y
+la bajada de imágenes (`bajarBlob`). la barra de arriba dice **`lan`** (verde: directo o tailscale por la lan),
+**`tailscale`** (verde: tailscale por derp) o **`buzón`** (gris).
+
+**sin perder mensajes**: si una llamada por la lan falla, `lanPoner(null)` y la misma llamada sale por github en
+el acto. un POST que cae al buzón lleva `<!--lan:<lid>-->`: si el endpoint alcanzó a atenderlo, el daemon ve el
+lid y no lo contesta dos veces. del lado del server, `/msg` escribe `tmp/lan/salida/<t>-<lid>.json` **antes**
+de contestar 201; si este nodo atiende el chat lo contesta ya, y el hilo de salida publica el comentario en el
+buzón en background con `<!--lan:<lid> atendido:server-->` (así el otro dispositivo y cloud lo ven y
+`iface_web_ok` / `respaldo_chat` no lo contestan). si el chat está en cloud, sale sin `atendido` y **después**
+de subir sus adjuntos. la marca no se pinta (`RE_LAN_MARCA`) y el mensaje que salió por la lan no se duplica
+con su copia del buzón (`lanMsgs`). la cola sobrevive reinicios.
+
+**lo que falta de facundo**: el tailnet no da certificados (`tailscale cert`: "does not support getting TLS
+certs"). hasta prender **HTTPS Certificates** en `login.tailscale.com/admin/dns`, desde github pages el board
+sigue por el buzón; el script `chat_lan` (cada 10 min) engancha `tailscale serve` solo apenas se pueda (por
+`cambio_sistema`, con revert) y deja un único aviso mientras falta.
+
+probar: `python3 -m recetas.prueba_chat_lan` (el endpoint real con github falso) y el bloque `lan` de
+`recetas/prueba_web_tabs` (endpoint vivo, caído y de vuelta). estado: `python3 -m recetas.chat_lan --estado`.

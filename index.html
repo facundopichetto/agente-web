@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.198">
-<link rel="manifest" href="manifest.json?v=4.198">
+<meta name="agente-web-version" content="4.199">
+<link rel="manifest" href="manifest.json?v=4.199">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -374,6 +374,9 @@
   #nodos .marca{color:var(--verde);font-size:8px}
   /* el nodo que atiende el chat sin publicar todo (cloud, 2026-09-12): la palabra `chat` en verde en vez de la luz */
   #nodos .chatw{color:var(--verde);font-size:8px;letter-spacing:.5px;flex:0 0 auto}
+  /* por donde habla el board (facundo, 2026-09-13, lan primero): lan / tailscale en verde, buzón en gris */
+  #via{font-size:9px;letter-spacing:.5px;padding:0 4px;flex:0 0 auto;color:var(--gris);white-space:nowrap}
+  #via.directo{color:var(--verde)}
   #vistas{display:none;gap:6px;flex:0 0 auto}
   #vistas button.on{color:var(--verde);border-color:var(--verde)}
   body.sinlogin #cabecera,body.sinlogin #cuerpo{display:none}
@@ -543,6 +546,7 @@
 
 <div id="cabecera">
   <div id="nodos"></div>
+  <span id="via" class="via" title="por dónde habla el board con el server">buzón</span>
   <div id="vistas">
     <button id="ver-chat" class="bb on" type="button">chat</button>
     <button id="ver-widgets" class="bb" type="button">widgets</button>
@@ -1682,13 +1686,7 @@ function bajarImagen(src){
   var repo = srcBuzon(src);
   if(imgUrls[src]) return Promise.resolve(imgUrls[src]);
   if(imgUrls[repo]) return Promise.resolve(imgUrls[src] = imgUrls[repo]);
-  if(!token) return Promise.reject(new Error("401"));
-  var ruta = API + "/repos/" + REPO + "/contents/" + repo.split("/").map(encodeURIComponent).join("/");
-  return fetch(ruta, {headers: {"authorization": "Bearer " + token, "accept": "application/vnd.github.raw"}})
-    .then(function(r){
-      if(!r.ok) throw new Error("http " + r.status);
-      return r.blob();
-    }).then(function(b){
+  return bajarBlob(repo).then(function(b){
       imgUrls[repo] = imgUrls[src] = URL.createObjectURL(b);
       return imgUrls[src];
     });
@@ -1976,10 +1974,140 @@ function frenar(seg, motivo, callado){   // callado: el que llama avisa (el envi
   }
   reprogramar();
 }
+// ---------- lan primero (facundo, 2026-09-13) ----------
+// "siempre que haya una comunicacion que sea en lan, intentar hacerla por lan primero. envio una screenshot, eso
+// no deberia viajar por internet al pedo". al cargar y cada 60 s se prueba (1 s por candidato) el endpoint del
+// daemon (`recetas/chat_lan.py`): el https de `tailscale serve` y, si el board se abrio por http desde el server,
+// ese mismo origen. si contesta, TODO va por ahi: el poll (comentarios, estado, widgets, chat), el envio, la
+// subida de fotos y audios y la bajada de imagenes. si una llamada falla, cae al buzon de github en el acto.
+// el http de la lan no se prueba desde github pages: es mixed content y el navegador lo bloquea igual.
+var LAN_PUERTO = 8781, LAN_PROBE_MS = 1000, LAN_CADA = 60000;
+var LAN_DEFAULT = [{via: "tailscale", url: "https://claudio.taile8a6a7.ts.net"}];
+var RE_LAN_MARCA = /\n?<!--lan:([\w-]{6,40})(?: atendido:[\w-]+)?-->/;
+var lan = {base: null, via: "buzón", ult: 0, probando: null};
+var lanMsgs = {};          // lid -> true: salio por la lan, su copia del buzon no se pinta dos veces
+var lanStub = null;        // `prueba_web_tabs` simula el endpoint vivo o caido
+function lanFetch(url, opts){
+  return lanStub ? Promise.resolve().then(function(){ return lanStub(url, opts || {}); }) : fetch(url, opts);
+}
+function lanCandidatos(){
+  var c = [], extra = [];
+  if(location.protocol === "http:" && location.port === String(LAN_PUERTO)) c.push({via: "lan", url: location.origin});
+  try{ extra = JSON.parse(localStorage.getItem("agente_lan") || "[]") || []; }catch(x){}
+  LAN_DEFAULT.concat(extra).forEach(function(e){
+    if(!e || !e.url) return;
+    if(/^http:/.test(e.url) && location.protocol !== "http:") return;   // desde https o file:// no llega
+    var url = String(e.url).replace(/\/+$/, "");
+    for(var i = 0; i < c.length; i++) if(c[i].url === url) return;
+    c.push({via: e.via || "tailscale", url: url});
+  });
+  return c;
+}
+// `widgets.json` trae `lan.endpoints` (lo arma el daemon con tailscale serve y la ip de casa)
+function lanAnuncio(d){
+  var eps = d && d.lan && d.lan.endpoints;
+  if(!eps) return;
+  try{ localStorage.setItem("agente_lan", JSON.stringify(eps)); }catch(x){}
+}
+function pintarVia(){
+  var n = $("via");
+  if(!n) return;
+  n.textContent = lan.base ? lan.via : "buzón";
+  n.className = "via" + (lan.base ? " directo" : "");
+  n.title = lan.base ? "el board habla directo con el server (" + lan.base + ")"
+                     : "el board va por el buzón de github (no alcanza al server por lan ni por tailscale)";
+}
+function lanPoner(x){
+  var antes = lan.base;
+  lan.base = x ? x.url : null;
+  lan.via = x ? (x.via || "lan") : "buzón";
+  // los etag del endpoint y los de github no se mezclan
+  if(antes !== lan.base){ etagCom = null; etagWid = null; etagIssue = null; etagChat = {}; etagEstado = null; }
+  pintarVia();
+}
+function probarLan(){
+  if(!token && !lanStub) return Promise.resolve(null);
+  if(lan.probando) return lan.probando;
+  lan.ult = Date.now();
+  var cands = lanCandidatos(), i = 0;
+  function sig(){
+    if(i >= cands.length){ lanPoner(null); return null; }
+    var c = cands[i++];
+    var ctl = typeof AbortController !== "undefined" ? new AbortController() : null;
+    return new Promise(function(ok, mal){
+      var t = setTimeout(function(){ if(ctl) ctl.abort(); mal(new Error("timeout")); }, LAN_PROBE_MS);
+      lanFetch(c.url + "/ping", {headers: {"authorization": "Bearer " + token}, cache: "no-store",
+                                 signal: ctl ? ctl.signal : undefined})
+        .then(function(r){ clearTimeout(t); ok(r); }, function(e){ clearTimeout(t); mal(e); });
+    }).then(function(r){
+      if(!r || !r.ok) throw new Error("http " + (r && r.status));
+      return r.json();
+    }).then(function(j){
+      if(!j || !j.ok) throw new Error("no");
+      lanPoner({url: c.url, via: j.via === "local" ? "lan" : (j.via || c.via)});
+      return lan.base;
+    }).catch(function(){ return sig(); });
+  }
+  lan.probando = sig().then(function(v){ lan.probando = null; return v; },
+                            function(){ lan.probando = null; return null; });
+  return lan.probando;
+}
+function lanRuta(metodo, ruta){
+  var pre = "/repos/" + REPO + "/";
+  if(ruta.indexOf(pre) !== 0) return false;
+  var resto = ruta.slice(pre.length);
+  if(metodo === "GET") return /^(contents\/|issues\/\d+(\/comments)?(\?|$))/.test(resto);
+  return metodo === "POST" && resto === "issues/" + ISSUE + "/comments";
+}
+function lidNuevo(){ return "w" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+function apiLan(metodo, ruta, cuerpo, etag, accept){
+  var h = {"authorization": "Bearer " + token, "accept": accept || "application/vnd.github+json"};
+  var url = lan.base + ruta, opts = {method: metodo, headers: h, cache: "no-store"}, lid = null;
+  function caido(motivo){ var e = new Error("lan: " + motivo); e.lanCaido = true; e.lid = lid; return e; }
+  if(metodo === "POST"){
+    lid = lidNuevo();
+    url = lan.base + "/msg";
+    h["content-type"] = "application/json";
+    opts.body = JSON.stringify({body: cuerpo.body, lid: lid});
+  }
+  if(etag) h["if-none-match"] = etag;
+  return lanFetch(url, opts).then(function(r){
+    if(r.status === 304) return {status: 304};
+    if(!r.ok) throw caido("http " + r.status);
+    return r.json().then(function(j){
+      if(lid && j && j.lid) lanMsgs[j.lid] = true;
+      return {status: r.status, json: j, etag: r.headers && r.headers.get ? r.headers.get("etag") : null};
+    });
+  }, function(e){ throw caido((e && e.message) || "sin respuesta"); });
+}
+// bytes de `img/...` o `audio/...`: del endpoint si esta, si no (o si no lo tiene) del buzon
+function bajarBlob(repo){
+  function github(){
+    if(!token) return Promise.reject(new Error("401"));
+    var ruta = API + "/repos/" + REPO + "/contents/" + repo.split("/").map(encodeURIComponent).join("/");
+    return fetch(ruta, {headers: {"authorization": "Bearer " + token, "accept": "application/vnd.github.raw"}})
+      .then(function(r){ if(!r.ok) throw new Error("http " + r.status); return r.blob(); });
+  }
+  if(!lan.base || !/^(img|audio)\//.test(repo)) return github();
+  return lanFetch(lan.base + "/" + repo.split("/").map(encodeURIComponent).join("/"),
+                  {headers: {"authorization": "Bearer " + token}, cache: "no-store"})
+    .then(function(r){ if(!r.ok) throw new Error("http " + r.status); return r.blob(); })
+    .catch(function(){ return github(); });
+}
+
 // `recetas/prueba_web_tabs` enchufa aca un POST falso para probar el envio sin tocar github.
 // en produccion es null y esta linea no hace nada.
 var apiStub = null;
 function api(metodo, ruta, cuerpo, etag, accept){
+  if(lan.base && lanRuta(metodo, ruta)){
+    return apiLan(metodo, ruta, cuerpo, etag, accept).catch(function(e){
+      if(!e || !e.lanCaido) throw e;
+      lanPoner(null);                                     // respaldo: el buzon, en el acto y sin perder el mensaje
+      // si el endpoint alcanzo a atenderlo, el daemon ve el mismo lid y no lo contesta dos veces
+      if(e.lid && cuerpo && cuerpo.body) cuerpo = {body: cuerpo.body + "\n<!--lan:" + e.lid + "-->"};
+      return api(metodo, ruta, cuerpo, null, accept);
+    });
+  }
   if(apiStub) return apiStub(metodo, ruta, cuerpo, etag, accept);
   if(!token) return Promise.reject(new Error("401"));
   if(Date.now() < frenoHasta && metodo === "GET"){
@@ -2058,7 +2186,7 @@ function ruta(desdeIso){
 // op N X) contestan sin tag: caen en la pestaña del mensaje anterior, que es desde donde salieron.
 function agregar(c, arriba){
   vistos[c.id] = true;
-  var b = c.body || "", m;
+  var b = (c.body || "").replace(RE_LAN_MARCA, ""), m;
   if(b.indexOf(MARCA) === 0){
     // `<!--nodo:cloud modelo:fable dur:12 cuello:modelo-->` va al header, no al cuerpo
     var lm = leerMeta(b.slice(MARCA.length).replace(/^\n/, "")), mm = lm.meta;
@@ -2088,11 +2216,13 @@ function cargarComentarios(reemplazar){
     if(r.status === 304) return;
     if(!reemplazar) etagCom = r.etag;
     var cs = r.json || [];
-    if(reemplazar){ msgsCom = []; vistos = {}; }
+    if(reemplazar){ msgsCom = []; vistos = {}; lanMsgs = {}; }
     var pego = seguirAlFinal() || reemplazar;
     var nuevos = 0;
     cs.sort(function(a, b){ return a.id - b.id; }).forEach(function(c){
       if(vistos[c.id]) return;
+      var ld = RE_LAN_MARCA.exec(c.body || "");
+      if(ld && lanMsgs[ld[1]]){ vistos[c.id] = true; ultimoIso = c.created_at; return; }   // ya se pinto al salir por la lan
       agregar(c, false);
       ultimoIso = c.created_at;
       nuevos++;
@@ -2202,6 +2332,7 @@ function chatDeTab(tema){
 }
 
 function tick(){
+  if(Date.now() - lan.ult > LAN_CADA) probarLan();   // lan primero: cada 60 s se vuelve a probar el endpoint
   vaciarSalida();   // lo que github freno sale solo apenas levanta el freno
   Promise.all([cargarEstado(), cargarComentarios(false)])
     .catch(function(e){ if(ruidoso(e)) sistema("error: " + e.message, "error"); });
@@ -2252,6 +2383,7 @@ function sincronizar(primera){
   if(!token) return Promise.resolve();
   if(syncEnVuelo) return syncEnVuelo;
   syncUlt = Date.now();
+  if(primera || Date.now() - lan.ult > LAN_CADA) probarLan();   // no frena la sync: si contesta, lo que sigue va por ahi
   widUlt = 0; tabsUlt = 0; chatUlt = Date.now();   // que el tick no las saltee (ni repita el chat)
   var cartel = setTimeout(function(){ pintarSync("sync"); }, primera ? 0 : 250);
   syncEnVuelo = Promise.all([
@@ -2759,8 +2891,15 @@ function nombreFoto(hash, file){
 // sube al repo del buzon con el mismo token. fetch propio (no `api()`): un 403 de escritura no tiene
 // que desloguear a facundo del chat, igual que en `ponerTabs`.
 var fotoStub = null;     // `prueba_web_tabs` lo enchufa para probar la subida sin tocar github
-function subirBuzon(ruta, b64, mensaje){
+function subirBuzon(ruta, b64, mensaje, bytes){
   if(fotoStub) return Promise.resolve(fotoStub(ruta, b64)).then(function(){ return ruta; });
+  // lan primero: los bytes crudos al endpoint (el daemon la sube al buzon despues, sin que esto espere)
+  if(lan.base && bytes && /^(img|audio)\//.test(ruta)){
+    return lanFetch(lan.base + "/subir?ruta=" + encodeURIComponent(ruta), {method: "POST", cache: "no-store",
+        headers: {"authorization": "Bearer " + token, "content-type": "application/octet-stream"}, body: bytes})
+      .then(function(r){ if(!r.ok) throw new Error("http " + r.status); return ruta; })
+      .catch(function(){ lanPoner(null); return subirBuzon(ruta, b64, mensaje); });
+  }
   return fetch(API + "/repos/" + REPO + "/contents/" + ruta, {
     method: "PUT", cache: "no-store",
     headers: {"authorization": "Bearer " + token, "accept": "application/vnd.github+json",
@@ -2771,7 +2910,7 @@ function subirBuzon(ruta, b64, mensaje){
     return r.text().then(function(t){ throw new Error("http " + r.status + " " + t.slice(0, 80)); });
   });
 }
-function subirFoto(ruta, b64){ return subirBuzon(ruta, b64, "foto"); }
+function subirFoto(ruta, b64, bytes){ return subirBuzon(ruta, b64, "foto", bytes); }
 
 // ---------- notificaciones push al iphone (facundo, 2026-09-12) ----------
 // ios 16.4+ solo manda push a la pwa agregada a inicio y solo pide permiso dentro de un toque. la
@@ -2923,7 +3062,7 @@ function mandarFoto(file, pieTexto){
   }).then(function(buf){
     return sha12(buf).then(function(h){
       ruta = nombreFoto(h, file);
-      return subirFoto(ruta, bytesAb64(new Uint8Array(buf)));
+      return subirFoto(ruta, bytesAb64(new Uint8Array(buf)), new Uint8Array(buf));
     });
   }).then(function(){
     imgUrls[ruta] = URL.createObjectURL(blob);    // ya la tengo: no la bajo de nuevo para pintarla
@@ -3133,7 +3272,7 @@ function mandarAudio(blob, mime, pieTexto){
   return blob.arrayBuffer().then(function(buf){
     return sha12(buf).then(function(h){
       ruta = nombreAudio(h, mime);
-      return subirBuzon(ruta, bytesAb64(new Uint8Array(buf)), "audio");
+      return subirBuzon(ruta, bytesAb64(new Uint8Array(buf)), "audio", new Uint8Array(buf));
     });
   }).then(function(){
     audioUrls[ruta] = URL.createObjectURL(blob);      // ya lo tengo: no lo bajo para reproducirlo
@@ -3179,13 +3318,7 @@ var sonando = null;
 function bajarAudio(src){
   if(/^(https?:|blob:|data:)/i.test(src)) return Promise.resolve(src);
   if(audioUrls[src]) return Promise.resolve(audioUrls[src]);
-  if(!token) return Promise.reject(new Error("401"));
-  var ruta = API + "/repos/" + REPO + "/contents/" + src.split("/").map(encodeURIComponent).join("/");
-  return fetch(ruta, {headers: {"authorization": "Bearer " + token, "accept": "application/vnd.github.raw"}})
-    .then(function(r){
-      if(!r.ok) throw new Error("http " + r.status);
-      return r.blob();
-    }).then(function(b){
+  return bajarBlob(src).then(function(b){
       audioUrls[src] = URL.createObjectURL(b);
       return audioUrls[src];
     });
@@ -4097,6 +4230,7 @@ function cargarWidgets(){
              "application/vnd.github.raw+json").then(function(r){
     if(r.status === 304){ pintarWidgets(null); return; }
     etagWid = r.etag;
+    lanAnuncio(r.json);
     pintarWidgets(r.json);
   });
 }
@@ -5210,6 +5344,10 @@ window.__agente = {
   // envio idempotente: dos enter rapidos no mandan dos veces (prueba_web_tabs lo chequea)
   envios: function(){ return {enviando: enviando, ultimo: ultimoTexto, repeMs: REPE_MS}; },
   stubApi: function(f){ apiStub = f || null; },
+  // lan primero (prueba_web_tabs simula el endpoint vivo y caido)
+  stubLan: function(f){ lanStub = f || null; }, probarLan: probarLan, lanPoner: lanPoner, lanCandidatos: lanCandidatos,
+  lan: function(){ return {base: lan.base, via: lan.via, texto: ($("via") || {}).textContent}; },
+  subirBuzon: subirBuzon, cargarComentarios: cargarComentarios, cargarWidgets: cargarWidgets, bajarBlob: bajarBlob,
   normTema: normTema, padreTema: padreTema,
   resaltar: resaltar, pintarWidgets: pintarWidgets, refrescarEdad: refrescarEdad,
   // modal de items de widget: `recetas/prueba_web_tabs` lo abre y lee lo que quedo pintado
