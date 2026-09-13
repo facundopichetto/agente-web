@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.206">
-<link rel="manifest" href="manifest.json?v=4.206">
+<meta name="agente-web-version" content="4.207">
+<link rel="manifest" href="manifest.json?v=4.207">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2427,7 +2427,9 @@ function recibirChat(tema, d){
   var t = normTema(tema), filas = (d && d.filas) || [], out = [], resp = {};
   filas.forEach(function(f, i){
     var base = t + "-" + i;
-    if(f.pregunta) out.push({id: "h:" + base + ":q", clase: "yo", quien: QUIEN_F, texto: f.pregunta,
+    // `(aviso de claudio)`, `(tarea 12: ...)`, `(menu de claudio)`: filas que escribe el agente solo, no son de f
+    var propia = /^\((aviso de claudio|menu de claudio|turno nocturno|tarea \d+:)/.test(String(f.pregunta || ""));
+    if(f.pregunta && !propia) out.push({id: "h:" + base + ":q", clase: "yo", quien: QUIEN_F, texto: f.pregunta,
                              iso: f.ts, tema: t, explicito: true});
     var r = String(f.respuesta || ""), mt = /^\s*\[([\w\/-]+)\]\s*/.exec(r);
     if(mt && esTema(mt[1])) r = r.slice(mt[0].length);   // el `[tema]` ya lo dice la pestaña
@@ -2480,6 +2482,8 @@ function temasACargar(){
   function sumar(t){ t = normTema(t); if(t && t !== AUTO && out.indexOf(t) < 0) out.push(t); }
   sumar(temaActivo());
   if(tabs.indexOf(AUTO) >= 0) Object.keys(chatIndex || {}).forEach(sumar);
+  // lo que el daemon publica en la general misma (el menu a/b/c al volver, 1117) viene en `chat/auto.json`
+  if(tabs.indexOf(AUTO) >= 0 && chatIndex && chatIndex[AUTO] && out.indexOf(AUTO) < 0) out.push(AUTO);
   tabs.forEach(sumar);
   return out;
 }
