@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.193">
-<link rel="manifest" href="manifest.json?v=4.193">
+<meta name="agente-web-version" content="4.194">
+<link rel="manifest" href="manifest.json?v=4.194">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -906,6 +906,7 @@ var WSETS_DEBOUNCE = 1200;
 // `filas: 0` = todas. la tercera de cada uno es la especifica que pidio facundo.
 var WSETS = {
   server:      [{k: "log", et: "mostrar el log", tipo: "bool", def: true}],
+  salud:       [{k: "solo_problemas", et: "solo rojo y amarillo", tipo: "bool", def: false}],
   usage:       [{k: "cuentas", et: "cuentas", tipo: "opciones", def: "todas", ops: ["todas"]}],
   agent:       [{k: "cola", et: "mostrar la cola", tipo: "bool", def: true}],
   tickets:     [{k: "estado", et: "filtro de estado", tipo: "opciones", def: "todos", ops: ["todos"]}],
@@ -3367,6 +3368,29 @@ function cajaServer(s){
   return caja("server", ese, limFilas("server", filas).join("\n"), false, "server");
 }
 
+// salud (facundo, 2026-09-13, PLAN-INVENCIBLE capa 4): cuando vence cada credencial. lo arma
+// recetas/salud.py cada 10 min; rojo y amarillo arriba, tocar una fila da el arreglo como boton.
+var SALUD_COLOR = {rojo: "r", amarillo: "a", verde: "v", gris: "g"};
+function cajaSalud(s){
+  if(!s || !s.filas) return caja("salud", "", vacio((s && s.error) || "salud todavia no corrio"), false, "salud");
+  var r = s.resumen || {}, filas = [], solo = !!wset("salud", "solo_problemas");
+  s.filas.forEach(function(f){
+    if(solo && (f.estado === "verde" || f.estado === "gris")) return;
+    var vence = (f.falta_s !== null && f.falta_s !== undefined && f.grupo !== "oauth" && f.estado !== "rojo")
+      ? '<span class="g">vence en</span> <span class="b">' + faltaTxt(f.falta_s) + "</span> " : "";
+    filas.push(it({tipo: "salud", tema: "tools", d: f},
+      '<span class="' + (SALUD_COLOR[f.estado] || "g") + ' b">' + esc(f.estado || "?") + "</span> " +
+      '<span class="b">' + esc(f.nombre || "") + "</span> " + vence +
+      '<span class="g">' + esc(String(f.detalle || "").slice(0, 70)) + "</span>"));
+  });
+  if(!filas.length) filas.push(vacio("todo verde"));
+  var ese = (r.rojo ? '<span class="r b">' + r.rojo + " rojo</span> " : "") +
+            (r.amarillo ? '<span class="a b">' + r.amarillo + " amarillo</span> " : "") +
+            (!r.rojo && !r.amarillo ? '<span class="v b">todo verde</span> ' : "") +
+            '<span class="g">' + (r.verde || 0) + " verde</span>";
+  return caja("salud", ese, limFilas("salud", filas).join("\n"), false, "salud");
+}
+
 // facundo (2026-09-11): el widget muestra SOLO las barras, tres por cuenta (5h, week, fable).
 // presupuesto, horario laboral y costo siguen en el json pero no se pintan aca.
 // facundo (2026-09-12, mitad y mitad): arriba dice QUE CUENTA esta eligiendo el agente y POR QUE
@@ -3824,6 +3848,7 @@ function pintarWidgets(d, err){
   var partes = [
     ["server", cajaServer(d.server || {})],
     ["usage", cajaUsage(d.usage || {})],
+    ["salud", cajaSalud(d.salud || {})],
     ["agent", cajaAgente(d.agente || {})],
     ["verificaciones", cajaVerif(d.verificaciones || {})],
     ["tickets", cajaTickets(d.tickets || {})],
@@ -4073,7 +4098,7 @@ function accHablar(o, contexto){
 // contexto": el `[✎]` del header (y `escribir` en el modal de cada fila) lleva a la pestaña del tema
 // del widget y deja una cita `> widget <nombre>: ...` + linea vacia en el input, sin mandar nada. el
 // daemon la separa del pedido con `marcas_chat` (igual que `responder`) y se la pasa al modelo.
-var TEMA_WIDGET = {server: "server", usage: "tools", agent: "tools", cola: "tools", verificaciones: "awtomic/qa",
+var TEMA_WIDGET = {server: "server", salud: "tools", usage: "tools", agent: "tools", cola: "tools", verificaciones: "awtomic/qa",
                    tickets: "awtomic", oportunidades: "tools", decided: "tools", sombra: "tools",
                    avisos: "tools", propuestas: "tools", podcast: "podcast", dj: "fuzzer", mail: "fuzzer",
                    que_ver: "personal"};
@@ -4335,6 +4360,16 @@ function modalDe(o){
       return link(v.url, v.voz + (v.min ? " " + v.min + "m" : ""));
     }).join(" · ");
     m.acciones.push(accHablar(o, "el episodio «" + corto(d.titulo, 60) + "»"));
+  } else if(o.tipo === "salud"){
+    m.titulo = "salud · " + (d.nombre || "");
+    m.cuerpo = '<span class="' + (SALUD_COLOR[d.estado] || "g") + ' b">' + esc(d.estado || "?") + "</span>" +
+      (d.nodo ? '  <span class="g">nodo</span> ' + esc(d.nodo) : "") + "\n" + esc(d.detalle || "") +
+      (d.vence ? '\n<span class="g">vence</span> ' + esc(d.vence) +
+        (d.falta_s > 0 ? " (en " + faltaTxt(d.falta_s) + ")" : "") : "") +
+      (d.arreglo ? '\n<span class="g">arreglo</span> ' + esc(d.arreglo) : "");
+    if(d.comando) m.acciones.push([d.comando, function(){ actuar("tools", d.comando, true); }, true]);
+    m.acciones.push(["volver a medir ahora", function(){ actuar("tools", "salud fresco", true); }]);
+    m.acciones.push(accHablar(o, "la credencial " + (d.nombre || "")));
   } else {
     m.cuerpo = esc(JSON.stringify(d, null, 1));
     m.acciones.push(accHablar(o, "esto del widget"));
