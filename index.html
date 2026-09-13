@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.209">
-<link rel="manifest" href="manifest.json?v=4.209">
+<meta name="agente-web-version" content="4.210">
+<link rel="manifest" href="manifest.json?v=4.210">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -373,32 +373,25 @@
   .btn:active{background:#111}
   .btn.voto{color:var(--verde);border-color:#1f3a14}
   .btn.dale{color:var(--verde);border-color:var(--verde)}
-  /* selector de nodos (facundo, 2026-09-12): donde puede vivir claudio. arriba a la izquierda,
-     en el lugar donde antes decia "claudio board". SERVER | MAC | CLOUD (el tercer nombre lo pone
-     el daemon). el color lo manda `recetas/nodos.py` (failover en cadena, 2026-09-12): verde el
-     que publica o un relevo listo de backup, rojo el server caido, amarillo advertencia (el texto
-     de cual va en el title), gris el que no existe o no responde. el `↻` de la derecha (accion)
-     aparece solo en amarillo, rojo o gris: en verde no hay nada que tocar. el tamaño es el de `.bb`. */
-  #nodos{display:flex;gap:6px;flex:1 1 auto;min-width:0;overflow-x:auto;scrollbar-width:none}
+  /* barra de nodos (facundo, 2026-09-13; pisa el look de boton y el `chat` verde): solo los labels
+     server | mac | cloud, sin borde ni fondo, cada uno con un circulito a la izquierda. el label se
+     toca y abre el menu del nodo (revivir, guardia). el orden lo pone `uptime_s`: el que lleva mas
+     tiempo corriendo a la izquierda (`pintarNodos`, igual que `nodos.orden_uptime`).
+     circulito: opacidad 1 el main (el de guardia, al que le habla la web), .9 los otros. color =
+     estado real del nodo (`nodos.color_nodo`): verde solo con todo ok, amarillo advertencia, naranja
+     problemas sin emergencia, rojo emergencia, gris apagado o sin responder. el motivo va en el title. */
+  #nodos{display:flex;align-items:center;gap:12px;flex:1 1 auto;min-width:0;overflow-x:auto;scrollbar-width:none}
   #nodos::-webkit-scrollbar{display:none}
-  #nodos button.guardia{color:var(--blanco);border-color:var(--verde-tenue)}
-  #nodos button.gris{opacity:.5;cursor:default}
-  #nodos button.mal{color:var(--rojo);border-color:var(--rojo)}
-  #nodos button.medio{color:var(--amarillo);border-color:var(--amarillo)}
-  #nodos .acc{color:var(--cian)}
-  #nodos .luz{width:6px;height:6px;border-radius:50%;background:var(--gris);flex:0 0 auto}
-  #nodos .luz.bien{background:var(--verde)}
-  #nodos .luz.medio{background:var(--amarillo)}
-  #nodos .luz.mal{background:var(--rojo)}
-  #nodos .marca{color:var(--verde);font-size:8px}
-  /* el nodo que atiende el chat sin publicar todo (cloud, 2026-09-12): la palabra `chat` en verde en vez de la luz */
-  #nodos .chatw{color:var(--verde);font-size:8px;letter-spacing:.5px;flex:0 0 auto}
-  /* a la derecha del nodo de guardia, un boton `chat` (facundo, 2026-09-13): look de la caja A (fondo negro, letra
-     y borde verdes). es un span y no un <button> para no anidar ni sumar al conteo de botones de la barra. */
-  #nodos .irchat{display:inline-flex;align-items:center;box-sizing:border-box;background:#000;color:var(--verde);
-    border:1px solid var(--verde);border-radius:4px;padding:0 8px;font-size:10px;cursor:pointer;flex:0 0 auto;
-    user-select:none;-webkit-user-select:none}
-  #nodos .irchat:active{background:var(--verde);color:#000}
+  #nodos .nodo{display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;background:none;border:0;
+    padding:0;margin:0;color:var(--blanco);font-size:10px;line-height:14px;cursor:pointer;white-space:nowrap;
+    text-transform:lowercase;user-select:none;-webkit-user-select:none}
+  #nodos .luz{width:7px;height:7px;border-radius:50%;background:var(--gris);flex:0 0 auto;opacity:.9}
+  #nodos .nodo.main .luz{opacity:1}
+  #nodos .luz.verde{background:var(--verde)}
+  #nodos .luz.amarillo{background:var(--amarillo)}
+  #nodos .luz.naranja{background:var(--naranja)}
+  #nodos .luz.rojo{background:var(--rojo)}
+  #nodos .luz.gris{background:var(--gris)}
   /* por donde habla el board (facundo, 2026-09-13, lan primero): lan / tailscale en verde, buzón en gris */
   #via{font-size:9px;letter-spacing:.5px;padding:0 4px;flex:0 0 auto;color:var(--gris);white-space:nowrap}
   #via.directo{color:var(--verde)}
@@ -413,6 +406,7 @@
     #vistas{display:flex}
     /* dedo: los seis botones de la barra se tocan con el pulgar, todos del mismo alto */
     .bb{height:32px;padding:4px 6px;gap:4px}
+    #nodos .nodo{min-height:32px}   /* dedo: el label se toca aunque no parezca boton */
     #nodos,#vistas{gap:5px}
     #cabecera{gap:6px}
     /* dedo: los botones del header de cada widget con area tactil de 40px (facundo, 2026-09-12) */
@@ -4390,31 +4384,33 @@ function pintarNodos(n){
   if(!nodosEl) return;
   var ns = (n && n.nodos) || [];
   if(!ns.length){ nodosEl.innerHTML = '<span class="g" style="font-size:9px">nodos…</span>'; return; }
-  nodosEl.innerHTML = ns.map(function(x, i){
-    var nv = x.nivel === "gris" || x.nivel === "mal" || x.nivel === "medio" ? x.nivel : "";
-    // el boton de accion solo cuando hay algo que arreglar (amarillo, rojo o gris con acciones)
-    var acc = x.nivel !== "bien" && (x.acciones || []).length;
-    return '<button type="button" data-nodo="' + i + '" class="bb ' + (x.publica ? "guardia " : "") +
-      nv + '" title="' + esc((x.detalle || "") + " · " + (x.advertencia || x.estado || "")) + '">' +
-      (x.chat && x.nivel === "bien" ? '<span class="chatw">chat</span>' : '<span class="luz ' + esc(x.nivel || "") + '"></span>') +
-      esc(x.nombre || x.id || "?") +
-      (x.guardia ? '<span class="marca">\u25c9</span>' : "") +
-      (acc ? '<span class="acc">\u21bb</span>' : "") + "</button>" +
-      (x.guardia ? '<span class="irchat" role="button" tabindex="0" title="ir al chat">chat</span>' : "");
+  // el que lleva mas tiempo corriendo a la izquierda; sin `uptime_s` al final en su orden (nodos.orden_uptime)
+  var orden = ns.map(function(x, i){ return i; }).sort(function(a, b){
+    var ua = ns[a].uptime_s, ub = ns[b].uptime_s;
+    var sa = typeof ua !== "number", sb = typeof ub !== "number";
+    if(sa !== sb) return sa ? 1 : -1;
+    if(!sa && ua !== ub) return ub - ua;
+    return a - b;
+  });
+  nodosEl.innerHTML = orden.map(function(i){
+    var x = ns[i];
+    var col = ["verde", "amarillo", "naranja", "rojo", "gris"].indexOf(x.color) >= 0 ? x.color : "gris";
+    var mot = (x.motivos || []).join(" \u00b7 ") || x.estado || "";
+    return '<span class="nodo' + (x.main || x.guardia ? " main" : "") + '" role="button" tabindex="0" data-nodo="' + i +
+      '" title="' + esc((x.nombre || x.id || "?").toLowerCase() + " \u00b7 " + col + (mot ? ": " + mot : "")) + '">' +
+      '<span class="luz ' + col + '"></span>' + esc(x.nombre || x.id || "?") + "</span>";
   }).join("");
 }
-// el `chat` del nodo de guardia: en el celu salta a la vista chat, en desktop pone el foco en el input
-function irAlChat(){
-  if(esVistaMobile()) verPanel("chat");
-  txt.focus();
-}
-$("nodos").addEventListener("click", function(e){
-  if(e.target.closest(".irchat")){ irAlChat(); return; }
-  var b = e.target.closest("button[data-nodo]");
+function abrirNodo(e){
+  var b = e.target.closest(".nodo[data-nodo]");
   if(!b) return;
   var n = ((widDatos || {}).nodos || {}).nodos || [];
   var x = n[+b.dataset.nodo];
   if(x) abrirModal({tipo: "nodo", tema: x.id === "mbp" ? "tools" : "server", d: x});
+}
+$("nodos").addEventListener("click", abrirNodo);
+$("nodos").addEventListener("keydown", function(e){
+  if(e.key === "Enter" || e.key === " "){ e.preventDefault(); abrirNodo(e); }
 });
 
 function pintarWidgets(d, err){
@@ -4892,7 +4888,11 @@ function modalDe(o){
   } else if(o.tipo === "nodo"){
     m.titulo = "nodo " + (d.nombre || d.id) + " \u00b7 " + (d.detalle || "");
     var color = d.nivel === "bien" ? "v" : d.nivel === "medio" ? "a" : d.nivel === "mal" ? "r" : "g";
+    var colNodo = {verde: "var(--verde)", amarillo: "var(--amarillo)", naranja: "var(--naranja)",
+                   rojo: "var(--rojo)", gris: "var(--gris)"}[d.color] || "var(--gris)";
     m.cuerpo = '<span class="' + color + ' b">' + esc(d.estado || "?") + "</span>" +
+      (d.color ? '\n<span class="b" style="color:' + colNodo + '">● ' + esc(d.color) + "</span>" +
+        (d.motivos || []).map(function(x){ return '\n<span class="g">·</span> ' + esc(x); }).join("") : "") +
       (d.guardia ? '  <span class="v">\u25c9 de guardia</span>' +
           (d.publica_hace_s !== null && d.publica_hace_s !== undefined
             ? ' <span class="g">publica en el buz\u00f3n hace</span> ' + haceSeg(d.publica_hace_s) : "")
