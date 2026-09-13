@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.204">
-<link rel="manifest" href="manifest.json?v=4.204">
+<meta name="agente-web-version" content="4.205">
+<link rel="manifest" href="manifest.json?v=4.205">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -4249,6 +4249,25 @@ function cajaDj(p){
   return caja("dj", extra, limFilas("dj", filas).join("\n"), false, "dj");
 }
 
+function cajaSaludPersonal(p){
+  // salud de facundo (tema personal, 2026-09-13): peso y tendencia, comidas de hoy, racha y edad.
+  // lo arma `recetas/salud_personal.py` (`widget()`), se carga desde el chat sin modelo.
+  if(p.error) return caja("salud personal", "", vacio(p.error), false, "salud_personal");
+  var t = p.tendencia_7;
+  var extra = (p.peso ? '<span class="v b">' + (+p.peso).toFixed(1) + " kg</span>" : '<span class="g">sin peso</span>') +
+              (t === null || t === undefined ? "" :
+               ' <span class="' + (t <= 0 ? "v" : "a") + '">7d ' + (t > 0 ? "+" : "") + (+t).toFixed(1) + "</span>");
+  var filas = [];
+  (p.comidas_hoy || []).forEach(function(c){ filas.push("· " + esc(c)); });
+  if(!filas.length) filas.push(vacio("sin comidas hoy"));
+  (p.notas_hoy || []).forEach(function(n){ filas.push('<span class="g">nota: ' + esc(n) + "</span>"); });
+  var pie = "racha <b>" + (p.racha || 0) + "d</b>" + (p.edad !== null && p.edad !== undefined ? " · " + p.edad + " años" : "") +
+            (p.imc ? " · imc " + p.imc : "");
+  if((p.faltan_perfil || []).length) pie += ' <span class="g">· falta ' + esc(p.faltan_perfil.join(", ")) + "</span>";
+  filas.push(pie);
+  return caja("salud personal", extra, limFilas("salud_personal", filas).join("\n"), false, "salud_personal");
+}
+
 function cajaMail(p){
   // el chequeo del mail: adaptativo (facundo, 2026-09-12). 15 min de base, 2 min con conversacion
   // abierta, y vuelve a 15 al enfriarse. lo decide `recetas/mail_fuzzer.py` (`intervalo()`).
@@ -4376,7 +4395,8 @@ function pintarWidgets(d, err){
     ["podcast", cajaPodcast(d.podcast || {})],
     ["dj", cajaDj(d.dj || {})],
     ["mail", cajaMail(d.mail || {})],
-    ["que_ver", cajaQueVer(d.que_ver || {})]
+    ["que_ver", cajaQueVer(d.que_ver || {})],
+    ["salud_personal", d.salud_personal ? cajaSaludPersonal(d.salud_personal) : ""]
   ];
   var mapa = {}, hay = [];
   partes.forEach(function(pa){ if(pa[1]){ mapa[pa[0]] = pa[1]; hay.push(pa[0]); } });
