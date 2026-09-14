@@ -652,7 +652,6 @@ en el momento y el modal se queda abierto:
 | `my tickets` | | `filtro de estado` (los estados que hay ahora) |
 | `opportunities` | | `ocultar las decididas` (saca la caja `decided`) |
 | `propuestas` | | `filtro de tema` |
-| `avisos` | | `solo los de hoy` |
 | `podcast` | | `abierto por default` |
 | `dj` | | `mostrar la cola` |
 
@@ -929,8 +928,8 @@ cada aviso de `avisos.md` y cada respuesta del chat llegan como **notificacion r
 celu, con el numero en el icono.
 
 - **paso unico de facundo**: abrir el board **desde el icono de inicio** (compartir > agregar a inicio en
-  safari) y tocar **`[activar notificaciones]`** en el header del widget `avisos` (o `[⚙]` de avisos >
-  `notificaciones`). ios 16.4+ solo manda push a la pwa de inicio y solo pide permiso dentro de un toque.
+  safari) y tocar **`notificaciones`** en `[⚙]` settings del board (el widget `avisos` se saco en la 1163:
+  los avisos van por la tira de notificaciones). ios 16.4+ solo manda push a la pwa de inicio y solo pide permiso dentro de un toque.
   en safari a secas el boton dice "agregá a inicio para activar".
 - **web**: `sw.js` (sin cache, `VERSION` la reescribe `bump_web`) muestra la notificacion, pone el badge con
   `setAppBadge(n)` y al tocarla abre `./?tema=<tema>` (o le avisa a la ventana abierta). `activarPush()`
@@ -1046,11 +1045,32 @@ probar: `python3 -m recetas.prueba_chat_lan` (el endpoint real con github falso)
   `chat/<tema>.json` como `opciones: [{letra, texto}]` (`opciones_de` en `daemon.py`); la web usa ese campo o
   parsea las lineas del comentario (`opcionesDe`), y no las pinta como texto.
   - sin elegir: fondo negro, letra y borde del color. elegida: fondo del color, letra negra.
-  - primer tap elige (se puede cambiar), segundo tap sobre la elegida **manda** `A: <texto>` como mensaje
-    normal de la pestaña (con su `tema x:`). si el mensaje nombra una oportunidad (`op N`) con opciones reales
-    en `widgets.json`, las cajas mandan `op N X` crudo.
+  - primer tap elige, segundo tap sobre la unica elegida **manda** `A: <texto>` como mensaje normal de la
+    pestaña (con su `tema x:`). si el mensaje nombra una oportunidad (`op N`) con opciones reales en
+    `widgets.json`, las cajas mandan `op N X` crudo (varias: una por linea, el daemon corre todas).
+  - **seleccion multiple** (1169): tocar otra opcion la suma (hasta 3) y aparece `mandar`; sin tocarlo sale sola a
+    los 2 s (`OPC_AUTO_MS`). un solo mensaje `A y C: <texto a> / <texto c>`. tocar una elegida de nuevo la saca.
+  - **no vencen** (1168): mandar un mensaje ya no cierra las cajas de antes. solo queda hecha la tocada, o la mas
+    reciente si facundo escribe la letra (`A`, `A: ...`). tocar una caja que no es la ultima manda la cita
+    `> claudio hh:mm: <titulo o 2 lineas>` + linea vacia (`citaCaja`), que `marcas_chat` separa del pedido.
+  - **me arrepenti** (1169): doble toque o doble click (`OPC_DOBLE_MS` 450) sobre una opcion ya elegida la desmarca
+    y manda `me arrepentí: <letras>: <textos>` con la cita. el daemon (`arrepentido_cmd`) cancela sin modelo las
+    ordenes de esa opcion que siguen `[ ]` (las busca en `logs/opcion-orden.jsonl`, que anota cada `ORDEN:` que salio
+    de un `A: ...`); si ya corren o terminaron, pasa al chat con el estado para charlarlo.
   - drag o scroll por encima no elige: `pointerdown`/`pointerup` con umbral de 10 px (`OPC_UMBRAL`).
-  - despues de mandar quedan deshabilitadas con la elegida marcada (`localStorage.agente_opciones`); al recargar,
-    si hay un mensaje de f posterior en la pestaña, quedan cerradas y marcan la letra si ese mensaje empieza con
-    `X:` u `op N X`. facundo siempre puede contestar escribiendo.
-  - lo prueba `recetas/prueba_web_tabs` (pinta, drag que no elige, elige B, cambia, manda con el segundo tap).
+  - estado: `localStorage.agente_opciones` = `{clave: {l, ts}}` de este dispositivo; en los otros se deduce de los
+    mensajes de f (`estadoDeducido`: letra sin cita = la caja mas reciente, con cita = la de esa respuesta,
+    `me arrepentí` la reabre). gana el mas nuevo. facundo siempre puede contestar escribiendo.
+  - lo prueba `recetas/prueba_web_tabs` (pinta, drag que no elige, suma y saca, manda con el segundo tap, caja
+    vieja viva tras 3 mensajes con cita, doble toque, `mandar`, envio solo a los 2 s, deduccion en otro dispositivo).
+
+## notificaciones: la tira muestra solo el ultimo aviso (facundo, 2026-09-13, orden 1170)
+
+- debajo de las pestañas, **una sola linea**: el aviso sin leer mas nuevo (luz, hora y primeras palabras). nada de
+  `+N más`, desplegar ni `cerrar todas` ("leer mas no, solo la ultima. y que se pueda cerrar").
+- **`x` a la derecha** (`.nx`, `data-notix`, 40 px de area tactil): marca leido ese aviso (`avLeidos`, viaja en
+  `tabs.json`) y la tira pasa al siguiente sin leer; sin mas, se esconde. tocar el texto abre el detalle con
+  `responder` / `cerrar sin responder`, igual que en la 1162.
+- la lista completa de no leidas vive solo en la campanita del header (1166).
+- lo prueba `recetas/prueba_web_tabs` (5 avisos: se ve solo el mas nuevo, la `x` pasa al siguiente sin abrir el
+  detalle, area de toque en el celu).

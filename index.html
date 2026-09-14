@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.212">
-<link rel="manifest" href="manifest.json?v=4.212">
+<meta name="agente-web-version" content="4.213">
+<link rel="manifest" href="manifest.json?v=4.213">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -101,6 +101,7 @@
   /* cajas a/b/c debajo de una respuesta (facundo, 2026-09-13): A verde (la que haria claudio), B celeste (la
      segura), C fucsia (la transgresora). sin elegir: fondo negro, letra y borde del color. elegida: fondo del
      color, letra negra. primer tap elige, segundo tap sobre la misma manda. en fila; si no entran, apiladas. */
+  .tnum{font-size:.8em;opacity:.7}
   .opciones{display:flex;gap:6px;margin:6px 0 2px 0;white-space:normal}
   .opciones .opc{
     flex:1 1 0;min-width:0;box-sizing:border-box;background:#000;border:1px solid;border-radius:4px;
@@ -116,6 +117,7 @@
   .opciones .opc.B.sel{background:var(--cian);color:#000}
   .opciones .opc.C.sel{background:var(--magenta);color:#000}
   .opciones.hecho .opc{cursor:default}
+  .opciones .mandar{font:inherit;font-size:.85em;background:none;border:0;color:var(--cian);padding:0 4px;cursor:pointer;align-self:center}
   .opciones.hecho .opc:not(.sel){opacity:.45}
   @media (max-width:380px){ .opciones{flex-direction:column} }
   .sistema .cuerpo{color:var(--gris)}
@@ -407,7 +409,7 @@
     /* dedo: los seis botones de la barra se tocan con el pulgar, todos del mismo alto */
     .bb{height:32px;padding:4px 6px;gap:4px}
     #nodos .nodo{min-height:32px}   /* dedo: el label se toca aunque no parezca boton */
-    #notis .noti,#notis .nmas{min-height:34px;font-size:12px}   /* dedo: cada aviso se toca con el pulgar */
+    #notis .noti{min-height:40px;font-size:12px}   /* dedo: el aviso y su `x` se tocan con el pulgar */
     #mcuerpo textarea.nresp{font-size:16px}   /* ios no zoomea al enfocar */
     #nodos,#vistas{gap:5px}
     #cabecera{gap:6px}
@@ -459,19 +461,21 @@
   #tabs .barrabtn:active{background:#111}
   #tabs .relleno{flex:1 1 auto;min-width:8px}
   /* ---------- notificaciones (facundo, 2026-09-13, orden 1162) ----------
-     las lineas de avisos.md sin leer, debajo de las pestañas: una linea por aviso (hora + primeras palabras,
-     la mas nueva arriba), sin look de boton como la barra de nodos. mas de 3: se pliega. tocar abre el detalle. */
-  #notis{flex:0 0 auto;display:flex;flex-direction:column;border-bottom:1px solid var(--linea);padding:2px 10px;
-    max-height:40vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+     solo el ultimo aviso sin leer, debajo de las pestañas, en una linea (hora + primeras palabras), sin look de
+     boton como la barra de nodos. tocar abre el detalle; la `x` lo marca leido y pasa al siguiente (1170: "leer
+     mas no, solo la ultima. y que se pueda cerrar"). la lista entera vive en la campanita del header. */
+  #notis{flex:0 0 auto;display:flex;align-items:center;border-bottom:1px solid var(--linea);padding:0 0 0 10px}
   #notis.oculta{display:none}
-  #notis .noti,#notis .nmas{display:flex;align-items:center;gap:6px;min-width:0;background:none;border:0;padding:0;margin:0;
+  #notis .noti{flex:1 1 auto;display:flex;align-items:center;gap:6px;min-width:0;background:none;border:0;padding:0;margin:0;
     color:var(--blanco);font-size:10px;line-height:18px;cursor:pointer;white-space:nowrap;
     user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
   #notis .luz{width:7px;height:7px;border-radius:50%;background:var(--amarillo);flex:0 0 auto}
   #notis .nh{color:var(--gris);flex:0 0 auto}
   #notis .nt{overflow:hidden;text-overflow:ellipsis;min-width:0}
-  #notis .nmas{color:var(--gris);gap:12px}
-  #notis .nmas span{cursor:pointer}
+  #notis .nx{flex:0 0 auto;width:40px;height:40px;margin:-11px 0;display:flex;align-items:center;justify-content:center;
+    background:none;border:0;padding:0;color:var(--gris);font:inherit;font-size:13px;cursor:pointer;
+    -webkit-tap-highlight-color:transparent}
+  #notis .nx:active{color:var(--blanco)}
   #mcuerpo textarea.nresp{display:block;width:100%;box-sizing:border-box;margin-top:10px;background:#000;color:var(--blanco);
     border:1px solid var(--linea);border-radius:4px;padding:6px;font:inherit;resize:vertical;min-height:60px}
   /* ---------- sincronizando (facundo, 2026-09-11) ----------
@@ -1012,7 +1016,6 @@ var WSETS = {
   tickets:     [{k: "estado", et: "filtro de estado", tipo: "opciones", def: "todos", ops: ["todos"]}],
   oportunidades: [{k: "ocultar_decididas", et: "ocultar las decididas", tipo: "bool", def: false}],
   propuestas:  [{k: "tema", et: "filtro de tema", tipo: "opciones", def: "todos", ops: ["todos"]}],
-  avisos:      [{k: "solo_hoy", et: "solo los de hoy", tipo: "bool", def: false}],
   podcast:     [{k: "abierto", et: "abierto por default", tipo: "bool", def: false}],
   dj:          [{k: "cola", et: "mostrar la cola", tipo: "bool", def: true}],
   mail:        [{k: "pendientes", et: "mostrar los pendientes", tipo: "bool", def: true}],
@@ -2017,7 +2020,13 @@ function nodoMsg(m){
 // opciones reales en widgets.json, las cajas mandan `op N X` crudo (lo resuelve el daemon sin modelo).
 var RE_OPCION = /^\s*(?:[-*]\s+)?\**OPCI[OÓ]N\s+([ABC])\**\s*[:)\.]\**\s*(\S.*)$/i;
 var OPC_UMBRAL = 10;     // px: un dedo que se mueve mas que esto esta scrolleando, no eligiendo
-var opcSel = {}, opcHecho = {};
+// cajas que no vencen (1168/1169): `opcHecho[clave] = {l: "AC", ts}` es lo ultimo que se hizo en ESTE dispositivo
+// ("" = desmarcada con doble click). lo de los otros dispositivos se deduce de los mensajes de f (`estadoCaja`):
+// `A: ...` sin cita cierra la caja mas reciente, con cita `> claudio hh:mm: ...` la caja de esa respuesta, y
+// `me arrepentí: A: ...` la vuelve a abrir. gana el mas nuevo de los dos.
+var OPC_AUTO_MS = 2000;  // con dos o tres elegidas, se manda sola a los 2 s (o con `mandar`)
+var OPC_DOBLE_MS = 450;  // dos toques en este lapso sobre una ya tocada = me arrepenti
+var opcSel = {}, opcHecho = {}, opcTimer = {}, opcToque = {}, cajaMsg = {};
 try{ opcHecho = JSON.parse(localStorage.getItem("agente_opciones") || "{}") || {}; }catch(x){ opcHecho = {}; }
 function opcionesDe(texto){
   var lista = [], fuera = [], vistas = {};
@@ -2058,25 +2067,117 @@ function respuestaA(m){
   }
   return null;
 }
-function marcarHecho(caja, letra){
-  caja.classList.add("hecho");
+var RE_ELEGIDAS = /^([ABC](?:\s*(?:y|,)\s*[ABC]){0,2})\s*(?::|$)/;
+var RE_ARREPENTI = /^me\s+arrepent[ií]\s*:\s*([ABC](?:\s*(?:y|,)\s*[ABC]){0,2})\s*:/i;
+function hhmmDe(m){
+  var d = new Date(m && m.iso || "");
+  return isNaN(d) ? "" : pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+}
+function normCita(t){ return String(t || "").replace(/\*\*|`/g, "").replace(/\s+/g, " ").trim().toLowerCase(); }
+function lineasCita(m){
+  var o = opcionesDe(m.texto);
+  return String(o.cuerpo !== null ? o.cuerpo : (m.texto || "")).split("\n")
+    .map(function(x){ return x.replace(/\s+/g, " ").trim(); }).filter(function(x){ return x !== ""; });
+}
+// la cita de una caja vieja: `> claudio hh:mm: <titulo o primeras 2 lineas>` + linea vacia (la separa `marcas_chat`)
+function citaCaja(m){
+  var ls = lineasCita(m).slice(0, 2).map(function(x){ return x.length > CITA_CHARS ? x.slice(0, CITA_CHARS - 1) + "…" : x; });
+  if(!ls.length) ls = [""];
+  return ls.map(function(x, i){ return "> " + (i === 0 ? "claudio " + hhmmDe(m) + ": " : "") + x; }).join("\n") + "\n\n";
+}
+// {cita, cuerpo} de un mensaje de f (sin el `tema x:` de la pestaña)
+function partirCita(texto){
+  var t = String(texto || "").replace(/^\s*tema\s+[\w\/-]+\s*:\s*/i, "");
+  var mm = /^((?:[ \t]*>[^\n]*(?:\n|$))+)\s*/.exec(t);
+  return mm ? {cita: mm[1], cuerpo: t.slice(mm[0].length).trim()} : {cita: "", cuerpo: t.trim()};
+}
+function citaEsDe(cita, m){
+  var mm = /^\s*>\s*claudio\s+(\d\d:\d\d)\s*:\s*(.*)$/m.exec(cita || "");
+  if(!mm || mm[1] !== hhmmDe(m)) return false;
+  var q = normCita(mm[2]).replace(/…$/, "").slice(0, 24), ls = lineasCita(m);
+  return !q || normCita(ls[0] || "").indexOf(q) === 0;
+}
+function letrasDe(txt){ return (String(txt).match(/[ABC]/g) || []).filter(function(l, i, a){ return a.indexOf(l) === i; }).sort().join(""); }
+function tieneCajas(m){
+  if(!m || m.clase !== "agente") return false;
+  if(m._tc === undefined || m._tcT !== m.texto){ m._tc = cajasDe(m).lista.length > 0; m._tcT = m.texto; }
+  return m._tc;
+}
+// la caja mas reciente de la pestaña antes del mensaje de indice `j`
+function cajaPrevia(j, tema){
+  for(var i = j - 1; i >= 0; i--){
+    var x = msgs[i];
+    if(x.clase === "agente" && deEstaTab(x.tema, tema) && tieneCajas(x)) return x;
+  }
+  return null;
+}
+// {l, ts} de una caja segun los mensajes de f que vinieron despues (lo que ven los otros dispositivos)
+function estadoDeducido(m){
+  var i = msgs.indexOf(m), est = {l: "", ts: 0};
+  if(i < 0) return est;
+  var tema = m.tema || temaActivo(), o = cajasDe(m);
+  for(var j = i + 1; j < msgs.length; j++){
+    var x = msgs[j];
+    if(x.clase !== "yo" || !deEstaTab(x.tema, tema)) continue;
+    var pc = partirCita(x.texto), ts = +new Date(x.iso || 0) || j, mm;
+    var mia = pc.cita ? citaEsDe(pc.cita, m) : cajaPrevia(j, tema) === m;
+    if((mm = RE_ARREPENTI.exec(pc.cuerpo))){
+      if(mia) est = {l: est.l.replace(new RegExp("[" + letrasDe(mm[1]) + "]", "g"), ""), ts: ts};
+      continue;
+    }
+    if(!mia) continue;
+    if((mm = RE_ELEGIDAS.exec(pc.cuerpo))){ est = {l: letrasDe(mm[1]), ts: ts}; continue; }
+    var cmds = o.lista.filter(function(op){
+      return op.cmd && pc.cuerpo.split("\n").some(function(l){ return l.trim().toLowerCase() === op.cmd.toLowerCase(); });
+    });
+    if(cmds.length) est = {l: letrasDe(cmds.map(function(op){ return op.letra; }).join("")), ts: ts};
+  }
+  return est;
+}
+function estadoCaja(m){
+  var k = claveCajas(m), loc = opcHecho[k], ded = estadoDeducido(m);
+  if(typeof loc === "string") loc = {l: loc === "-" ? "" : loc, ts: 1};   // formato viejo (una letra)
+  if(!loc) return ded;
+  return (+loc.ts || 0) >= (ded.ts || 0) ? loc : ded;
+}
+function guardarOpc(k, letras){
+  opcHecho[k] = {l: letras, ts: Date.now()};
+  try{ localStorage.setItem("agente_opciones", JSON.stringify(opcHecho)); }catch(x){}
+}
+function marcarHecho(caja, letras){
+  letras = letras || "";
+  caja.classList.toggle("hecho", !!letras);
   [].forEach.call(caja.querySelectorAll(".opc"), function(b){
-    b.disabled = true;
-    b.classList.toggle("sel", !!letra && b.dataset.letra === letra);
+    b.classList.toggle("sel", letras.indexOf(b.dataset.letra) >= 0);
+    b.setAttribute("aria-disabled", letras ? "true" : "false");
+  });
+  var mb = caja.querySelector(".mandar");
+  if(mb && letras) mb.remove();
+}
+// repinta cada caja de la lista con su estado (llego un mensaje de f, de este u otro dispositivo)
+function refrescarCajas(){
+  if(!lista) return;
+  [].forEach.call(lista.querySelectorAll(".opciones"), function(c){
+    var m = cajaMsg[c.dataset.clave];
+    if(!m) return;
+    var e = estadoCaja(m);
+    if(e.l) marcarHecho(c, e.l);
+    else if(c.classList.contains("hecho")) marcarHecho(c, "");
   });
 }
-function nodoCajas(m, lista){
+function nodoCajas(m, lista_){
   var k = claveCajas(m), caja = document.createElement("div");
   caja.className = "opciones";
   caja.dataset.clave = k;
-  lista.forEach(function(o){
+  cajaMsg[k] = m;
+  lista_.forEach(function(o){
     var b = document.createElement("button");
     b.type = "button"; b.className = "opc " + o.letra; b.dataset.letra = o.letra;
     b.innerHTML = '<span class="l"></span><span class="t"></span>';
     b.querySelector(".l").textContent = o.letra;
     b.querySelector(".t").textContent = o.texto;
     b.title = o.cmd || (o.letra + ": " + o.texto);
-    if(opcSel[k] === o.letra) b.classList.add("sel");
+    if((opcSel[k] || []).indexOf(o.letra) >= 0) b.classList.add("sel");
     var ini = null;
     b.addEventListener("pointerdown", function(e){ ini = {x: e.clientX, y: e.clientY, mov: false}; });
     b.addEventListener("pointermove", function(e){
@@ -2086,52 +2187,102 @@ function nodoCajas(m, lista){
     b.addEventListener("pointerup", function(e){
       var t = ini; ini = null;
       if(!t || t.mov || Math.abs(e.clientX - t.x) + Math.abs(e.clientY - t.y) > OPC_UMBRAL) return;
-      tocarCaja(m, caja, o);
+      tocarCaja(m, caja, o, lista_);
     });
     // teclado (enter / espacio): click sin puntero
-    b.addEventListener("click", function(e){ if(e.detail === 0) tocarCaja(m, caja, o); });
+    b.addEventListener("click", function(e){ if(e.detail === 0) tocarCaja(m, caja, o, lista_); });
     caja.appendChild(b);
   });
-  // ya respondida: elegida marcada (si se sabe) y todo deshabilitado
-  var r = respuestaA(m), hecha = opcHecho[k];
-  if(!hecha && r){
-    var mm = /^\s*([ABC])\s*:/.exec(r.texto || "") || /^\s*op\s+\d+\s+([ABC])\s*$/i.exec(r.texto || "");
-    hecha = mm ? mm[1].toUpperCase() : "-";
-  }
-  if(hecha) marcarHecho(caja, hecha === "-" ? null : hecha);
+  var e = estadoCaja(m);
+  if(e.l) marcarHecho(caja, e.l);
+  else if((opcSel[k] || []).length > 1) botonMandar(m, caja, lista_);
   return caja;
 }
-function tocarCaja(m, caja, o){
-  if(caja.classList.contains("hecho")) return;
-  var k = caja.dataset.clave;
-  if(opcSel[k] !== o.letra){                       // primer tap: elige (se puede cambiar)
-    opcSel[k] = o.letra;
-    [].forEach.call(caja.querySelectorAll(".opc"), function(b){ b.classList.toggle("sel", b.dataset.letra === o.letra); });
+// la caja no es la ultima de la pestaña (o ya hubo mensajes de f despues): lo que sale lleva la cita
+function cajaVieja(m){
+  var i = msgs.indexOf(m), tema = m.tema || temaActivo();
+  for(var j = i + 1; j < msgs.length; j++){
+    var x = msgs[j];
+    if(deEstaTab(x.tema, tema) && (x.clase === "yo" || tieneCajas(x))) return true;
+  }
+  return false;
+}
+function botonMandar(m, caja, lista_){
+  var mb = caja.querySelector(".mandar");
+  if(!mb){
+    mb = document.createElement("button");
+    mb.type = "button"; mb.className = "mandar"; mb.textContent = "mandar";
+    mb.addEventListener("click", function(){ mandarCaja(m, caja, lista_); });
+    caja.appendChild(mb);
+  }
+  return mb;
+}
+function tocarCaja(m, caja, o, lista_){
+  var k = caja.dataset.clave, ahora = Date.now(), prev = opcToque[k];
+  opcToque[k] = {letra: o.letra, t: ahora};
+  if(caja.classList.contains("hecho")){
+    // doble toque (o doble click) sobre una opcion ya elegida: me arrepenti
+    if(prev && prev.letra === o.letra && ahora - prev.t < OPC_DOBLE_MS &&
+       (estadoCaja(m).l || "").indexOf(o.letra) >= 0){
+      opcToque[k] = null;
+      arrepentirse(m, caja, lista_);
+    }
     return;
   }
-  // segundo tap sobre la elegida: manda, como un mensaje normal de esa pestaña
-  opcHecho[k] = o.letra;
-  try{ localStorage.setItem("agente_opciones", JSON.stringify(opcHecho)); }catch(x){}
-  marcarHecho(caja, o.letra);
-  var tema = m.tema || temaActivo();
-  if(o.cmd) mandar(o.cmd, tema, true);
-  else mandar(o.letra + ": " + o.texto, tema, false);
+  var sel = (opcSel[k] || []).slice(), i = sel.indexOf(o.letra);
+  clearTimeout(opcTimer[k]);
+  if(i >= 0 && sel.length === 1){ mandarCaja(m, caja, lista_); return; }   // segundo tap sobre la unica: manda
+  if(i >= 0) sel.splice(i, 1); else if(sel.length < 3) sel.push(o.letra);
+  sel.sort();
+  opcSel[k] = sel;
+  [].forEach.call(caja.querySelectorAll(".opc"), function(b){ b.classList.toggle("sel", sel.indexOf(b.dataset.letra) >= 0); });
+  var mb = caja.querySelector(".mandar");
+  if(sel.length > 1){
+    botonMandar(m, caja, lista_);
+    opcTimer[k] = setTimeout(function(){ if((opcSel[k] || []).length > 1) mandarCaja(m, caja, lista_); }, OPC_AUTO_MS);
+  }else if(mb) mb.remove();
+}
+function mandarCaja(m, caja, lista_){
+  var k = caja.dataset.clave, sel = (opcSel[k] || []).slice().sort();
+  clearTimeout(opcTimer[k]);
+  if(!sel.length || caja.classList.contains("hecho")) return;
+  var ops = lista_.filter(function(o){ return sel.indexOf(o.letra) >= 0; });
+  var vieja = cajaVieja(m), tema = m.tema || temaActivo();
+  opcSel[k] = [];
+  guardarOpc(k, sel.join(""));
+  marcarHecho(caja, sel.join(""));
+  if(ops.some(function(o){ return o.cmd; })){          // `op N X`: crudo, uno por linea (el daemon los corre todos)
+    mandar(ops.map(function(o){ return o.cmd || (o.letra + ": " + o.texto); }).join("\n"), tema, true);
+    return;
+  }
+  var txt = sel.join(" y ") + ": " + ops.map(function(o){ return o.texto; }).join(" / ");
+  mandar((vieja ? citaCaja(m) : "") + txt, tema, false);
+}
+function arrepentirse(m, caja, lista_){
+  var k = caja.dataset.clave, letras = estadoCaja(m).l || "";
+  var ops = lista_.filter(function(o){ return letras.indexOf(o.letra) >= 0; });
+  if(!ops.length) return;
+  opcSel[k] = [];
+  guardarOpc(k, "");
+  marcarHecho(caja, "");
+  mandar(citaCaja(m) + "me arrepentí: " + ops.map(function(o){ return o.letra; }).join(" y ") + ": " +
+         ops.map(function(o){ return o.texto; }).join(" / "), m.tema || temaActivo(), false);
 }
 function pintarMsg(m, arriba){
-  if(!arriba && m.clase === "yo" && lista)          // f contesto: las cajas de antes quedan cerradas
-    [].forEach.call(lista.querySelectorAll(".opciones:not(.hecho)"), function(c){
-      var s = c.querySelector(".opc.sel");
-      marcarHecho(c, opcHecho[c.dataset.clave] || (s && /^\s*[ABC]\s*:/.test(m.texto || "") ? s.dataset.letra : null));
-    });
   if(deEstaTab(m.tema, temaActivo()) && lista){
     if(arriba) lista.insertBefore(nodoMsg(m), lista.firstChild); else lista.appendChild(nodoMsg(m));
   }
+  // f contesto (1168): ya no se cierran todas las cajas; cada una se deduce de lo que dijo (letra sola = la mas
+  // reciente, con cita = la de esa respuesta, `me arrepentí` = la reabre)
+  if(!arriba && m.clase === "yo" && !renderando) refrescarCajas();
   if(!arriba && m.clase === "agente") pintarChips();   // contesto el daemon: sugerencias nuevas
   if(!arriba && vuelo) pintarVuelo();                   // el bloque en vuelo queda siempre al final
 }
+var renderando = false;   // el render entero arma cada caja ya con todos los mensajes: no hace falta refrescar
 function render(){
   if(lista) lista.innerHTML = "";
-  msgs.forEach(function(m){ pintarMsg(m, false); });
+  renderando = true;
+  try{ msgs.forEach(function(m){ pintarMsg(m, false); }); } finally { renderando = false; }
   pintarChips();
   if(!vueloContestado()) pintarVuelo();
 }
@@ -4060,6 +4211,12 @@ function cajaUsage(u){
               false, "usage");
 }
 
+// el nombre de una palabra de la tarea primero y el numero chico (facundo, 2026-09-13, 1165)
+function nomTarea(t){
+  if(!t || !t.nombre) return "";
+  return '<span class="c b tnom">' + esc(t.nombre) + "</span>" +
+         (t.n ? ' <span class="g tnum">' + esc(String(t.n)) + "</span>" : "") + " ";
+}
 function cajaAgente(a){
   var filas = [];
   var est = a.pausa ? '<span class="r b">PAUSA</span>'
@@ -4075,7 +4232,7 @@ function cajaAgente(a){
     filas.push(it({tipo: "tarea", estado: "corriendo", tema: t.tema, d: t},
                '<span class="a">&gt;</span> <span class="m b">' + esc(t.modelo) + '</span> <span class="g">' +
                (t.min === null ? "?" : t.min) + "m</span> " +
-               (rec ? '<span class="g">[' + esc(rec) + "]</span> " : "") + esc(String(t.texto || "").slice(0, 120))));
+               (rec ? '<span class="g">[' + esc(rec) + "]</span> " : "") + nomTarea(t) + esc(String(t.texto || "").slice(0, 120))));
   });
   filas.push(a.horas + "h  ok <span class=\"v b\">" + a.ok + '</span>  fallo <span class="r b">' + a.fallo +
              '</span>  <span class="g">chat ' + a.chat + "</span>");
@@ -4086,12 +4243,12 @@ function cajaAgente(a){
     filas.push(it({tipo: "tarea", estado: "hecha", tema: t.tema, d: t},
                '<span class="g">' + esc(hora) + "</span> " +
                (t.ok ? '<span class="v">ok</span>' : '<span class="r">!!</span>') + " " +
-               esc(String(t.texto || "").slice(0, 90)) +
+               nomTarea(t) + esc(String(t.texto || "").slice(0, 90)) +
                (t.usd ? ' <span class="m">$' + t.usd.toFixed(2) + "</span>" : "")));
   });
   if(wset("agent", "cola")) (a.cola || []).slice(0, 4).forEach(function(t){
     filas.push(it({tipo: "tarea", estado: "cola", tema: t.tema, d: t},
-               '<span class="a">[ ]</span> <span class="g">' + esc(t.tema) + "</span> " +
+               '<span class="a">[ ]</span> ' + nomTarea(t) + '<span class="g">' + esc(t.tema) + "</span> " +
                esc(String(t.texto).slice(0, 80))));
   });
   var pausa = boton(a.pausa ? "segui" : "pausa", a.pausa ? "segui" : "pausa");
@@ -4242,34 +4399,6 @@ function cajaSombra(sb){
   var ese = apto ? '<span class="v b">apto</span> <span class="g">' + esc(apto) + "</span>"
                  : '<span class="g">sin apto todavia</span>';
   return caja("backup models", ese, limFilas("sombra", filas).join("\n"), true, "sombra");
-}
-
-function cajaAvisos(av){
-  av = av || [];
-  if(wset("avisos", "solo_hoy")){
-    var hoy = new Date(), d = hoy.getFullYear() + "-" + pad2(hoy.getMonth() + 1) + "-" + pad2(hoy.getDate());
-    av = av.filter(function(l){ return String(l).slice(0, 10) === d; });
-  }
-  var ese = '<span class="c b">' + av.length + "</span> " +
-            '<span class="g">' + (wset("avisos", "solo_hoy") ? "hoy" : "en total") + "</span>" +
-            // notificaciones push al iphone: el boton se ve mientras no esten activas en este dispositivo
-            (pushEstado() === "activas" ? ' <span class="g">· push on</span>'
-                                        : ' <button class="wbtn" type="button" data-push="1" title="' +
-                                          esc(pushTexto()) + '">[activar notificaciones]</button>');
-  if(!av.length) return caja("avisos", ese, vacio(wset("avisos", "solo_hoy") ? "sin avisos hoy" : "sin avisos"),
-                             false, "avisos");
-  return caja("avisos", ese, limFilas("avisos", av.map(function(l){
-    var m = /^(\d{4}-\d\d-\d\d \d\d:\d\d)\s+([\s\S]*)$/.exec(l);
-    var cuerpo = m ? m[2] : String(l);
-    // un aviso con url NO se corta: cortar a 400 chars dejaba la url de oauth sin `&state=` y
-    // claude.com contestaba "Missing state parameter" (facundo, 2026-09-12). ademas va clickeable.
-    var conUrl = RE_URL.test(cuerpo);
-    RE_URL.lastIndex = 0;
-    var cuerpoHtml = conUrl ? enlaces(esc(cuerpo))
-                            : (esc(cuerpo).length > 400 ? esc(cuerpo).slice(0, 400) + "…" : esc(cuerpo));
-    var t = (m ? '<span class="g">' + esc(m[1].slice(5, 16)) + "</span> " : "") + cuerpoHtml;
-    return it({tipo: "aviso", d: {texto: cuerpo, fecha: m ? m[1] : null}}, t);
-  })).join("\n"), false, "avisos");
 }
 
 function cajaPropuestas(pr){
@@ -4454,9 +4583,8 @@ $("nodos").addEventListener("keydown", function(e){
 // "los avisos tienen que aparecer arriba como notificaciones, debajo de las pestañas del chat, y si toco puedo leerlo
 // detallado y responder (o no)". los datos salen de `widgets.json` (clave `notificaciones`, `widgets_json.w_notificaciones`:
 // id estable, texto, fecha, tema). responder o cerrar marca el id en `avLeidos`, que viaja en `tabs.json`.
-var NOTIS_VISIBLES = 3;
-var notisAbierta = false;          // la tira plegada muestra 3; esto la despliega (solo en este dispositivo)
-var notisPor = {};                 // id -> aviso, lo ultimo pintado
+// la tira muestra solo el mas nuevo sin leer, con una `x` que lo cierra (1170); el resto va en la campanita.
+var notisPor = {};                 // id -> aviso sin leer, lo ultimo pintado
 function leidosLimpios(){
   var ids = Object.keys(avLeidos);
   if(!ids.length) return null;
@@ -4509,17 +4637,11 @@ function pintarNotis(){
   notisPor = {};
   ns.forEach(function(n){ notisPor[n.id] = n; });
   if(!ns.length){ notisEl.innerHTML = ""; notisEl.classList.add("oculta"); return; }
-  var ver = notisAbierta || ns.length <= NOTIS_VISIBLES ? ns : ns.slice(0, NOTIS_VISIBLES);
-  var html = ver.map(function(n){
-    return '<span class="noti" role="button" tabindex="0" data-noti="' + esc(n.id) + '" title="' +
+  var n = ns[0];
+  notisEl.innerHTML = '<span class="noti" role="button" tabindex="0" data-noti="' + esc(n.id) + '" title="' +
       esc(unaLinea(n.texto, 200)) + '"><span class="luz"></span><span class="nh">' + esc(horaNoti(n)) +
-      '</span><span class="nt">' + esc(unaLinea(n.texto, 160)) + "</span></span>";
-  }).join("");
-  if(ns.length > NOTIS_VISIBLES)
-    html += '<span class="nmas">' + (notisAbierta
-      ? '<span data-notis="menos">menos</span><span data-notis="todas">cerrar todas (' + ns.length + ")</span>"
-      : '<span data-notis="mas">+' + (ns.length - NOTIS_VISIBLES) + " más</span>") + "</span>";
-  notisEl.innerHTML = html;
+      '</span><span class="nt">' + esc(unaLinea(n.texto, 160)) + "</span></span>" +
+    '<button class="nx" type="button" data-notix="' + esc(n.id) + '" title="cerrar" aria-label="cerrar aviso">×</button>';
   notisEl.classList.remove("oculta");
 }
 // la cita que lleva la respuesta: `> aviso hh:mm: <texto>` + linea vacia (el daemon la separa con `marcas_chat`)
@@ -4558,15 +4680,8 @@ function abrirNoti(id){
   return true;
 }
 function tocarNotis(e){
-  var b = e.target.closest("[data-notis]");
-  if(b){
-    var q = b.dataset.notis;
-    if(q === "mas") notisAbierta = true;
-    else if(q === "menos") notisAbierta = false;
-    else if(q === "todas"){ notisAbierta = false; marcarLeidos(notisNoLeidas().map(function(n){ return n.id; })); }
-    pintarNotis();
-    return;
-  }
+  var x = e.target.closest("[data-notix]");
+  if(x){ e.preventDefault(); marcarLeidos([x.dataset.notix]); return; }   // repinta con el siguiente sin leer
   var r = e.target.closest(".noti[data-noti]");
   if(r) abrirNoti(r.dataset.noti);
 }
@@ -4607,7 +4722,6 @@ function pintarWidgets(d, err){
     ["decided", cajaDecididas(d.oportunidades || {})],
     ["sombra", cajaSombra(d.sombra || {})],
     ["propuestas", cajaPropuestas(d.propuestas || [])],
-    ["avisos", cajaAvisos(d.avisos || [])],
     ["podcast", cajaPodcast(d.podcast || {})],
     ["dj", cajaDj(d.dj || {})],
     ["mail", cajaMail(d.mail || {})],
@@ -4854,7 +4968,7 @@ function accHablar(o, contexto){
 // daemon la separa del pedido con `marcas_chat` (igual que `responder`) y se la pasa al modelo.
 var TEMA_WIDGET = {server: "server", salud: "tools", usage: "tools", agent: "tools", cola: "tools", verificaciones: "awtomic/qa",
                    tickets: "awtomic", oportunidades: "tools", decided: "tools", sombra: "tools",
-                   avisos: "tools", propuestas: "tools", podcast: "podcast", dj: "fuzzer", mail: "fuzzer",
+                   propuestas: "tools", podcast: "podcast", dj: "fuzzer", mail: "fuzzer",
                    que_ver: "personal"};
 var ESC_CHARS = 300;
 function temaWidget(clave){
@@ -5173,12 +5287,6 @@ function modalSets(clave){
       pintarModal(modalSets(clave));      // el modal se queda abierto con el valor nuevo
     }, false]);
   });
-  if(clave === "avisos"){
-    // ios pide permiso solo dentro de un toque: la accion llama directo a activarPush
-    m.acciones.push(["notificaciones: " + pushTexto(), function(){
-      activarPush().then(function(){ pintarModal(modalSets(clave)); });
-    }, false]);
-  }
   // la alternativa sin arrastrar (facundo, 2026-09-12: "por si el drag no va")
   m.acciones.push(["subir", function(){
     moverWidget(clave, -1); pintarModal(modalSets(clave));
@@ -5554,6 +5662,12 @@ var salirT = null;
 function modalBoard(confirmar){
   var m = {titulo: "settings · board", tema: "tools", board: true, acciones: [],
            cuerpo: '<span class="g">de este dispositivo.</span>'};
+  // push al celu (1163): vivia en el widget `avisos`, que se saco; los avisos van por la tira de notificaciones.
+  // ios pide permiso solo dentro de un toque: la accion llama directo a activarPush
+  m.acciones.push(["notificaciones: " + pushTexto(), function(){
+    var r = activarPush();
+    (r && r.then ? r : Promise.resolve()).then(function(){ if(modalAbierto && modalAbierto.board) pintarModal(modalBoard(false)); });
+  }, false]);
   m.acciones.push([confirmar ? "borrar token?" : "salir", function(){
     clearTimeout(salirT);
     if(confirmar){ cerrarModal(); pedirToken("token borrado de este teléfono."); return; }
@@ -5588,12 +5702,13 @@ window.__agente = {
   fmtTiempo: fmtTiempo,
   // cajas a/b/c: `prueba_web_tabs` las pinta, elige, manda y chequea que un drag no elija
   opcionesDe: opcionesDe,
+  hhmmDe: hhmmDe, citaCaja: citaCaja,
   cajas: function(){
     return [].map.call(document.querySelectorAll("#lista .opciones"), function(c){
-      return {clave: c.dataset.clave, hecho: c.classList.contains("hecho"),
+      return {clave: c.dataset.clave, hecho: c.classList.contains("hecho"), mandar: !!c.querySelector(".mandar"),
               opc: [].map.call(c.querySelectorAll(".opc"), function(b){
                 var cs = getComputedStyle(b);
-                return {letra: b.dataset.letra, sel: b.classList.contains("sel"), disabled: b.disabled,
+                return {letra: b.dataset.letra, sel: b.classList.contains("sel"), disabled: c.classList.contains("hecho"),
                         texto: b.textContent, bg: cs.backgroundColor, color: cs.color, top: Math.round(b.getBoundingClientRect().top)};
               })};
     });
@@ -5609,7 +5724,7 @@ window.__agente = {
   pintarNotis: pintarNotis, abrirNoti: abrirNoti, responderNoti: responderNoti, citaNoti: citaNoti,
   marcarLeidos: marcarLeidos, recibirLeidos: recibirLeidos,
   leidos: function(){ return JSON.parse(JSON.stringify(avLeidos)); },
-  borrarLeidos: function(){ avLeidos = {}; notisAbierta = false; guardarCache(); pintarNotis(); },
+  borrarLeidos: function(){ avLeidos = {}; guardarCache(); pintarNotis(); },
   notis: function(){
     var el = $("notis");
     return {visible: !el.classList.contains("oculta") && el.offsetHeight > 0,
@@ -5619,6 +5734,10 @@ window.__agente = {
                       texto: (b.querySelector(".nt") || {}).textContent, tag: b.tagName, alto: Math.round(r.height)};
             }),
             mas: (el.querySelector(".nmas") || {}).textContent || "",
+            x: (function(){ var b = el.querySelector(".nx"); if(!b || !b.offsetHeight) return null;
+                            var r = b.getBoundingClientRect(), f = el.getBoundingClientRect();
+                            return {id: b.dataset.notix, ancho: Math.round(r.width), alto: Math.round(r.height),
+                                    derecha: r.right >= f.right - 12}; })(),
             debajoTabs: (function(){ var t = $("tabs").getBoundingClientRect(), n = el.getBoundingClientRect(),
                                          h = $("hist").getBoundingClientRect();
                                      return n.top >= t.bottom - 1 && n.bottom <= h.top + 1; })()};
