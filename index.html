@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.237">
-<link rel="manifest" href="manifest.json?v=4.237">
+<meta name="agente-web-version" content="4.238">
+<link rel="manifest" href="manifest.json?v=4.238">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2186,6 +2186,9 @@ function nodoMsg(m){
 // opciones reales en widgets.json, las cajas mandan `op N X` crudo (lo resuelve el daemon sin modelo).
 var RE_OPCION = /^\s*(?:[-*]\s+)?\**OPCI[OÓ]N\s+([ABC])\**\s*[:)\.]\**\s*(\S.*)$/i;
 var OPC_UMBRAL = 10;     // px: un dedo que se mueve mas que esto esta scrolleando, no eligiendo
+// 1276: ms. un 2do toque sobre la misma caja antes de esto es el mismo doble click: no manda ni pregunta
+// (`window.__opcDobleMs` lo pisa en las pruebas, que tocan seguido)
+var OPC_DOBLE_MS = 600;
 // cajas que no vencen (1168/1169): `opcHecho[clave] = {l: "AC", ts}` es lo ultimo que se hizo en ESTE dispositivo
 // ("" = desmarcada con doble click). lo de los otros dispositivos se deduce de los mensajes de f (`estadoCaja`):
 // `A: ...` sin cita cierra la caja mas reciente, con cita `> claudio hh:mm: ...` la caja de esa respuesta, y
@@ -2557,6 +2560,13 @@ function cajaVieja(m){
 // un toque sobre una caja (1202). sin marca en esa respuesta: manda y queda marcada. con marca: no manda
 // nada todavia, pregunta adentro de la caja tocada y espera el tap en `sí` (o `no` para dejar todo como esta).
 function tocarCaja(m, caja, o, lista_, target){
+  var b = opcBoton(caja, o.letra), ahora = Date.now();
+  var dobleMs = window.__opcDobleMs != null ? window.__opcDobleMs : OPC_DOBLE_MS;
+  if(b){
+    // doble click = un click: se cuenta desde el ultimo toque aceptado, los ignorados no alargan la ventana
+    if(ahora - (+b.dataset.toque || 0) < dobleMs) return;
+    b.dataset.toque = ahora;
+  }
   var k = caja.dataset.clave, c = opcConf[k];
   if(c && c.letra === o.letra){
     var dentro = function(cl){ return !!(target && target.closest && target.closest(cl)); };
