@@ -559,13 +559,60 @@ las dos puntas no se separen.
 **entrantes.** el boton `[●]`, al lado del de camara, graba con **tap and hold** (pointer, asi vale el
 dedo y el mouse): apretado graba y el boton late en rojo con el reloj al lado, arrastrar el dedo afuera
 cancela y un toque de menos de `AUDIO_MIN_MS` (600 ms) no deja nada. el formato lo elige el navegador
-entre `MIMES` (opus en webm donde se puede, mp4 en safari) a 24 kbps.
+entre `MIMES` (opus en webm donde se puede, mp4 en safari), **mono 16 khz a 16 kbps** (`AUDIO_BPS`,
+`AUDIO_PISTA`): el minimo legible medido (ver abajo). si el celu rechaza las constraints, micro pelado.
 
 **soltar ya no manda** (facundo, 2026-09-12): el audio queda como **adjunto pendiente** arriba del
 input, con `[▶]` para escucharlo, su duracion y una `×` para descartarlo (ver "el adjunto no se manda
 solo"). al tocar enviar se sube al **mismo repo del buzon** que las fotos (`audio/<hash>.<ext>`,
 contents api, mismo token, `subirBuzon`) y sale como un mensaje normal de la pestaña activa con su
 `tema x:`, el texto que haya escrito y el marcador `[audio](audio/<hash>.webm)`.
+
+### el celu transcribe antes de mandar (facundo, 2026-09-14, orden 1209)
+
+> "audio del chat transcripto en el celu antes de mandar."
+
+si el navegador tiene reconocimiento de voz (`SpeechRecognition` / `webkitSpeechRecognition` de safari
+ios, `es-AR`), arranca **en paralelo** al `MediaRecorder` (`empezarDictado`, justo despues de
+`grabador.start()`): mientras grabas, el telefono transcribe. al soltar, el texto ya esta y se ve en el
+adjunto pendiente entre comillas (`.adj-dicho`, se descarta con la misma `×`). el mensaje sale con el
+texto **y** el archivo:
+
+```
+mira esto
+(audio de facundo, transcripto en el celu): hola flaudio, esto lo dicta el celu
+[audio](audio/<hash>.webm)
+```
+
+esa marca la lee `recetas/transcribir_audio.recibir_web`: con ella **whisper no corre** (saca el
+marcador del archivo y le pasa al modelo el texto del celu, sin esperar ni gastar cpu). el archivo
+igual queda en el disco del server, asi que el `[▶]` del chat suena igual.
+
+**los dos caminos, siempre**: sin reconocimiento, si falla (`onerror`), si no se entendio nada, o si el
+reconocedor no arranca, el mensaje va como siempre (solo el archivo) y lo transcribe whisper local. el
+dictado **nunca** puede romper la grabacion: arranca despues del `MediaRecorder`, todos sus errores se
+comen ahi y `cortarDictado()` lo suelta en los mismos caminos que el microfono.
+
+**on-device**: chrome 138+ sabe decir si el modelo esta en el telefono
+(`SpeechRecognition.available({langs, processLocally: true})`, se pregunta **una vez** al cargar con
+`prepararDictado()`) y ahi se prende `rec.processLocally = true`. safari no expone nada: se dicta igual
+(lo hace el telefono con el dictado del sistema) pero **no se puede afirmar** que el reconocimiento sea
+on-device; lo que si es seguro es que **el archivo de audio no sale de la lan**.
+
+### el archivo del audio no sale a internet (orden 1209)
+
+`mandarAudio` prueba la lan **antes** de subir (`probarLan()` si `lan.base` esta vacio) y manda los
+bytes al endpoint (`POST /subir?ruta=audio/...`, `recetas/chat_lan.py`). del otro lado, `audio/` esta en
+`SOLO_LAN`: `recibir_archivo` **no deja marcador de subida**, asi que el archivo se queda en
+`tmp/lan/audio/` y **nunca se publica en el buzon de github**. como cloud solo lee el buzon (y `tmp/`
+esta excluido del rsync de `trabajo_nube` y de `replica_estado`), **el audio nunca pasa por cloud**. si
+el comentario sale al buzon sin atender, lleva la nota "el audio quedó en el disco del server"
+(`nota_solo_lan`) para que el nodo que lo atienda no lo busque en github.
+
+la unica vez que el archivo viaja por internet es con **la lan caida**: ahi la web lo sube al buzon
+(`subirBuzon`), que es el respaldo. mejor eso que perder el audio.
+
+### whisper local, cuando el celu no pudo
 
 el daemon lo baja a `tmp/audio-entrante/` y lo transcribe **local y sin tokens** con faster-whisper
 `small` en cpu int8 (`recetas/transcribir_audio.py`, venv en `~/.claudio/tools/stt`), asi que al modelo
@@ -593,8 +640,14 @@ link"), rutas largas (queda el nombre del archivo), los signos del markdown y lo
 tope de 3 minutos por respuesta: se corta en la ultima oracion que entra y avisa que el resto esta
 escrito.
 
+**compresion: 16 kbps es el piso, medido.** `python3 -m recetas.prueba_web_audio --compresion` (cero
+tokens, ~2 min) hace que piper diga una frase, la encodea en opus a 8, 16 y 24 kbps y la lee con
+whisper: a 16 sale lo mismo que a 24 (0,88 vs 0,78 de parecido con el wav crudo) y pesa 30% menos
+(16,9 kb vs 23,9 kb); a 8 kbps ya se come las primeras palabras (0,50). de ahi salio `AUDIO_BPS`.
+
 se prueba con `python3 -m recetas.prueba_web_audio` (cero tokens, chrome headless, sin microfono: el
-blob se manda a mano y la subida va contra un stub) y corre tambien dentro de `recetas/prueba_web`.
+blob se manda a mano y la subida va contra un stub; el dictado va contra un reconocedor falso y cubre
+**los dos caminos**) y corre tambien dentro de `recetas/prueba_web`.
 
 ## claudio sigue contestando aunque claude no tenga tokens (facundo, 2026-09-12)
 

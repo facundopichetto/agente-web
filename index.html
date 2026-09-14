@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.224">
-<link rel="manifest" href="manifest.json?v=4.224">
+<meta name="agente-web-version" content="4.225">
+<link rel="manifest" href="manifest.json?v=4.225">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -214,6 +214,9 @@
   }
   #adjunto .adj-info{flex:1 1 auto;min-width:0;color:var(--gris);font-size:10px;line-height:1.35}
   #adjunto .adj-info .n{color:var(--cian);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* lo que transcribio el celu antes de mandar (1209): se lee y se puede descartar con la × */
+  #adjunto .adj-info .adj-dicho{display:block;color:var(--verde);margin-top:2px;overflow:hidden;
+    text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
   #adjunto .adj-play{flex:0 0 auto}
   #adjunto .adj-x{
     flex:0 0 auto;background:#000;color:var(--rojo);border:1px solid transparent;border-radius:4px;
@@ -3817,6 +3820,13 @@ function pintarAdjunto(){
     n.textContent = "audio " + mmss(Math.round((adjunto.ms || 0) / 1000));
     info.appendChild(n);
     info.appendChild(document.createTextNode("audio listo, escribí algo y mandá"));
+    if(adjunto.dicho){                       // el celu ya lo transcribio: se lee antes de mandar (1209)
+      var dd = document.createElement("span");
+      dd.className = "adj-dicho";
+      dd.textContent = "«" + adjunto.dicho + "»";
+      dd.title = "lo transcribió el celu: va en el mensaje y el server no usa whisper";
+      info.appendChild(dd);
+    }
   }
   caja.appendChild(info);
   var x = document.createElement("button");
@@ -3843,12 +3853,14 @@ function adjuntarFoto(file){
   txt.focus();
   return adjunto;
 }
-function adjuntarAudio(blob, mime, ms){
+function adjuntarAudio(blob, mime, ms, dicho){
   if(!blob || !blob.size) return null;
   if(subiendoFoto || subiendoAudio) return null;
   descartarAdjunto();
   adjunto = {tipo: "aud", blob: blob, mime: mime || blob.type || "audio/webm",
-             nombre: "audio", ms: ms || 0, url: URL.createObjectURL(blob)};
+             nombre: "audio", ms: ms || 0, url: URL.createObjectURL(blob),
+             // lo que entendio el celu (1209): se ve antes de mandar y viaja en el mensaje
+             dicho: (dicho && dicho.texto) || "", dictLocal: !!(dicho && dicho.local)};
   pintarAdjunto();
   return adjunto;
 }
@@ -3860,7 +3872,8 @@ function mandarAdjunto(texto){
   pintarAdjunto();
   txt.value = ""; txt.style.height = "";
   borrarBorrador(temaCaja || temaActivo());
-  var p = a.tipo === "img" ? mandarFoto(a.file, pie, ts) : mandarAudio(a.blob, a.mime, pie, ts);
+  var p = a.tipo === "img" ? mandarFoto(a.file, pie, ts)
+                          : mandarAudio(a.blob, a.mime, pie, ts, a.dicho ? {texto: a.dicho, local: a.dictLocal} : null);
   return Promise.resolve(p).then(function(r){
     if(r){                                       // salio: recien ahi se suelta el object url
       if(a.url && /^blob:/.test(a.url)){ try{ URL.revokeObjectURL(a.url); }catch(e){} }
@@ -3869,6 +3882,86 @@ function mandarAdjunto(texto){
     if(!adjunto){ adjunto = a; pintarAdjunto(); } // fallo la subida: vuelve al pie, no se pierde
     if(pie && !txt.value.trim()){ ponerCaja(pie); }
     return null;
+  });
+}
+
+// ---------- dictado en el celu: el texto lo saca el telefono (facundo, 2026-09-14, orden 1209) ----------
+// "audio del chat transcripto en el celu antes de mandar". si el navegador tiene reconocimiento de voz
+// (`SpeechRecognition` / `webkitSpeechRecognition` de safari ios, en rioplatense), corre **en paralelo** al
+// MediaRecorder mientras grabas: al soltar el texto ya esta y sale en el mismo mensaje marcado como audio,
+// asi el server no gasta whisper ni te hace esperar. si no hay reconocimiento, falla, o no se entendio nada,
+// el mensaje va como siempre (solo el archivo) y lo transcribe whisper local en el server
+// (`recetas/transcribir_audio.py`). **el dictado nunca puede romper la grabacion**: arranca despues del
+// MediaRecorder, cualquier error se come aca y el archivo se manda igual.
+var DICT_LANGS = ["es-AR", "es-419", "es-ES"];
+var DICT_GRACIA = 2500;        // ms de gracia despues del stop(), esperando el ultimo resultado final
+var MARCA_CELU = "(audio de facundo, transcripto en el celu): ";   // la lee `recetas/transcribir_audio.py`
+var dictStub = null;           // `prueba_web_audio` enchufa un reconocedor de mentira
+var dictado = null;            // el reconocedor de esta grabacion: {rec, partes, local, err, cerrado}
+var dictOnDevice = null;       // "available" | "downloadable" | "unavailable" | "sin_dato" | null (sin api)
+
+function claseDictado(){
+  if(dictStub) return dictStub.clase || null;
+  return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+}
+function hayDictado(){ return !!claseDictado(); }
+// chrome 138+ sabe decir si el modelo esta **en el telefono** (`available({processLocally: true})`); safari
+// no expone nada y usa el dictado del sistema, asi que ahi queda `sin_dato`: se dicta igual (lo hace el celu)
+// pero no se puede afirmar que el reconocimiento sea on-device. el archivo de audio no sale de la lan en
+// ninguno de los dos casos. se pregunta una vez al cargar: al soltar el boton la respuesta ya esta.
+function prepararDictado(){
+  var C = claseDictado();
+  if(!C){ dictOnDevice = null; return Promise.resolve(null); }
+  if(typeof C.available !== "function"){ dictOnDevice = "sin_dato"; return Promise.resolve(dictOnDevice); }
+  try{
+    return Promise.resolve(C.available({langs: [DICT_LANGS[0]], processLocally: true})).then(
+      function(v){ dictOnDevice = String(v || "unavailable"); return dictOnDevice; },
+      function(){ dictOnDevice = "sin_dato"; return dictOnDevice; });
+  }catch(e){ dictOnDevice = "sin_dato"; return Promise.resolve(dictOnDevice); }
+}
+function empezarDictado(){
+  dictado = null;
+  var C = claseDictado();
+  if(!C) return null;
+  try{
+    var rec = new C(), d = {rec: rec, partes: [], local: dictOnDevice === "available", err: null, cerrado: false, fin: null};
+    rec.lang = DICT_LANGS[0];
+    try{ rec.continuous = true; rec.interimResults = false; rec.maxAlternatives = 1; }catch(e){}
+    if(d.local && "processLocally" in rec){ try{ rec.processLocally = true; }catch(e){} }
+    rec.onresult = function(e){
+      var rs = e && e.results; if(!rs) return;
+      for(var i = e.resultIndex || 0; i < rs.length; i++)
+        if(rs[i] && rs[i].isFinal && rs[i][0]) d.partes.push(String(rs[i][0].transcript || "").trim());
+    };
+    rec.onerror = function(e){ d.err = (e && (e.error || e.message)) || "error"; };
+    rec.onend = function(){ d.cerrado = true; if(d.fin) d.fin(); };
+    rec.start();
+    dictado = d;
+    return d;
+  }catch(e){ dictado = null; return null; }    // sin dictado se sigue con whisper: no se avisa nada
+}
+// cancelar (arrastrar el dedo afuera, toque corto, salir de la pagina): el reconocedor se suelta igual
+function cortarDictado(){
+  var d = dictado; dictado = null;
+  if(!d) return;
+  try{ if(d.rec.abort) d.rec.abort(); else d.rec.stop(); }catch(e){}
+}
+// el texto final, o null si no hubo dictado / no se entendio nada. nunca tira y nunca espera de mas.
+function terminarDictado(){
+  var d = dictado; dictado = null;
+  if(!d) return Promise.resolve(null);
+  return new Promise(function(res){
+    var listo = false;
+    function cerrar(){
+      if(listo) return;
+      listo = true;
+      var t = d.partes.join(" ").replace(/\s+/g, " ").trim();
+      res(t ? {texto: t, local: !!d.local} : null);
+    }
+    d.fin = cerrar;
+    setTimeout(cerrar, DICT_GRACIA);
+    try{ d.rec.stop(); }catch(e){ cerrar(); }
+    if(d.cerrado) cerrar();
   });
 }
 
@@ -3887,8 +3980,15 @@ function mandarAdjunto(texto){
 var AUDIO_TOPE = 8 * 1024 * 1024;      // 8 mb: son ~25 minutos de opus a 24 kbps
 var AUDIO_MAX_MS = 10 * 60 * 1000;     // y un corte duro a 10 min, por las dudas
 var AUDIO_MIN_MS = 600;                // menos que esto fue un toque sin querer, no un audio
+// el minimo legible, medido de verdad (orden 1209, `prueba_web_audio --compresion`): mono 16 khz y opus a
+// 16 kbps. whisper `small` saca el mismo texto que el wav crudo y el archivo pesa ~30% menos que a 24 kbps
+// (un minuto de audio son ~120 kb). a 8 kbps ya se come las primeras palabras, asi que 16 es el piso.
+var AUDIO_BPS = 16000;
+var AUDIO_PISTA = {channelCount: {ideal: 1}, sampleRate: {ideal: 16000},
+                   echoCancellation: true, noiseSuppression: true, autoGainControl: true};
 var MIMES = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/aac", "audio/ogg;codecs=opus"];
 var grabador = null, trozosAudio = [], stream = null, desdeGrab = 0, relojGrab = null, cortarGrab = null;
+var vacioStub = false;        // `prueba_web_audio`: simula un micro que no dejo ni un byte (ios peleando el audio)
 var subiendoAudio = false;
 
 function mimeAudio(){
@@ -3901,6 +4001,12 @@ function extAudio(mime){
   if(/mp4|aac/.test(mime || "")) return "m4a";
   if(/ogg/.test(mime || "")) return "ogg";
   return "webm";
+}
+// el celu puede no aceptar las constraints (safari ignora `sampleRate`): si las rechaza, micro pelado
+function pedirMicro(){
+  return navigator.mediaDevices.getUserMedia({audio: AUDIO_PISTA}).catch(function(){
+    return navigator.mediaDevices.getUserMedia({audio: true});
+  });
 }
 function hayGrabacion(){
   return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && mimeAudio() !== null);
@@ -3924,13 +4030,14 @@ function relojTexto(ms){
 function empezarGrabacion(){
   if(grabador || subiendoAudio) return Promise.resolve(false);
   if(!hayGrabacion()){ sistema("este navegador no graba audio", "error"); return Promise.resolve(false); }
-  return navigator.mediaDevices.getUserMedia({audio: true}).then(function(st){
+  return pedirMicro().then(function(st){
     stream = st;
     var mime = mimeAudio();
-    grabador = new MediaRecorder(st, mime ? {mimeType: mime, audioBitsPerSecond: 24000} : {});
+    grabador = new MediaRecorder(st, mime ? {mimeType: mime, audioBitsPerSecond: AUDIO_BPS} : {});
     trozosAudio = [];
     grabador.ondataavailable = function(e){ if(e.data && e.data.size) trozosAudio.push(e.data); };
     grabador.start();
+    empezarDictado();                  // el celu transcribe mientras grabas (1209). si no puede, whisper
     marcarOcupado("grabando", true);   // el daemon no reinicia mientras el micro esta abierto (1204)
     desdeGrab = Date.now();
     $("grabar").classList.add("grabando");
@@ -3940,7 +4047,7 @@ function empezarGrabacion(){
     cortarGrab = setTimeout(function(){ terminarGrabacion(true); }, AUDIO_MAX_MS);
     return true;
   }).catch(function(e){
-    soltarMicro();
+    soltarMicro(); cortarDictado();
     sistema("no pude usar el microfono: " + (e && e.message || e), "error");
     return false;
   });
@@ -3951,18 +4058,32 @@ function terminarGrabacion(enviar){
   var g = grabador, ms = Date.now() - desdeGrab, mime = g.mimeType || mimeAudio() || "audio/webm";
   if(enviar && ms < AUDIO_MIN_MS){ enviar = false; sistema("mantené apretado para grabar", "sistema"); }
   return new Promise(function(res){
-    g.onstop = function(){ res(new Blob(trozosAudio, {type: mime})); };
+    g.onstop = function(){ res(new Blob(vacioStub ? [] : trozosAudio, {type: mime})); };
     try{ g.stop(); }catch(e){ res(null); }
   }).then(function(blob){
     soltarMicro();
-    if(!enviar || !blob || !blob.size) return null;
-    // no se manda al soltar (facundo, 2026-09-12): queda como adjunto pendiente con play y `×`
-    return adjuntarAudio(blob, mime, ms);
-  }, function(){ soltarMicro(); return null; });
+    if(!enviar){ cortarDictado(); return null; }
+    if(!blob || !blob.size){
+      // el micro no dejo nada (en ios el reconocedor puede pelearle la sesion de audio): si el celu igual
+      // entendio algo, el texto **no se pierde**, queda escrito en el input para mandarlo a mano
+      return terminarDictado().then(function(d){
+        if(d && d.texto){
+          ponerCaja(((txt.value || "") + " " + d.texto).trim());
+          sistema("el micro no grabó nada, te dejé lo que entendió el celu en el input", "sistema");
+        }
+        return null;
+      });
+    }
+    // el texto del celu se espera aca (1209): al soltar ya casi siempre esta, y como mucho DICT_GRACIA
+    return terminarDictado().then(function(d){
+      // no se manda al soltar (facundo, 2026-09-12): queda como adjunto pendiente con play y `×`
+      return adjuntarAudio(blob, mime, ms, d);
+    });
+  }, function(){ soltarMicro(); cortarDictado(); return null; });
 }
 function nombreAudio(hash, mime){ return "audio/" + hash + "." + extAudio(mime); }
 // el camino entero: blob -> hash -> subir al buzon -> mandar el mensaje de la pestaña activa.
-function mandarAudio(blob, mime, pieTexto, tsEnvio){
+function mandarAudio(blob, mime, pieTexto, tsEnvio, dicho){
   if(subiendoAudio) return Promise.resolve(null);
   // subir el audio y transcribirlo tarda: la hora del mensaje es esta, no la de cuando termina (1191)
   tsEnvio = tsEnvio || Date.now();
@@ -3975,7 +4096,13 @@ function mandarAudio(blob, mime, pieTexto, tsEnvio){
   marcarOcupado("subiendo", true);    // y tampoco mientras el m4a viaja al server
   sistema("subiendo el audio...", "sistema");
   var ruta;
-  return blob.arrayBuffer().then(function(buf){
+  // **el audio va por la lan y no al buzon** (1209): si la lan no esta marcada se prueba una vez antes de
+  // subir, asi el archivo no sale a internet por no haber preguntado. el buzon queda solo de respaldo, para
+  // cuando el server no esta a mano (ahi si se sube: mejor eso que perder el audio).
+  var antes = lan.base ? Promise.resolve(lan.base) : probarLan();
+  return Promise.resolve(antes).catch(function(){ return null; }).then(function(){
+    return blob.arrayBuffer();
+  }).then(function(buf){
     return sha12(buf).then(function(h){
       ruta = nombreAudio(h, mime);
       return subirBuzon(ruta, bytesAb64(new Uint8Array(buf)), "audio", new Uint8Array(buf));
@@ -3984,7 +4111,10 @@ function mandarAudio(blob, mime, pieTexto, tsEnvio){
     audioUrls[ruta] = URL.createObjectURL(blob);      // ya lo tengo: no lo bajo para reproducirlo
     var pie = (pieTexto !== undefined ? pieTexto : txt.value || "").trim();
     txt.value = ""; txt.style.height = "";
-    return mandar((pie ? pie + "\n" : "") + "[audio](" + ruta + ")", temaActivo(), false, tsEnvio);
+    // si el celu lo transcribio, el texto va en el mensaje marcado como audio y whisper no corre (1209)
+    var dictado_ = (dicho && (dicho.texto || (typeof dicho === "string" ? dicho : ""))) || "";
+    return mandar((pie ? pie + "\n" : "") + (dictado_ ? MARCA_CELU + dictado_ + "\n" : "") +
+                  "[audio](" + ruta + ")", temaActivo(), false, tsEnvio);
   }).catch(function(e){
     sistema("no pude subir el audio: " + (e && e.message || e), "error");
     ruta = null;                                  // fallo: el audio vuelve a quedar pendiente
@@ -6117,6 +6247,7 @@ if(urlSucia) sistema("el token venía en la url: lo guardé acá y limpié la di
 // el clasificador de la web da lo mismo que la receta de python y que cada mensaje cae en su pestaña.
 // push: registrar el sw (si hay soporte) y, si se abrio desde una notificacion, ir a la pestaña del tema
 iniciarPush();
+prepararDictado();     // 1209: preguntar una vez si el celu puede transcribir on-device
 (function(){
   var q = new URLSearchParams(location.search), t = q.get("tema");
   if(!t) return;
@@ -6337,6 +6468,24 @@ window.__agente = {
   mandarAudio: mandarAudio, nombreAudio: nombreAudio, extAudio: extAudio, mimeAudio: mimeAudio,
   conAudios: conAudios, reproductor: reproductor, audioTope: AUDIO_TOPE, audioMinMs: AUDIO_MIN_MS,
   empezarGrabacion: empezarGrabacion, terminarGrabacion: terminarGrabacion,
+  // dictado en el celu (1209): la prueba enchufa un reconocedor falso y chequea los dos caminos
+  hayDictado: hayDictado, prepararDictado: prepararDictado, empezarDictado: empezarDictado,
+  terminarDictado: terminarDictado, cortarDictado: cortarDictado, marcaCelu: MARCA_CELU,
+  audioBps: AUDIO_BPS, audioPista: AUDIO_PISTA, dictGracia: DICT_GRACIA,
+  stubDictado: function(s){ dictStub = s || null; dictOnDevice = null; },
+  ponerCaja: ponerCaja,
+  stubVacio: function(v){ vacioStub = !!v; },      // simula un MediaRecorder que no dejo ni un byte
+  // la prueba necesita un token de mentira para el camino "sube por la lan" (igual que en `ponerTabs`)
+  ponerToken: function(t){ token = t || null; },
+  dictInfo: function(){ return {onDevice: dictOnDevice, vivo: !!dictado,
+                               partes: dictado ? dictado.partes.slice() : null,
+                               local: dictado ? !!dictado.local : null,
+                               proc: dictado ? !!dictado.rec.processLocally : null}; },
+  adjuntoInfo: function(){
+    var d = document.querySelector("#adjunto .adj-dicho");
+    return adjunto ? {tipo: adjunto.tipo, dicho: adjunto.dicho || "", dictLocal: !!adjunto.dictLocal,
+                      pintado: d ? d.textContent : null} : null;
+  },
   // flag de audio en curso (1204): la prueba stubea la lan y mira que se prenda y se apague
   marcarOcupado: marcarOcupado, pingOcupado: pingOcupado,
   ocupadoTimers: function(){ return Object.keys(ocupadoTimers); },
