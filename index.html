@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.218">
-<link rel="manifest" href="manifest.json?v=4.218">
+<meta name="agente-web-version" content="4.219">
+<link rel="manifest" href="manifest.json?v=4.219">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -3117,14 +3117,44 @@ function vaciarSalida(){
     })
     .catch(function(e){ saliendo = false; if(ruidoso(e)) sistema("no se pudo mandar lo guardado: " + e.message, "error"); });
 }
+// el mensaje escrito en la pestaña X viaja a otra: X se queda **solo con lo que no viajo** (caja y
+// borrador de `tabs.json`), si no facundo lo ve repetido al volver. va **antes** de `abrirTab`, que
+// guarda la caja como borrador de la pestaña que se deja.
+function soltarOrigen(origen, resto){
+  if(!origen) return;
+  resto = (resto || "").trim();
+  if(temaCaja === origen && txt.value !== resto) ponerCaja(resto);
+  guardarBorrador(origen, resto, true);
+}
+// `texto` sin el fragmento `trozo` (la primera vez que aparece), pegando lo que queda a los costados
+function sinTrozo(texto, trozo){
+  texto = texto || ""; trozo = (trozo || "").trim();
+  var i = trozo ? texto.indexOf(trozo) : -1;
+  if(i < 0) return texto.trim();
+  var a = texto.slice(0, i).trim(), b = texto.slice(i + trozo.length).trim();
+  return a && b ? a + "\n\n" + b : (a || b);
+}
 // un mensaje partido sale como varios mensajes, uno por tema, **en orden** y cada uno con su
-// `tema x:` a su pestaña (la abre si no estaba). el foco queda en la del ultimo fragmento.
-function mandarPartido(trozos){
-  var p = Promise.resolve();
+// `tema x:` a su pestaña (la abre si no estaba). el foco queda en la del ultimo fragmento. cada
+// fragmento que sale se descuenta de la pestaña de origen; uno que no pudo salir vuelve a ella.
+function mandarPartido(trozos, origen, texto){
+  var p = Promise.resolve(), quedan = [];
+  var pendiente = texto || trozos.map(function(t){ return t.texto; }).join("\n\n");
+  function enX(){ return quedan.concat(pendiente ? [pendiente] : []).join("\n\n"); }
   trozos.forEach(function(tr){
     p = p.then(function(){
+      pendiente = sinTrozo(pendiente, tr.texto);
+      soltarOrigen(origen, enX());
       if(tabs.indexOf(tr.tema) < 0 || temaActivo() !== tr.tema) abrirTab(tr.tema);
-      return mandar(tr.texto, tr.tema);
+      return Promise.resolve(mandar(tr.texto, tr.tema)).then(function(){
+        // `mandar` limpia `ultimoTexto` si fallo (o ni salio): esa mitad no viajo y vuelve a X. si
+        // `mandar` ya la devolvio a la caja de su pestaña, se saca de ahi para que no quede en dos lados.
+        if(ultimoTexto !== tr.texto){
+          if(borradorDe(tr.tema).indexOf(tr.texto) >= 0) soltarOrigen(tr.tema, sinTrozo(borradorDe(tr.tema), tr.texto));
+          quedan.push(tr.texto);
+        }
+        soltarOrigen(origen, enX());   // `mandar` en X borra su borrador entero: se repone lo que queda
+      });
     });
   });
   return p;
@@ -3147,7 +3177,7 @@ function enviarMensaje(texto){
   if(RE_CRUDO.test(texto)){ mandar(texto, temaActivo(), true); return; }
   var activo = temaActivo(), c = clasificar(texto);
   if(c.fuente === "prefijo"){
-    if(c.tema !== activo) abrirTab(c.tema);
+    if(c.tema !== activo){ soltarOrigen(activo, sinTrozo(txt.value, texto)); abrirTab(c.tema); }
     mandar(texto, c.tema);
     return;
   }
@@ -3178,8 +3208,9 @@ function preguntarDestino(texto, activo, otro, trozos){
   ops.push(["no, dejalo acá como `tema " + activo + ":`", "aqui"]);
   dd(trozos && trozos.length > 1 ? "esto tiene " + trozos.length + " temas" : "esto parece de " + otro,
      ops, function(que){
-    if(que === "partir"){ mandarPartido(trozos); return; }
+    if(que === "partir"){ mandarPartido(trozos, activo, texto); return; }
     if(que === "aqui"){ mandar(texto, activo); return; }
+    soltarOrigen(activo, "");        // viaja entero: en X no queda nada
     abrirTab(otro);
     mandar(texto, otro);
   });
@@ -4511,7 +4542,10 @@ function cajaPodcast(p){
   if(!eps.length) filas.push(vacio("sin episodios"));
   eps.forEach(function(e){
     filas.push(it({tipo: "episodio", tema: "tools", d: e},
-               '<span class="g">' + esc((e.fecha || "").slice(5)) + "</span> " + esc(e.titulo)));
+               '<span class="g">' + esc((e.fecha || "").slice(5)) +
+               // la hora de la ultima actualizacion (el podcast vivo se republica con el mismo id)
+               (/T\d\d:\d\d/.test(e.actualizado || "") ? " · act " + esc(e.actualizado.slice(11, 16)) : "") +
+               "</span> " + esc(e.titulo)));
     filas.push("  " + (e.voces || []).map(function(v){
       return link(v.url, v.voz + (v.min ? " " + v.min + "m" : ""));
     }).join(" · "));

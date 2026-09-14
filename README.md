@@ -88,6 +88,10 @@ desde el celu". lo que hay en la caja es un **borrador por pestaña** y viaja en
 - **al mandar el mensaje** el borrador de esa pestaña se borra en todos los dispositivos: queda una
   **tumba** (`{"texto": "", "ts": ...}`) que le gana al borrador viejo del otro lado. las tumbas de mas
   de 2 dias se podan solas y el texto se corta en 8000 caracteres.
+- **un mensaje escrito en la pestaña X que viaja a otra** (pregunta "mandalo a la pestaña Y", `tema y:` a
+  mano, o partido en dos temas) **se borra de X**: caja y borrador de `tabs.json` (tumba con `ts`), antes
+  de abrir Y (`soltarOrigen()`). partido: cada mitad que sale se descuenta de X (`mandarPartido(trozos,
+  origen, texto)`); la que no pudo salir queda **solo en X**, no en la caja de Y (orden 1189).
 - **cerrar la pestaña o bloquear el telefono** no pierde nada: en `pagehide` / `beforeunload` /
   `visibilitychange` se publica lo escrito y el PUT va con `keepalive`.
 - `localStorage` sigue siendo **solo cache offline**.
