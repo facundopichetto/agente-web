@@ -1054,8 +1054,14 @@ cuentas!). idealmente el widget deberia llevarme al contenido".
 
 ## notificaciones push al iphone, con badge (facundo, 2026-09-12)
 
-cada aviso de `avisos.md` y cada respuesta del chat llegan como **notificacion real** a la pantalla del
-celu, con el numero en el icono.
+**desde la 1328 (2026-09-14) suena solo** `urgente` (tambien de noche), `bloqueado` (espera tu decision, una por
+cosa), `cola` (la cola termino todo, una sola con cada tarea) y `recordatorio`; el chat, las tareas sueltas y los
+avisos informativos no suenan (`recetas/push_filtro.py`, config `push` de `daemon.json`, tope por hora de red de
+seguridad). titulo de una linea `tipo: asunto` y cuerpo plano de 2-3 lineas (`push_filtro.formato`), el mismo que
+usa la campana; el payload lleva `tipo` para pasar a pushover. la linea "flaudio board" la agrega ios en toda web
+push (nombre del manifest) y no se puede sacar desde el service worker. antes de la 1328: cada aviso de
+`avisos.md` y cada respuesta del chat llegaban como **notificacion real** a la pantalla del celu, con el numero en
+el icono.
 
 - **paso unico de facundo**: abrir el board **desde el icono de inicio** (compartir > agregar a inicio en
   safari) y tocar **`notificaciones`** en `[⚙]` settings del board (el widget `avisos` se saco en la 1163:

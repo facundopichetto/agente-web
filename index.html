@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.246">
-<link rel="manifest" href="manifest.json?v=4.246">
+<meta name="agente-web-version" content="4.247">
+<link rel="manifest" href="manifest.json?v=4.247">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -5196,6 +5196,10 @@ function horaNoti(n){
   return f.slice(0, 10) === d ? f.slice(11, 16) : f.slice(8, 10) + "/" + f.slice(5, 7) + " " + f.slice(11, 16);
 }
 function temaNoti(n){ return n && n.tema && esTema(n.tema) ? normTema(n.tema) : "tools"; }
+// 1328 (19:47): el mismo titulo de una linea ("tipo: asunto") y cuerpo corto que el push (`push_filtro.formato`);
+// el detalle (modal) sigue con el texto entero
+function tituloNoti(n){ return unaLinea(n.titulo || n.texto, 160); }
+function cortoNoti(n){ return unaLinea(n.titulo ? n.titulo + (n.cuerpo ? " · " + n.cuerpo : "") : n.texto, 200); }
 var notisEl = null;
 function pintarNotis(){
   if(!notisEl) notisEl = $("notis");
@@ -5207,8 +5211,8 @@ function pintarNotis(){
   if(!ns.length){ notisEl.innerHTML = ""; notisEl.classList.add("oculta"); return; }
   var n = ns[0];
   notisEl.innerHTML = '<span class="noti" role="button" tabindex="0" data-noti="' + esc(n.id) + '" data-nivel="' + nivelNoti(n) +
-      '" title="' + esc(unaLinea(n.texto, 200)) + '"><span class="luz ' + nivelNoti(n) + '"></span><span class="nh">' + esc(horaNoti(n)) +
-      '</span><span class="nt">' + esc(unaLinea(n.texto, 160)) + "</span></span>" +
+      '" title="' + esc(cortoNoti(n)) + '"><span class="luz ' + nivelNoti(n) + '"></span><span class="nh">' + esc(horaNoti(n)) +
+      '</span><span class="nt">' + esc(tituloNoti(n)) + "</span></span>" +
     '<button class="nx" type="button" data-notix="' + esc(n.id) + '" title="cerrar" aria-label="cerrar aviso">×</button>';
   notisEl.classList.remove("oculta");
 }
@@ -5285,9 +5289,9 @@ function pintarListaNotis(ns){
   el.innerHTML = '<div class="ntit">notificaciones · ' + (ns.length ? ns.length + " sin leer" : "al día") + "</div>" +
     (ns.length ? ns.map(function(n){
       return '<div class="nfila" data-nid="' + esc(n.id) + '">' +
-        '<button class="nabrir" type="button" data-nabrir="' + esc(n.id) + '" title="' + esc(unaLinea(n.texto, 200)) + '">' +
+        '<button class="nabrir" type="button" data-nabrir="' + esc(n.id) + '" title="' + esc(cortoNoti(n)) + '">' +
           '<span class="luz ' + nivelNoti(n) + '"></span><span class="nh">' + esc(horaNoti(n)) + "</span>" +
-          '<span class="nt">' + esc(unaLinea(n.texto, 160)) + "</span></button>" +
+          '<span class="nt">' + esc(tituloNoti(n)) + "</span></button>" +
         '<button class="nacc" type="button" data-nresp="' + esc(n.id) + '">responder</button>' +
         '<button class="nacc nx" type="button" data-ncerrar="' + esc(n.id) + '" title="cerrar sin responder" ' +
           'aria-label="cerrar sin responder">×</button></div>';

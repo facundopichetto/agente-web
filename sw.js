@@ -2,12 +2,14 @@
 // no cachea nada a proposito (sin handler de fetch): la pagina va siempre a la red y se recarga sola con
 // version.json. el daemon reescribe VERSION en cada publicacion, asi el navegador toma el sw nuevo.
 // detalle en README.md, seccion "notificaciones push".
-var VERSION = "4.246";
+var VERSION = "4.247";
 
 self.addEventListener("install", function(){ self.skipWaiting(); });
 self.addEventListener("activate", function(e){ e.waitUntil(self.clients.claim()); });
 
-// el payload lo arma `recetas/push.py`: {titulo, cuerpo, tema, badge, ts}
+// el payload lo arma `recetas/push.py`: {titulo, cuerpo, tema, tipo, badge, ts}. titulo = "tipo: asunto" en una
+// linea y cuerpo plano de 2-3 lineas (`recetas/push_filtro.formato`, 1328). aca no se agrega nada al titulo: la
+// linea con el nombre de la app ("flaudio board", del manifest) la pone ios solo en toda web push y no se puede sacar.
 self.addEventListener("push", function(e){
   var d = {};
   try{ d = e.data ? e.data.json() : {}; }
