@@ -809,6 +809,22 @@ escribe la web la lee `daemon.py`), `prueba_web_audio` (el audio sale con la hor
 mandar, no con la de la subida) y `python3 daemon.py --prueba` (`marca_enviado`, `ts` / `ts_llegada` y
 el orden que publica `chat_web_datos`).
 
+### el historial viejo tambien (orden 1194, `recetas/reordenar_chat.py`)
+
+lo de arriba vale de la 1191 en adelante. las filas **anteriores** se habian guardado con la hora de la
+respuesta, asi que un mensaje que tardo mas quedaba debajo de uno mandado despues (`C: contraste` de las
+21:44:44 debajo de `cuando algo mando a otra pestaña` de las 21:44:52). el script `reordenar_chat` del
+daemon (cada 10 min, cero tokens) cruza cada fila con el **comentario original del buzon** (por `com_id`,
+y si no por texto normalizado + dia, sin repetir comentario) y le pone al `ts` el `created_at` de github,
+dejando la hora vieja en `ts_llegada`. no se mueve lo que vino de telegram o la consola, ni lo que no
+matchea ningun comentario: nunca se inventa una hora. antes de reescribir deja backup con fecha en
+`backup/`, y los temas que movio los **republica el daemon** (la receta no escribe en el buzon).
+
+corrida de fondo 2026-09-13 23:57 sobre todo el historial: 480 filas corregidas (tools 234, server 145,
+awtomic 71, fuzzer 12, podcast 11, personal 6, juegos 1), sin perder ni duplicar ninguna.
+`python3 -m recetas.reordenar_chat --seco` lista lo que moveria; prueba
+`python3 -m recetas.prueba_reordenar_chat` (cero tokens, cero red).
+
 ## urls: enteras y clickeables (facundo, 2026-09-12)
 
 paso con el `login orugote`: la url de oauth (450 chars) llego cortada y claude.com contesto
@@ -1094,17 +1110,28 @@ probar: `python3 -m recetas.prueba_chat_lan` (el endpoint real con github falso)
   `chat/<tema>.json` como `opciones: [{letra, texto}]` (`opciones_de` en `daemon.py`); la web usa ese campo o
   parsea las lineas del comentario (`opcionesDe`), y no las pinta como texto.
   - sin elegir: fondo negro, letra y borde del color. elegida: fondo del color, letra negra.
-  - primer tap elige, segundo tap sobre la unica elegida **manda** `A: <texto>` como mensaje normal de la
-    pestaña (con su `tema x:`). si el mensaje nombra una oportunidad (`op N`) con opciones reales en
-    `widgets.json`, las cajas mandan `op N X` crudo (varias: una por linea, el daemon corre todas).
-  - **seleccion multiple** (1169): tocar otra opcion la suma (hasta 3) y aparece `mandar`; sin tocarlo sale sola a
-    los 2 s (`OPC_AUTO_MS`). un solo mensaje `A y C: <texto a> / <texto c>`. tocar una elegida de nuevo la saca.
+  - **un toque manda** (1202, reemplaza al "primer tap elige, segundo manda"): el tap sobre una caja de una
+    respuesta que todavia no tiene ninguna marca **manda** `A: <texto>` como mensaje normal de la pestaña (con
+    su `tema x:`) y la caja queda marcada, con estado persistente. si el mensaje nombra una oportunidad (`op N`)
+    con opciones reales en `widgets.json`, las cajas mandan `op N X` crudo (varias: una por linea, el daemon
+    corre todas).
+  - **con una marca, el toque no manda: pregunta adentro de esa misma caja** (1202, `opcConf[clave]`), y la
+    pregunta le tapa el texto a la caja tocada (`.opc.conf`, spans `.cf .q` / `.si` / `.no`):
+    - **la ya marcada** -> `revertir?`. `sí` la desmarca (solo esa letra: si habia dos sumadas, la otra queda) y
+      manda `me arrepentí: <letra>: <texto>` con la cita. `no` deja todo como estaba y no manda nada.
+    - **otra distinta** -> `sumo esta también?`. `sí` la marca y manda **un solo mensaje** `A y C: <texto a> /
+      <texto c>` (el formato que ya entiende `opciones_de` del daemon). con `op N X` sale solo el comando nuevo.
+    - la confirmacion es **un tap simple** (con teclado, enter sobre esa caja = `sí`); tocar otra opcion mueve la
+      pregunta a esa sin mandar nada, y un cambio de estado que llega de otro dispositivo la cancela.
+    - ya **no hay** boton `mandar`, ni envio solo a los 2 s, ni doble tap: se sacaron `OPC_AUTO_MS`,
+      `OPC_DOBLE_MS`, `opcSel`, `opcTimer` y `botonMandar`. una caja marcada nunca queda `disabled`
+      (`aria-pressed`), porque siempre se puede tocar para revertir o sumar.
   - **no vencen** (1168): mandar un mensaje ya no cierra las cajas de antes. solo queda hecha la tocada, o la mas
     reciente si facundo escribe la letra (`A`, `A: ...`). tocar una caja que no es la ultima manda la cita
     `> claudio hh:mm: <titulo o 2 lineas>` + linea vacia (`citaCaja`), que `marcas_chat` separa del pedido.
     la cita va sin el `[tema]` de la respuesta; `citaEsDe` igual acepta una con `[tema]` adelante (mensajes viejos).
-  - **me arrepenti** (1169): doble toque o doble click (`OPC_DOBLE_MS` 450) sobre una opcion ya elegida la desmarca
-    y manda `me arrepentí: <letras>: <textos>` con la cita. el daemon (`arrepentido_cmd`) cancela sin modelo las
+  - **me arrepenti** (1169, la interaccion la cambio 1202: ahora sale del `revertir?` confirmado)
+    manda `me arrepentí: <letra>: <texto>` con la cita. el daemon (`arrepentido_cmd`) cancela sin modelo las
     ordenes de esa opcion que siguen `[ ]` (las busca en `logs/opcion-orden.jsonl`, que anota cada `ORDEN:` que salio
     de un `A: ...`); si ya corren o terminaron, pasa al chat con el estado para charlarlo.
   - drag o scroll por encima no elige: `pointerdown`/`pointerup` con umbral de 10 px (`OPC_UMBRAL`).
@@ -1116,9 +1143,12 @@ probar: `python3 -m recetas.prueba_chat_lan` (el endpoint real con github falso)
     guardado hace mas de 24 h (`OPC_VIDA_MS`) y toda clave o valor invalido (no string, letras fuera de `ABC`,
     basura de versiones viejas). una entrada sin `g` (formato viejo) no se tira: se migra con la fecha de hoy y
     conserva su `ts`, asi sigue perdiendo contra lo deducido. la purga se escribe en `localStorage` solo si cambio.
-  - lo prueba `recetas/prueba_web_tabs` (pinta, drag que no elige, suma y saca, manda con el segundo tap, caja
-    vieja viva tras 3 mensajes con cita, doble toque, `mandar`, envio solo a los 2 s, deduccion en otro dispositivo,
-    purga de 24 h y de claves invalidas al llegar una respuesta con cajas).
+  - lo prueba `recetas/prueba_web_tabs` (pinta, drag que no elige, el primer tap manda y marca, `revertir?` con
+    `no` que no manda y `sí` que manda `me arrepentí`, `sumo esta también?` con el mensaje unico `A y B: ...`,
+    revertir una de dos sumadas, tocar otra mientras una pregunta, caja vieja viva tras 3 mensajes con su cita,
+    deduccion en otro dispositivo, purga de 24 h y de claves invalidas al llegar una respuesta con cajas).
+    capturas de los cuatro estados (sin elegir, marcada, `revertir?`, `sumo esta también?`) en desktop y celu:
+    `tmp/capturas-1202/`, las saca `tmp/capturas_1202.py` (cero tokens, api stubbeada).
 
 ## notificaciones: la tira muestra solo el ultimo aviso (facundo, 2026-09-13, orden 1170)
 

@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.221">
-<link rel="manifest" href="manifest.json?v=4.221">
+<meta name="agente-web-version" content="4.222">
+<link rel="manifest" href="manifest.json?v=4.222">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -119,7 +119,9 @@
   .error .cuerpo{color:var(--rojo)}
   /* cajas a/b/c debajo de una respuesta (facundo, 2026-09-13): A verde (la que haria claudio), B celeste (la
      segura), C fucsia (la transgresora). sin elegir: fondo negro, letra y borde del color. elegida: fondo del
-     color, letra negra. primer tap elige, segundo tap sobre la misma manda. en fila; si no entran, apiladas. */
+     color, letra negra. **un solo toque manda y la deja marcada** (1202); tocar una caja de una respuesta que
+     ya tiene marca pide confirmacion adentro de esa misma caja (`revertir?` / `sumo esta tambien?`) con un
+     `si` / `no` de un tap. en fila; si no entran, apiladas. */
   .tnum{font-size:.8em;opacity:.7}
   .opciones{display:flex;gap:6px;margin:6px 0 2px 0;white-space:normal}
   .opciones .opc{
@@ -135,9 +137,16 @@
   .opciones .opc.A.sel{background:var(--verde);color:#000}
   .opciones .opc.B.sel{background:var(--cian);color:#000}
   .opciones .opc.C.sel{background:var(--magenta);color:#000}
-  .opciones.hecho .opc{cursor:default}
-  .opciones .mandar{font:inherit;font-size:.85em;background:none;border:0;color:var(--cian);padding:0 4px;cursor:pointer;align-self:center}
-  .opciones.hecho .opc:not(.sel){opacity:.45}
+  .opciones.hecho .opc:not(.sel){opacity:.45}          /* las no elegidas se apagan, pero se siguen pudiendo tocar */
+  /* la confirmacion vive DENTRO de la caja tocada: le tapa el texto y deja `si` / `no` (facundo, 1202) */
+  .opciones .opc .cf{display:none}
+  .opciones .opc.conf{opacity:1}
+  .opciones .opc.conf .t{display:none}
+  .opciones .opc.conf .cf{display:block}
+  .opciones .opc .cf .q{display:block;margin-bottom:4px}     /* la pregunta arriba, el sí/no abajo: entra en el celu */
+  .opciones .opc .cf .si,.opciones .opc .cf .no{
+    display:inline-block;border:1px solid;border-radius:3px;padding:1px 8px;margin-right:8px;font-weight:600;
+  }
   @media (max-width:380px){ .opciones{flex-direction:column} }
   .sistema .cuerpo{color:var(--gris)}
   /* los mensajes se muestran siempre enteros: no hay plegado (facundo, 2026-09-10) */
@@ -2110,9 +2119,9 @@ var OPC_UMBRAL = 10;     // px: un dedo que se mueve mas que esto esta scrollean
 // ("" = desmarcada con doble click). lo de los otros dispositivos se deduce de los mensajes de f (`estadoCaja`):
 // `A: ...` sin cita cierra la caja mas reciente, con cita `> claudio hh:mm: ...` la caja de esa respuesta, y
 // `me arrepentí: A: ...` la vuelve a abrir. gana el mas nuevo de los dos.
-var OPC_AUTO_MS = 2000;  // con dos o tres elegidas, se manda sola a los 2 s (o con `mandar`)
-var OPC_DOBLE_MS = 450;  // dos toques en este lapso sobre una ya tocada = me arrepenti
-var opcSel = {}, opcHecho = {}, opcTimer = {}, opcToque = {}, cajaMsg = {};
+// 1202: un toque manda y marca. si la caja YA tiene marca, el toque no manda nada: pide confirmacion
+// adentro de la caja tocada (`opcConf[clave] = {letra, tipo}`) y recien el tap en `si` manda.
+var opcHecho = {}, opcConf = {}, cajaMsg = {};
 try{ opcHecho = JSON.parse(localStorage.getItem("agente_opciones") || "{}") || {}; }catch(x){ opcHecho = {}; }
 // 1212: el estado local de una caja no sobrevive mas de 24 h. cada vez que llega una respuesta nueva con
 // cajas se purga `agente_opciones`: lo de mas de 24 h y lo que no es una clave/valor valido (basura vieja
@@ -2263,11 +2272,34 @@ function marcarHecho(caja, letras){
   letras = letras || "";
   caja.classList.toggle("hecho", !!letras);
   [].forEach.call(caja.querySelectorAll(".opc"), function(b){
-    b.classList.toggle("sel", letras.indexOf(b.dataset.letra) >= 0);
-    b.setAttribute("aria-disabled", letras ? "true" : "false");
+    var sel = letras.indexOf(b.dataset.letra) >= 0;
+    b.classList.toggle("sel", sel);
+    b.setAttribute("aria-pressed", sel ? "true" : "false");   // 1202: nunca `disabled`, siempre se puede tocar
   });
-  var mb = caja.querySelector(".mandar");
-  if(mb && letras) mb.remove();
+}
+// las letras marcadas segun el dom (para saber si lo que llego de afuera cambio algo)
+function letrasPintadas(caja){
+  return [].filter.call(caja.querySelectorAll(".opc.sel"), function(b){ return true; })
+           .map(function(b){ return b.dataset.letra; }).sort().join("");
+}
+function opcBoton(caja, letra){ return caja.querySelector('.opc[data-letra="' + letra + '"]'); }
+// saca la confirmacion pendiente de una caja (tap en `no`, toque en otra opcion, o cambio de estado)
+function limpiarConfirm(caja){
+  var k = caja.dataset.clave;
+  if(!opcConf[k]) return false;
+  var b = opcBoton(caja, opcConf[k].letra);
+  if(b) b.classList.remove("conf");
+  delete opcConf[k];
+  return true;
+}
+// pide confirmacion adentro de la caja tocada: `revertir?` (ya marcada) o `sumo esta tambien?` (otra)
+function pedirConfirm(caja, o, tipo){
+  limpiarConfirm(caja);
+  var b = opcBoton(caja, o.letra);
+  if(!b) return;
+  opcConf[caja.dataset.clave] = {letra: o.letra, tipo: tipo};
+  b.querySelector(".cf .q").textContent = tipo === "revertir" ? "revertir?" : "sumo esta también?";
+  b.classList.add("conf");
 }
 // repinta cada caja de la lista con su estado (llego un mensaje de f, de este u otro dispositivo)
 function refrescarCajas(){
@@ -2276,8 +2308,9 @@ function refrescarCajas(){
     var m = cajaMsg[c.dataset.clave];
     if(!m) return;
     var e = estadoCaja(m);
-    if(e.l) marcarHecho(c, e.l);
-    else if(c.classList.contains("hecho")) marcarHecho(c, "");
+    if(e.l === letrasPintadas(c) && !!e.l === c.classList.contains("hecho")) return;
+    limpiarConfirm(c);            // cambio desde otro dispositivo: la confirmacion pendiente ya no vale
+    marcarHecho(c, e.l);
   });
 }
 function nodoCajas(m, lista_){
@@ -2288,11 +2321,11 @@ function nodoCajas(m, lista_){
   lista_.forEach(function(o){
     var b = document.createElement("button");
     b.type = "button"; b.className = "opc " + o.letra; b.dataset.letra = o.letra;
-    b.innerHTML = '<span class="l"></span><span class="t"></span>';
+    b.innerHTML = '<span class="l"></span><span class="t"></span>' +
+                  '<span class="cf"><span class="q"></span><span class="si">sí</span><span class="no">no</span></span>';
     b.querySelector(".l").textContent = o.letra;
     b.querySelector(".t").textContent = o.texto;
     b.title = o.cmd || (o.letra + ": " + o.texto);
-    if((opcSel[k] || []).indexOf(o.letra) >= 0) b.classList.add("sel");
     var ini = null;
     b.addEventListener("pointerdown", function(e){ ini = {x: e.clientX, y: e.clientY, mov: false}; });
     b.addEventListener("pointermove", function(e){
@@ -2302,15 +2335,13 @@ function nodoCajas(m, lista_){
     b.addEventListener("pointerup", function(e){
       var t = ini; ini = null;
       if(!t || t.mov || Math.abs(e.clientX - t.x) + Math.abs(e.clientY - t.y) > OPC_UMBRAL) return;
-      tocarCaja(m, caja, o, lista_);
+      tocarCaja(m, caja, o, lista_, e.target);
     });
-    // teclado (enter / espacio): click sin puntero
-    b.addEventListener("click", function(e){ if(e.detail === 0) tocarCaja(m, caja, o, lista_); });
+    // teclado (enter / espacio): click sin puntero. sobre una caja que esta preguntando, enter = si
+    b.addEventListener("click", function(e){ if(e.detail === 0) tocarCaja(m, caja, o, lista_, null); });
     caja.appendChild(b);
   });
-  var e = estadoCaja(m);
-  if(e.l) marcarHecho(caja, e.l);
-  else if((opcSel[k] || []).length > 1) botonMandar(m, caja, lista_);
+  marcarHecho(caja, estadoCaja(m).l || "");
   return caja;
 }
 // la caja no es la ultima de la pestaña (o ya hubo mensajes de f despues): lo que sale lleva la cita
@@ -2322,66 +2353,55 @@ function cajaVieja(m){
   }
   return false;
 }
-function botonMandar(m, caja, lista_){
-  var mb = caja.querySelector(".mandar");
-  if(!mb){
-    mb = document.createElement("button");
-    mb.type = "button"; mb.className = "mandar"; mb.textContent = "mandar";
-    mb.addEventListener("click", function(){ mandarCaja(m, caja, lista_); });
-    caja.appendChild(mb);
-  }
-  return mb;
-}
-function tocarCaja(m, caja, o, lista_){
-  var k = caja.dataset.clave, ahora = Date.now(), prev = opcToque[k];
-  opcToque[k] = {letra: o.letra, t: ahora};
-  if(caja.classList.contains("hecho")){
-    // doble toque (o doble click) sobre una opcion ya elegida: me arrepenti
-    if(prev && prev.letra === o.letra && ahora - prev.t < OPC_DOBLE_MS &&
-       (estadoCaja(m).l || "").indexOf(o.letra) >= 0){
-      opcToque[k] = null;
-      arrepentirse(m, caja, lista_);
+// un toque sobre una caja (1202). sin marca en esa respuesta: manda y queda marcada. con marca: no manda
+// nada todavia, pregunta adentro de la caja tocada y espera el tap en `sí` (o `no` para dejar todo como esta).
+function tocarCaja(m, caja, o, lista_, target){
+  var k = caja.dataset.clave, c = opcConf[k];
+  if(c && c.letra === o.letra){
+    var dentro = function(cl){ return !!(target && target.closest && target.closest(cl)); };
+    if(dentro(".no")){ limpiarConfirm(caja); return; }
+    if(target && !dentro(".si")) return;      // tap en la caja que pregunta pero fuera de si/no: no pasa nada
+    limpiarConfirm(caja);                     // `sí` (o enter del teclado, sin target)
+    if(c.tipo === "revertir") arrepentirse(m, caja, lista_, o.letra);
+    else{
+      // `sumo esta tambien?`: sale un solo mensaje con las dos (`A y C: ...`). si son `op N X`, solo la nueva
+      var todas = letrasDe((estadoCaja(m).l || "") + o.letra);
+      mandarCaja(m, caja, lista_, todas, lista_.some(function(x){ return x.cmd; }) ? o.letra : todas);
     }
     return;
   }
-  var sel = (opcSel[k] || []).slice(), i = sel.indexOf(o.letra);
-  clearTimeout(opcTimer[k]);
-  if(i >= 0 && sel.length === 1){ mandarCaja(m, caja, lista_); return; }   // segundo tap sobre la unica: manda
-  if(i >= 0) sel.splice(i, 1); else if(sel.length < 3) sel.push(o.letra);
-  sel.sort();
-  opcSel[k] = sel;
-  [].forEach.call(caja.querySelectorAll(".opc"), function(b){ b.classList.toggle("sel", sel.indexOf(b.dataset.letra) >= 0); });
-  var mb = caja.querySelector(".mandar");
-  if(sel.length > 1){
-    botonMandar(m, caja, lista_);
-    opcTimer[k] = setTimeout(function(){ if((opcSel[k] || []).length > 1) mandarCaja(m, caja, lista_); }, OPC_AUTO_MS);
-  }else if(mb) mb.remove();
+  if(c) limpiarConfirm(caja);                 // estaba preguntando por otra: se cancela y sigue este toque
+  var letras = estadoCaja(m).l || "";
+  if(!letras){ mandarCaja(m, caja, lista_, o.letra); return; }
+  pedirConfirm(caja, o, letras.indexOf(o.letra) >= 0 ? "revertir" : "sumar");
 }
-function mandarCaja(m, caja, lista_){
-  var k = caja.dataset.clave, sel = (opcSel[k] || []).slice().sort();
-  clearTimeout(opcTimer[k]);
-  if(!sel.length || caja.classList.contains("hecho")) return;
-  var ops = lista_.filter(function(o){ return sel.indexOf(o.letra) >= 0; });
+// deja la caja marcada con `marcar` y manda un solo mensaje con las opciones `decir` (por default, las mismas).
+// al sumar una opcion sale `A y C: <texto a> / <texto c>`, el formato que ya entiende `opciones_de` del daemon.
+function mandarCaja(m, caja, lista_, marcar, decir){
+  var k = caja.dataset.clave;
+  marcar = letrasDe(marcar || "");
+  decir = letrasDe(decir || marcar);
+  var ops = lista_.filter(function(o){ return decir.indexOf(o.letra) >= 0; });
+  if(!ops.length) return;
   var vieja = cajaVieja(m), tema = m.tema || temaActivo();
-  opcSel[k] = [];
-  guardarOpc(k, sel.join(""));
-  marcarHecho(caja, sel.join(""));
+  guardarOpc(k, marcar);
+  marcarHecho(caja, marcar);
   if(ops.some(function(o){ return o.cmd; })){          // `op N X`: crudo, uno por linea (el daemon los corre todos)
     mandar(ops.map(function(o){ return o.cmd || (o.letra + ": " + o.texto); }).join("\n"), tema, true);
     return;
   }
-  var txt = sel.join(" y ") + ": " + ops.map(function(o){ return o.texto; }).join(" / ");
+  var txt = decir.split("").join(" y ") + ": " + ops.map(function(o){ return o.texto; }).join(" / ");
   mandar((vieja ? citaCaja(m) : "") + txt, tema, false);
 }
-function arrepentirse(m, caja, lista_){
+// confirmado el `revertir?`: esa letra se desmarca (las otras, si habia sumadas, quedan) y sale `me arrepentí`
+function arrepentirse(m, caja, lista_, letra){
   var k = caja.dataset.clave, letras = estadoCaja(m).l || "";
-  var ops = lista_.filter(function(o){ return letras.indexOf(o.letra) >= 0; });
-  if(!ops.length) return;
-  opcSel[k] = [];
-  guardarOpc(k, "");
-  marcarHecho(caja, "");
-  mandar(citaCaja(m) + "me arrepentí: " + ops.map(function(o){ return o.letra; }).join(" y ") + ": " +
-         ops.map(function(o){ return o.texto; }).join(" / "), m.tema || temaActivo(), false);
+  var op = lista_.filter(function(o){ return o.letra === letra; })[0];
+  if(!op || letras.indexOf(letra) < 0) return;
+  var quedan = letras.split("").filter(function(l){ return l !== letra; }).join("");
+  guardarOpc(k, quedan);
+  marcarHecho(caja, quedan);
+  mandar(citaCaja(m) + "me arrepentí: " + letra + ": " + op.texto, m.tema || temaActivo(), false);
 }
 function pintarMsg(m, arriba){
   // 1212: respuesta nueva con cajas -> se limpia el estado viejo antes de pintarla (no se hereda una marca)
@@ -6015,11 +6035,15 @@ window.__agente = {
   ponerOpcHecho: function(o){ opcHecho = o || {}; try{ localStorage.setItem("agente_opciones", JSON.stringify(opcHecho)); }catch(x){} },
   cajas: function(){
     return [].map.call(document.querySelectorAll("#lista .opciones"), function(c){
-      return {clave: c.dataset.clave, hecho: c.classList.contains("hecho"), mandar: !!c.querySelector(".mandar"),
+      var cf = opcConf[c.dataset.clave] || null;
+      return {clave: c.dataset.clave, hecho: c.classList.contains("hecho"),
+              conf: cf ? {letra: cf.letra, tipo: cf.tipo,
+                          pregunta: (opcBoton(c, cf.letra).querySelector(".cf .q") || {}).textContent} : null,
               opc: [].map.call(c.querySelectorAll(".opc"), function(b){
                 var cs = getComputedStyle(b);
-                return {letra: b.dataset.letra, sel: b.classList.contains("sel"), disabled: c.classList.contains("hecho"),
-                        texto: b.textContent, bg: cs.backgroundColor, color: cs.color, top: Math.round(b.getBoundingClientRect().top)};
+                return {letra: b.dataset.letra, sel: b.classList.contains("sel"), conf: b.classList.contains("conf"),
+                        texto: b.querySelector(".t").textContent, bg: cs.backgroundColor, color: cs.color,
+                        top: Math.round(b.getBoundingClientRect().top)};
               })};
     });
   },
