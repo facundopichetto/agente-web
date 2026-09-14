@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.235">
-<link rel="manifest" href="manifest.json?v=4.235">
+<meta name="agente-web-version" content="4.236">
+<link rel="manifest" href="manifest.json?v=4.236">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -5002,6 +5002,8 @@ function cajaPodcast(p){
   var extra = ult ? '<span class="b">' + esc(corto(ult.titulo, 42)) + "</span>" +
                     '<span class="g"> · ' + eps.length + " ep</span>"
                   : '<span class="g">sin episodios</span>';
+  // automatico apagado en daemon.json (podcast_auto.activo: false)
+  if(p.pausa) extra = '<span class="a">' + esc(p.pausa) + "</span> " + extra;
   if(!ab) return caja("podcast", extra, btn + '<span class="g">' + (eps.length ? "tocá para ver los links" : "sin episodios") + "</span>",
                       false, "podcast");
   var filas = [btn + link(p.web || "#", "la web del podcast")];
