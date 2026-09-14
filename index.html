@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.217">
-<link rel="manifest" href="manifest.json?v=4.217">
+<meta name="agente-web-version" content="4.218">
+<link rel="manifest" href="manifest.json?v=4.218">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -173,7 +173,6 @@
      del input hasta que facundo toca enviar; la `×` los descarta y no se sube nada. */
   #adjunto{
     display:flex;align-items:center;gap:7px;padding:4px 0 3px 0;margin:0;
-    border-top:1px dashed var(--linea);
   }
   #adjunto.oculta{display:none}
   #adjunto img{
@@ -267,8 +266,9 @@
   /* ---------- web 2: dos paneles (chat | widgets) ---------- */
   #cuerpo{flex:1 1 auto;min-height:0;display:flex;flex-direction:row}
   #panel-chat{flex:1 1 auto;min-width:0;display:flex;flex-direction:column}
+  /* sin bordes (orden 1188): el panel de widgets va un tono arriba del chat y cada caja otro tono mas */
   #panel-widgets{
-    flex:0 0 420px;min-width:0;overflow-y:auto;
+    flex:0 0 420px;min-width:0;overflow-y:auto;background:#060606;
     padding:8px 10px calc(8px + env(safe-area-inset-bottom)) 10px;
     -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
   }
@@ -278,13 +278,15 @@
     flex:0 0 7px;position:relative;cursor:col-resize;background:transparent;
     touch-action:none;-webkit-user-select:none;user-select:none;
   }
+  /* sin linea en reposo (facundo, 2026-09-13, orden 1188): chat y widgets se separan por el tono del fondo.
+     la linea verde solo aparece al pasar el mouse o arrastrar. */
   #sep::after{
-    content:"";position:absolute;top:0;bottom:0;left:3px;width:1px;background:var(--linea);
+    content:"";position:absolute;top:0;bottom:0;left:3px;width:1px;background:transparent;
   }
   #sep:hover::after,#sep.arrastrando::after{background:var(--verde);box-shadow:0 0 6px var(--verde)}
   body.arrastrando-sep{cursor:col-resize}
   body.arrastrando-sep #hist,body.arrastrando-sep #panel-widgets{pointer-events:none}
-  .caja{border:1px solid var(--linea);border-radius:6px;padding:7px 9px 8px 9px;margin:0 0 8px 0}
+  .caja{border:0;outline:0;background:#0e0e0e;border-radius:6px;padding:7px 9px 8px 9px;margin:0 0 8px 0}
   .caja > .tit{
     color:var(--gris);font-size:9px;letter-spacing:.06em;text-transform:uppercase;
     margin:0 0 5px 0;display:flex;justify-content:space-between;gap:8px;align-items:center;
@@ -313,10 +315,10 @@
      se agarran del header: en desktop con el mouse, en el celu con tap and hold. */
   .caja > .tit{cursor:grab}
   .caja.arrastrando{
-    opacity:.95;border-color:var(--verde);box-shadow:0 6px 18px rgba(0,0,0,.6);
+    opacity:.95;background:#121a14;box-shadow:0 6px 18px rgba(0,0,0,.6);
     pointer-events:none;cursor:grabbing;
   }
-  .caja.fantasma{border-style:dashed;border-color:var(--verde);background:#0d1411}
+  .caja.fantasma{background:#0d1411}
   body.arrastrando-w{user-select:none;-webkit-user-select:none}
   body.arrastrando-w #panel-widgets{overflow:hidden}
   .wbtn.oc{color:var(--cian);padding:1px 4px}
@@ -488,18 +490,18 @@
      come el borde y se funde con la charla, sin renglon extra. */
   #tabs{
     flex:0 0 auto;display:flex;align-items:flex-end;gap:0;overflow-x:auto;
-    border-bottom:1px solid var(--linea);padding:0 6px;scrollbar-width:none;
+    padding:0 6px;scrollbar-width:none;
     -webkit-overflow-scrolling:touch;
   }
   #tabs::-webkit-scrollbar{display:none}
   #tabs .tab{
-    flex:0 0 auto;background:#000;color:var(--gris);border:1px solid transparent;border-bottom:none;
+    flex:0 0 auto;background:#000;color:var(--gris);border:0;
     border-radius:4px 4px 0 0;padding:4px 9px;font:inherit;font-size:10.5px;cursor:pointer;
-    white-space:nowrap;margin-bottom:-1px;
+    white-space:nowrap;
   }
   #tabs .tab.enpanel{color:var(--cian)}
   #tabs .tab.activo{
-    color:var(--verde);border-color:var(--linea);border-bottom:1px solid #000;background:#060606;
+    color:var(--verde);background:#0e0e0e;
   }
   #tabs .tab .x{color:#555;margin-left:7px}
   #tabs .barrabtn{
@@ -513,7 +515,7 @@
      solo el ultimo aviso sin leer, debajo de las pestañas, en una linea (hora + primeras palabras), sin look de
      boton como la barra de nodos. tocar abre el detalle; la `x` lo marca leido y pasa al siguiente (1170: "leer
      mas no, solo la ultima. y que se pueda cerrar"). la lista entera vive en la campanita del header. */
-  #notis{flex:0 0 auto;display:flex;align-items:center;border-bottom:1px solid var(--linea);padding:0 0 0 10px}
+  #notis{flex:0 0 auto;display:flex;align-items:center;padding:0 0 0 10px;background:#060606}
   #notis.oculta{display:none}
   #notis .noti{flex:1 1 auto;display:flex;align-items:center;gap:6px;min-width:0;background:none;border:0;padding:0;margin:0;
     color:var(--blanco);font-size:10px;line-height:18px;cursor:pointer;white-space:nowrap;
@@ -532,7 +534,7 @@
      estado real: mientras baja el buzon se ve esta linea y lo cacheado queda apagado. */
   #sync{
     flex:0 0 auto;padding:2px 10px;font-size:10px;color:var(--cian);
-    border-bottom:1px solid var(--linea);background:#050505;
+    background:#060606;
   }
   #sync.oculta{display:none}
   #sync.off{color:var(--amarillo)}
@@ -620,7 +622,7 @@
   #ctx button:hover{border-color:var(--linea);background:#0d1410}
   #ctx button:active{background:#111}
   /* lo que se toco queda marcado mientras el menu esta abierto */
-  .msg.marcado,#widgets .it.marcado,#tabs .tab.marcado{outline:1px dotted var(--verde);outline-offset:1px}
+  .msg.marcado,#widgets .it.marcado,#tabs .tab.marcado{outline:0;background:#0d1410;border-radius:3px}
   /* el hold no tiene que disparar el menu de ios ("copiar / buscar"): el nuestro lo reemplaza */
   .msg .cuerpo,#tabs .tab{-webkit-touch-callout:none}
   body.sinsel,body.sinsel *{-webkit-user-select:none;user-select:none}
