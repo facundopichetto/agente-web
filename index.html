@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.223">
-<link rel="manifest" href="manifest.json?v=4.223">
+<meta name="agente-web-version" content="4.224">
+<link rel="manifest" href="manifest.json?v=4.224">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2623,6 +2623,25 @@ function probarLan(){
                             function(){ lan.probando = null; return null; });
   return lan.probando;
 }
+// ---------- audio en curso: el daemon no reinicia mientras grabo o sube (facundo, 2026-09-14) ----------
+// un reinicio del daemon a mitad de un audio te come el mensaje (y el microfono queda abierto del otro lado).
+// mientras el micro esta abierto (`grabando`) o el m4a viaja (`subiendo`) se avisa al endpoint de la lan y se
+// renueva cada OCUPADO_RENUEVA ms: si el navegador se cierra, el flag vence solo en el server (nunca frena mas
+// que su tope). sin endpoint lan (solo buzon) no hay por donde avisar: el reinicio no espera.
+var OCUPADO_RENUEVA = 10000, ocupadoTimers = {};
+function pingOcupado(que, on){
+  if(!lan.base || (!token && !lanStub)) return Promise.resolve(false);
+  return lanFetch(lan.base + "/ping?ocupado=" + encodeURIComponent(que) + "&on=" + (on ? "1" : "0"),
+                  {headers: {"authorization": "Bearer " + token}, cache: "no-store", keepalive: true})
+    .then(function(r){ return !!(r && r.ok); }, function(){ return false; });
+}
+function marcarOcupado(que, on){
+  if(ocupadoTimers[que]){ clearInterval(ocupadoTimers[que]); delete ocupadoTimers[que]; }
+  if(on) ocupadoTimers[que] = setInterval(function(){ pingOcupado(que, true); }, OCUPADO_RENUEVA);
+  if(on && !lan.base) return probarLan().then(function(){ return pingOcupado(que, true); });
+  return pingOcupado(que, on);
+}
+
 function lanRuta(metodo, ruta){
   var pre = "/repos/" + REPO + "/";
   if(ruta.indexOf(pre) !== 0) return false;
@@ -3889,6 +3908,7 @@ function hayGrabacion(){
 // **lo que abro lo cierro**: el microfono se suelta siempre, aunque la subida falle (si no queda el
 // punto rojo prendido en el celu). va en el `finally` de todos los caminos.
 function soltarMicro(){
+  marcarOcupado("grabando", false);   // se apaga aca: es el finally de todos los caminos del micro
   if(relojGrab){ clearInterval(relojGrab); relojGrab = null; }
   if(cortarGrab){ clearTimeout(cortarGrab); cortarGrab = null; }
   if(stream){ (stream.getTracks() || []).forEach(function(t){ try{ t.stop(); }catch(e){} }); stream = null; }
@@ -3911,6 +3931,7 @@ function empezarGrabacion(){
     trozosAudio = [];
     grabador.ondataavailable = function(e){ if(e.data && e.data.size) trozosAudio.push(e.data); };
     grabador.start();
+    marcarOcupado("grabando", true);   // el daemon no reinicia mientras el micro esta abierto (1204)
     desdeGrab = Date.now();
     $("grabar").classList.add("grabando");
     $("grabinfo").classList.add("viendo");
@@ -3951,6 +3972,7 @@ function mandarAudio(blob, mime, pieTexto, tsEnvio){
     return Promise.resolve(null);
   }
   subiendoAudio = true; $("grabar").disabled = true;
+  marcarOcupado("subiendo", true);    // y tampoco mientras el m4a viaja al server
   sistema("subiendo el audio...", "sistema");
   var ruta;
   return blob.arrayBuffer().then(function(buf){
@@ -3968,6 +3990,7 @@ function mandarAudio(blob, mime, pieTexto, tsEnvio){
     ruta = null;                                  // fallo: el audio vuelve a quedar pendiente
   }).then(function(){
     subiendoAudio = false; $("grabar").disabled = false;
+    marcarOcupado("subiendo", false);
     return ruta;
   });
 }
@@ -6314,6 +6337,9 @@ window.__agente = {
   mandarAudio: mandarAudio, nombreAudio: nombreAudio, extAudio: extAudio, mimeAudio: mimeAudio,
   conAudios: conAudios, reproductor: reproductor, audioTope: AUDIO_TOPE, audioMinMs: AUDIO_MIN_MS,
   empezarGrabacion: empezarGrabacion, terminarGrabacion: terminarGrabacion,
+  // flag de audio en curso (1204): la prueba stubea la lan y mira que se prenda y se apague
+  marcarOcupado: marcarOcupado, pingOcupado: pingOcupado,
+  ocupadoTimers: function(){ return Object.keys(ocupadoTimers); },
   grabando: function(){ return {grabando: !!grabador, micro: !!stream,
                                 marcado: $("grabar").classList.contains("grabando"),
                                 reloj: $("grabinfo").textContent}; },

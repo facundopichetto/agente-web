@@ -1204,3 +1204,15 @@ no de hex sueltos:
 `--tono-base`) y los tres niveles se recalculan con `color-mix`. los hex de la tabla estan escritos
 como fallback para un navegador sin `color-mix`; si se cambia `--tono-paso`, actualizar tambien esos
 fallbacks. vale igual en desktop y en celu (el mismo panel ocupa toda la pantalla).
+
+## grabando o subiendo un audio: el daemon no reinicia (facundo, 2026-09-14, orden 1204)
+
+- mientras el microfono esta abierto o el m4a viaja, la web avisa al endpoint de la lan:
+  `GET /ping?ocupado=grabando|subiendo&on=1|0` (`marcarOcupado`/`pingOcupado` en `index.html`), y lo
+  **renueva cada 10 s** (`OCUPADO_RENUEVA`). `grabando` se prende en `empezarGrabacion` y se apaga en
+  `soltarMicro` (el `finally` de todos los caminos del micro); `subiendo` envuelve a `mandarAudio`.
+- del otro lado, `recetas/chat_lan.py` lo guarda en `tmp/lan/ocupado.json` y el daemon lo refleja en
+  `daemon.json` (`web_audio`) y **difiere el reinicio** mientras dure (cambio de codigo, `reinicia`,
+  watchdog). vence solo a los 30 s sin renovar y nunca frena mas de 3 min seguidos.
+- sin endpoint lan (la web hablando solo por el buzon) no hay por donde avisar: el reinicio no espera.
+- pruebas: `python3 -m recetas.prueba_web_audio` (graba de verdad con el microfono falso de chrome).
