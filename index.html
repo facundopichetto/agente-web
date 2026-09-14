@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.244">
-<link rel="manifest" href="manifest.json?v=4.244">
+<meta name="agente-web-version" content="4.245">
+<link rel="manifest" href="manifest.json?v=4.245">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -5314,7 +5314,7 @@ $("nlista").addEventListener("click", function(e){
   var t = e.target.closest("[data-ncerrar]");
   if(t){ marcarLeidos([t.dataset.ncerrar]); return; }            // repinta la lista y baja el badge
   t = e.target.closest("[data-ntodas]");
-  if(t){ marcarLeidos(notisNoLeidas().map(function(n){ return n.id; })); return; }
+  if(t){ marcarLeidos(notisNoLeidas().map(function(n){ return n.id; })); cerrarCampana(); return; }  // y cierra el desplegable (1320)
   t = e.target.closest("[data-nresp]");
   if(t){
     var id = t.dataset.nresp;
