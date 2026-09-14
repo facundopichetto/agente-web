@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.228">
-<link rel="manifest" href="manifest.json?v=4.228">
+<meta name="agente-web-version" content="4.229">
+<link rel="manifest" href="manifest.json?v=4.229">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -972,12 +972,22 @@ function dispDe(d){
   if(os === "android") return "android";
   return celu || !os ? "" : "pc";
 }
+// app o navegador (orden 1215): `app` si corre como pwa (`esStandalone()`), `safari` si es safari pelado y
+// `navegador` cualquier otro. viaja como quinto tramo de la marca y sale en la cabecera `f · hh:mm · iphone · app`.
+var MODOS = ["app", "safari", "navegador"];
+function modoActual(standalone, nav){
+  if(standalone === undefined) standalone = esStandalone();
+  if(standalone) return "app";
+  nav = nav === undefined ? navCorto() : String(nav || "");
+  return /(^|\/)safari$/.test(nav) ? "safari" : "navegador";
+}
+function modoDe(d){ return d && MODOS.indexOf(d.modo) >= 0 ? d.modo : ""; }
 function desdeActual(){
-  return {tipo: esTactil() ? "celu" : "compu", id: DISPOSITIVO, nav: navCorto(), disp: dispActual()};
+  return {tipo: esTactil() ? "celu" : "compu", id: DISPOSITIVO, nav: navCorto(), disp: dispActual(), modo: modoActual()};
 }
 function marcaDesde(){
   var d = desdeActual();
-  return "[desde: " + d.tipo + " " + d.id + " " + d.nav + " " + d.disp + "]";
+  return "[desde: " + d.tipo + " " + d.id + " " + d.nav + " " + d.disp + " " + d.modo + "]";
 }
 // la hora en que facundo apreto mandar (facundo, 2026-09-13, orden 1191): viaja como
 // `[enviado: <epoch ms>]` arriba de `[desde: ...]`. sin esto el chat quedaba ordenado por la hora de
@@ -994,13 +1004,14 @@ function sacarEnviado(t){
 
 // la forma es cerrada (celu|compu + id + navegador): un mensaje que termine en "[desde: casa]" es
 // texto de facundo y no se toca. misma regex que `RE_DESDE` de daemon.py.
-var RE_DESDE = /\s*\[desde:\s*(celu|compu)\s+([\w.-]{1,24})(?:\s+([\w./+-]{1,32}))?(?:\s+(iphone|ipad|mac|android|pc))?\]\s*$/i;
+var RE_DESDE = /\s*\[desde:\s*(celu|compu)\s+([\w.-]{1,24})(?:\s+([\w./+-]{1,32}))?(?:\s+(iphone|ipad|mac|android|pc))?(?:\s+(app|safari|navegador))?\]\s*$/i;
 // saca la marca del texto que se muestra: {texto, desde}
 function sacarDesde(t){
   var m = RE_DESDE.exec(t || "");
   if(!m) return {texto: t || "", desde: null};
   var d = {tipo: m[1].toLowerCase(), id: m[2], nav: m[3] || ""};
   if(m[4]) d.disp = m[4].toLowerCase();
+  if(m[5]) d.modo = m[5].toLowerCase();
   return {texto: (t || "").slice(0, m.index).replace(/\s+$/, ""), desde: d};
 }
 
@@ -2105,7 +2116,8 @@ function nodoMsg(m){
   // `claudio · 12:46 · cloud`: que nodo contesto (facundo, 2026-09-13: el modelo viaja en el json pero no se
   // pinta). mensajes viejos sin nodo: nada.
   // `f · 12:46 · iphone`: desde que dispositivo escribio facundo (1140). mensajes viejos sin `desde`: nada.
-  var info = [m.clase === "yo" ? m.disp : m.nodo].filter(function(x){ return !!x; });
+  // `f · 12:46 · iphone · app`: si escribio desde la pwa o desde safari/otro navegador (1215)
+  var info = (m.clase === "yo" ? [m.disp, m.modo] : [m.nodo]).filter(function(x){ return !!x; });
   if(info.length){
     var sp = document.createElement("span");
     sp.className = "nodo"; sp.textContent = " · " + info.join(" · ");
@@ -2883,7 +2895,7 @@ function agregar(c, arriba){
     // recien cuando termino de subir, asi que `created_at` llega tarde
     m = {id: c.id, clase: "yo", quien: QUIEN_F, texto: texto,
          iso: se.enviado ? new Date(se.enviado).toISOString() : c.created_at, tag: tg,
-         desde: sd.desde, disp: dispDe(sd.desde) || null};
+         desde: sd.desde, disp: dispDe(sd.desde) || null, modo: modoDe(sd.desde) || null};
   }
   if(arriba) msgsCom.unshift(m); else msgsCom.push(m);
   return m;
@@ -2947,7 +2959,8 @@ function recibirChat(tema, d){
     // `(aviso de claudio)`, `(tarea 12: ...)`, `(menu de claudio)`: filas que escribe el agente solo, no son de f
     var propia = /^\((aviso de claudio|menu de claudio|turno nocturno|tarea \d+:)/.test(String(f.pregunta || ""));
     if(f.pregunta && !propia) out.push({id: "h:" + base + ":q", clase: "yo", quien: QUIEN_F, texto: f.pregunta,
-                             iso: f.ts, tema: t, explicito: true, disp: dispDe(f.desde) || null});
+                             iso: f.ts, tema: t, explicito: true, disp: dispDe(f.desde) || null,
+                             modo: modoDe(f.desde) || null});
     var r = String(f.respuesta || ""), mt = /^\s*\[([\w\/-]+)\]\s*/.exec(r);
     if(mt && esTema(mt[1])) r = r.slice(mt[0].length);   // el `[tema]` ya lo dice la pestaña
     var lm = leerMeta(r), nodo = f.nodo || lm.meta.nodo || null;   // el `[cloud]` viejo sale del cuerpo
@@ -3342,7 +3355,8 @@ function mandar(texto, tema, crudo, tsEnvio){
         vistos[r.json.id] = true;
         // la hora que se pinta es la de ENVIO, no la que le puso github al comentario (1191)
         var m = {id: r.json.id, clase: "yo", quien: QUIEN_F, texto: texto, iso: new Date(tsEnvio).toISOString(),
-                 explicito: true, tema: tema, disp: dispDe(sacarDesde(cuerpo).desde) || null};
+                 explicito: true, tema: tema, disp: dispDe(sacarDesde(cuerpo).desde) || null,
+                 modo: modoDe(sacarDesde(cuerpo).desde) || null};
         msgsCom.push(m); msgs.push(m); pintarMsg(m, false);
         vueloIniciar(m, cuerpo);   // spinner + fase + eta hasta que llegue la respuesta
         alFinal();
@@ -3385,7 +3399,8 @@ function vaciarSalida(){
         var ye = sacarEnviado(sacarDesde(m.cuerpo).texto).enviado;
         var y = {id: r.json.id, clase: "yo", quien: QUIEN_F, texto: m.texto,
                  iso: ye ? new Date(ye).toISOString() : r.json.created_at,
-                 explicito: true, tema: m.tema, disp: dispDe(sacarDesde(m.cuerpo).desde) || null};
+                 explicito: true, tema: m.tema, disp: dispDe(sacarDesde(m.cuerpo).desde) || null,
+                 modo: modoDe(sacarDesde(m.cuerpo).desde) || null};
         msgsCom.push(y); msgs.push(y); pintarMsg(y, false); alFinal();
       }
       etagCom = null;
@@ -6508,7 +6523,7 @@ window.__agente = {
   // la hora de envio del cliente (1191)
   marcaEnviado: marcaEnviado, sacarEnviado: sacarEnviado,
   // `f · hh:mm · iphone` (1140): dispositivo corto por userAgent/toques/pantalla y desde un `desde` guardado
-  dispActual: dispActual, dispDe: dispDe, nodoMsg: nodoMsg,
+  dispActual: dispActual, dispDe: dispDe, nodoMsg: nodoMsg, modoActual: modoActual, modoDe: modoDe,
   esVistaMobile: esVistaMobile, sincronizarVista: sincronizarVista, mqMobile: MQ_MOBILE,
   vistaActual: function(){ var b = document.body.classList; return {
     mobile: esVistaMobile(), toggle: document.getElementById('vistas').offsetHeight > 0,
