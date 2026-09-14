@@ -1295,3 +1295,5 @@ chars; `<clave: algo>` es un tapado de la boveda y no lleva boton). los bloques 
   sobre `.cp` / `.copiar`. los links siguen con `target=_blank`.
 - prueba: `python3 -m recetas.prueba_web_copiar [--vivo]` (user agent de iphone, touch emulado, taps por cdp, lee el
   portapapeles; el fallback se chequea por el evento `copy` y el portapapeles).
+
+- **app o safari (1215)**: la marca `[desde: celu <id> <os/nav> <disp> <modo>]` lleva `app` si la pagina corre como pwa (`esStandalone()`), `safari` o `navegador` si no; la cabecera lo pinta `f · hh:mm · iphone · app` y el daemon lo guarda en `desde.modo` y se lo pasa al chat.
