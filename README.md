@@ -617,7 +617,8 @@ lo que se ve en el chat cuando claude no esta:
   cuenta contra su linea, en texto, desde el cache: sirve igual con el widget caido.
 - **el mensaje no se pierde**: lo que escribio queda en `preguntas-sin-tokens.jsonl` y cuando claude vuelve
   aparece un mensaje en la pestaña listando lo que quedo sin contestar (`pendientes` lo muestra antes).
-- **el aviso llega antes del corte**: cuando un limite de la cuenta activa pasa el 90%, el daemon deja un
+- **el aviso llega antes del corte**: cuando un limite de la cuenta activa pasa el 97% (`sin_tokens.AVISO_PCT`;
+  era 90% hasta el 2026-09-13, cuando el switch de cuenta paso a ser casi al 99%), el daemon deja un
   aviso al celu y un mensaje en la pestaña `tools`, una sola vez por ventana.
 
 las letras `a` / `b` / `c` sueltas se interceptan **solo** cuando claude de verdad no esta; si claude
@@ -1063,11 +1064,17 @@ probar: `python3 -m recetas.prueba_chat_lan` (el endpoint real con github falso)
     ordenes de esa opcion que siguen `[ ]` (las busca en `logs/opcion-orden.jsonl`, que anota cada `ORDEN:` que salio
     de un `A: ...`); si ya corren o terminaron, pasa al chat con el estado para charlarlo.
   - drag o scroll por encima no elige: `pointerdown`/`pointerup` con umbral de 10 px (`OPC_UMBRAL`).
-  - estado: `localStorage.agente_opciones` = `{clave: {l, ts}}` de este dispositivo; en los otros se deduce de los
+  - estado: `localStorage.agente_opciones` = `{clave: {l, ts, g}}` de este dispositivo; en los otros se deduce de los
     mensajes de f (`estadoDeducido`: letra sin cita = la caja mas reciente, con cita = la de esa respuesta,
     `me arrepentí` la reabre). gana el mas nuevo. facundo siempre puede contestar escribiendo.
+  - **purga de 24 h** (1212): `g` es cuando se guardo en este dispositivo (`ts` sigue siendo la precedencia contra
+    lo deducido). cada vez que se pinta una respuesta nueva con cajas, `purgarOpc()` tira de `agente_opciones` lo
+    guardado hace mas de 24 h (`OPC_VIDA_MS`) y toda clave o valor invalido (no string, letras fuera de `ABC`,
+    basura de versiones viejas). una entrada sin `g` (formato viejo) no se tira: se migra con la fecha de hoy y
+    conserva su `ts`, asi sigue perdiendo contra lo deducido. la purga se escribe en `localStorage` solo si cambio.
   - lo prueba `recetas/prueba_web_tabs` (pinta, drag que no elige, suma y saca, manda con el segundo tap, caja
-    vieja viva tras 3 mensajes con cita, doble toque, `mandar`, envio solo a los 2 s, deduccion en otro dispositivo).
+    vieja viva tras 3 mensajes con cita, doble toque, `mandar`, envio solo a los 2 s, deduccion en otro dispositivo,
+    purga de 24 h y de claves invalidas al llegar una respuesta con cajas).
 
 ## notificaciones: la tira muestra solo el ultimo aviso (facundo, 2026-09-13, orden 1170)
 

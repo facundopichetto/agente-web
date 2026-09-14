@@ -2101,6 +2101,35 @@ var OPC_AUTO_MS = 2000;  // con dos o tres elegidas, se manda sola a los 2 s (o 
 var OPC_DOBLE_MS = 450;  // dos toques en este lapso sobre una ya tocada = me arrepenti
 var opcSel = {}, opcHecho = {}, opcTimer = {}, opcToque = {}, cajaMsg = {};
 try{ opcHecho = JSON.parse(localStorage.getItem("agente_opciones") || "{}") || {}; }catch(x){ opcHecho = {}; }
+// 1212: el estado local de una caja no sobrevive mas de 24 h. cada vez que llega una respuesta nueva con
+// cajas se purga `agente_opciones`: lo de mas de 24 h y lo que no es una clave/valor valido (basura vieja
+// de versiones anteriores). `g` es cuando se guardo en ESTE dispositivo (para la purga); `ts` sigue siendo
+// la precedencia contra lo deducido de los mensajes de f, y no se toca.
+var OPC_VIDA_MS = 24 * 3600 * 1000;
+function opcGuardado(v){ return v && typeof v === "object" ? (+v.g || 0) : 0; }
+function opcValida(k, v){
+  if(!k || typeof k !== "string") return false;
+  if(typeof v === "string") return /^(-|[ABC]{1,3})$/.test(v);        // formato viejo (una letra o `-`)
+  if(!v || typeof v !== "object" || Array.isArray(v)) return false;
+  return typeof v.l === "string" && /^[ABC]{0,3}$/.test(v.l);
+}
+function purgarOpc(ahora){
+  ahora = ahora || Date.now();
+  var cambio = false;
+  Object.keys(opcHecho).forEach(function(k){
+    var v = opcHecho[k];
+    if(!opcValida(k, v)){ delete opcHecho[k]; cambio = true; return; }
+    var g = opcGuardado(v);
+    if(!g){                       // guardada por una version sin fecha: se le pone la de hoy y vive 24 h mas
+      opcHecho[k] = typeof v === "string" ? {l: v === "-" ? "" : v, ts: 1, g: ahora}
+                                          : {l: v.l, ts: +v.ts || 0, g: ahora};
+      cambio = true; return;
+    }
+    if(ahora - g > OPC_VIDA_MS){ delete opcHecho[k]; cambio = true; }
+  });
+  if(cambio) try{ localStorage.setItem("agente_opciones", JSON.stringify(opcHecho)); }catch(x){}
+  return cambio;
+}
 function opcionesDe(texto){
   var lista = [], fuera = [], vistas = {};
   String(texto || "").split("\n").forEach(function(l){
@@ -2214,7 +2243,7 @@ function estadoCaja(m){
   return (+loc.ts || 0) >= (ded.ts || 0) ? loc : ded;
 }
 function guardarOpc(k, letras){
-  opcHecho[k] = {l: letras, ts: Date.now()};
+  opcHecho[k] = {l: letras, ts: Date.now(), g: Date.now()};
   try{ localStorage.setItem("agente_opciones", JSON.stringify(opcHecho)); }catch(x){}
 }
 function marcarHecho(caja, letras){
@@ -2342,6 +2371,8 @@ function arrepentirse(m, caja, lista_){
          ops.map(function(o){ return o.texto; }).join(" / "), m.tema || temaActivo(), false);
 }
 function pintarMsg(m, arriba){
+  // 1212: respuesta nueva con cajas -> se limpia el estado viejo antes de pintarla (no se hereda una marca)
+  if(m.clase === "agente" && tieneCajas(m) && purgarOpc() && !renderando) refrescarCajas();
   if(deEstaTab(m.tema, temaActivo()) && lista){
     if(arriba) lista.insertBefore(nodoMsg(m), lista.firstChild); else lista.appendChild(nodoMsg(m));
   }
@@ -5948,6 +5979,9 @@ window.__agente = {
   // cajas a/b/c: `prueba_web_tabs` las pinta, elige, manda y chequea que un drag no elija
   opcionesDe: opcionesDe,
   hhmmDe: hhmmDe, citaCaja: citaCaja,
+  // 1212: purga de `agente_opciones` (24 h y claves invalidas)
+  purgarOpc: purgarOpc, opcHecho: function(){ return JSON.parse(JSON.stringify(opcHecho)); },
+  ponerOpcHecho: function(o){ opcHecho = o || {}; try{ localStorage.setItem("agente_opciones", JSON.stringify(opcHecho)); }catch(x){} },
   cajas: function(){
     return [].map.call(document.querySelectorAll("#lista .opciones"), function(c){
       return {clave: c.dataset.clave, hecho: c.classList.contains("hecho"), mandar: !!c.querySelector(".mandar"),
