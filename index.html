@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.232">
-<link rel="manifest" href="manifest.json?v=4.232">
+<meta name="agente-web-version" content="4.233">
+<link rel="manifest" href="manifest.json?v=4.233">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2915,6 +2915,8 @@ function agregar(c, arriba){
     // `<!--nodo:cloud modelo:fable dur:12 cuello:modelo-->` va al header, no al cuerpo
     var lm = leerMeta(b.slice(MARCA.length).replace(/^\n/, "")), mm = lm.meta;
     var cuerpo = lm.cuerpo, mt = /^\[([\w\/-]+)\]\s*/.exec(cuerpo), tag = null;
+    // 1237: los `aviso: ...` que el daemon viejo comentaba en el buzon no se pintan: van a la campanita
+    if(/^aviso: /.test(cuerpo)) return null;
     if(mt && esTema(mt[1])){ tag = normTema(mt[1]); cuerpo = cuerpo.slice(mt[0].length); }
     m = {id: c.id, clase: "agente", quien: QUIEN_AGENTE, texto: cuerpo, iso: c.created_at, tag: tag,
          nodo: mm.nodo || null, modelo: mm.modelo ? modeloCorto(mm.modelo) : null,
@@ -2989,11 +2991,15 @@ function recibirChat(tema, d){
   filas.forEach(function(f, i){
     var base = t + "-" + i;
     // `(aviso de claudio)`, `(tarea 12: ...)`, `(menu de claudio)`: filas que escribe el agente solo, no son de f
-    var propia = /^\((aviso de [fc]laudio|menu de [fc]laudio|turno nocturno|tarea \d+:)/.test(String(f.pregunta || ""));
+    // 1237: el fin de tarea ahora dice `(tarea <nombre>: ...)` y trae `fuente: tarea`; la linea queda en el jsonl
+    // como contexto del chat pero no se pinta como mensaje de f
+    var propia = f.fuente === "tarea" || f.fuente === "menu" ||
+        /^\((aviso de [fc]laudio|menu de [fc]laudio|turno nocturno|tarea [^:()\s]+:)/.test(String(f.pregunta || ""));
     if(f.pregunta && !propia) out.push({id: "h:" + base + ":q", clase: "yo", quien: QUIEN_F, texto: f.pregunta,
                              iso: f.ts, tema: t, explicito: true, disp: dispDe(f.desde) || null,
                              modo: modoDe(f.desde) || null});
     var r = String(f.respuesta || ""), mt = /^\s*\[([\w\/-]+)\]\s*/.exec(r);
+    if(/^aviso: /.test(r)) return;   // 1237: los avisos van solo a la campanita, nunca al chat
     if(mt && esTema(mt[1])) r = r.slice(mt[0].length);   // el `[tema]` ya lo dice la pestaña
     var lm = leerMeta(r), nodo = f.nodo || lm.meta.nodo || null;   // el `[cloud]` viejo sale del cuerpo
     r = lm.cuerpo;

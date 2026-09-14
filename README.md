@@ -1309,3 +1309,5 @@ chars; `<clave: algo>` es un tapado de la boveda y no lleva boton). los bloques 
   portapapeles; el fallback se chequea por el evento `copy` y el portapapeles).
 
 - **app o safari (1215)**: la marca `[desde: celu <id> <os/nav> <disp> <modo>]` lleva `app` si la pagina corre como pwa (`esStandalone()`), `safari` o `navegador` si no; la cabecera lo pinta `f · hh:mm · iphone · app` y el daemon lo guarda en `desde.modo` y se lo pasa al chat.
+
+- **avisos solo en la campanita, fin de tarea sin pregunta falsa (1237)**: `despachar_avisos` ya no comenta `aviso: ...` en el buzon (solo push, telegram y el widget `notificaciones`); `agregar` descarta los comentarios viejos `aviso: ...` y `recibirChat` las filas cuya respuesta arranca con `aviso: `. la fila de `tarea_al_chat` (`fuente: tarea`, `(tarea <nombre>: ...)`) no se pinta como mensaje de f: el informe sale solo; el prompt del chat la sigue viendo como contexto (`_fila_texto` sin `facundo:`). `web_enviar` y `push_al_toque` no salen con `chat_es_real()` falso (pruebas de la mula).
