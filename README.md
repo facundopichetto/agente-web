@@ -1053,6 +1053,7 @@ probar: `python3 -m recetas.prueba_chat_lan` (el endpoint real con github falso)
   - **no vencen** (1168): mandar un mensaje ya no cierra las cajas de antes. solo queda hecha la tocada, o la mas
     reciente si facundo escribe la letra (`A`, `A: ...`). tocar una caja que no es la ultima manda la cita
     `> claudio hh:mm: <titulo o 2 lineas>` + linea vacia (`citaCaja`), que `marcas_chat` separa del pedido.
+    la cita va sin el `[tema]` de la respuesta; `citaEsDe` igual acepta una con `[tema]` adelante (mensajes viejos).
   - **me arrepenti** (1169): doble toque o doble click (`OPC_DOBLE_MS` 450) sobre una opcion ya elegida la desmarca
     y manda `me arrepentí: <letras>: <textos>` con la cita. el daemon (`arrepentido_cmd`) cancela sin modelo las
     ordenes de esa opcion que siguen `[ ]` (las busca en `logs/opcion-orden.jsonl`, que anota cada `ORDEN:` que salio
