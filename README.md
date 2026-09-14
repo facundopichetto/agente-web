@@ -1074,3 +1074,16 @@ probar: `python3 -m recetas.prueba_chat_lan` (el endpoint real con github falso)
 - la lista completa de no leidas vive solo en la campanita del header (1166).
 - lo prueba `recetas/prueba_web_tabs` (5 avisos: se ve solo el mas nuevo, la `x` pasa al siguiente sin abrir el
   detalle, area de toque en el celu).
+
+## campana, persona y `x` de widgets (facundo, 2026-09-13, orden 1166)
+
+- **campana** (`#campana`, a la izquierda de la persona): badge chiquito con las no leidas y fondo del color de la peor
+  (rojo error, naranja problema, amarillo advertencia, verde ok, gris info). tocarla abre `#nlista`: solo las no leidas,
+  la mas nueva arriba, cada fila con circulito, hora, texto, `responder` y `×`; abajo `cerrar todas`. las leidas son las
+  mismas `avisos_leidos` de `tabs.json`. la tira `#notis` usa el mismo circulito. el nivel viene en `notificaciones[].nivel`.
+- **persona** (`#persona`, reemplaza a `[⚙]`): menu con la cuenta en uso (`usage.reparto`), `cuenta <x>` / `cuenta auto`
+  (comando crudo, sin modelo), `settings del board` (push y widgets ocultos), `reinicia` y `salir` con confirmacion.
+- **widgets**: iconos del header a 17 px (20 px con 40 px de area en celu) y `×` que oculta la caja; vuelve con `mostrar`
+  desde settings del board o desde el pie.
+- **via**: ya no hay cartel en el header; el menu del nodo server dice `habla por: lan|tailscale|buzón`.
+- se prueba en `prueba_web_tabs` (bloque 1166) y el nivel en `prueba_web` y `daemon.py --prueba`.

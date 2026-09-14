@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.214">
-<link rel="manifest" href="manifest.json?v=4.214">
+<meta name="agente-web-version" content="4.215">
+<link rel="manifest" href="manifest.json?v=4.215">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -301,9 +301,10 @@
   .caja > .tit > .wacc .wage{color:#4a4a4a;font-size:8.5px;letter-spacing:0;text-transform:none}
   .caja > .tit > .wacc .wage.wage-vieja{color:var(--amarillo)}
   .caja > .tit > .wacc .wage.wage-muy{color:var(--rojo)}
+  /* iconos mas grandes y la `x` que oculta la caja (facundo, 2026-09-13, orden 1166) */
   .wbtn{
     background:transparent;color:var(--gris);border:none;border-radius:4px;
-    font:inherit;font-size:10px;line-height:1;padding:3px 6px;cursor:pointer;
+    font:inherit;font-size:17px;line-height:1;padding:2px 5px;cursor:pointer;
   }
   .wbtn:hover{color:var(--verde)}
   .wbtn:active{color:var(--verde)}
@@ -382,7 +383,7 @@
      circulito: opacidad 1 el main (el de guardia, al que le habla la web), .9 los otros. color =
      estado real del nodo (`nodos.color_nodo`): verde solo con todo ok, amarillo advertencia, naranja
      problemas sin emergencia, rojo emergencia, gris apagado o sin responder. el motivo va en el title. */
-  #nodos{display:flex;align-items:center;gap:12px;flex:1 1 auto;min-width:0;overflow-x:auto;scrollbar-width:none}
+  #nodos{display:flex;align-items:center;gap:18px;flex:1 1 auto;min-width:0;overflow-x:auto;scrollbar-width:none}
   #nodos::-webkit-scrollbar{display:none}
   #nodos .nodo{display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;background:none;border:0;
     padding:0;margin:0;color:var(--blanco);font-size:10px;line-height:14px;cursor:pointer;white-space:nowrap;
@@ -394,9 +395,47 @@
   #nodos .luz.naranja{background:var(--naranja)}
   #nodos .luz.rojo{background:var(--rojo)}
   #nodos .luz.gris{background:var(--gris)}
-  /* por donde habla el board (facundo, 2026-09-13, lan primero): lan / tailscale en verde, buzón en gris */
-  #via{font-size:9px;letter-spacing:.5px;padding:0 4px;flex:0 0 auto;color:var(--gris);white-space:nowrap}
-  #via.directo{color:var(--verde)}
+  /* campana y persona (facundo, 2026-09-13, orden 1166): iconos svg sin look de boton, como la barra de nodos.
+     el cartel `lan / tailscale / buzón` se saco del header: vive en el menu del nodo server ("habla por"). */
+  .ib{flex:0 0 auto;position:relative;background:none;border:0;padding:0;margin:0;color:var(--blanco);
+    width:26px;height:24px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;
+    -webkit-tap-highlight-color:transparent}
+  .ib svg{width:17px;height:17px}
+  .ib:hover,.ib:active,.ib.on{color:var(--verde)}
+  #campana .badge{position:absolute;top:0;right:0;min-width:12px;height:12px;padding:0 3px;border-radius:6px;
+    font-size:8px;line-height:12px;font-weight:600;text-align:center;color:#000;background:var(--gris);pointer-events:none}
+  #campana .badge.oculta{display:none}
+  #campana .badge.gris{color:var(--blanco)}
+  /* el nivel de cada notificacion: la misma paleta que `recetas/nodos.py` (`recetas/nivel_aviso.py`) */
+  #notis .luz.rojo,#nlista .luz.rojo,#campana .badge.rojo{background:var(--rojo)}
+  #notis .luz.naranja,#nlista .luz.naranja,#campana .badge.naranja{background:var(--naranja)}
+  #notis .luz.amarillo,#nlista .luz.amarillo,#campana .badge.amarillo{background:var(--amarillo)}
+  #notis .luz.verde,#nlista .luz.verde,#campana .badge.verde{background:var(--verde)}
+  #notis .luz.gris,#nlista .luz.gris,#campana .badge.gris{background:var(--gris)}
+  /* el desplegable de la campana: solo las no leidas, la mas nueva arriba */
+  #nfondo{position:fixed;inset:0;z-index:33}
+  #nfondo.oculta,#nlista.oculta{display:none}
+  #nlista{position:fixed;z-index:34;top:44px;right:8px;width:min(440px,calc(100vw - 16px));max-height:70dvh;
+    overflow-y:auto;background:#000;border:1px solid var(--linea-clara);border-radius:5px;padding:4px;
+    display:flex;flex-direction:column;gap:1px;box-shadow:0 8px 28px rgba(0,0,0,.85);
+    -webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+  #nlista .ntit{color:var(--gris);font-size:9px;text-transform:uppercase;letter-spacing:.06em;padding:3px 6px 4px 6px;
+    border-bottom:1px solid var(--linea);margin-bottom:2px}
+  #nlista .nfila{display:flex;align-items:center;min-height:30px;border-radius:3px}
+  #nlista .nfila:hover{background:#0d1410}
+  #nlista .nabrir{flex:1 1 auto;min-width:0;align-self:stretch;display:flex;align-items:center;gap:6px;background:none;border:0;
+    padding:0 0 0 6px;margin:0;color:var(--blanco);font:inherit;font-size:10.5px;text-align:left;cursor:pointer;
+    white-space:nowrap;-webkit-tap-highlight-color:transparent}
+  #nlista .luz{width:7px;height:7px;border-radius:50%;background:var(--gris);flex:0 0 auto}
+  #nlista .nh{color:var(--gris);flex:0 0 auto}
+  #nlista .nt{overflow:hidden;text-overflow:ellipsis;min-width:0}
+  #nlista .nacc{flex:0 0 auto;background:none;border:0;color:var(--gris);font:inherit;font-size:10px;padding:0 6px;
+    height:30px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  #nlista .nacc.nx{font-size:14px;width:30px;padding:0}
+  #nlista .nacc:hover,#nlista .nacc:active{color:var(--blanco)}
+  #nlista .ntodas{background:none;border:0;border-top:1px solid var(--linea);margin-top:2px;color:var(--cian);font:inherit;
+    font-size:10px;padding:6px;text-align:left;cursor:pointer}
+  #nlista .nvacio{color:var(--gris);padding:8px 6px;font-size:10.5px}
   #vistas{display:none;gap:6px;flex:0 0 auto}
   #vistas button.on{color:var(--verde);border-color:var(--verde)}
   body.sinlogin #cabecera,body.sinlogin #cuerpo{display:none}
@@ -411,10 +450,20 @@
     #nodos .nodo{min-height:32px}   /* dedo: el label se toca aunque no parezca boton */
     #notis .noti{min-height:40px;font-size:12px}   /* dedo: el aviso y su `x` se tocan con el pulgar */
     #mcuerpo textarea.nresp{font-size:16px}   /* ios no zoomea al enfocar */
-    #nodos,#vistas{gap:5px}
+    #nodos{gap:10px}
+    #vistas{gap:5px}
     #cabecera{gap:6px}
+    /* dedo: campana, persona, filas de la campana y el menu de persona con 40px (1166) */
+    .ib{width:36px;height:40px;margin:-4px 0}
+    .ib svg{width:20px;height:20px}
+    #campana .badge{top:4px;right:1px}
+    #nlista .nfila{min-height:40px}
+    #nlista .nabrir{font-size:12px}
+    #nlista .nacc{height:40px;min-width:40px;font-size:11px}
+    #nlista .ntodas{min-height:40px;font-size:11px}
+    #ctx button{min-height:40px}
     /* dedo: los botones del header de cada widget con area tactil de 40px (facundo, 2026-09-12) */
-    .caja > .tit > .wacc .wbtn{min-width:40px;min-height:40px;font-size:13px;padding:0}
+    .caja > .tit > .wacc .wbtn{min-width:40px;min-height:40px;font-size:20px;padding:0}
     .caja > .tit{min-height:40px}
     #panel-widgets{flex:1 1 auto;padding-bottom:calc(14px + env(safe-area-inset-bottom))}
     #sep{display:none}
@@ -591,12 +640,12 @@
 
 <div id="cabecera">
   <div id="nodos"></div>
-  <span id="via" class="via" title="por dónde habla el board con el server">buzón</span>
   <div id="vistas">
     <button id="ver-chat" class="bb on" type="button">chat</button>
     <button id="ver-widgets" class="bb" type="button">widgets</button>
   </div>
-  <button id="ajustes" class="bb" type="button" title="settings del board">[⚙]</button>
+  <button id="campana" class="ib" type="button" title="notificaciones" aria-label="notificaciones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 8 2.5 8h-17S6 15 6 9"/><path d="M10.3 20.5a2 2 0 0 0 3.4 0"/></svg><span id="badge" class="badge oculta"></span></button>
+  <button id="persona" class="ib" type="button" title="cuenta" aria-label="cuenta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></button>
 </div>
 
 <div id="login">
@@ -642,6 +691,9 @@
 
 <div id="ctxfondo" class="oculta"></div>
 <div id="ctx" class="oculta" role="menu"></div>
+
+<div id="nfondo" class="oculta"></div>
+<div id="nlista" class="oculta" role="menu" aria-label="notificaciones"></div>
 
 <div id="mfondo" class="oculta"></div>
 <div id="modal" class="oculta" role="dialog" aria-modal="true">
@@ -2368,14 +2420,11 @@ function lanAnuncio(d){
   if(!eps) return;
   try{ localStorage.setItem("agente_lan", JSON.stringify(eps)); }catch(x){}
 }
+// por donde habla el board (lan primero). desde la 1166 no hay cartel en el header: lo dice el menu del nodo
+// server ("habla por: ..."), y si ese menu esta abierto se repinta con el camino nuevo.
+function viaTexto(){ return lan.base ? lan.via + (lan.sinGithub ? " (sin github)" : "") : "buzón"; }
 function pintarVia(){
-  var n = $("via");
-  if(!n) return;
-  n.textContent = lan.base ? lan.via + (lan.sinGithub ? " (sin github)" : "") : "buzón";
-  n.className = "via" + (lan.base ? " directo" : "");
-  n.title = lan.base ? "el board habla directo con el server (" + lan.base + ")" +
-                       (lan.sinGithub ? ". github no contesta: el chat sigue por acá, el buzón se pone al día solo" : "")
-                     : "el board va por el buzón de github (no alcanza al server por lan ni por tailscale)";
+  if(modalAbierto && modalAbierto.nodoId === "server" && modalAbierto.reabrir) modalAbierto.reabrir();
 }
 function lanPoner(x){
   var antes = lan.base;
@@ -3960,6 +4009,7 @@ function caja(tit, extra, cuerpo, tabla, clave){
          '<button class="wbtn" type="button" data-esc="' + esc(clave) + '" title="escribir sobre este widget">✎</button>' +
          '<button class="wbtn" type="button" data-ref="' + esc(clave) + '" title="actualizar">\u21bb</button>' +
          '<button class="wbtn" type="button" data-set="' + esc(clave) + '" title="settings">\u2699</button>' +
+         '<button class="wbtn wx" type="button" data-ocultar="' + esc(clave) + '" title="ocultar este widget (vuelve desde settings del board)" aria-label="ocultar">\u00d7</button>' +
          "</span></div>" +
          '<div class="cuerpo' + (tabla ? " tabla" : "") + '">' + cuerpo + "</div></div>";
 }
@@ -4598,7 +4648,10 @@ function abrirNodo(e){
   if(!b) return;
   var n = ((widDatos || {}).nodos || {}).nodos || [];
   var x = n[+b.dataset.nodo];
-  if(x) abrirModal({tipo: "nodo", tema: x.id === "mbp" ? "tools" : "server", d: x});
+  if(!x) return;
+  abrirModal({tipo: "nodo", tema: x.id === "mbp" ? "tools" : "server", d: x});
+  // el del server dice "habla por: lan|tailscale|buzón" (1166): si cambia el camino con el menu abierto, se repinta
+  if(modalAbierto){ modalAbierto.nodoId = x.id; modalAbierto.reabrir = function(){ abrirNodo(e); }; }
 }
 $("nodos").addEventListener("click", abrirNodo);
 $("nodos").addEventListener("keydown", function(e){
@@ -4662,10 +4715,11 @@ function pintarNotis(){
   var ns = notisNoLeidas();
   notisPor = {};
   ns.forEach(function(n){ notisPor[n.id] = n; });
+  pintarCampana(ns);            // el badge y, si esta abierto, el desplegable
   if(!ns.length){ notisEl.innerHTML = ""; notisEl.classList.add("oculta"); return; }
   var n = ns[0];
-  notisEl.innerHTML = '<span class="noti" role="button" tabindex="0" data-noti="' + esc(n.id) + '" title="' +
-      esc(unaLinea(n.texto, 200)) + '"><span class="luz"></span><span class="nh">' + esc(horaNoti(n)) +
+  notisEl.innerHTML = '<span class="noti" role="button" tabindex="0" data-noti="' + esc(n.id) + '" data-nivel="' + nivelNoti(n) +
+      '" title="' + esc(unaLinea(n.texto, 200)) + '"><span class="luz ' + nivelNoti(n) + '"></span><span class="nh">' + esc(horaNoti(n)) +
       '</span><span class="nt">' + esc(unaLinea(n.texto, 160)) + "</span></span>" +
     '<button class="nx" type="button" data-notix="' + esc(n.id) + '" title="cerrar" aria-label="cerrar aviso">×</button>';
   notisEl.classList.remove("oculta");
@@ -4715,6 +4769,104 @@ $("notis").addEventListener("click", tocarNotis);
 $("notis").addEventListener("keydown", function(e){
   if(e.key === "Enter" || e.key === " "){ e.preventDefault(); tocarNotis(e); }
 });
+// ---------- campana: todas las no leidas, con badge del color de la peor (facundo, 2026-09-13, orden 1166) ----------
+// "desplegame notificaciones que yo no haya cerrado ni respondido, o que hayan sucedido durante la noche sin nadie
+// mirando el board". el badge dice cuantas y su fondo es el nivel de la peor; cada fila tiene el circulito de su
+// nivel y las mismas acciones que la tira: abrir el detalle, responder, cerrar sin responder. mas `cerrar todas`.
+// el nivel lo pone el daemon en avisos.md (`[rojo] ...`, `recetas/nivel_aviso.py`) y llega como `nivel`.
+var NIVELES_NOTI = ["rojo", "naranja", "amarillo", "verde", "gris"];   // de peor a mejor
+function nivelNoti(n){ return n && NIVELES_NOTI.indexOf(n.nivel) >= 0 ? n.nivel : "gris"; }
+function peorNivel(ns){
+  var j = NIVELES_NOTI.length - 1;
+  (ns || []).forEach(function(n){ j = Math.min(j, NIVELES_NOTI.indexOf(nivelNoti(n))); });
+  return NIVELES_NOTI[j];
+}
+var campanaAbierta = false;
+function pintarCampana(ns){
+  ns = ns || notisNoLeidas();
+  var b = $("badge"), c = $("campana");
+  if(b){
+    b.textContent = ns.length ? (ns.length > 99 ? "99+" : String(ns.length)) : "";
+    b.className = "badge " + (ns.length ? peorNivel(ns) : "oculta");
+  }
+  if(c) c.title = ns.length ? "notificaciones: " + ns.length + " sin leer" : "notificaciones";
+  if(campanaAbierta) pintarListaNotis(ns);
+}
+function pintarListaNotis(ns){
+  var el = $("nlista");
+  el.innerHTML = '<div class="ntit">notificaciones · ' + (ns.length ? ns.length + " sin leer" : "al día") + "</div>" +
+    (ns.length ? ns.map(function(n){
+      return '<div class="nfila" data-nid="' + esc(n.id) + '">' +
+        '<button class="nabrir" type="button" data-nabrir="' + esc(n.id) + '" title="' + esc(unaLinea(n.texto, 200)) + '">' +
+          '<span class="luz ' + nivelNoti(n) + '"></span><span class="nh">' + esc(horaNoti(n)) + "</span>" +
+          '<span class="nt">' + esc(unaLinea(n.texto, 160)) + "</span></button>" +
+        '<button class="nacc" type="button" data-nresp="' + esc(n.id) + '">responder</button>' +
+        '<button class="nacc nx" type="button" data-ncerrar="' + esc(n.id) + '" title="cerrar sin responder" ' +
+          'aria-label="cerrar sin responder">×</button></div>';
+    }).join("") + '<button class="ntodas" type="button" data-ntodas="1">cerrar todas</button>'
+    : '<div class="nvacio">nada sin leer</div>');
+}
+function abrirCampana(){
+  cerrarMenu();
+  campanaAbierta = true;
+  var el = $("nlista");
+  pintarListaNotis(notisNoLeidas());
+  el.style.top = Math.round($("cabecera").getBoundingClientRect().bottom + 4) + "px";
+  el.classList.remove("oculta");
+  $("nfondo").classList.remove("oculta");
+  $("campana").classList.add("on");
+  return true;
+}
+function cerrarCampana(){
+  if(!campanaAbierta) return;
+  campanaAbierta = false;
+  $("nlista").classList.add("oculta"); $("nlista").innerHTML = "";
+  $("nfondo").classList.add("oculta");
+  $("campana").classList.remove("on");
+}
+$("campana").addEventListener("click", function(){ if(campanaAbierta) cerrarCampana(); else abrirCampana(); });
+$("nfondo").addEventListener("click", cerrarCampana);
+$("nlista").addEventListener("click", function(e){
+  var t = e.target.closest("[data-ncerrar]");
+  if(t){ marcarLeidos([t.dataset.ncerrar]); return; }            // repinta la lista y baja el badge
+  t = e.target.closest("[data-ntodas]");
+  if(t){ marcarLeidos(notisNoLeidas().map(function(n){ return n.id; })); return; }
+  t = e.target.closest("[data-nresp]");
+  if(t){
+    var id = t.dataset.nresp;
+    cerrarCampana();
+    if(abrirNoti(id)){ var c = $("notiresp"); if(c) c.focus(); }
+    return;
+  }
+  t = e.target.closest("[data-nabrir]");
+  if(t){ var id2 = t.dataset.nabrir; cerrarCampana(); abrirNoti(id2); }
+});
+
+// ---------- persona: menu de cuenta (facundo, 2026-09-13, orden 1166) ----------
+// reemplaza al `[⚙]` de arriba a la derecha: cuenta de claude en uso y cambiarla (`cuenta facu|orugote|auto`, sin
+// modelo), settings del board, `reinicia` con confirmacion y abajo de todo `salir`.
+function cuentaEnUso(){
+  var rep = ((widDatos || {}).usage || {}).reparto || {};
+  return {elegida: rep.elegida || ((widDatos || {}).agente || {}).cuenta || "", modo: rep.modo || ""};
+}
+function abrirPersona(){
+  cerrarCampana();
+  var r = $("persona").getBoundingClientRect(), cu = cuentaEnUso(), auto = cu.modo === "auto";
+  var cuentas = cuentasConocidas();
+  if(!cuentas.length) cuentas = ["facu", "orugote"];
+  var ops = cuentas.map(function(c){
+    return [(!auto && c === cu.elegida ? "● " : "○ ") + "cuenta " + c,
+            function(){ actuar("tools", "cuenta " + c, true); }];
+  });
+  ops.push([(auto ? "● " : "○ ") + "cuenta auto", function(){ actuar("tools", "cuenta auto", true); }]);
+  ops.push(["settings del board", function(){ pintarModal(modalBoard()); }]);
+  ops.push(["reinicia", function(){ pintarModal(modalReinicia()); }]);
+  ops.push(["salir", function(){ pintarModal(modalSalir()); }]);
+  return menu(Math.round(r.right - 210), Math.round(r.bottom + 4),
+              "cuenta en uso: " + (cu.elegida || "?") + (auto ? " (auto)" : ""), ops, null);
+}
+$("persona").addEventListener("click", abrirPersona);
+
 // en la caja de respuesta: cmd/ctrl+enter manda (enter solo hace salto, como en el celu)
 document.addEventListener("keydown", function(e){
   if(e.target && e.target.id === "notiresp" && e.key === "Enter" && (e.metaKey || e.ctrlKey)){
@@ -4934,6 +5086,8 @@ widgetsEl.addEventListener("click", function(e){
   if(ref){ refrescarWidgets(ref.dataset.ref); return; }
   var set = e.target.closest("button[data-set]");         // [⚙] settings de ese widget
   if(set){ abrirSets(set.dataset.set); return; }
+  var ocw = e.target.closest("button[data-ocultar]");     // [×] oculta la caja (1166): vuelve desde settings del board
+  if(ocw){ guardarWset(ocw.dataset.ocultar, "oculto", true); return; }
   var fold = e.target.closest("[data-fold]");             // tocar el titulo pliega y despliega
   if(fold){
     guardarWset(fold.dataset.fold, "plegado", !wset(fold.dataset.fold, "plegado"));
@@ -5209,6 +5363,8 @@ function modalDe(o){
             ? ' <span class="g">publica en el buz\u00f3n hace</span> ' + haceSeg(d.publica_hace_s) : "")
         : '  <span class="g">no publica (respaldo)</span>') +
       (d.aqui ? '  <span class="g">(el chat corre aca)</span>' : "") +
+      (d.id === "server" ? '\n<span class="g">habla por:</span> <span class="' + (lan.base ? "v" : "g") + '">' +
+        esc(viaTexto()) + "</span>" : "") +
       (d.senal_hace_s !== null && d.senal_hace_s !== undefined
         ? '\n<span class="g">ultima se\u00f1al</span> hace ' + haceSeg(d.senal_hace_s) : "") +
       (d.pid ? '  <span class="g">pid</span> ' + d.pid : "") +
@@ -5611,7 +5767,7 @@ if(mqMobile){
 })();
 $("ddfondo").addEventListener("click", cerrarDd);
 document.addEventListener("keydown", function(e){
-  if(e.key === "Escape"){ cerrarMenu(); cerrarDd(); cerrarModal(); return; }
+  if(e.key === "Escape"){ cerrarMenu(); cerrarDd(); cerrarModal(); cerrarCampana(); return; }
   // con el modal abierto, a/b/c dispara la accion de esa letra
   if(!modalAbierto || e.metaKey || e.ctrlKey || e.altKey) return;
   if(e.target && /^(TEXTAREA|INPUT)$/.test(e.target.tagName || "")) return;   // escribiendo (la respuesta de un aviso)
@@ -5682,30 +5838,38 @@ function entrarConClave(){
 }
 $("entrar-clave").addEventListener("click", entrarConClave);
 $("clave").addEventListener("keydown", function(e){ if(e.key === "Enter") entrarConClave(); });
-// `[⚙]` de la barra (facundo, 2026-09-13): settings del board. `salir` vive aca y no en la barra, asi la
-// barra entra en la franja del titulo de la pwa. primer toque pide confirmacion en rojo, 4 s para el segundo.
-var salirT = null;
-function modalBoard(confirmar){
+// settings del board (se abre desde el menu de persona, 1166): push y los widgets ocultos con la `x` del header.
+// `salir` y `reinicia` viven en el menu de persona, cada uno con su confirmacion en rojo.
+function modalBoard(){
+  var ocultas = clavesW.filter(ocultoW);
   var m = {titulo: "settings · board", tema: "tools", board: true, acciones: [],
-           cuerpo: '<span class="g">de este dispositivo.</span>'};
+           cuerpo: '<span class="g">de este dispositivo.</span>\n\n<span class="g">widgets ocultos:</span> ' +
+                   (ocultas.length ? '<span class="c">' + ocultas.map(esc).join(" · ") + "</span>"
+                                   : '<span class="g">ninguno (la × del header de cada widget lo oculta)</span>')};
   // push al celu (1163): vivia en el widget `avisos`, que se saco; los avisos van por la tira de notificaciones.
   // ios pide permiso solo dentro de un toque: la accion llama directo a activarPush
   m.acciones.push(["notificaciones: " + pushTexto(), function(){
     var r = activarPush();
-    (r && r.then ? r : Promise.resolve()).then(function(){ if(modalAbierto && modalAbierto.board) pintarModal(modalBoard(false)); });
+    (r && r.then ? r : Promise.resolve()).then(function(){ if(modalAbierto && modalAbierto.board) pintarModal(modalBoard()); });
   }, false]);
-  m.acciones.push([confirmar ? "borrar token?" : "salir", function(){
-    clearTimeout(salirT);
-    if(confirmar){ cerrarModal(); pedirToken("token borrado de este teléfono."); return; }
-    pintarModal(modalBoard(true));
-    salirT = setTimeout(function(){
-      if(modalAbierto && modalAbierto.board) pintarModal(modalBoard(false));
-    }, 4000);
-  }, false, confirmar ? "confirmar" : ""]);
-  m.acciones.push(["cerrar", function(){ clearTimeout(salirT); cerrarModal(); }, true]);
+  ocultas.forEach(function(c){
+    m.acciones.push(["mostrar " + c, function(){ guardarWset(c, "oculto", false); pintarModal(modalBoard()); }, false]);
+  });
+  m.acciones.push(["cerrar", cerrarModal, true]);
   return m;
 }
-$("ajustes").addEventListener("click", function(){ pintarModal(modalBoard(false)); });
+function modalReinicia(){
+  return {titulo: "reinicia · daemon", tema: "tools", board: true, acciones: [
+            ["sí, reiniciar", function(){ actuar("tools", "reinicia", true); }, false, "confirmar"],
+            ["cancelar", cerrarModal, true]],
+          cuerpo: '<span class="g">reinicio diferido: espera a que no quede ninguna tarea corriendo. no gasta tokens.</span>'};
+}
+function modalSalir(){
+  return {titulo: "salir", tema: "tools", board: true, acciones: [
+            ["borrar token?", function(){ cerrarModal(); pedirToken("token borrado de este teléfono."); }, false, "confirmar"],
+            ["cancelar", cerrarModal, true]],
+          cuerpo: '<span class="g">borra el token de este dispositivo. para volver a entrar hace falta la clave.</span>'};
+}
 
 var guardado = urlSucia;
 if(!guardado){ try{ guardado = localStorage.getItem("agente_token"); }catch(x){} }
@@ -5755,8 +5919,9 @@ window.__agente = {
     var el = $("notis");
     return {visible: !el.classList.contains("oculta") && el.offsetHeight > 0,
             filas: [].map.call(el.querySelectorAll(".noti"), function(b){
-              var r = b.getBoundingClientRect();
-              return {id: b.dataset.noti, hora: (b.querySelector(".nh") || {}).textContent,
+              var r = b.getBoundingClientRect(), lz = b.querySelector(".luz");
+              return {id: b.dataset.noti, nivel: b.dataset.nivel || "", fondo: lz ? getComputedStyle(lz).backgroundColor : "",
+                      hora: (b.querySelector(".nh") || {}).textContent,
                       texto: (b.querySelector(".nt") || {}).textContent, tag: b.tagName, alto: Math.round(r.height)};
             }),
             mas: (el.querySelector(".nmas") || {}).textContent || "",
@@ -5842,13 +6007,18 @@ window.__agente = {
               refrescar: !!(t.querySelector && t.querySelector("[data-ref]")),
               escribir: !!(t.querySelector && t.querySelector("[data-esc]")),
               settings: !!(t.querySelector && t.querySelector("[data-set]")),
+              ocultar: !!(t.querySelector && t.querySelector("[data-ocultar]")),
+              iconos: t.querySelectorAll ? [].map.call(t.querySelectorAll(".wbtn"), function(b){
+                var r = b.getBoundingClientRect();
+                return [parseFloat(getComputedStyle(b).fontSize), Math.round(r.width), Math.round(r.height)]; }) : [],
               plegada: c.classList.contains("plegada"),
               filas: ((c.querySelector(".cuerpo") || {}).textContent || "").split("\n").length};
     });
   },
   tocarHeader: function(clave, que){
     var n = document.querySelector('#widgets .caja[data-w="' + clave + '"] ' +
-      (que === "fold" ? "[data-fold]" : que === "set" ? "[data-set]" : que === "esc" ? "[data-esc]" : "[data-ref]"));
+      (que === "fold" ? "[data-fold]" : que === "set" ? "[data-set]" : que === "esc" ? "[data-esc]" :
+       que === "x" ? "[data-ocultar]" : "[data-ref]"));
     if(!n) return false;
     n.click(); return true;
   },
@@ -5962,7 +6132,30 @@ window.__agente = {
   ponerTabs: function(){ var t0 = token; token = token || "t-prueba"; tabsListo = true; tabsSync = true;
                          frenoHasta = 0; var p = ponerTabs(false); token = t0; return p; },
   sinGithub: function(){ return !!lan.sinGithub; },
-  lan: function(){ return {base: lan.base, via: lan.via, texto: ($("via") || {}).textContent}; },
+  lan: function(){ return {base: lan.base, via: lan.via, texto: viaTexto(), cartel: !!$("via")}; },
+  // campana, persona y la `x` de los widgets (1166)
+  abrirCampana: abrirCampana, cerrarCampana: cerrarCampana, abrirPersona: abrirPersona, peorNivel: peorNivel,
+  campana: function(){
+    var b = $("badge"), c = $("campana"), l = $("nlista"), rc = c.getBoundingClientRect();
+    return {n: b.classList.contains("oculta") ? 0 : parseInt(b.textContent, 10) || 0, texto: b.textContent,
+            nivel: NIVELES_NOTI.filter(function(x){ return b.classList.contains(x); })[0] || null,
+            fondo: getComputedStyle(b).backgroundColor, ancho: Math.round(rc.width), alto: Math.round(rc.height),
+            svg: !!c.querySelector("svg"), borde: getComputedStyle(c).borderTopWidth, bg: getComputedStyle(c).backgroundColor,
+            izqPersona: rc.right <= $("persona").getBoundingClientRect().left + 1,
+            abierta: !l.classList.contains("oculta"), todas: !!l.querySelector("[data-ntodas]"),
+            filas: [].map.call(l.querySelectorAll(".nfila"), function(f){
+              var r = f.getBoundingClientRect(), lz = f.querySelector(".luz");
+              return {id: f.dataset.nid, nivel: lz ? lz.className.replace("luz", "").trim() : "",
+                      fondo: lz ? getComputedStyle(lz).backgroundColor : "", hora: (f.querySelector(".nh") || {}).textContent,
+                      texto: (f.querySelector(".nt") || {}).textContent, alto: Math.round(r.height),
+                      acciones: [].map.call(f.querySelectorAll(".nacc"), function(a){ return a.title || a.textContent; })};
+            })};
+  },
+  persona: function(){
+    var p = $("persona"), r = p.getBoundingClientRect(), s = getComputedStyle(p);
+    return {svg: !!p.querySelector("svg"), ancho: Math.round(r.width), alto: Math.round(r.height), borde: s.borderTopWidth,
+            bg: s.backgroundColor, bb: p.classList.contains("bb"), ajustes: !!$("ajustes")};
+  },
   subirBuzon: subirBuzon, cargarComentarios: cargarComentarios, cargarWidgets: cargarWidgets, bajarBlob: bajarBlob,
   normTema: normTema, padreTema: padreTema,
   resaltar: resaltar, pintarWidgets: pintarWidgets, refrescarEdad: refrescarEdad,
