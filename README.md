@@ -1092,3 +1092,21 @@ probar: `python3 -m recetas.prueba_chat_lan` (el endpoint real con github falso)
   desde settings del board o desde el pie.
 - **via**: ya no hay cartel en el header; el menu del nodo server dice `habla por: lan|tailscale|buzón`.
 - se prueba en `prueba_web_tabs` (bloque 1166) y el nivel en `prueba_web` y `daemon.py --prueba`.
+
+## tonos de fondo (facundo, 2026-09-13, ordenes 1188 y 1190)
+
+sin bordes y con **look plano**: chat, panel de widgets y cajas casi del mismo tono, la diferencia
+justa para distinguir el panel. los tonos salen de variables css en `:root` de `web/index.html`,
+no de hex sueltos:
+
+| variable | nivel | quien lo usa | hoy |
+|---|---|---|---|
+| `--fondo-chat` | 0 | `#panel-chat` | `#000000` |
+| `--fondo-panel` | 1 | `#panel-widgets`, `#notis`, `#sync` | `#040404` |
+| `--fondo-caja` | 2 | `.caja`, pestaña activa | `#080808` |
+| `--fondo-hundido` | 3 | pista de las barras de `usage` | `#0b0b0b` |
+
+**para ajustar el contraste se toca `--tono-paso`** (hoy `1.5%`: cuanto aclara cada nivel sobre
+`--tono-base`) y los tres niveles se recalculan con `color-mix`. los hex de la tabla estan escritos
+como fallback para un navegador sin `color-mix`; si se cambia `--tono-paso`, actualizar tambien esos
+fallbacks. vale igual en desktop y en celu (el mismo panel ocupa toda la pantalla).

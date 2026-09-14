@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.219">
-<link rel="manifest" href="manifest.json?v=4.219">
+<meta name="agente-web-version" content="4.220">
+<link rel="manifest" href="manifest.json?v=4.220">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -33,6 +33,25 @@
     --magenta:#ff4fd8; --rojo:#ff4d4d; --amarillo:#ffd60a; --linea:#1c1c1c;
     --verde-tenue:#1f7a12; --linea-clara:#3a3a3a; --yo:#9be88a;
     --naranja:#ff9f1a;
+    /* ---------- tonos de fondo (facundo, 2026-09-13, orden 1190) ----------
+       look plano: chat, panel de widgets y cajas casi del mismo tono, la diferencia justa para
+       distinguir el panel. se ajusta en un solo lugar: `--tono-paso` es cuanto aclara cada nivel
+       sobre `--tono-base`. nivel 0 = chat, 1 = panel (y sus barras: notis, sync), 2 = caja y
+       pestaña activa, 3 = lo hundido dentro de una caja (pista de las barras de usage).
+       los hex de abajo son el fallback si el navegador no tiene `color-mix`. */
+    --tono-base:#000000;
+    --tono-paso:1.5%;
+    --fondo-chat:var(--tono-base);
+    --fondo-panel:#040404;
+    --fondo-caja:#080808;
+    --fondo-hundido:#0b0b0b;
+  }
+  @supports (background: color-mix(in srgb, #fff 1%, #000)){
+    :root{
+      --fondo-panel:color-mix(in srgb, #fff var(--tono-paso), var(--tono-base));
+      --fondo-caja:color-mix(in srgb, #fff calc(var(--tono-paso) * 2), var(--tono-base));
+      --fondo-hundido:color-mix(in srgb, #fff calc(var(--tono-paso) * 3), var(--tono-base));
+    }
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0;background:#000;color:var(--blanco)}
@@ -265,10 +284,10 @@
   }
   /* ---------- web 2: dos paneles (chat | widgets) ---------- */
   #cuerpo{flex:1 1 auto;min-height:0;display:flex;flex-direction:row}
-  #panel-chat{flex:1 1 auto;min-width:0;display:flex;flex-direction:column}
+  #panel-chat{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;background:var(--fondo-chat)}
   /* sin bordes (orden 1188): el panel de widgets va un tono arriba del chat y cada caja otro tono mas */
   #panel-widgets{
-    flex:0 0 420px;min-width:0;overflow-y:auto;background:#060606;
+    flex:0 0 420px;min-width:0;overflow-y:auto;background:var(--fondo-panel);
     padding:8px 10px calc(8px + env(safe-area-inset-bottom)) 10px;
     -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
   }
@@ -286,7 +305,7 @@
   #sep:hover::after,#sep.arrastrando::after{background:var(--verde);box-shadow:0 0 6px var(--verde)}
   body.arrastrando-sep{cursor:col-resize}
   body.arrastrando-sep #hist,body.arrastrando-sep #panel-widgets{pointer-events:none}
-  .caja{border:0;outline:0;background:#0e0e0e;border-radius:6px;padding:7px 9px 8px 9px;margin:0 0 8px 0}
+  .caja{border:0;outline:0;background:var(--fondo-caja);border-radius:6px;padding:7px 9px 8px 9px;margin:0 0 8px 0}
   .caja > .tit{
     color:var(--gris);font-size:9px;letter-spacing:.06em;text-transform:uppercase;
     margin:0 0 5px 0;display:flex;justify-content:space-between;gap:8px;align-items:center;
@@ -348,7 +367,7 @@
   .ub{display:flex;align-items:center;gap:6px;margin:0 0 5px 0}
   .ub-n{flex:0 0 34px;color:var(--gris);font-size:10px;letter-spacing:.04em}
   .ub-pista{
-    flex:1 1 auto;min-width:0;position:relative;height:11px;background:#0d0d0d;
+    flex:1 1 auto;min-width:0;position:relative;height:11px;background:var(--fondo-hundido);
     border:1px solid var(--linea);border-radius:2px;overflow:hidden;
   }
   .ub-lleno{position:absolute;left:0;top:0;bottom:0;background:#333;border-radius:1px}
@@ -501,7 +520,7 @@
   }
   #tabs .tab.enpanel{color:var(--cian)}
   #tabs .tab.activo{
-    color:var(--verde);background:#0e0e0e;
+    color:var(--verde);background:var(--fondo-caja);
   }
   #tabs .tab .x{color:#555;margin-left:7px}
   #tabs .barrabtn{
@@ -515,7 +534,7 @@
      solo el ultimo aviso sin leer, debajo de las pestañas, en una linea (hora + primeras palabras), sin look de
      boton como la barra de nodos. tocar abre el detalle; la `x` lo marca leido y pasa al siguiente (1170: "leer
      mas no, solo la ultima. y que se pueda cerrar"). la lista entera vive en la campanita del header. */
-  #notis{flex:0 0 auto;display:flex;align-items:center;padding:0 0 0 10px;background:#060606}
+  #notis{flex:0 0 auto;display:flex;align-items:center;padding:0 0 0 10px;background:var(--fondo-panel)}
   #notis.oculta{display:none}
   #notis .noti{flex:1 1 auto;display:flex;align-items:center;gap:6px;min-width:0;background:none;border:0;padding:0;margin:0;
     color:var(--blanco);font-size:10px;line-height:18px;cursor:pointer;white-space:nowrap;
@@ -534,7 +553,7 @@
      estado real: mientras baja el buzon se ve esta linea y lo cacheado queda apagado. */
   #sync{
     flex:0 0 auto;padding:2px 10px;font-size:10px;color:var(--cian);
-    background:#060606;
+    background:var(--fondo-panel);
   }
   #sync.oculta{display:none}
   #sync.off{color:var(--amarillo)}
