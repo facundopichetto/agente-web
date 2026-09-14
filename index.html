@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.213">
-<link rel="manifest" href="manifest.json?v=4.213">
+<meta name="agente-web-version" content="4.214">
+<link rel="manifest" href="manifest.json?v=4.214">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2905,15 +2905,37 @@ function pintarVuelo(){
 // el estimado se quedo corto se clava en `1s` (el `+Ns` y el total real quedan para el header `12s · fable`).
 // reloj del celu corrido: `desfase` = lo minimo que tardo un estado en llegar contra su `ts` (local - daemon); si
 // pasa de ETA_DESFASE_MS es el reloj y no la red, y el fin se corre a hora local.
+// 1171 (awtomic, 60 s con eta de ~25: el `1s` quedo clavado medio minuto): pasado el fin, `1s` se ve como mucho
+// ETA_CLAVADO_MS y se reestima en el acto con `recientes_s` (los totales reales de las ultimas 10 respuestas de esa
+// pestaña y modelo, `recetas/eta_chat.recientes`): p75 de las que tardaron mas que lo transcurrido, y si ninguna
+// tardo tanto, lo transcurrido + max(5 s, 25%). la cuenta sigue bajando desde ahi; nunca mas de 2 s en `1s`.
 var ETA_SUBE_MS = 1500;   // un reestimado que corre el fin menos que esto para arriba no se pinta (sin saltos raros)
 var ETA_DESFASE_MS = 3000;
-function etaFin(inicio, eta){
+var ETA_CLAVADO_MS = 1000;
+function etaFin(inicio, eta, ahora){
   var fin = inicio + eta * 1000;
+  // un eta del daemon que ya vencio no deshace la reestimacion local (volveria a clavar `1s`)
+  if(vuelo.reest && ahora !== undefined && fin < vuelo.fin && fin <= ahora + ETA_CLAVADO_MS) return;
   if(!vuelo.fin || fin < vuelo.fin || fin > vuelo.fin + ETA_SUBE_MS) vuelo.fin = fin;
+}
+function etaReestimar(ahora){
+  if(!vuelo || !vuelo.fin || ahora < vuelo.fin + ETA_CLAVADO_MS) return false;
+  var base = vuelo.base || vuelo.t, trans = (ahora - base) / 1000;
+  var quedan = (vuelo.recientes || []).filter(function(x){ return x > trans + 1; }).sort(function(a, b){ return a - b; });
+  var total = trans + Math.max(5, trans * 0.25);
+  if(quedan.length){
+    var i = 0.75 * (quedan.length - 1), lo = Math.floor(i), hi = Math.min(lo + 1, quedan.length - 1);
+    total = quedan[lo] + (quedan[hi] - quedan[lo]) * (i - lo);
+  }
+  vuelo.fin = base + Math.max(total, trans + 2) * 1000;
+  vuelo.reest = (vuelo.reest || 0) + 1;
+  return true;
 }
 function etaFalta(ahora){
   if(!vuelo || !vuelo.fin) return null;
-  return Math.max(1, Math.ceil((vuelo.fin - (ahora === undefined ? Date.now() : ahora)) / 1000));
+  ahora = ahora === undefined ? Date.now() : ahora;
+  etaReestimar(ahora);
+  return Math.max(1, Math.ceil((vuelo.fin - ahora) / 1000));
 }
 function etaTexto(ahora){
   var f = etaFalta(ahora);
@@ -2936,7 +2958,11 @@ function recibirEstado(e, ahora){
   if(e.ts){ var d = ahora - e.ts * 1000; if(vuelo.desfase === undefined || vuelo.desfase === null || d < vuelo.desfase) vuelo.desfase = d; }
   var corr = Math.abs(vuelo.desfase || 0) > ETA_DESFASE_MS ? vuelo.desfase : 0;
   if(e.ts_inicio) vuelo.inicio = e.ts_inicio * 1000;
-  if(e.eta_respuesta_s || e.eta_s){ vuelo.eta = e.eta_respuesta_s || e.eta_s; etaFin((vuelo.inicio || vuelo.t) + corr, vuelo.eta); }
+  vuelo.base = (vuelo.inicio || vuelo.t) + corr;
+  if(e.recientes_s && e.recientes_s.length) vuelo.recientes = e.recientes_s;
+  var mismo = e.ts && e.ts === vuelo.ultTs;   // el mismo estado releido (poll sin etag) no vuelve a mover el fin
+  vuelo.ultTs = e.ts;
+  if(!mismo && (e.eta_respuesta_s || e.eta_s)){ vuelo.eta = e.eta_respuesta_s || e.eta_s; etaFin(vuelo.base, vuelo.eta, ahora); }
   if((e.fase === "listo" || e.fase === "sin claude") && !vuelo.listo) vuelo.listo = Date.now();
   pintarVuelo();
   return true;
