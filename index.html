@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.231">
-<link rel="manifest" href="manifest.json?v=4.231">
+<meta name="agente-web-version" content="4.232">
+<link rel="manifest" href="manifest.json?v=4.232">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -634,6 +634,22 @@
   /* ---------- modal de item de widget (facundo, 2026-09-11) ----------
      tocar cualquier fila de un widget la expande y ofrece 2 a 4 acciones a/b/c. look terminal. */
   .it{cursor:pointer;border-radius:3px}
+  /* `que ver` (1229): cada fila se swipea en celu (derecha = visto, izquierda = no me interesa) y en
+     desktop muestra dos botones al pasar el mouse. sin bordes, tonos de la caja. */
+  .qv{position:relative;display:inline-block;width:100%;vertical-align:top;overflow:hidden;border-radius:4px;touch-action:pan-y}
+  .qv .qvin{position:relative;display:block;background:var(--fondo-caja);will-change:transform}
+  .qv.suelta .qvin{transition:transform .18s ease-out}
+  .qv .qvf{position:absolute;inset:0;display:none;align-items:center;padding:0 10px;font-size:10.5px;color:#000;font-weight:700}
+  .qv .qvf.qvv{background:var(--verde);justify-content:flex-start}
+  .qv .qvf.qvn{background:var(--rojo);justify-content:flex-end}
+  .qv.der .qvf.qvv,.qv.izq .qvf.qvn{display:flex}
+  .qv.listo .qvf{filter:brightness(1.15)}
+  .qv.chau{transition:max-height .2s ease-in .16s,opacity .2s ease-in .16s;max-height:0 !important;opacity:0}
+  .qv .qvb{display:none;position:absolute;top:0;right:0;gap:4px;background:var(--fondo-caja);padding:0 0 2px 6px}
+  .qv .qvb button{border:0;outline:0;background:#000;color:var(--gris);font:inherit;font-size:10px;padding:1px 6px;border-radius:3px;cursor:pointer}
+  .qv .qvb button[data-qvacc="visto"]:hover{color:var(--verde)}
+  .qv .qvb button[data-qvacc="no"]:hover{color:var(--rojo)}
+  @media (hover:hover) and (pointer:fine){ .qv:hover .qvb{display:flex} }
   .it:hover{background:#0d1410}
   #mfondo{position:fixed;inset:0;z-index:29;background:rgba(0,0,0,.65)}
   #mfondo.oculta,#modal.oculta{display:none}
@@ -5044,8 +5060,23 @@ function cajaMail(p){
 
 // que filas se ven segun el `[⚙]`: fuente, cuantas por fuente y "solo lo nuevo". el json trae
 // `candidatos` (todo lo que hay), asi que cambiar una setting no vuelve a pedirle nada a nadie.
+// lo que facundo ya saco con swipe o boton (1229): se esconde en el acto, sin esperar a que el daemon
+// republique `widgets.json`. vence a los 2 dias (para entonces la receta ya no lo manda).
+var QV_OCULTOS = "agente_que_ver_ocultos", QV_VIDA_MS = 2 * 86400000, QV_UMBRAL = 0.4;
+function qvOcultos(){
+  var o = {}, ahora = Date.now(), cambio = false;
+  try{ o = JSON.parse(localStorage.getItem(QV_OCULTOS) || "{}") || {}; }catch(x){ o = {}; }
+  Object.keys(o).forEach(function(k){ if(!(ahora - (+o[k] || 0) < QV_VIDA_MS)){ delete o[k]; cambio = true; } });
+  if(cambio) try{ localStorage.setItem(QV_OCULTOS, JSON.stringify(o)); }catch(x){}
+  return o;
+}
+function qvOcultar(id){
+  var o = qvOcultos(); o[id] = Date.now();
+  try{ localStorage.setItem(QV_OCULTOS, JSON.stringify(o)); }catch(x){}
+}
 function filasQueVer(p){
-  var cand = p.candidatos || p.items || [];
+  var oc = qvOcultos();
+  var cand = (p.candidatos || p.items || []).filter(function(i){ return !oc[i.id]; });
   var fu = wset("que_ver", "fuentes"), porF = +wset("que_ver", "por_fuente") || 2;
   var nuevos = !!wset("que_ver", "solo_nuevos"), tope = +p.tope || 5;
   var libres = cand.filter(function(i){
@@ -5053,7 +5084,8 @@ function filasQueVer(p){
     if(nuevos && String(i.porque || "").indexOf("nuevo") !== 0) return false;
     return true;
   });
-  if(fu === "todas" && porF === 2 && !nuevos && (p.items || []).length) return p.items;
+  if(fu === "todas" && porF === 2 && !nuevos && (p.items || []).length &&
+     !(p.items || []).some(function(i){ return oc[i.id]; })) return p.items;
   var out = [], cuenta = {};
   [porF, tope].forEach(function(lim){
     libres.forEach(function(i){
@@ -5077,10 +5109,14 @@ function cajaQueVer(p){
   var extra = '<span class="v b">' + its.length + "</span> " +
               '<span class="g">' + esc((p.con_sesion || []).join(" · ")) + "</span>";
   var filas = its.map(function(i, n){
-    return it({tipo: "queVer", tema: "tools", d: i},
+    return '<span class="qv" data-qv="' + esc(i.id) + '" data-qvt="' + esc(corto(i.titulo, 60)) + '">' +
+      '<span class="qvf qvv">visto</span><span class="qvf qvn">no me interesa</span>' +
+      '<span class="qvin">' + it({tipo: "queVer", tema: "tools", d: i},
       '<span class="c b">' + (n + 1) + '</span> <span class="g">' + esc(i.nombre) + "</span> " +
       esc(corto(i.titulo, 64)) + ' <span class="g">' + esc(i.porque) + "</span>") +
-      "\n  " + link(i.url, "abrir");
+      "\n  " + link(i.url, "abrir") + "</span>" +
+      '<span class="qvb"><button type="button" data-qvacc="visto" title="marcar como visto">visto</button>' +
+      '<button type="button" data-qvacc="no" title="no me interesa">no me interesa</button></span></span>';
   });
   if((p.falta_login || []).length && wset("que_ver", "falta_login"))
     filas.push('<span class="a">falta login: ' + esc(p.falta_login.join(", ")) + "</span> " +
@@ -5514,6 +5550,71 @@ widgetsEl.addEventListener("pointerdown", function(e){
   document.addEventListener("pointercancel", fin);
 });
 
+// ---------- swipe de `que ver` (facundo, 2026-09-14, orden 1229) ----------
+// derecha = visto (verde), izquierda = no me interesa (rojo). pasado el 40% del ancho al soltar se aplica
+// y la fila se va; si no, vuelve. solo arranca si el dedo va de costado: un scroll vertical no lo toca.
+// la accion sale como comando crudo (`que ver visto <id>` / `que ver no <id>`), la contesta el daemon sin modelo.
+var qvSw = null, qvUlt = 0;
+function qvMandar(msg, intentos){
+  if(enviando && intentos > 0){ setTimeout(function(){ qvMandar(msg, intentos - 1); }, 700); return; }
+  mandar(msg, "tools", true);
+}
+function qvAplicar(fila, accion, dir){
+  if(!fila || fila.classList.contains("chau")) return false;
+  var id = fila.dataset.qv, inn = fila.querySelector(".qvin");
+  qvOcultar(id);
+  fila.classList.add("suelta", dir > 0 ? "der" : "izq");
+  fila.classList.remove(dir > 0 ? "izq" : "der");
+  fila.style.maxHeight = fila.offsetHeight + "px";
+  if(inn) inn.style.transform = "translateX(" + (dir > 0 ? "" : "-") + "110%)";
+  void fila.offsetHeight;
+  fila.classList.add("chau");
+  setTimeout(function(){ if(!arrW) pintarWidgets(null); }, 420);   // antes de mandar: si mandar tira, la fila igual se va
+  try{ qvMandar("que ver " + (accion === "visto" ? "visto " : "no ") + id, 8); }catch(x){}
+  return true;
+}
+function qvVolver(fila){
+  var inn = fila.querySelector(".qvin");
+  fila.classList.add("suelta");
+  if(inn) inn.style.transform = "";
+  setTimeout(function(){ fila.classList.remove("suelta", "der", "izq", "listo"); }, 200);
+}
+widgetsEl.addEventListener("touchstart", function(e){
+  qvSw = null;
+  if(e.touches.length !== 1) return;
+  var f = e.target.closest && e.target.closest(".qv");
+  if(!f || f.classList.contains("chau")) return;
+  qvSw = {fila: f, x: e.touches[0].clientX, y: e.touches[0].clientY, dx: 0, lado: false, ancho: f.offsetWidth || 1};
+}, {passive: true});
+widgetsEl.addEventListener("touchmove", function(e){
+  var s = qvSw, p = e.touches[0];
+  if(!s || !p || arrW) return;
+  var dx = p.clientX - s.x, dy = p.clientY - s.y;
+  if(!s.lado){
+    if(Math.abs(dy) > 10 && Math.abs(dy) >= Math.abs(dx)){ qvSw = null; return; }   // era un scroll
+    if(Math.abs(dx) < 10) return;
+    s.lado = true;
+    s.fila.classList.remove("suelta");
+  }
+  e.preventDefault();
+  s.dx = dx;
+  s.fila.classList.toggle("der", dx > 0);
+  s.fila.classList.toggle("izq", dx < 0);
+  s.fila.classList.toggle("listo", Math.abs(dx) >= s.ancho * QV_UMBRAL);
+  var inn = s.fila.querySelector(".qvin");
+  if(inn) inn.style.transform = "translateX(" + dx + "px)";
+}, {passive: false});
+["touchend", "touchcancel"].forEach(function(ev){
+  widgetsEl.addEventListener(ev, function(){
+    var s = qvSw; qvSw = null;
+    if(!s || !s.lado) return;
+    qvUlt = Date.now();
+    if(ev === "touchend" && Math.abs(s.dx) >= s.ancho * QV_UMBRAL)
+      qvAplicar(s.fila, s.dx > 0 ? "visto" : "no", s.dx > 0 ? 1 : -1);
+    else qvVolver(s.fila);
+  }, {passive: true});
+});
+
 widgetsEl.addEventListener("touchstart", function(e){
   arrCancelarHold();
   if(e.touches.length !== 1 || arrW) return;
@@ -5548,6 +5649,9 @@ widgetsEl.addEventListener("touchmove", function(e){
 
 widgetsEl.addEventListener("click", function(e){
   if(Date.now() - arrUlt < 300){ e.stopPropagation(); return; }   // el click que viene atras del arrastre
+  if(Date.now() - qvUlt < 400){ e.stopPropagation(); e.preventDefault(); return; }   // idem atras de un swipe
+  var qvb = e.target.closest("button[data-qvacc]");       // `que ver` en desktop: visto / no me interesa
+  if(qvb){ qvAplicar(qvb.closest(".qv"), qvb.dataset.qvacc, qvb.dataset.qvacc === "visto" ? 1 : -1); return; }
   var ver = e.target.closest("button[data-mostrar]");      // el pie: volver a mostrar una caja oculta
   if(ver){ guardarWset(ver.dataset.mostrar, "oculto", false); return; }
   var pbtn = e.target.closest("button[data-push]");       // activar notificaciones (gesto de facundo)
@@ -6460,6 +6564,7 @@ prepararDictado();     // 1209: preguntar una vez si el celu puede transcribir o
 
 window.__agente = {
   fmtTiempo: fmtTiempo,
+  qvOcultos: qvOcultos, qvUmbral: QV_UMBRAL,   // 1229: swipe de `que ver`
   // cajas a/b/c: `prueba_web_tabs` las pinta, elige, manda y chequea que un drag no elija
   opcionesDe: opcionesDe,
   hhmmDe: hhmmDe, citaCaja: citaCaja, hhmmBA: hhmmBA,   // 1203: hora de envio de cada caja marcada

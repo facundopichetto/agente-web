@@ -1015,11 +1015,23 @@ cuentas!). idealmente el widget deberia llevarme al contenido".
   (`que ver otra prime`) y **no me interesa** (`que ver no <id>`, queda en `.que_ver-descartes.json`
   y no vuelve a salir). los dos ultimos son **comandos crudos que contesta el daemon sin modelo**
   (`es_cmd_que_ver` / `que_ver_cmd`), igual que `dale N` y `op N X`.
+- **swipe en celu** (facundo, 2026-09-14, orden 1229): cada fila se desliza. **a la derecha** asoma
+  `visto` en verde, **a la izquierda** `no me interesa` en rojo. al soltar pasado el **40% del ancho**
+  (`QV_UMBRAL`) la fila sale de costado y se cierra; si no, vuelve a su lugar. solo arranca si el dedo va
+  de costado (un scroll vertical no lo toca, `touch-action: pan-y`) y el click que viene atras no abre el
+  modal. **en desktop** (`(hover:hover) and (pointer:fine)`, hardware y no ancho) la fila muestra al pasar
+  el mouse dos botones chicos con las mismas acciones. sin bordes, fondo `--fondo-caja`.
+- lo que sale del swipe o del boton es el comando crudo `que ver visto <id>` / `que ver no <id>` (tema
+  tools, sin modelo: `es_cmd_que_ver` / `que_ver_cmd` -> `que_ver.quitar`). **visto** queda en
+  `.que_ver-vistos.json` (aparte de los descartes) y tampoco vuelve; el id se busca tambien entre los
+  `candidatos`, asi anda con las filas que filtra el `[⚙]`. la web lo esconde **en el acto** con
+  `localStorage.agente_que_ver_ocultos` (vence a los 2 dias) sin esperar a que el daemon republique
+  `widgets.json`.
 - settings del `[⚙]`: las dos comunes (plegado, filas) mas **fuentes** (solo una, o todas),
   **cuantas por fuente** (1/2/3), **solo lo nuevo** y "avisar que fuente falta". se resuelven en la
   web sobre `candidatos` (todo lo que trajo la receta), asi que cambiar una no vuelve a pedir nada.
 - en el chat, sin gastar un token: `que ver`, `que ver fresco`, `que ver otra <fuente>`,
-  `que ver no <n>`, `que ver login` (que falta loguear y donde).
+  `que ver no <n|id>`, `que ver visto <n|id>`, `que ver login` (que falta loguear y donde).
 - probar: `python3 -m recetas.prueba_que_ver` (cero tokens, cero red) y el bloque `que ver` de
   `recetas/prueba_web_tabs`.
 
