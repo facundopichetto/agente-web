@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.233">
-<link rel="manifest" href="manifest.json?v=4.233">
+<meta name="agente-web-version" content="4.234">
+<link rel="manifest" href="manifest.json?v=4.234">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -3239,8 +3239,12 @@ function claveEstado(cuerpo){
   var m = /^\s*tema\s+([\w\/-]+)\s*:/i.exec(cuerpo || "");
   return m ? m[1].toLowerCase().replace(/\//g, "-") : "auto";
 }
+// `t` = reloj del celu (eta, tope); `ref` = reloj del server/github (`created_at` del POST): con eso se compara
+// lo que publica el daemon. 1259: el iphone iba ~90 s adelantado, el estado y la respuesta parecian "de antes"
+// y el bloque quedaba clavado en `enviado` hasta el tope de 10 min.
 function vueloIniciar(m, cuerpo){
-  vuelo = {id: m.id, tema: m.tema, iso: m.iso, t: fecha(m.iso) || Date.now(), clave: claveEstado(cuerpo),
+  var t0 = fecha(m.iso) || Date.now();
+  vuelo = {id: m.id, tema: m.tema, iso: m.iso, t: t0, ref: fecha(m.creado) || t0, clave: claveEstado(cuerpo),
            palabra: "enviado", eta: null, fin: 0, giro: 0, listo: 0};
   etagEstado = null;
   if(vueloGiro) clearInterval(vueloGiro);
@@ -3325,7 +3329,7 @@ function vueloGirar(){
 // lo que publica el daemon. un estado de un intercambio anterior (ts_inicio viejo) no se pinta
 function recibirEstado(e, ahora){
   if(!vuelo || !e) return false;
-  if(e.ts_inicio && e.ts_inicio * 1000 < vuelo.t - 15000) return false;
+  if(e.ts_inicio && e.ts_inicio * 1000 < vuelo.ref - 15000) return false;
   ahora = ahora === undefined ? Date.now() : ahora;
   vuelo.palabra = e.palabra || e.fase || vuelo.palabra;
   if(e.ts){ var d = ahora - e.ts * 1000; if(vuelo.desfase === undefined || vuelo.desfase === null || d < vuelo.desfase) vuelo.desfase = d; }
@@ -3358,7 +3362,7 @@ function vueloContestado(){
   if(!vuelo) return false;
   for(var i = msgs.length - 1; i >= 0; i--){
     var m = msgs[i];
-    if(m.clase !== "agente" || fecha(m.iso) < vuelo.t - 2000) continue;
+    if(m.clase !== "agente" || fecha(m.iso) < vuelo.ref - 2000) continue;
     if(m.tag || vuelo.listo){ vueloTerminar(); return true; }
   }
   return false;
@@ -3393,7 +3397,7 @@ function mandar(texto, tema, crudo, tsEnvio){
         vistos[r.json.id] = true;
         // la hora que se pinta es la de ENVIO, no la que le puso github al comentario (1191)
         var m = {id: r.json.id, clase: "yo", quien: QUIEN_F, texto: texto, iso: new Date(tsEnvio).toISOString(),
-                 explicito: true, tema: tema, disp: dispDe(sacarDesde(cuerpo).desde) || null,
+                 explicito: true, tema: tema, creado: r.json.created_at || null, disp: dispDe(sacarDesde(cuerpo).desde) || null,
                  modo: modoDe(sacarDesde(cuerpo).desde) || null};
         msgsCom.push(m); msgs.push(m); pintarMsg(m, false);
         vueloIniciar(m, cuerpo);   // spinner + fase + eta hasta que llegue la respuesta
