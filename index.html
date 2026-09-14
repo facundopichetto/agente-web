@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.238">
-<link rel="manifest" href="manifest.json?v=4.238">
+<meta name="agente-web-version" content="4.239">
+<link rel="manifest" href="manifest.json?v=4.239">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -4732,7 +4732,22 @@ function cajaUsage(u){
   });
   var ca = u.caidas || {};
   // 1. proyeccion general: a este ritmo, cuanto del tanque de las dos cuentas se usa al reset
-  if(pr.combinada !== null && pr.combinada !== undefined){
+  // orden 1279 (facundo, 2026-09-14): tres barras generales, `5h` / `week` / `fable`. la barra es el tanque de
+  // las dos cuentas en ese rango, el color y el `→ N%` son el ritmo (100 rojo solo si las dos lo agotan).
+  var rgs = (pr.rangos || []).filter(function(r){ return r.tanque !== null && r.tanque !== undefined; });
+  if(rgs.length){
+    html += it({tipo: "cuenta", tema: "tools", d: pr, completo: pr.texto || pr.lectura || ""},
+      '<div class="uproy">' + rgs.map(function(r){
+        var tq = Math.round(r.tanque), ri = Math.round(r.ritmo || 0), col = colorUso(r.color);
+        return '<div class="ub urango" title="' + esc(r.nombre + ": tanque " + tq + "%, ritmo " + ri + "%") + '">' +
+          '<span class="ub-n">' + esc(r.nombre) + "</span>" +
+          '<span class="ub-pista"><span class="ub-lleno" style="width:' + Math.max(0, Math.min(100, tq)) + "%" +
+          (col ? ";background:" + col : "") + '"></span></span>' +
+          '<span class="ub-p">' + tq + "%</span>" +
+          '<span class="ub-r"' + (col ? ' style="color:' + col + '"' : "") + ">&rarr; " + ri + "%</span></div>";
+      }).join("") +
+      '<span class="lect">' + esc(pr.lectura || "") + "</span></div>");
+  } else if(pr.combinada !== null && pr.combinada !== undefined){
     var pc = Math.round(pr.combinada), col = colorUso(pr.color);
     html += it({tipo: "cuenta", tema: "tools", d: pr, completo: pr.texto || pr.corto || ""},
       '<div class="uproy">' +
