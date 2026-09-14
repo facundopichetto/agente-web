@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.234">
-<link rel="manifest" href="manifest.json?v=4.234">
+<meta name="agente-web-version" content="4.235">
+<link rel="manifest" href="manifest.json?v=4.235">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -4738,13 +4738,17 @@ function cajaUsage(u){
       '<div class="umod"><span class="g">' + esc(mo.modelo || "") + '</span><span class="nom">' +
       esc(mo.elegida || "") + '</span><span class="por">' + esc(mo.corto || mo.linea || "") + "</span></div>");
   });
+  // 2b. freno duro de facundo (2026-09-14): "facu excluida hasta mie 16/09 18:00 (pedido de facundo)"
+  (rep.excluidas || []).forEach(function(tx){
+    html += '<div class="umod"><span class="r b">excluida</span><span class="por">' + esc(tx) + "</span></div>";
+  });
   // 3. las dos columnas
   var proyDe = {};
   (pr.cuentas || []).forEach(function(c){ proyDe[c.nombre] = c.proyectado_duro; });
   var cols = cuentas.map(function(cu){
     var pj = proyDe[cu.nombre];
     var cab = '<span class="cta"><span class="nom">' + esc(cu.nombre) + "</span>" +
-      (cu.sin_login ? '<span class="r b">sin login</span>' :
+      (cu.excluida ? '<span class="r b">excluida</span>' : cu.sin_login ? '<span class="r b">sin login</span>' :
        (pj === null || pj === undefined ? "" : '<span class="pj">&rarr; ' + Math.round(pj) + "%</span>")) + "</span>";
     var cuerpo;
     if(cu.sin_login){

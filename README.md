@@ -1101,7 +1101,10 @@ header que nodo y que modelo contesto". el criterio del daemon esta en `recetas/
   la cuenta regresiva hasta la **respuesta completa** (`~8 s`, `~7 s`... y `+3 s` si se paso del estimado, contada
   desde `ts_inicio`). la fase la publica el daemon en `chat/estado-<clave>.json` (`{fase, palabra, ts, ts_inicio,
   eta_respuesta_s, eta_s, canal, tema, nodo}`; clave = tema del prefijo `tema x:` o `auto`) y la web la mira cada 1 s solo mientras hay
-  un mensaje en vuelo (los comentarios pasan a 3 s). fases: `recibido`, `audio`, `clasificando`, `cuenta`,
+  un mensaje en vuelo (los comentarios pasan a 3 s). **reloj del celu corrido (1259)**: el bloque guarda `t` (reloj
+  del celu, para eta y tope) y `ref` = `created_at` del POST (server por lan, github por el buzon); el estado viejo
+  (`ts_inicio < ref - 15 s`) y la respuesta (`iso < ref - 2 s`) se comparan contra `ref`, nunca contra `t`. antes, con
+  el iphone ~90 s adelantado, todo parecia "de antes" y quedaba clavado en `enviado`. fases: `recibido`, `audio`, `clasificando`, `cuenta`,
   `historial`, `modelo` (dice `fable` / `opus`), `guardando`, `listo`, `sin claude`; una fase nueva sin palabra se
   registra sola. el estado lo sube **solo el nodo que atiende el chat**, coalescido (una subida cada 1,5 s como
   mucho) y respetando el freno y el tope del buzon. `eta_respuesta_s` = promedio del `duracion_s` de los ultimos 20
