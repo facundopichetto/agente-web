@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.241">
-<link rel="manifest" href="manifest.json?v=4.241">
+<meta name="agente-web-version" content="4.242">
+<link rel="manifest" href="manifest.json?v=4.242">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -3285,8 +3285,17 @@ function pintarVuelo(){
   if(n.parentNode !== lista || lista.lastChild !== n) lista.appendChild(n);
   n.querySelector(".ts").textContent = " · " + desde(vuelo.iso);
   n.querySelector(".giro").textContent = GIRO[vuelo.giro % GIRO.length];
-  n.querySelector(".fase").textContent = vuelo.palabra;
+  n.querySelector(".fase").textContent = faseTexto();
   n.querySelector(".eta").textContent = etaTexto();
+}
+// 1292: en la fase `modelo` el daemon publica lo que hace el modelo (`opus: leyendo daemon.py`, `recetas/chat_stream.py`).
+// si pasan VUELO_PENSANDO_MS desde que arranco el modelo sin ninguna accion, `opus: pensando...`
+var VUELO_PENSANDO_MS = 3000;
+function faseTexto(ahora){
+  if(!vuelo) return "";
+  if(vuelo.fase !== "modelo" || !vuelo.modelo || vuelo.accion) return vuelo.palabra;
+  ahora = ahora === undefined ? Date.now() : ahora;
+  return ahora - (vuelo.modeloDesde || ahora) >= VUELO_PENSANDO_MS ? vuelo.modelo + ": pensando..." : vuelo.palabra;
 }
 // `eta_respuesta_s` = segundos hasta la respuesta completa, contados desde `ts_inicio` (reloj del daemon). el numero
 // es SIEMPRE lo que falta para poder leer la respuesta (facundo, 2026-09-13, orden 1160): en cada tick
@@ -3337,6 +3346,8 @@ function vueloGirar(){
   if(g) g.textContent = GIRO[vuelo.giro % GIRO.length];
   var e = document.querySelector("#vuelo .eta"), t = etaTexto();
   if(e && e.textContent !== t) e.textContent = t;
+  var f = document.querySelector("#vuelo .fase"), ft = faseTexto();
+  if(f && f.textContent !== ft) f.textContent = ft;
 }
 // lo que publica el daemon. un estado de un intercambio anterior (ts_inicio viejo) no se pinta
 function recibirEstado(e, ahora){
@@ -3344,6 +3355,12 @@ function recibirEstado(e, ahora){
   if(e.ts_inicio && e.ts_inicio * 1000 < vuelo.ref - 15000) return false;
   ahora = ahora === undefined ? Date.now() : ahora;
   vuelo.palabra = e.palabra || e.fase || vuelo.palabra;
+  if(e.fase === "modelo"){
+    vuelo.modelo = e.modelo || vuelo.modelo || e.palabra;   // un daemon viejo no manda `modelo`: la palabra es el modelo
+    if(!vuelo.modeloDesde) vuelo.modeloDesde = ahora;
+    vuelo.accion = e.accion || null;
+  } else vuelo.accion = null;
+  vuelo.fase = e.fase;
   if(e.ts){ var d = ahora - e.ts * 1000; if(vuelo.desfase === undefined || vuelo.desfase === null || d < vuelo.desfase) vuelo.desfase = d; }
   var corr = Math.abs(vuelo.desfase || 0) > ETA_DESFASE_MS ? vuelo.desfase : 0;
   if(e.ts_inicio) vuelo.inicio = e.ts_inicio * 1000;
