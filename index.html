@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.242">
-<link rel="manifest" href="manifest.json?v=4.242">
+<meta name="agente-web-version" content="4.243">
+<link rel="manifest" href="manifest.json?v=4.243">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -398,7 +398,7 @@
   .usage .rep .por{flex:1 1 100%;opacity:.8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .usage .bloque + .bloque{margin-top:9px;padding-top:8px;border-top:1px solid var(--linea)}
   .ub{display:flex;align-items:center;gap:6px;margin:0 0 5px 0}
-  .ub-n{flex:0 0 34px;color:var(--gris);font-size:10px;letter-spacing:.04em}
+  .ub-n{flex:0 0 40px;min-width:40px;white-space:nowrap;color:var(--gris);font-size:10px;letter-spacing:.04em}
   .ub-pista{
     flex:1 1 auto;min-width:0;position:relative;height:11px;background:var(--fondo-hundido);
     border:1px solid var(--linea);border-radius:2px;overflow:hidden;
@@ -869,41 +869,6 @@ function clasificar(txt){
   var t = porPalabras(txt);
   if(t) return {tema: t, fuente: "palabras"};
   return {tema: null, fuente: "default"};
-}
-
-// ---------- mensajes con dos temas adentro (facundo, 2026-09-11) ----------
-// facundo escribe de corrido y la primera mitad es de un tema y la segunda de otro. `partir()` es la
-// copia js de `clasificar_tema.partir`: corta por parrafo / oracion / conector (`otra cosa`, `aparte`,
-// `ademas`, `tambien`), clasifica cada fragmento solo por palabras y pega los vecinos del mismo tema.
-// devuelve [{tema, texto}]; un solo elemento = el mensaje es de un tema solo.
-function cortes(txt){
-  var re = new RegExp(RE_CORTE_SRC, "gi"), ps = [0], m;
-  while((m = re.exec(txt)) !== null){
-    var p = (m[1] || m[2]) ? m.index + m[0].length : m.index + (m[3] || "").length;
-    if(p > ps[ps.length - 1] && p < txt.length) ps.push(p);
-    if(re.lastIndex === m.index) re.lastIndex++;      // por si algun dia el corte es de ancho cero
-  }
-  ps.push(txt.length);
-  return ps;
-}
-function partir(txt){
-  txt = (txt || "").trim();
-  if(!txt) return [];
-  var m = RE_TEMA.exec(txt);
-  if(m && esTema(m[1]))
-    return [{tema: m[1].toLowerCase(), texto: txt.slice(m[0].length).trim()}];
-  var ps = cortes(txt), grupos = [];
-  for(var i = 0; i < ps.length - 1; i++){
-    var a = ps[i], b = ps[i + 1];
-    if(!txt.slice(a, b).trim()) continue;
-    var t = porPalabras(txt.slice(a, b)), g = grupos[grupos.length - 1];
-    if(g && (!t || t === g.tema)) g.b = b;
-    else if(g && !g.tema){ g.tema = t; g.b = b; }
-    else grupos.push({tema: t, a: a, b: b});
-  }
-  var defecto = clasificar(txt).tema;                 // puede ser null: ahi lo pone la pestaña
-  if(grupos.length < 2) return [{tema: defecto, texto: txt}];
-  return grupos.map(function(g){ return {tema: g.tema || defecto, texto: txt.slice(g.a, g.b).trim()}; });
 }
 
 // ---------- estado de las pestañas, compartido entre dispositivos (facundo, 2026-09-11) ----------
@@ -3498,40 +3463,14 @@ function sinTrozo(texto, trozo){
   var a = texto.slice(0, i).trim(), b = texto.slice(i + trozo.length).trim();
   return a && b ? a + "\n\n" + b : (a || b);
 }
-// un mensaje partido sale como varios mensajes, uno por tema, **en orden** y cada uno con su
-// `tema x:` a su pestaña (la abre si no estaba). el foco queda en la del ultimo fragmento. cada
-// fragmento que sale se descuenta de la pestaña de origen; uno que no pudo salir vuelve a ella.
-function mandarPartido(trozos, origen, texto){
-  var p = Promise.resolve(), quedan = [];
-  var pendiente = texto || trozos.map(function(t){ return t.texto; }).join("\n\n");
-  function enX(){ return quedan.concat(pendiente ? [pendiente] : []).join("\n\n"); }
-  trozos.forEach(function(tr){
-    p = p.then(function(){
-      pendiente = sinTrozo(pendiente, tr.texto);
-      soltarOrigen(origen, enX());
-      if(tabs.indexOf(tr.tema) < 0 || temaActivo() !== tr.tema) abrirTab(tr.tema);
-      return Promise.resolve(mandar(tr.texto, tr.tema)).then(function(){
-        // `mandar` limpia `ultimoTexto` si fallo (o ni salio): esa mitad no viajo y vuelve a X. si
-        // `mandar` ya la devolvio a la caja de su pestaña, se saca de ahi para que no quede en dos lados.
-        if(ultimoTexto !== tr.texto){
-          if(borradorDe(tr.tema).indexOf(tr.texto) >= 0) soltarOrigen(tr.tema, sinTrozo(borradorDe(tr.tema), tr.texto));
-          quedan.push(tr.texto);
-        }
-        soltarOrigen(origen, enX());   // `mandar` en X borra su borrador entero: se repone lo que queda
-      });
-    });
-  });
-  return p;
-}
-
 // el tema lo detecta el clasificador (cero tokens) y se cruza con el de la pestaña:
 // - `tema x:` escrito a mano: manda, y la charla se va a esa pestaña.
 // - pestaña general (`auto`): la puerta de entrada. va sin prefijo (el clasificador es solo el default y el
 //   daemon contesta viendo la charla de todos los temas) y **no se renombra nunca** (facundo, 2026-09-11:
 //   quiere una puerta de entrada fija ademas de las pestañas de tema). si el tema detectado ya tiene
 //   pestaña, salta ahi para que la respuesta se vea donde cae.
-// - pestaña X y el mensaje parece de Y: pregunta antes de mandar (3 opciones).
-// - si no hay pistas, se queda en la pestaña donde esta.
+// - cualquier otra pestaña: sale directo a la pestaña activa, sin preguntar. el selector "esto parece de X"
+//   / "partir" se saco (facundo, 2026-09-14: "cuando toco send quiero enviar").
 function enviarMensaje(texto){
   texto = (texto || "").trim();
   // adjunto pendiente (foto o audio): sale un solo mensaje con el archivo y el texto, sin clasificar
@@ -3550,34 +3489,7 @@ function enviarMensaje(texto){
     if(c.tema && tabs.indexOf(c.tema) >= 0) abrirTab(c.tema);
     return;
   }
-  // el mensaje trae dos temas adentro: se pregunta aunque el tema del conjunto sea el de la pestaña
-  var trozos = partir(texto);
-  if(trozos.length > 1){
-    var otro = null;
-    for(var i = 0; i < trozos.length; i++) if(trozos[i].tema !== activo){ otro = trozos[i].tema; break; }
-    preguntarDestino(texto, activo, otro || trozos[0].tema, trozos);
-    return;
-  }
-  if(c.fuente === "palabras" && c.tema !== activo){ preguntarDestino(texto, activo, c.tema); return; }
-  mandar(texto, activo);
-}
-// el mensaje parece de otro tema: opciones y no se manda hasta elegir (ir a esa pestaña, o forzar
-// el tema de esta; ya no hay "al lado de los widgets").
-// si ademas viene partido en 2+ temas, la primera opcion es partirlo: cada mitad a su pestaña.
-function preguntarDestino(texto, activo, otro, trozos){
-  var existe = tabs.indexOf(otro) >= 0, ops = [];
-  if(trozos && trozos.length > 1)
-    ops.push(["partir: " + trozos.map(function(t){ return t.tema; }).join(" / "), "partir"]);
-  ops.push(["mandalo a la pestaña " + otro + (existe ? "" : " (la abre)"), "ir"]);
-  ops.push(["no, dejalo acá como `tema " + activo + ":`", "aqui"]);
-  dd(trozos && trozos.length > 1 ? "esto tiene " + trozos.length + " temas" : "esto parece de " + otro,
-     ops, function(que){
-    if(que === "partir"){ mandarPartido(trozos, activo, texto); return; }
-    if(que === "aqui"){ mandar(texto, activo); return; }
-    soltarOrigen(activo, "");        // viaja entero: en X no queda nada
-    abrirTab(otro);
-    mandar(texto, otro);
-  });
+  mandar(texto, temaActivo());
 }
 
 // ---------- sugerencias de respuesta arriba del input (facundo, 2026-09-11) ----------
@@ -6684,7 +6596,7 @@ window.__agente = {
                                      return n.top >= t.bottom - 1 && n.bottom <= h.top + 1; })()};
   },
   nodos: function(){ return ((widDatos || {}).nodos || {}).nodos || []; },
-  clasificar: clasificar, partir: partir,
+  clasificar: clasificar, temaActivo: function(){ return temaActivo(); },
   // 403 secondary rate limit: freno de 60 s y el mensaje frenado sale solo (prueba_web_tabs lo chequea)
   limiteGithub: limiteGithub, frenar: frenar, guardarSalida: guardarSalida, vaciarSalida: vaciarSalida,
   salida: function(){ return salida.slice(); },
