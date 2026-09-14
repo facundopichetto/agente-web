@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.245">
-<link rel="manifest" href="manifest.json?v=4.245">
+<meta name="agente-web-version" content="4.246">
+<link rel="manifest" href="manifest.json?v=4.246">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -4885,21 +4885,23 @@ function cajaDecididas(o){
 function cajaSombra(sb){
   if(sb.error)
     return caja("backup models", "", '<span class="r">' + esc(sb.error) + "</span>", false, "sombra");
-  var cols = sb.cols || [], cortos = {principal:"prin", gemini:"gem", groq:"groq", openrouter:"orou", mistral:"mist"};
-  var filas = ['<span class="g">' + pad("categoria", 11) + cols.map(function(c){ return pad(cortos[c] || c, 5, true); }).join(" ") +
+  // escala (facundo, 2026-09-14): el numero es la calidad normalizada, 100 = el mejor de esa categoria (uno solo)
+  var cols = sb.cols || [], cortos = {opus:"opus", fable:"fabl", gemini:"gem", groq:"groq", openrouter:"orou",
+                                      mistral:"mist", local:"locl", principal:"prin"};
+  var filas = ['<span class="g">' + pad("categoria", 11) + cols.map(function(c){ return pad(cortos[c] || c, 4, true); }).join(" ") +
                " " + pad("veredicto", 9) + "</span>"];
   (sb.cats || []).forEach(function(cat){
     var f = (sb.tabla || {})[cat];
     if(!f) return;
     var celdas = cols.map(function(c){
       var x = f[c];
-      if(!x) return '<span class="g">' + pad("-", 5, true) + "</span>";
+      if(!x) return '<span class="g">' + pad("-", 4, true) + "</span>";
       if(x.acierto === null || x.acierto === undefined){
         var t = x.sin_clave ? "-" : x.pendientes ? "wait" : "err";
-        return '<span class="g">' + pad(t, 5, true) + "</span>";
+        return '<span class="g">' + pad(t, 4, true) + "</span>";
       }
       var cl = x.acierto >= 80 ? "v" : x.acierto >= 50 ? "a" : "r";
-      return '<span class="' + cl + ' b">' + pad(x.acierto + "%", 5, true) + "</span>";
+      return '<span class="' + cl + ' b">' + pad(String(x.acierto), 4, true) + "</span>";
     });
     var v = (sb.veredictos || {})[cat] || {};
     var ver = v.veredicto === "apto" ? '<span class="v b">' + pad("ok " + (cortos[v.proveedor] || v.proveedor || ""), 9) + "</span>"
@@ -4923,7 +4925,9 @@ function cajaSombra(sb){
     });
     filas.push('<span class="g">' + pad("hoy", 11) + "</span>" + chips.join('<span class="g"> \u00b7 </span>'));
   }
-  filas.push('<span class="g">' + (sb.n || 0) + " corridas · apto = 85%+ &lt;5s 20+" +
+  var loc = ((sb.modelos || {}).local || {}).modelo;
+  filas.push('<span class="g">' + (sb.n || 0) + " corridas · 100 = mejor de la categoria · apto = 85+ crudo 80+ &lt;5s 20+" +
+             (loc ? " · locl = " + esc(loc) : "") +
              ((sb.faltan || []).length ? " · sin clave: " + sb.faltan.length : "") + "</span>");
   // dato esencial: el ultimo veredicto (el primer proveedor apto, o que no hay)
   var apto = null;
@@ -5829,7 +5833,7 @@ function modalDe(o){
       "\n" + (d.cats || []).map(function(c){
         var x = ((d.tabla || {})[c] || {})[d.prov];
         if(!x || x.acierto === null || x.acierto === undefined) return "";
-        return '\n<span class="g">' + pad(c, 11) + "</span>" + x.acierto + "% · " +
+        return '\n<span class="g">' + pad(c, 11) + "</span>" + x.acierto + " (crudo " + x.crudo + ") · " +
                (x.latencia === null ? "?" : x.latencia) + "s · " + x.n + " corridas";
       }).join("");
     m.acciones.push(["probarlo ahora (manda un `eco:`)", function(){
@@ -5843,12 +5847,12 @@ function modalDe(o){
   } else if(o.tipo === "catbackup"){
     var v = d.veredicto || {};
     m.titulo = "backup: categoria " + d.cat;
-    m.cuerpo = '<span class="g">acierto por proveedor en esta categoria</span>' +
+    m.cuerpo = '<span class="g">calidad por modelo en esta categoria (100 = el mejor, crudo = puntaje absoluto)</span>' +
       (d.cols || []).map(function(c){
         var x = (d.fila || {})[c];
         if(!x) return "";
         return "\n" + pad(c, 11) + (x.acierto === null || x.acierto === undefined ? "sin datos"
-               : x.acierto + "% · " + (x.latencia === null ? "?" : x.latencia) + "s · " + x.n + " corridas");
+               : x.acierto + " (crudo " + x.crudo + ") · " + (x.latencia === null ? "?" : x.latencia) + "s · " + x.n + " corridas");
       }).join("") +
       '\n\n<span class="g">veredicto</span> ' + esc(v.veredicto || "pocos datos") +
       (v.proveedor ? " (" + esc(v.proveedor) + ")" : "");
