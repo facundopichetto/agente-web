@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.215">
-<link rel="manifest" href="manifest.json?v=4.215">
+<meta name="agente-web-version" content="4.216">
+<link rel="manifest" href="manifest.json?v=4.216">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2146,7 +2146,7 @@ function partirCita(texto){
 function citaEsDe(cita, m){
   var mm = /^\s*>\s*claudio\s+(\d\d:\d\d)\s*:\s*(.*)$/m.exec(cita || "");
   if(!mm || mm[1] !== hhmmDe(m)) return false;
-  var q = normCita(mm[2]).replace(/…$/, "").slice(0, 24), ls = lineasCita(m);
+  var q = normCita(mm[2].replace(/^\[[\w\/-]+\]\s*/, "")).replace(/…$/, "").slice(0, 24), ls = lineasCita(m);
   return !q || normCita(ls[0] || "").indexOf(q) === 0;
 }
 function letrasDe(txt){ return (String(txt).match(/[ABC]/g) || []).filter(function(l, i, a){ return a.indexOf(l) === i; }).sort().join(""); }
