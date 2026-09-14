@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.247">
-<link rel="manifest" href="manifest.json?v=4.247">
+<meta name="agente-web-version" content="4.248">
+<link rel="manifest" href="manifest.json?v=4.248">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -470,9 +470,9 @@
   .ib{flex:0 0 auto;position:relative;background:none;border:0;padding:0;margin:0;color:var(--blanco);
     width:26px;height:24px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;
     -webkit-tap-highlight-color:transparent}
-  .ib svg{width:17px;height:17px}
+  .ib svg{width:14px;height:14px}   /* facundo 2026-09-14 (1342): un poco mas chicos */
   .ib:hover,.ib:active,.ib.on{color:var(--verde)}
-  #campana .badge{position:absolute;top:0;right:0;min-width:12px;height:12px;padding:0 3px;border-radius:6px;
+  #campana .badge{position:absolute;top:-2px;right:-2px;min-width:12px;height:12px;padding:0 3px;border-radius:6px;
     font-size:8px;line-height:12px;font-weight:600;text-align:center;color:#000;background:var(--gris);pointer-events:none}
   #campana .badge.oculta{display:none}
   #campana .badge.gris{color:var(--blanco)}
@@ -527,8 +527,8 @@
     #cabecera{gap:6px}
     /* dedo: campana, persona, filas de la campana y el menu de persona con 40px (1166) */
     .ib{width:36px;height:40px;margin:-4px 0}
-    .ib svg{width:20px;height:20px}
-    #campana .badge{top:4px;right:1px}
+    .ib svg{width:16px;height:16px}
+    #campana .badge{top:4px;right:0}   /* afuera del icono de 16px, que no lo tape (1342) */
     #nlista .nfila{min-height:40px}
     #nlista .nabrir{font-size:12px}
     #nlista .nacc{height:40px;min-width:40px;font-size:11px}
