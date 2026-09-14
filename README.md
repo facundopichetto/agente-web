@@ -765,6 +765,50 @@ pruebas (cero tokens): `python3 -m recetas.prueba_web` (incluye `prueba_web_tabs
 del cuerpo, que se saque al pintar y que un "[desde: casa]" no cuente) y `python3 daemon.py --prueba`
 (`marca_desde` / `desde_texto` / `CAMPOS_CHAT_WEB`).
 
+## la hora de envio manda sobre la de llegada (facundo, 2026-09-13, orden 1191)
+
+> "un audio queda abajo de un texto posterior"
+
+el chat estaba ordenado por **cuando se escribia la fila en el server**, que es cuando la respuesta ya
+salio. un audio se sube al buzon, se transcribe con whisper y recien ahi se contesta: se escribia dos
+minutos despues de un texto que facundo habia mandado **mas tarde**, y quedaba abajo (`chat-tools.jsonl`,
+21:44 a 21:45).
+
+ahora cada mensaje de facundo sale con **la hora en que apreto mandar**, arriba de `[desde: ...]`:
+
+```
+tema tools: hola
+[enviado: 1757800000123]
+[desde: celu ab12cd ios/safari iphone]
+```
+
+- **epoch en ms** y no texto: el reloj del celu y el del server no comparten formato ni zona.
+- la pone `cuerpoMsg(texto, tema, crudo, tsEnvio)`. lo que tarda en salir (una foto, un audio) pasa su
+  propio `tsEnvio`, tomado **cuando se apreto enviar**, no cuando termino la subida.
+- lo guardado por el freno de github sale despues con su hora original: ya viaja en el cuerpo.
+
+del lado del daemon, `marca_enviado(texto)` la saca **despues** de `marca_desde` (va arriba de esa) y
+**antes** de mirar el texto, asi los comandos crudos siguen matcheando exacto. de ahi:
+
+- el **`ts` de la fila** de `logs/chat-<tema>.jsonl` es esa hora, y la de llegada queda en
+  **`ts_llegada`** (las dos viajan en `chat/<tema>.json`, `CAMPOS_CHAT_WEB`);
+- `chat_web_datos` publica las filas **ordenadas por `ts`** (el jsonl se apendea como llega, no como se
+  mando) y `chat_nodo.fusionar_filas` ya ordenaba por `ts`;
+- el indice (`chat/index.json`, el "hace N min") sigue midiendo la **ultima actividad en el server**:
+  usa `ts_llegada`.
+- **guard del reloj**: si el `enviado` esta mas de 2 min adelantado o mas de un dia atrasado respecto
+  del server, se ignora y manda la hora de llegada (un celu desfasado no manda mensajes al principio
+  ni al final del historial). queda una linea en `log.md`.
+
+en la web: la **pregunta** se pinta con la hora de envio y la **respuesta** con `ts_llegada` (cuando se
+escribio de verdad); un comentario del buzon con la marca gana sobre el `created_at` de github.
+
+pruebas (cero tokens, sin publicar en el buzon): `prueba_web_tabs` (un audio mandado 21:44 que se
+escribio 21:46 queda **arriba** de un texto mandado 21:45, las dos horas pintadas, y la marca que
+escribe la web la lee `daemon.py`), `prueba_web_audio` (el audio sale con la hora en que se apreto
+mandar, no con la de la subida) y `python3 daemon.py --prueba` (`marca_enviado`, `ts` / `ts_llegada` y
+el orden que publica `chat_web_datos`).
+
 ## urls: enteras y clickeables (facundo, 2026-09-12)
 
 paso con el `login orugote`: la url de oauth (450 chars) llego cortada y claude.com contesto

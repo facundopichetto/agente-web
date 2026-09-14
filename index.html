@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.220">
-<link rel="manifest" href="manifest.json?v=4.220">
+<meta name="agente-web-version" content="4.221">
+<link rel="manifest" href="manifest.json?v=4.221">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -946,6 +946,19 @@ function marcaDesde(){
   var d = desdeActual();
   return "[desde: " + d.tipo + " " + d.id + " " + d.nav + " " + d.disp + "]";
 }
+// la hora en que facundo apreto mandar (facundo, 2026-09-13, orden 1191): viaja como
+// `[enviado: <epoch ms>]` arriba de `[desde: ...]`. sin esto el chat quedaba ordenado por la hora de
+// LLEGADA al server, y un audio (que se sube y se transcribe antes de escribirse) caia abajo de un
+// texto mandado despues. epoch en ms y no texto: el reloj del celu y el del server no comparten zona.
+function marcaEnviado(ts){ return "[enviado: " + (ts || Date.now()) + "]"; }
+var RE_ENVIADO = /\s*\[enviado:\s*(\d{10,16})\]\s*$/;
+// saca la marca del texto que se pinta: {texto, enviado} (`enviado` = epoch ms o null)
+function sacarEnviado(t){
+  var m = RE_ENVIADO.exec(t || "");
+  if(!m) return {texto: t || "", enviado: null};
+  return {texto: (t || "").slice(0, m.index).replace(/\s+$/, ""), enviado: +m[1]};
+}
+
 // la forma es cerrada (celu|compu + id + navegador): un mensaje que termine en "[desde: casa]" es
 // texto de facundo y no se toca. misma regex que `RE_DESDE` de daemon.py.
 var RE_DESDE = /\s*\[desde:\s*(celu|compu)\s+([\w.-]{1,24})(?:\s+([\w./+-]{1,32}))?(?:\s+(iphone|ipad|mac|android|pc))?\]\s*$/i;
@@ -2664,10 +2677,13 @@ function agregar(c, arriba){
          nodo: mm.nodo || null, modelo: mm.modelo ? modeloCorto(mm.modelo) : null,
          duracion_s: mm.dur !== undefined ? mm.dur : null, cuello: mm.cuello || null};
   }else{
-    var sd = sacarDesde(b), tg = null, texto = sd.texto;
+    var sd = sacarDesde(b), se = sacarEnviado(sd.texto), tg = null, texto = se.texto;
     var mp = RE_TEMA.exec(texto);
     if(mp && esTema(mp[1])){ tg = normTema(mp[1]); texto = texto.slice(mp[0].length); }
-    m = {id: c.id, clase: "yo", quien: QUIEN_F, texto: texto, iso: c.created_at, tag: tg,
+    // la hora de ENVIO manda sobre la que le puso github al comentario (1191): un audio se postea
+    // recien cuando termino de subir, asi que `created_at` llega tarde
+    m = {id: c.id, clase: "yo", quien: QUIEN_F, texto: texto,
+         iso: se.enviado ? new Date(se.enviado).toISOString() : c.created_at, tag: tg,
          desde: sd.desde, disp: dispDe(sd.desde) || null};
   }
   if(arriba) msgsCom.unshift(m); else msgsCom.push(m);
@@ -2724,7 +2740,9 @@ function crudo(ruta, etag){
 var chatCambio = false;    // `recibirChat` la prende: el tick solo repinta si de verdad llego algo
 function recibirChat(tema, d){
   chatCambio = true;
-  var t = normTema(tema), filas = (d && d.filas) || [], out = [], resp = {};
+  var t = normTema(tema), filas = ((d && d.filas) || []).slice(), out = [], resp = {};
+  // por la hora de ENVIO (1191): el daemon ya las publica ordenadas asi, esto cubre los archivos viejos
+  filas.sort(function(a, b){ return fecha(a.ts) - fecha(b.ts); });
   filas.forEach(function(f, i){
     var base = t + "-" + i;
     // `(aviso de claudio)`, `(tarea 12: ...)`, `(menu de claudio)`: filas que escribe el agente solo, no son de f
@@ -2740,7 +2758,8 @@ function recibirChat(tema, d){
     if(r && !resp[k]){
       resp[k] = true;
       // nodo, modelo y mini estado solo en las filas que los traen (las viejas no tienen `nodo`: no se pinta nada)
-      out.push({id: "h:" + base + ":r", clase: "agente", quien: QUIEN_AGENTE, texto: r, iso: f.ts,
+      // la respuesta se pinta con la hora en que se escribio (`ts_llegada`); la pregunta, con la de envio
+      out.push({id: "h:" + base + ":r", clase: "agente", quien: QUIEN_AGENTE, texto: r, iso: f.ts_llegada || f.ts,
                 tema: t, explicito: true, tag: t, audio: f.audio || null, nodo: nodo,
                 modelo: f.nodo && f.modelo ? modeloCorto(f.modelo) : null,
                 duracion_s: f.duracion_s !== undefined ? f.duracion_s : null, cuello: f.cuello || null,
@@ -2946,10 +2965,12 @@ document.addEventListener("visibilitychange", function(){ if(!document.hidden) m
 // texto exacto sin modelo (status, cola, op 2 B, dale 3): ahi el prefijo lo rompería.
 // el texto tal cual sale al buzon: con `tema x:` adelante, salvo que ya lo traiga, que sea un comando
 // crudo, o que venga de la pestaña general (que no fija tema: ahi clasifica el daemon)
-function cuerpoMsg(texto, tema, crudo){
+function cuerpoMsg(texto, tema, crudo, tsEnvio){
   var ya = RE_TEMA.test(texto);
   var base = (crudo || ya || tema === AUTO) ? texto : "tema " + tema + ": " + texto;
-  return base + "\n" + marcaDesde();     // el daemon la saca antes de mirar el texto
+  // las dos marcas al final, `desde` ultima: el daemon las saca antes de mirar el texto.
+  // `tsEnvio` lo pasa lo que tarda en salir (una foto, un audio que se sube): es cuando facundo mando.
+  return base + "\n" + marcaEnviado(tsEnvio) + "\n" + marcaDesde();
 }
 // dos enter muy rapidos mandaban el mismo mensaje dos veces (facundo, 2026-09-11): la caja se vaciaba
 // recien cuando volvia el POST, asi que el segundo enter leia el mismo texto. ahora `mandar()` es
@@ -3093,13 +3114,16 @@ function vueloContestado(){
 }
 var REPE_MS = 2000;
 var ultimoTexto = "", ultimoTs = 0;
-function mandar(texto, tema, crudo){
+// `tsEnvio` (1191): cuando facundo apreto mandar. lo pasan la foto y el audio, que salen recien
+// despues de subirse; para un texto es ahora mismo. de ahi sale el `[enviado: ...]` y la hora que se pinta.
+function mandar(texto, tema, crudo, tsEnvio){
   texto = (texto || "").trim();
   if(!texto) return;
   if(enviando) return;                                          // hay uno saliendo: este enter no cuenta
   if(texto === ultimoTexto && Date.now() - ultimoTs < REPE_MS) return;
   tema = tema || temaActivo();
-  var cuerpo = cuerpoMsg(texto, tema, crudo);
+  tsEnvio = tsEnvio || Date.now();
+  var cuerpo = cuerpoMsg(texto, tema, crudo, tsEnvio);
   var caja = temaCaja;
   ultimoTexto = texto; ultimoTs = Date.now();
   if(Date.now() < frenoHasta){                                   // github frenado: ni lo intento, queda guardado
@@ -3116,7 +3140,8 @@ function mandar(texto, tema, crudo){
     .then(function(r){
       if(r.json && !vistos[r.json.id]){
         vistos[r.json.id] = true;
-        var m = {id: r.json.id, clase: "yo", quien: QUIEN_F, texto: texto, iso: r.json.created_at,
+        // la hora que se pinta es la de ENVIO, no la que le puso github al comentario (1191)
+        var m = {id: r.json.id, clase: "yo", quien: QUIEN_F, texto: texto, iso: new Date(tsEnvio).toISOString(),
                  explicito: true, tema: tema, disp: dispDe(sacarDesde(cuerpo).desde) || null};
         msgsCom.push(m); msgs.push(m); pintarMsg(m, false);
         vueloIniciar(m, cuerpo);   // spinner + fase + eta hasta que llegue la respuesta
@@ -3156,7 +3181,10 @@ function vaciarSalida(){
       try{ localStorage.setItem("agente_salida", JSON.stringify(salida)); }catch(x){}
       if(r.json && !vistos[r.json.id]){
         vistos[r.json.id] = true;
-        var y = {id: r.json.id, clase: "yo", quien: QUIEN_F, texto: m.texto, iso: r.json.created_at,
+        // lo que espero al freno de github sale con la hora en que facundo lo mando, no la de ahora
+        var ye = sacarEnviado(sacarDesde(m.cuerpo).texto).enviado;
+        var y = {id: r.json.id, clase: "yo", quien: QUIEN_F, texto: m.texto,
+                 iso: ye ? new Date(ye).toISOString() : r.json.created_at,
                  explicito: true, tema: m.tema, disp: dispDe(sacarDesde(m.cuerpo).desde) || null};
         msgsCom.push(y); msgs.push(y); pintarMsg(y, false); alFinal();
       }
@@ -3603,9 +3631,10 @@ function irTemaPush(tema){
   return true;
 }
 // el camino entero: comprimir -> hash -> subir -> mandar el mensaje de la pestaña activa.
-function mandarFoto(file, pieTexto){
+function mandarFoto(file, pieTexto, tsEnvio){
   if(!file) return Promise.resolve();
   if(subiendoFoto) return Promise.resolve();
+  tsEnvio = tsEnvio || Date.now();      // se mando ahora, aunque el mensaje salga cuando termine de subir
   if(!token && !fotoStub){ sistema("no se puede subir la foto sin token", "error"); return Promise.resolve(); }
   subiendoFoto = true;
   $("camara").disabled = true;
@@ -3625,7 +3654,7 @@ function mandarFoto(file, pieTexto){
     var pie = (pieTexto !== undefined ? pieTexto : txt.value || "").trim();
     txt.value = ""; txt.style.height = "";
     return mandar((pie ? pie + "\n" : "") + "![" + (file.name || "foto") + "](" + ruta + ")",
-                  temaActivo());
+                  temaActivo(), false, tsEnvio);
   }).catch(function(e){
     sistema("no pude subir la foto: " + e.message, "error");
     ruta = null;                                  // fallo: el que la mando la puede volver a adjuntar
@@ -3710,12 +3739,12 @@ function adjuntarAudio(blob, mime, ms){
 // enviar con adjunto: sube y manda **un solo** mensaje con el texto de la caja adentro.
 function mandarAdjunto(texto){
   if(!adjunto) return Promise.resolve();
-  var a = adjunto, pie = (texto || "").trim();
+  var a = adjunto, pie = (texto || "").trim(), ts = Date.now();   // apretar enviar es la hora del mensaje
   adjunto = null;                                // se saca del pie ya: no se manda dos veces
   pintarAdjunto();
   txt.value = ""; txt.style.height = "";
   borrarBorrador(temaCaja || temaActivo());
-  var p = a.tipo === "img" ? mandarFoto(a.file, pie) : mandarAudio(a.blob, a.mime, pie);
+  var p = a.tipo === "img" ? mandarFoto(a.file, pie, ts) : mandarAudio(a.blob, a.mime, pie, ts);
   return Promise.resolve(p).then(function(r){
     if(r){                                       // salio: recien ahi se suelta el object url
       if(a.url && /^blob:/.test(a.url)){ try{ URL.revokeObjectURL(a.url); }catch(e){} }
@@ -3815,8 +3844,10 @@ function terminarGrabacion(enviar){
 }
 function nombreAudio(hash, mime){ return "audio/" + hash + "." + extAudio(mime); }
 // el camino entero: blob -> hash -> subir al buzon -> mandar el mensaje de la pestaña activa.
-function mandarAudio(blob, mime, pieTexto){
+function mandarAudio(blob, mime, pieTexto, tsEnvio){
   if(subiendoAudio) return Promise.resolve(null);
+  // subir el audio y transcribirlo tarda: la hora del mensaje es esta, no la de cuando termina (1191)
+  tsEnvio = tsEnvio || Date.now();
   if(!token && !fotoStub){ sistema("no se puede subir el audio sin token", "error"); return Promise.resolve(null); }
   if(blob.size > AUDIO_TOPE){
     sistema("el audio pesa " + Math.round(blob.size / 1024) + " kb, es mucho", "error");
@@ -3834,7 +3865,7 @@ function mandarAudio(blob, mime, pieTexto){
     audioUrls[ruta] = URL.createObjectURL(blob);      // ya lo tengo: no lo bajo para reproducirlo
     var pie = (pieTexto !== undefined ? pieTexto : txt.value || "").trim();
     txt.value = ""; txt.style.height = "";
-    return mandar((pie ? pie + "\n" : "") + "[audio](" + ruta + ")", temaActivo());
+    return mandar((pie ? pie + "\n" : "") + "[audio](" + ruta + ")", temaActivo(), false, tsEnvio);
   }).catch(function(e){
     sistema("no pude subir el audio: " + (e && e.message || e), "error");
     ruta = null;                                  // fallo: el audio vuelve a quedar pendiente
@@ -6036,6 +6067,8 @@ window.__agente = {
   esStandalone: esStandalone, marcarStandalone: marcarStandalone,
   // de donde se escribe: viaja como `[desde: celu abc123 ios/safari]` al final del mensaje
   desde: desdeActual, marcaDesde: marcaDesde, sacarDesde: sacarDesde, cuerpoMsg: cuerpoMsg,
+  // la hora de envio del cliente (1191)
+  marcaEnviado: marcaEnviado, sacarEnviado: sacarEnviado,
   // `f · hh:mm · iphone` (1140): dispositivo corto por userAgent/toques/pantalla y desde un `desde` guardado
   dispActual: dispActual, dispDe: dispDe, nodoMsg: nodoMsg,
   esVistaMobile: esVistaMobile, sincronizarVista: sincronizarVista, mqMobile: MQ_MOBILE,
