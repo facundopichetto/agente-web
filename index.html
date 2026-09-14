@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.227">
-<link rel="manifest" href="manifest.json?v=4.227">
+<meta name="agente-web-version" content="4.228">
+<link rel="manifest" href="manifest.json?v=4.228">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -6039,7 +6039,9 @@ function copiaSeleccion(texto){
   a.value = texto; a.setAttribute("readonly", ""); a.contentEditable = "true";
   a.style.cssText = "position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;border:0;padding:0;font-size:16px";
   document.body.appendChild(a);
+  var antes = document.activeElement;
   try{
+    try{ a.focus({preventScroll: true}); }catch(x){ a.focus(); }
     var r = document.createRange(); r.selectNodeContents(a);
     var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
     a.setSelectionRange(0, texto.length);
@@ -6047,6 +6049,7 @@ function copiaSeleccion(texto){
   }catch(x){}
   document.body.removeChild(a);
   try{ window.getSelection().removeAllRanges(); }catch(x){}
+  try{ if(antes && antes.focus && antes !== document.body) antes.focus({preventScroll: true}); }catch(x){}
   return pudo;
 }
 function copiarViejo(texto, listo){

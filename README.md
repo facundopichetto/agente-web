@@ -1281,3 +1281,17 @@ fallbacks. vale igual en desktop y en celu (el mismo panel ocupa toda la pantall
 una respuesta del agente con bloques ``` (draft de comment de jira, slack, push o fix) los saca del cuerpo y los pinta
 abajo de las cajas a/b/c como `.drafts pre` con boton `copiar` (`draftsDe`, `nodoDrafts`). un `OPCION X:` dentro de un
 bloque no es caja (`opcionesDe` y `opciones_de` del daemon saltean lo cercado). prueba en `prueba_web_tabs`.
+
+## boton copiar de un toque (1214, 2026-09-14)
+en las respuestas de claudio (`m.clase === "agente"`), `ponerCopiar(b)` pone un `.cp` chico al lado de: cada link (copia
+el href entero, `&` incluido), `code` con url, `code` con token o clave (`esClave`), `code` precedido por `clave:` /
+`password:` / `token:` / `usuario:`..., y valores `clave: valor` en texto pelado (con numero, mayuscula o simbolo, o 8+
+chars; `<clave: algo>` es un tapado de la boveda y no lleva boton). los bloques ``` siguen con su `copiar` (1240).
+- un toque copia: `navigator.clipboard.writeText` dentro del click; si no esta o lo rechaza, `copiaSeleccion`
+  (textarea readonly 16px + foco sin scroll + rango + `setSelectionRange` + `execCommand("copy")`, lo que pide safari ios).
+  el boton dice `copiado` 1 s (`COPIADO_MS`), `no pude` si fallo.
+- el rotulo va por `::after` (`data-t`), asi el textContent del mensaje no cambia. el boton lleva
+  `-webkit-touch-callout:none` y `user-select:none`, cancela su `contextmenu`, y `pedirMenuMsg` no abre el menu propio
+  sobre `.cp` / `.copiar`. los links siguen con `target=_blank`.
+- prueba: `python3 -m recetas.prueba_web_copiar [--vivo]` (user agent de iphone, touch emulado, taps por cdp, lee el
+  portapapeles; el fallback se chequea por el evento `copy` y el portapapeles).
