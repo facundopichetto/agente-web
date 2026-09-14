@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.226">
-<link rel="manifest" href="manifest.json?v=4.226">
+<meta name="agente-web-version" content="4.227">
+<link rel="manifest" href="manifest.json?v=4.227">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -129,6 +129,16 @@
     white-space:pre-wrap;word-break:break-word;font:inherit;font-size:12px;user-select:text;-webkit-user-select:text}
   .drafts .copiar{position:absolute;top:3px;right:3px;background:#000;color:var(--gris);border:1px solid #1f3a44;
     border-radius:3px;font:inherit;font-size:10px;padding:1px 6px;cursor:pointer}
+  /* 1214: `copiar` chico al lado de cada link, clave o `code` copiable de una respuesta de claudio. un toque copia
+     (sin hold en el iphone) y dice `copiado` 1 s. el texto va por ::after asi no ensucia el textContent del mensaje.
+     el hold sobre el boton no abre ni el menu propio ni el callout de ios. */
+  .cuerpo .cp{display:inline-block;vertical-align:1px;margin:0 0 0 4px;background:#000;color:var(--gris);
+    border:1px solid #1f3a44;border-radius:3px;font:inherit;font-size:9.5px;line-height:1.3;padding:0 5px;
+    cursor:pointer;white-space:nowrap}
+  .cuerpo .cp::after{content:attr(data-t)}
+  .copiar,.cuerpo .cp{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation;
+    -webkit-tap-highlight-color:transparent}
+  .copiar.ok,.cuerpo .cp.ok{color:var(--verde);border-color:var(--verde-tenue)}
   .opciones{display:flex;gap:6px;margin:6px 0 2px 0;white-space:normal}
   .opciones .opc{
     flex:1 1 0;min-width:0;box-sizing:border-box;background:#000;border:1px solid;border-radius:4px;
@@ -2120,6 +2130,7 @@ function nodoMsg(m){
   if(ops && ops.lista.length) div.appendChild(nodoCajas(m, ops.lista));
   if(m.clase === "agente" && dr.bloques.length) div.appendChild(nodoDrafts(dr.bloques));
   div.__msg = m;          // el menu contextual (delegado) lee el mensaje del nodo
+  if(m.clase === "agente") ponerCopiar(b);   // 1214: `copiar` de un toque en links, claves y code
   cargarImagenes(b);
   cargarAudios(b);
   return div;
@@ -2219,8 +2230,8 @@ function nodoDrafts(bloques){
     var pre = document.createElement("pre");
     pre.textContent = t;
     var bt = document.createElement("button");
-    bt.className = "copiar"; bt.type = "button"; bt.textContent = "copiar";
-    bt.addEventListener("click", function(e){ e.stopPropagation(); copiar(t); });
+    bt.className = "copiar"; bt.textContent = "copiar";
+    armarCopiar(bt, t);
     d.appendChild(pre); d.appendChild(bt); w.appendChild(d);
   });
   return w;
@@ -6021,14 +6032,25 @@ function gestos(el, pedir){
   ["touchend", "touchcancel"].forEach(function(ev){ el.addEventListener(ev, cancelar, {passive: true}); });
 }
 
-function copiarViejo(texto, listo){
-  var a = document.createElement("textarea");
-  a.value = texto; a.style.position = "fixed"; a.style.top = "-1000px"; a.style.opacity = "0";
-  document.body.appendChild(a); a.focus(); a.select();
-  var pudo = false;
-  try{ pudo = document.execCommand("copy"); }catch(x){}
+// fallback de seleccion: safari ios no copia con `a.select()` a secas, necesita un rango sobre el nodo y
+// `setSelectionRange`; `readonly` y 16px para que no abra el teclado ni haga zoom.
+function copiaSeleccion(texto){
+  var a = document.createElement("textarea"), pudo = false;
+  a.value = texto; a.setAttribute("readonly", ""); a.contentEditable = "true";
+  a.style.cssText = "position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;border:0;padding:0;font-size:16px";
+  document.body.appendChild(a);
+  try{
+    var r = document.createRange(); r.selectNodeContents(a);
+    var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+    a.setSelectionRange(0, texto.length);
+    pudo = document.execCommand("copy");
+  }catch(x){}
   document.body.removeChild(a);
-  if(pudo) listo(); else sistema("no pude copiar", "error");
+  try{ window.getSelection().removeAllRanges(); }catch(x){}
+  return pudo;
+}
+function copiarViejo(texto, listo){
+  if(copiaSeleccion(texto)) listo(); else sistema("no pude copiar", "error");
 }
 function copiar(texto){
   texto = texto || "";
@@ -6038,6 +6060,88 @@ function copiar(texto){
       return navigator.clipboard.writeText(texto).then(listo, function(){ copiarViejo(texto, listo); });
   }catch(x){}
   copiarViejo(texto, listo);
+}
+
+// ---------- 1214: botones `copiar` de un toque en las respuestas de claudio ----------
+// links, `code` con url / clave / token, valores `clave: ...` y los bloques ``` (drafts). el portapapeles se
+// pide adentro del click (gesto del usuario); si safari lo rechaza, fallback de seleccion.
+var COPIADO_MS = 1000;
+var RE_CLAVE_LBL = /(?:^|[^\w<&])(clave|contraseña|password|passwd|pass|token|api[ _-]?key|secret|secreto|pin|usuario|user)\s*:\s*$/i;
+var RE_CLAVE_TXT = /(^|[^\w<&])(clave|contraseña|password|passwd|pass|token|api[ _-]?key|secret|secreto|pin|usuario|user)(\s*:\s*)([^\s<>`]{3,})/i;
+function copiarSeguro(texto){
+  return new Promise(function(res){
+    var viejo = function(){ res(copiaSeleccion(texto)); };
+    try{
+      if(navigator.clipboard && navigator.clipboard.writeText)
+        return navigator.clipboard.writeText(texto).then(function(){ res(true); }, viejo);
+    }catch(x){}
+    viejo();
+  });
+}
+function tocarCopiar(bt, texto){
+  return copiarSeguro(texto).then(function(ok){
+    var poner = function(t){ if(bt.classList.contains("cp")) bt.dataset.t = t; else bt.textContent = t; };
+    poner(ok ? "copiado" : "no pude");
+    bt.classList.toggle("ok", ok);
+    clearTimeout(bt.__t);
+    bt.__t = setTimeout(function(){ poner("copiar"); bt.classList.remove("ok"); }, COPIADO_MS);
+    if(!ok) sistema("no pude copiar", "error");
+    return ok;
+  });
+}
+function armarCopiar(bt, texto){
+  bt.type = "button"; bt.dataset.copia = texto;
+  bt.addEventListener("click", function(e){ e.preventDefault(); e.stopPropagation(); tocarCopiar(bt, texto); });
+  bt.addEventListener("contextmenu", function(e){ e.preventDefault(); e.stopPropagation(); });
+  return bt;
+}
+function botonCopiar(texto){
+  var bt = document.createElement("button");
+  bt.className = "cp"; bt.dataset.t = "copiar"; bt.setAttribute("aria-label", "copiar");
+  return armarCopiar(bt, texto);
+}
+// token o clave suelta: prefijos conocidos, uuid, hex largo, o 24+ chars sin espacios con mayuscula,
+// minuscula y numero. rutas y nombres de archivo no (tienen `.` o arrancan con `/` `~`).
+function esClave(t){
+  t = String(t || "").trim();
+  if(!t || /\s/.test(t)) return false;
+  if(/^(sk-|sk_|ghp_|gho_|ghs_|github_pat_|xox[abpcsd]-|tskey-|AIza|ya29\.|glpat-|ATATT|shpat_|shpss_)\S{8,}$/.test(t)) return true;
+  if(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(t)) return true;
+  if(/^[0-9a-f]{32,}$/i.test(t)) return true;
+  return t.length >= 24 && /^[A-Za-z0-9_\-+\/=]+$/.test(t) && !/^[\/~]/.test(t) &&
+         /[A-Z]/.test(t) && /[a-z]/.test(t) && /\d/.test(t);
+}
+function ponerCopiar(b){
+  if(!b || !b.querySelectorAll) return;
+  var despues = function(nodo, texto){ nodo.parentNode.insertBefore(botonCopiar(texto), nodo.nextSibling); };
+  [].forEach.call(b.querySelectorAll("a[href]"), function(a){
+    if(/^https?:/i.test(a.getAttribute("href"))) despues(a, a.getAttribute("href"));
+  });
+  [].forEach.call(b.querySelectorAll(".cod"), function(sp){
+    var t = sp.textContent.trim(), prev = sp.previousSibling;
+    var lbl = prev && prev.nodeType === 3 && RE_CLAVE_LBL.test(prev.nodeValue);
+    if(t && (/^https?:\/\/\S+$/.test(t) || esClave(t) || lbl)) despues(sp, t);
+  });
+  // `clave: valor` en texto pelado (no adentro de code, links ni botones). `<clave: algo>` es un tapado de la
+  // boveda, no un valor: se saltea.
+  var w = document.createTreeWalker(b, NodeFilter.SHOW_TEXT, null), textos = [];
+  while(w.nextNode()) textos.push(w.currentNode);
+  textos.forEach(function(n){
+    if(n.parentNode.closest && n.parentNode.closest(".cod,a,button")) return;
+    for(var vueltas = 0; n && vueltas < 20; vueltas++){
+      var m = RE_CLAVE_TXT.exec(n.nodeValue);
+      if(!m) return;
+      var val = m[4].replace(/[.,;:)]+$/, "");
+      var fin = m.index + m[1].length + m[2].length + m[3].length + val.length;
+      // una palabra suelta en prosa ("el token: vence") no es un valor: tiene que tener numero, mayuscula o
+      // simbolo, o ser larga
+      if(val.length >= 3 && (/[0-9A-Z_\-.@!#$%*+=\/]/.test(val) || val.length >= 8)){
+        var resto = n.splitText(fin);
+        n.parentNode.insertBefore(botonCopiar(val), resto);
+        n = resto;
+      }else n = n.splitText(fin);
+    }
+  });
 }
 
 // el bloque de cita que deja "responder" en la caja: `> <quien>: <primeras lineas>` y una linea vacia.
@@ -6106,6 +6210,7 @@ function menuTab(nodo, x, y){
   return menu(x, y, "pestaña " + (ETIQUETA[t] || t), ops, nodo);
 }
 function pedirMenuMsg(target, x, y){
+  if(target && target.closest && target.closest(".cp,.copiar")) return false;   // 1214: el hold del boton no abre menu
   var n = target && target.closest && target.closest(".msg");
   return n ? menuMsg(n, x, y) : false;
 }
@@ -6390,6 +6495,7 @@ window.__agente = {
   freno: function(v){ if(v !== undefined) frenoHasta = v; return frenoHasta; },
   // urls: enteras y clickeables, en el chat y en los widgets (prueba_web_tabs lo chequea)
   enlaces: enlaces, resaltar: resaltar,
+  esClave: esClave, ponerCopiar: ponerCopiar,   // 1214: botones copiar (prueba_web_copiar)
   // enter en el celu hace salto de linea, no manda (prueba_web_tabs lo chequea)
   esTactil: esTactil, ajustarCaja: ajustarCaja, topeLineas: TOPE_LINEAS,
   // pwa en la pantalla de inicio: sin barra de safari arriba del teclado (prueba_web_tabs lo chequea)

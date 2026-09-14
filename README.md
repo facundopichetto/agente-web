@@ -1205,6 +1205,13 @@ probar: `python3 -m recetas.prueba_chat_lan` (el endpoint real con github falso)
     guardado hace mas de 24 h (`OPC_VIDA_MS`) y toda clave o valor invalido (no string, letras fuera de `ABC`,
     basura de versiones viejas). una entrada sin `g` (formato viejo) no se tira: se migra con la fecha de hoy y
     conserva su `ts`, asi sigue perdiendo contra lo deducido. la purga se escribe en `localStorage` solo si cambio.
+  - **sin automarcado** (1211): la clave de una caja es de esa respuesta y no cambia (`claveCajas`): comentario =
+    su id de github, historial = `r:<tema>|<ts_llegada>|<hashTexto>` (`m.clave`, lo pone `recibirChat`). antes el
+    historial usaba el id por posicion (`h:tools-199:r`) y la marca guardada saltaba a la respuesta nueva cuando
+    entraba una fila. `RE_CLAVE_OK` hace que `purgarOpc` tire las claves `h:...`. una letra sin cita marca solo
+    la caja mas reciente que ya existia cuando facundo mando (`cajaAlMandar`, por hora de envio); con cita, la de
+    esa respuesta (`citaEsDe`). caso en `prueba_web_tabs`: respuesta nueva con opciones de texto identico, ninguna
+    caja marcada aunque la anterior tenga la C.
   - lo prueba `recetas/prueba_web_tabs` (pinta, drag que no elige, el primer tap manda y marca, `revertir?` con
     `no` que no manda y `sí` que manda `me arrepentí`, `sumo esta también?` con el mensaje unico `A y B: ...`,
     revertir una de dos sumadas, tocar otra mientras una pregunta, caja vieja viva tras 3 mensajes con su cita,
@@ -1269,3 +1276,8 @@ fallbacks. vale igual en desktop y en celu (el mismo panel ocupa toda la pantall
   watchdog). vence solo a los 30 s sin renovar y nunca frena mas de 3 min seguidos.
 - sin endpoint lan (la web hablando solo por el buzon) no hay por donde avisar: el reinicio no espera.
 - pruebas: `python3 -m recetas.prueba_web_audio` (graba de verdad con el microfono falso de chrome).
+
+## drafts copiables (1240, 2026-09-14)
+una respuesta del agente con bloques ``` (draft de comment de jira, slack, push o fix) los saca del cuerpo y los pinta
+abajo de las cajas a/b/c como `.drafts pre` con boton `copiar` (`draftsDe`, `nodoDrafts`). un `OPCION X:` dentro de un
+bloque no es caja (`opcionesDe` y `opciones_de` del daemon saltean lo cercado). prueba en `prueba_web_tabs`.
