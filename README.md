@@ -1135,9 +1135,18 @@ probar: `python3 -m recetas.prueba_chat_lan` (el endpoint real con github falso)
     ordenes de esa opcion que siguen `[ ]` (las busca en `logs/opcion-orden.jsonl`, que anota cada `ORDEN:` que salio
     de un `A: ...`); si ya corren o terminaron, pasa al chat con el estado para charlarlo.
   - drag o scroll por encima no elige: `pointerdown`/`pointerup` con umbral de 10 px (`OPC_UMBRAL`).
-  - estado: `localStorage.agente_opciones` = `{clave: {l, ts, g}}` de este dispositivo; en los otros se deduce de los
+  - **hora de envio al lado de cada marca** (1203): una caja marcada muestra a la derecha de su texto un `hh:mm`
+    chiquito (`.hh`, 9 px) con la hora de **buenos aires** (`hhmmBA`, `Intl` con `America/Argentina/Buenos_Aires`,
+    no la del dispositivo; si el navegador no tiene esa zona cae a la local) del mensaje que salio al tocarla.
+    **cada letra lleva la suya**: al sumar (`A y C`, un solo mensaje) la que ya estaba conserva la hora de su
+    toque y la nueva se lleva la de ahora (`conHoras`). mientras la caja pregunta (`revertir?` / `sumo esta
+    también?`) la hora queda tapada, y al desmarcar (revertir confirmado) se borra con la marca.
+  - estado: `localStorage.agente_opciones` = `{clave: {l, ts, g, h}}` de este dispositivo (`h` = `{letra: ms}`,
+    las horas de 1203, solo de las letras marcadas y solo fechas de verdad: un `ts` de fallback no es una hora); en los otros se deduce de los
     mensajes de f (`estadoDeducido`: letra sin cita = la caja mas reciente, con cita = la de esa respuesta,
-    `me arrepentí` la reabre). gana el mas nuevo. facundo siempre puede contestar escribiendo.
+    `me arrepentí` la reabre). gana el mas nuevo, con sus horas. facundo siempre puede contestar escribiendo.
+    **la hora viaja sola entre dispositivos**: sale del `iso` del mensaje que eligio esa caja (desde 1194 es
+    cuando facundo apreto enviar), asi que el celu y la compu muestran el mismo `hh:mm` sin sincronizar nada.
   - **purga de 24 h** (1212): `g` es cuando se guardo en este dispositivo (`ts` sigue siendo la precedencia contra
     lo deducido). cada vez que se pinta una respuesta nueva con cajas, `purgarOpc()` tira de `agente_opciones` lo
     guardado hace mas de 24 h (`OPC_VIDA_MS`) y toda clave o valor invalido (no string, letras fuera de `ABC`,
@@ -1146,9 +1155,13 @@ probar: `python3 -m recetas.prueba_chat_lan` (el endpoint real con github falso)
   - lo prueba `recetas/prueba_web_tabs` (pinta, drag que no elige, el primer tap manda y marca, `revertir?` con
     `no` que no manda y `sí` que manda `me arrepentí`, `sumo esta también?` con el mensaje unico `A y B: ...`,
     revertir una de dos sumadas, tocar otra mientras una pregunta, caja vieja viva tras 3 mensajes con su cita,
-    deduccion en otro dispositivo, purga de 24 h y de claves invalidas al llegar una respuesta con cajas).
+    deduccion en otro dispositivo, purga de 24 h y de claves invalidas al llegar una respuesta con cajas,
+    y las de 1203: sin marcar no hay hora, al tocar sale el `hh:mm` de BA y se guarda en `localStorage`, al
+    sumar cada caja conserva la hora de su mensaje, mientras pregunta la hora se tapa, revertir la borra,
+    en otro dispositivo sale del mensaje, y las horas invalidas o de letras no marcadas se tiran).
     capturas de los cuatro estados (sin elegir, marcada, `revertir?`, `sumo esta también?`) en desktop y celu:
-    `tmp/capturas-1202/`, las saca `tmp/capturas_1202.py` (cero tokens, api stubbeada).
+    `tmp/capturas-1202/` (1202) y `tmp/capturas-1203/` (con la hora), las sacan `tmp/capturas_1202.py` y
+    `tmp/capturas_1203.py` (cero tokens, api stubbeada).
 
 ## notificaciones: la tira muestra solo el ultimo aviso (facundo, 2026-09-13, orden 1170)
 

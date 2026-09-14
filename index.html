@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.222">
-<link rel="manifest" href="manifest.json?v=4.222">
+<meta name="agente-web-version" content="4.223">
+<link rel="manifest" href="manifest.json?v=4.223">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -131,6 +131,11 @@
     touch-action:pan-y;word-break:break-word;
   }
   .opciones .opc .l{font-weight:600;margin-right:5px}
+  /* 1203: hora de envio del mensaje que salio al tocar esa caja (hh:mm de buenos aires). chiquita, a la
+     derecha; cada letra lleva la suya (al sumar `A y C`, la A conserva la hora de su toque). */
+  .opciones .opc .hh{margin-left:6px;font-size:9px;opacity:.75;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .opciones .opc .hh:empty{display:none}
+  .opciones .opc.conf .hh{display:none}       /* mientras pregunta, la caja es solo la pregunta */
   .opciones .opc.A{color:var(--verde);border-color:var(--verde)}
   .opciones .opc.B{color:var(--cian);border-color:var(--cian)}
   .opciones .opc.C{color:var(--magenta);border-color:var(--magenta)}
@@ -2133,7 +2138,18 @@ function opcValida(k, v){
   if(!k || typeof k !== "string") return false;
   if(typeof v === "string") return /^(-|[ABC]{1,3})$/.test(v);        // formato viejo (una letra o `-`)
   if(!v || typeof v !== "object" || Array.isArray(v)) return false;
+  if(v.h !== undefined && (!v.h || typeof v.h !== "object" || Array.isArray(v.h))) return false;   // 1203
   return typeof v.l === "string" && /^[ABC]{0,3}$/.test(v.l);
+}
+var MS_2000 = 946684800000;   // piso: menos que esto no es una hora, es un indice
+// 1203: las horas guardadas, limpias: solo letras marcadas y valores que son una fecha en ms
+function limpiarHoras(letras, h){
+  var out = {};
+  String(letras || "").split("").forEach(function(l){
+    var t = +(h || {})[l] || 0;
+    if(t > MS_2000 && isFinite(t)) out[l] = t;     // una fecha de verdad (el `ts` de fallback no es una hora)
+  });
+  return out;
 }
 function purgarOpc(ahora){
   ahora = ahora || Date.now();
@@ -2143,11 +2159,13 @@ function purgarOpc(ahora){
     if(!opcValida(k, v)){ delete opcHecho[k]; cambio = true; return; }
     var g = opcGuardado(v);
     if(!g){                       // guardada por una version sin fecha: se le pone la de hoy y vive 24 h mas
-      opcHecho[k] = typeof v === "string" ? {l: v === "-" ? "" : v, ts: 1, g: ahora}
-                                          : {l: v.l, ts: +v.ts || 0, g: ahora};
+      opcHecho[k] = typeof v === "string" ? {l: v === "-" ? "" : v, ts: 1, g: ahora, h: {}}
+                                          : {l: v.l, ts: +v.ts || 0, g: ahora, h: limpiarHoras(v.l, v.h)};
       cambio = true; return;
     }
-    if(ahora - g > OPC_VIDA_MS){ delete opcHecho[k]; cambio = true; }
+    if(ahora - g > OPC_VIDA_MS){ delete opcHecho[k]; cambio = true; return; }
+    var hl = limpiarHoras(v.l, v.h);                                   // 1203: horas de letras que ya no estan
+    if(JSON.stringify(hl) !== JSON.stringify(v.h || {})){ v.h = hl; cambio = true; }
   });
   if(cambio) try{ localStorage.setItem("agente_opciones", JSON.stringify(opcHecho)); }catch(x){}
   return cambio;
@@ -2197,6 +2215,29 @@ function hhmmDe(m){
   var d = new Date(m && m.iso || "");
   return isNaN(d) ? "" : pad2(d.getHours()) + ":" + pad2(d.getMinutes());
 }
+// 1203: `hh:mm` de buenos aires (no la del dispositivo: facundo mira el mismo board desde el celu y la compu).
+// si el navegador no tiene esa zona, cae a la hora local antes que no mostrar nada.
+var TZ_BA = "America/Argentina/Buenos_Aires", fmtBA = null;
+function hhmmBA(ms){
+  ms = +ms || 0;
+  var d = new Date(ms);
+  if(!ms || isNaN(d)) return "";
+  try{
+    if(!fmtBA) fmtBA = new Intl.DateTimeFormat("es-AR", {timeZone: TZ_BA, hour: "2-digit", minute: "2-digit", hourCycle: "h23"});
+    return fmtBA.format(d).replace(/\D+/, ":").replace(/^(\d):/, "0$1:");
+  }catch(x){ return pad2(d.getHours()) + ":" + pad2(d.getMinutes()); }
+}
+// las horas de un estado `{l, h}`: `{A: "21:44", C: "21:51"}`, solo de las letras marcadas
+function horasDe(e){
+  var h = e && e.h || {}, out = {};
+  String(e && e.l || "").split("").forEach(function(l){ var t = hhmmBA(h[l]); if(t) out[l] = t; });
+  return out;
+}
+// lo que se ve de un estado (letras + hora de cada una): sirve para no repintar si no cambio nada
+function firmaEstado(e){
+  var h = horasDe(e);
+  return String(e && e.l || "").split("").sort().map(function(l){ return l + "@" + (h[l] || ""); }).join("|");
+}
 function normCita(t){ return String(t || "").replace(/\*\*|`/g, "").replace(/\s+/g, " ").trim().toLowerCase(); }
 function lineasCita(m){
   var o = opcionesDe(m.texto);
@@ -2236,8 +2277,15 @@ function cajaPrevia(j, tema){
   return null;
 }
 // {l, ts} de una caja segun los mensajes de f que vinieron despues (lo que ven los otros dispositivos)
+// 1203: la hora de cada letra sale del mensaje que la eligio (su `iso`, que desde 1194 es cuando facundo
+// apreto enviar). al sumar, la letra que ya estaba conserva la hora de su mensaje, no la del nuevo.
+function conHoras(est, letras, ts){
+  var h = {};
+  letras.split("").forEach(function(l){ h[l] = (est.h || {})[l] || ts; });
+  return h;
+}
 function estadoDeducido(m){
-  var i = msgs.indexOf(m), est = {l: "", ts: 0};
+  var i = msgs.indexOf(m), est = {l: "", ts: 0, h: {}};
   if(i < 0) return est;
   var tema = m.tema || temaActivo(), o = cajasDe(m);
   for(var j = i + 1; j < msgs.length; j++){
@@ -2246,15 +2294,25 @@ function estadoDeducido(m){
     var pc = partirCita(x.texto), ts = +new Date(x.iso || 0) || j, mm;
     var mia = pc.cita ? citaEsDe(pc.cita, m) : cajaPrevia(j, tema) === m;
     if((mm = RE_ARREPENTI.exec(pc.cuerpo))){
-      if(mia) est = {l: est.l.replace(new RegExp("[" + letrasDe(mm[1]) + "]", "g"), ""), ts: ts};
+      if(mia){
+        var quedan = est.l.replace(new RegExp("[" + letrasDe(mm[1]) + "]", "g"), "");
+        est = {l: quedan, ts: ts, h: conHoras(est, quedan, ts)};       // la desmarcada pierde su hora
+      }
       continue;
     }
     if(!mia) continue;
-    if((mm = RE_ELEGIDAS.exec(pc.cuerpo))){ est = {l: letrasDe(mm[1]), ts: ts}; continue; }
+    if((mm = RE_ELEGIDAS.exec(pc.cuerpo))){
+      var ls = letrasDe(mm[1]);
+      est = {l: ls, ts: ts, h: conHoras(est, ls, ts)};
+      continue;
+    }
     var cmds = o.lista.filter(function(op){
       return op.cmd && pc.cuerpo.split("\n").some(function(l){ return l.trim().toLowerCase() === op.cmd.toLowerCase(); });
     });
-    if(cmds.length) est = {l: letrasDe(cmds.map(function(op){ return op.letra; }).join("")), ts: ts};
+    if(cmds.length){
+      var lc = letrasDe(cmds.map(function(op){ return op.letra; }).join(""));
+      est = {l: lc, ts: ts, h: conHoras(est, lc, ts)};
+    }
   }
   return est;
 }
@@ -2262,25 +2320,40 @@ function estadoCaja(m){
   var k = claveCajas(m), loc = opcHecho[k], ded = estadoDeducido(m);
   if(typeof loc === "string") loc = {l: loc === "-" ? "" : loc, ts: 1};   // formato viejo (una letra)
   if(!loc) return ded;
-  return (+loc.ts || 0) >= (ded.ts || 0) ? loc : ded;
+  var gana = (+loc.ts || 0) >= (ded.ts || 0) ? loc : ded;
+  return {l: gana.l, ts: gana.ts, h: limpiarHoras(gana.l, gana.h)};      // 1203: horas del que gano
 }
-function guardarOpc(k, letras){
-  opcHecho[k] = {l: letras, ts: Date.now(), g: Date.now()};
+// guarda letras + hora de cada una. al desmarcar (revertir) la hora de esa letra se va con ella.
+function guardarOpc(k, letras, horas){
+  var ahora = Date.now();
+  opcHecho[k] = {l: letras, ts: ahora, g: ahora, h: limpiarHoras(letras, horas)};
   try{ localStorage.setItem("agente_opciones", JSON.stringify(opcHecho)); }catch(x){}
 }
-function marcarHecho(caja, letras){
+function marcarHecho(caja, letras, horas){
   letras = letras || "";
+  var hh = horasDe({l: letras, h: horas || {}});              // 1203: `{A: "21:44"}`
   caja.classList.toggle("hecho", !!letras);
   [].forEach.call(caja.querySelectorAll(".opc"), function(b){
     var sel = letras.indexOf(b.dataset.letra) >= 0;
     b.classList.toggle("sel", sel);
     b.setAttribute("aria-pressed", sel ? "true" : "false");   // 1202: nunca `disabled`, siempre se puede tocar
+    var t = b.querySelector(".hh");                           // 1203: la hora vive con la marca, se va con ella
+    if(t){
+      t.textContent = sel && hh[b.dataset.letra] ? hh[b.dataset.letra] : "";
+      t.title = t.textContent ? "mandado " + t.textContent : "";
+    }
   });
 }
 // las letras marcadas segun el dom (para saber si lo que llego de afuera cambio algo)
 function letrasPintadas(caja){
   return [].filter.call(caja.querySelectorAll(".opc.sel"), function(b){ return true; })
            .map(function(b){ return b.dataset.letra; }).sort().join("");
+}
+// 1203: lo que se ve hoy en la caja (letras + hora), para compararlo con el estado nuevo
+function firmaPintada(caja){
+  return [].map.call(caja.querySelectorAll(".opc.sel"), function(b){
+    return b.dataset.letra + "@" + ((b.querySelector(".hh") || {}).textContent || "");
+  }).sort().join("|");
 }
 function opcBoton(caja, letra){ return caja.querySelector('.opc[data-letra="' + letra + '"]'); }
 // saca la confirmacion pendiente de una caja (tap en `no`, toque en otra opcion, o cambio de estado)
@@ -2308,9 +2381,9 @@ function refrescarCajas(){
     var m = cajaMsg[c.dataset.clave];
     if(!m) return;
     var e = estadoCaja(m);
-    if(e.l === letrasPintadas(c) && !!e.l === c.classList.contains("hecho")) return;
+    if(firmaEstado(e) === firmaPintada(c) && !!e.l === c.classList.contains("hecho")) return;
     limpiarConfirm(c);            // cambio desde otro dispositivo: la confirmacion pendiente ya no vale
-    marcarHecho(c, e.l);
+    marcarHecho(c, e.l, e.h);
   });
 }
 function nodoCajas(m, lista_){
@@ -2321,7 +2394,7 @@ function nodoCajas(m, lista_){
   lista_.forEach(function(o){
     var b = document.createElement("button");
     b.type = "button"; b.className = "opc " + o.letra; b.dataset.letra = o.letra;
-    b.innerHTML = '<span class="l"></span><span class="t"></span>' +
+    b.innerHTML = '<span class="l"></span><span class="t"></span><span class="hh"></span>' +
                   '<span class="cf"><span class="q"></span><span class="si">sí</span><span class="no">no</span></span>';
     b.querySelector(".l").textContent = o.letra;
     b.querySelector(".t").textContent = o.texto;
@@ -2341,7 +2414,8 @@ function nodoCajas(m, lista_){
     b.addEventListener("click", function(e){ if(e.detail === 0) tocarCaja(m, caja, o, lista_, null); });
     caja.appendChild(b);
   });
-  marcarHecho(caja, estadoCaja(m).l || "");
+  var e0 = estadoCaja(m);
+  marcarHecho(caja, e0.l || "", e0.h);
   return caja;
 }
 // la caja no es la ultima de la pestaña (o ya hubo mensajes de f despues): lo que sale lleva la cita
@@ -2384,8 +2458,10 @@ function mandarCaja(m, caja, lista_, marcar, decir){
   var ops = lista_.filter(function(o){ return decir.indexOf(o.letra) >= 0; });
   if(!ops.length) return;
   var vieja = cajaVieja(m), tema = m.tema || temaActivo();
-  guardarOpc(k, marcar);
-  marcarHecho(caja, marcar);
+  // 1203: la hora es la de ESTE envio, y solo para las letras nuevas: la que ya estaba conserva la suya
+  var horas = conHoras(estadoCaja(m), marcar, Date.now());
+  guardarOpc(k, marcar, horas);
+  marcarHecho(caja, marcar, horas);
   if(ops.some(function(o){ return o.cmd; })){          // `op N X`: crudo, uno por linea (el daemon los corre todos)
     mandar(ops.map(function(o){ return o.cmd || (o.letra + ": " + o.texto); }).join("\n"), tema, true);
     return;
@@ -2399,8 +2475,9 @@ function arrepentirse(m, caja, lista_, letra){
   var op = lista_.filter(function(o){ return o.letra === letra; })[0];
   if(!op || letras.indexOf(letra) < 0) return;
   var quedan = letras.split("").filter(function(l){ return l !== letra; }).join("");
-  guardarOpc(k, quedan);
-  marcarHecho(caja, quedan);
+  var horas = conHoras(estadoCaja(m), quedan, Date.now());   // 1203: la desmarcada pierde su hora
+  guardarOpc(k, quedan, horas);
+  marcarHecho(caja, quedan, horas);
   mandar(citaCaja(m) + "me arrepentí: " + letra + ": " + op.texto, m.tema || temaActivo(), false);
 }
 function pintarMsg(m, arriba){
@@ -6029,9 +6106,10 @@ window.__agente = {
   fmtTiempo: fmtTiempo,
   // cajas a/b/c: `prueba_web_tabs` las pinta, elige, manda y chequea que un drag no elija
   opcionesDe: opcionesDe,
-  hhmmDe: hhmmDe, citaCaja: citaCaja,
+  hhmmDe: hhmmDe, citaCaja: citaCaja, hhmmBA: hhmmBA,   // 1203: hora de envio de cada caja marcada
   // 1212: purga de `agente_opciones` (24 h y claves invalidas)
   purgarOpc: purgarOpc, opcHecho: function(){ return JSON.parse(JSON.stringify(opcHecho)); },
+  refrescarCajas: refrescarCajas,   // 1203: repintar con el estado que llego de otro dispositivo
   ponerOpcHecho: function(o){ opcHecho = o || {}; try{ localStorage.setItem("agente_opciones", JSON.stringify(opcHecho)); }catch(x){} },
   cajas: function(){
     return [].map.call(document.querySelectorAll("#lista .opciones"), function(c){
@@ -6041,8 +6119,11 @@ window.__agente = {
                           pregunta: (opcBoton(c, cf.letra).querySelector(".cf .q") || {}).textContent} : null,
               opc: [].map.call(c.querySelectorAll(".opc"), function(b){
                 var cs = getComputedStyle(b);
+                var th = b.querySelector(".hh");
                 return {letra: b.dataset.letra, sel: b.classList.contains("sel"), conf: b.classList.contains("conf"),
                         texto: b.querySelector(".t").textContent, bg: cs.backgroundColor, color: cs.color,
+                        hora: th ? th.textContent : null,
+                        horaVisible: !!(th && th.textContent && getComputedStyle(th).display !== "none"),
                         top: Math.round(b.getBoundingClientRect().top)};
               })};
     });
