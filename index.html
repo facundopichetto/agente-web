@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.275">
-<link rel="manifest" href="manifest.json?v=4.275">
+<meta name="agente-web-version" content="4.276">
+<link rel="manifest" href="manifest.json?v=4.276">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -3941,7 +3941,7 @@ function selCuenta(){
 }
 function selAbrir(e){
   if(!e || !e.candidatas || !e.candidatas.length) return false;
-  if(e.modo === "tarjetas") return tjAbrir(e);   // 1440: de a una, con foto y cuatro botones
+  if(selEsTarjetas(e)) return tjAbrir(e);   // 1440: de a una, con foto y cuatro botones
   sel.actual = e;
   selModoLista(true);
   $("seltitulo").textContent = e.titulo || e.coleccion;
@@ -3997,6 +3997,13 @@ function selAbrir(e){
 // dm, no lo manda) y `pasar` (decidir despues). cada toque manda SU registro (`tipo: "tarjeta"`), asi que cerrar el
 // modal a la mitad no pierde ninguna decision; cuando no queda ninguna, un `aceptar` cierra la tanda y el server
 // arma y abre la siguiente (`recetas/ig_embudo.py`).
+// el modo viene del server (`modo: "tarjetas"`), pero un server viejo que todavia no recargo la receta no lo manda:
+// si las candidatas traen los campos de la tarjeta (`fotos`, `privada`, `etiquetas`), es de a una igual.
+function selEsTarjetas(e){
+  if(!e) return false;
+  if(e.modo) return e.modo === "tarjetas";
+  return (e.candidatas || []).some(function(c){ return c.fotos || c.privada !== undefined || c.etiquetas; });
+}
 function selModoLista(lista){
   $("sellista").classList.toggle("oculta", !lista);
   $("seltarjeta").classList.toggle("oculta", lista);
@@ -8053,6 +8060,7 @@ window.__agente = {
   votElegir: votElegir, votBasta: votBasta, votMandarTexto: votMandarTexto, votCerrar: votCerrar,
   // 1388: seleccion con checkboxes (`prueba_seleccion`)
   selArrancar: selArrancar, selMirar: selMirar, selSubir: selSubir, selAbrir: selAbrir, selAceptar: selAceptar,
+  selEsTarjetas: selEsTarjetas,   // 1440: modo tarjetas y su fallback sin `modo` del server
   selEnviarTexto: selEnviarTexto, selCerrar: selCerrar,
   // 1407: boton `votar` y respaldo por el buzon (`prueba_web_votar`)
   selPoner: selPoner, selVotar: selVotar, selBoton: selBoton, selPendientes: selPendientes,
