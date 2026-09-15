@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.250">
-<link rel="manifest" href="manifest.json?v=4.250">
+<meta name="agente-web-version" content="4.251">
+<link rel="manifest" href="manifest.json?v=4.251">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -4405,7 +4405,24 @@ function olvidarMicro(parar){
   var st = microCache; microCache = null;
   if(parar && st) (st.getTracks() || []).forEach(function(t){ try{ t.stop(); }catch(e){} });
 }
+// 1357 (micmac): el reuso es **solo para la pwa del iphone**. en la mac (la pwa instalada tambien es
+// "standalone") y en la app nativa (1354, el permiso lo guarda ios) el micro se abre al grabar y se para al
+// terminar, asi el punto del micro aparece solo mientras se graba. `microStubIOS` lo fuerza en las pruebas.
+var microStubIOS = null, microUltimo = null;
+function esAppNativa(){
+  try{ return !!(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.flaudio) ||
+              /FlaudioApp/.test(navigator.userAgent); }
+  catch(e){ return false; }
+}
+function microReusable(){
+  if(microStubIOS !== null) return microStubIOS;
+  return esIOS() && esAppInstalada() && !esAppNativa();
+}
 function pedirMicro(){
+  if(!microReusable()){                        // mac y app nativa: un stream nuevo por grabacion
+    if(microCache) olvidarMicro(true);
+    return abrirMicro();
+  }
   if(microVivo(microCache)) return Promise.resolve(microCache);
   if(microCache) olvidarMicro(true);           // pista muerta o muda: se suelta y se pide de nuevo
   if(microPidiendo) return microPidiendo;      // el precalentado y el primer hold no piden dos veces
@@ -4426,10 +4443,10 @@ function esAppInstalada(){
   catch(e){ return false; }
 }
 function precalentarMicro(){
-  if(!hayGrabacion() || microVivo(microCache)) return Promise.resolve(false);
+  if(!microReusable() || !hayGrabacion() || microVivo(microCache)) return Promise.resolve(false);
   return pedirMicro().then(function(){ return true; }, function(){ return false; });
 }
-if(esAppInstalada()){
+if(microReusable()){
   precalentarMicro().then(function(ok){
     if(ok) return;
     var primer = function(){
@@ -4451,7 +4468,9 @@ function soltarMicro(){
   marcarOcupado("grabando", false);   // se apaga aca: es el finally de todos los caminos del micro
   if(relojGrab){ clearInterval(relojGrab); relojGrab = null; }
   if(cortarGrab){ clearTimeout(cortarGrab); cortarGrab = null; }
-  if(stream && stream !== microCache) (stream.getTracks() || []).forEach(function(t){ try{ t.stop(); }catch(e){} });
+  if(stream && (stream !== microCache || !microReusable()))
+    (stream.getTracks() || []).forEach(function(t){ try{ t.stop(); }catch(e){} });
+  if(!microReusable() && microCache) olvidarMicro(true);
   stream = null;
   grabador = null;
   $("grabar").classList.remove("grabando");
@@ -4466,7 +4485,7 @@ function empezarGrabacion(){
   if(grabador || subiendoAudio) return Promise.resolve(false);
   if(!hayGrabacion()){ sistema("este navegador no graba audio", "error"); return Promise.resolve(false); }
   return pedirMicro().then(function(st){
-    stream = st;
+    stream = st; microUltimo = st;
     var mime = mimeAudio();
     grabador = new MediaRecorder(st, mime ? {mimeType: mime, audioBitsPerSecond: AUDIO_BPS} : {});
     trozosAudio = [];
@@ -7187,6 +7206,9 @@ window.__agente = {
                                  id: microCache ? microCache.id : null}; },
   matarPistaMicro: function(){ if(microCache) microCache.getTracks().forEach(function(t){ t.stop(); t.dispatchEvent(new Event("ended")); }); },
   olvidarMicro: olvidarMicro, precalentarMicro: precalentarMicro,
+  // 1357: forzar ios (true), mac (false) o lo real (null); `microUltimo` dice si el ultimo stream sigue vivo
+  stubIOSMicro: function(v){ microStubIOS = v; }, microReusable: microReusable,
+  microUltimo: function(){ return {hay: !!microUltimo, vivo: microVivo(microUltimo)}; },
   grabando: function(){ return {grabando: !!grabador, micro: !!stream,
                                 marcado: $("grabar").classList.contains("grabando"),
                                 reloj: $("grabinfo").textContent}; },
