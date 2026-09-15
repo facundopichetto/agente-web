@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.293">
-<link rel="manifest" href="manifest.json?v=4.293">
+<meta name="agente-web-version" content="4.294">
+<link rel="manifest" href="manifest.json?v=4.294">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -37,7 +37,8 @@
     --texto-max:12px;
     /* molde de componentes (1558): el fondo de las capas y la sombra de los modales, un solo lugar */
     --capa-fondo:rgba(0,0,0,.9);
-    --modal-sombra:0 0 0 1px #06210a,0 10px 40px rgba(0,0,0,.85);
+    /* 1652 (facundo, 2026-09-15): modales sin borde de color, solo una sombra suave clara que los despega del fondo negro */
+    --modal-sombra:0 2px 12px rgba(255,255,255,.06),0 14px 44px rgba(255,255,255,.09);
     /* ---------- tonos de fondo (facundo, 2026-09-13, orden 1190) ----------
        look plano: chat, panel de widgets y cajas casi del mismo tono, la diferencia justa para
        distinguir el panel. se ajusta en un solo lugar: `--tono-paso` es cuanto aclara cada nivel
@@ -136,7 +137,8 @@
   .capa.optico::after{flex-basis:10%}
   .capa > *{flex-shrink:0}
   .capa.oculta{display:none!important}
-  .mcaja{background:#000;border:1px solid var(--verde);border-radius:4px}
+  /* 1652: sin borde de color; el 1px queda transparente para no mover medidas (tarjeta, lista) y despega la sombra */
+  .mcaja{background:#000;border:1px solid transparent;border-radius:4px;box-shadow:var(--modal-sombra)}
   .mhead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;color:var(--verde);font-size:12px}
   .mcuenta,.mestado{color:var(--gris);font-size:10.5px}
   .mestado{min-height:1em}
@@ -395,12 +397,19 @@
   .cuerpo .img .pie{display:block;color:var(--gris);font-size:10px;margin-top:2px}
   .cuerpo .img .cargando{color:var(--cian)}
   .cuerpo .img .rota{color:var(--rojo)}
+  /* 1652 (facundo, 2026-09-15): pinch zoom en el iphone sin perder la salida. `touch-action:none` solo en el visor
+     (la pagina no escala), la imagen entra entera a 1x y escala con transform; la `✕` va fija afuera de lo que escala */
   #visor{
-    position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.92);overflow:auto;
-    display:flex;align-items:center;justify-content:center;cursor:zoom-out
+    position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.92);overflow:hidden;
+    display:flex;align-items:center;justify-content:center;touch-action:none;overscroll-behavior:contain;
+    -webkit-user-select:none;user-select:none
   }
-  #visor img{max-width:100%;height:auto}
-  #visor .cerrar{position:fixed;top:8px;right:12px;color:var(--verde);font-size:var(--texto-max)}
+  #visor img{max-width:100vw;max-height:100dvh;width:auto;height:auto;object-fit:contain;transform-origin:50% 50%;
+    will-change:transform;touch-action:none;-webkit-user-drag:none}
+  #visor.zoom img{cursor:grab}
+  #visor .cerrar{position:fixed;z-index:1;top:calc(4px + env(safe-area-inset-top));right:calc(4px + env(safe-area-inset-right));
+    width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:19px;background:rgba(0,0,0,.55);
+    color:#e8e8e8;color:var(--blanco);font-size:var(--texto-max);cursor:pointer;touch-action:manipulation}
   #pie{
     flex:0 0 auto;border-top:0;background:transparent;
     padding:4px 10px calc(4px + env(safe-area-inset-bottom)) 10px;
@@ -720,8 +729,8 @@
   #nfondo{position:fixed;inset:0;z-index:33}
   #nfondo.oculta,#nlista.oculta{display:none}
   #nlista{position:fixed;z-index:34;top:44px;right:8px;width:min(440px,calc(100vw - 16px));max-height:70dvh;
-    overflow-y:auto;background:#000;border:1px solid var(--linea-clara);border-radius:5px;padding:4px;
-    display:flex;flex-direction:column;gap:1px;box-shadow:0 8px 28px rgba(0,0,0,.85);
+    overflow-y:auto;background:#000;border:1px solid transparent;border-radius:5px;padding:4px;
+    display:flex;flex-direction:column;gap:1px;box-shadow:var(--modal-sombra);
     -webkit-overflow-scrolling:touch;overscroll-behavior:contain}
   #nlista .ntit{color:var(--gris);font-size:9px;text-transform:uppercase;letter-spacing:.06em;padding:3px 6px 4px 6px;
     border-bottom:1px solid var(--linea);margin-bottom:2px}
@@ -870,7 +879,7 @@
   #ddfondo.oculta,#dd.oculta{display:none}
   #dd{
     position:fixed;left:8px;right:8px;bottom:calc(72px + env(safe-area-inset-bottom));z-index:20;
-    max-width:460px;margin:0 auto;background:#000;border:1px solid var(--verde);border-radius:6px;
+    max-width:460px;margin:0 auto;background:#000;border:1px solid transparent;border-radius:6px;box-shadow:var(--modal-sombra);
     padding:6px;display:flex;flex-direction:column;gap:4px;max-height:60dvh;overflow-y:auto;
   }
   #dd .ddtit{color:var(--gris);font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;padding:2px 4px}
@@ -970,9 +979,9 @@
   #ctxfondo.oculta,#ctx.oculta{display:none}
   #ctx{
     position:fixed;z-index:32;min-width:180px;max-width:min(300px,calc(100vw - 16px));
-    background:#000;border:1px solid var(--verde);border-radius:5px;padding:4px;
+    background:#000;border:1px solid transparent;border-radius:5px;padding:4px;
     display:flex;flex-direction:column;gap:2px;
-    box-shadow:0 0 0 1px #06210a,0 8px 28px rgba(0,0,0,.85);
+    box-shadow:var(--modal-sombra);
   }
   #ctx .ctit{
     color:var(--gris);font-size:9px;text-transform:uppercase;letter-spacing:.06em;padding:3px 6px 4px 6px;
@@ -2417,18 +2426,107 @@ function cargarImagenes(nodo){
     });
   });
 }
-function verImagen(url, alt){                      // tamaño real, click o esc para cerrar
+// 1652 (facundo, 2026-09-15): pinch con dos dedos, arrastre con zoom, doble toque vuelve a 1x, rueda en desktop.
+// la imagen nunca se va de la pantalla (`vzLimitar`) y salir anda siempre: `✕` fija, tocar el fondo a 1x, esc (`escTope`)
+var VZ_MAX = 5, VZ_DOBLE_MS = 300;
+function verImagen(url, alt){
   var v = document.createElement("div");
   v.id = "visor";
   var im = document.createElement("img");
-  im.src = url; im.alt = alt || "";
+  im.src = url; im.alt = alt || ""; im.draggable = false;
   var x = document.createElement("span");
-  x.className = "cerrar"; x.textContent = "cerrar";
+  x.className = "cerrar"; x.textContent = "✕";
+  x.setAttribute("role", "button"); x.setAttribute("aria-label", "cerrar");
   v.appendChild(im); v.appendChild(x);
-  function cerrar(){ if(v.parentNode) v.parentNode.removeChild(v); document.removeEventListener("keydown", tecla); }
-  function tecla(e){ if(e.key === "Escape") cerrar(); }
-  v.addEventListener("click", cerrar);
-  document.addEventListener("keydown", tecla);
+  var z = {s: 1, tx: 0, ty: 0}, ptrs = {}, gesto = null, movio = false, ultTap = {t: 0, x: 0, y: 0};
+  function pintar(){
+    im.style.transform = "translate(" + z.tx + "px," + z.ty + "px) scale(" + z.s + ")";
+    v.classList.toggle("zoom", z.s > 1.01);
+  }
+  function limitar(){                               // sin huecos: centrada si entra, bordes pegados si sobra
+    z.s = Math.min(VZ_MAX, Math.max(1, z.s));
+    var mx = Math.max(0, (im.offsetWidth * z.s - v.clientWidth) / 2);
+    var my = Math.max(0, (im.offsetHeight * z.s - v.clientHeight) / 2);
+    z.tx = Math.min(mx, Math.max(-mx, z.tx));
+    z.ty = Math.min(my, Math.max(-my, z.ty));
+  }
+  function escalarEn(s2, fx, fy){                  // fx/fy: punto de pantalla que queda quieto
+    var r = v.getBoundingClientRect(), cx = fx - r.left - r.width / 2, cy = fy - r.top - r.height / 2;
+    s2 = Math.min(VZ_MAX, Math.max(1, s2));
+    z.tx = cx - (cx - z.tx) * (s2 / z.s); z.ty = cy - (cy - z.ty) * (s2 / z.s); z.s = s2;
+    limitar(); pintar();
+  }
+  function lista(){ return Object.keys(ptrs).map(function(k){ return ptrs[k]; }); }
+  function arrancar(){
+    var p = lista();
+    if(p.length >= 2){
+      gesto = {tipo: "pinch", d: Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y) || 1, s: z.s,
+               mx: (p[0].x + p[1].x) / 2, my: (p[0].y + p[1].y) / 2, tx: z.tx, ty: z.ty};
+    } else if(p.length === 1){
+      gesto = {tipo: "arrastre", x: p[0].x, y: p[0].y, tx: z.tx, ty: z.ty};
+    } else gesto = null;
+  }
+  v.addEventListener("pointerdown", function(e){
+    if(e.target === x) return;
+    if(!Object.keys(ptrs).length) movio = false;
+    ptrs[e.pointerId] = {x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY};
+    try{ v.setPointerCapture(e.pointerId); }catch(err){}
+    if(Object.keys(ptrs).length >= 2) movio = true;   // dos dedos nunca es un toque que cierra
+    arrancar();
+  });
+  v.addEventListener("pointermove", function(e){
+    var q = ptrs[e.pointerId];
+    if(!q || !gesto) return;
+    q.x = e.clientX; q.y = e.clientY;
+    if(Math.hypot(q.x - q.x0, q.y - q.y0) > 8) movio = true;
+    var p = lista();
+    if(gesto.tipo === "pinch" && p.length >= 2){
+      var d = Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y) || 1;
+      var mx = (p[0].x + p[1].x) / 2, my = (p[0].y + p[1].y) / 2;
+      z.tx = gesto.tx + (mx - gesto.mx); z.ty = gesto.ty + (my - gesto.my);   // el punto medio arrastra
+      z.s = gesto.s;
+      escalarEn(gesto.s * d / gesto.d, mx, my);
+    } else if(gesto.tipo === "arrastre" && z.s > 1.01){
+      z.tx = gesto.tx + (q.x - gesto.x); z.ty = gesto.ty + (q.y - gesto.y);
+      limitar(); pintar();
+    }
+    e.preventDefault();
+  });
+  function soltar(e){
+    var q = ptrs[e.pointerId];
+    delete ptrs[e.pointerId];
+    arrancar();                                     // de dos a un dedo sigue como arrastre, sin salto
+    if(!q || e.type === "pointercancel" || movio || Object.keys(ptrs).length) return;
+    var t = Date.now();
+    if(t - ultTap.t < VZ_DOBLE_MS && Math.hypot(e.clientX - ultTap.x, e.clientY - ultTap.y) < 30){
+      ultTap.t = 0;
+      if(z.s > 1.01){ z.s = 1; z.tx = 0; z.ty = 0; pintar(); movio = true; }   // doble toque: vuelve a 1x
+      else { escalarEn(2.5, e.clientX, e.clientY); movio = true; }
+    } else ultTap = {t: t, x: e.clientX, y: e.clientY};
+  }
+  v.addEventListener("pointerup", soltar);
+  v.addEventListener("pointercancel", soltar);
+  v.addEventListener("wheel", function(e){          // desktop: rueda o trackpad escala en el cursor
+    e.preventDefault();
+    escalarEn(z.s * Math.exp(-e.deltaY / 300), e.clientX, e.clientY);
+  }, {passive: false});
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function(n){   // safari: que no escale la pagina
+    v.addEventListener(n, function(e){ e.preventDefault(); }, {passive: false});
+  });
+  v.addEventListener("dblclick", function(e){ e.preventDefault(); });
+  function reacomodar(){ limitar(); pintar(); }
+  function cerrar(){
+    if(v.parentNode) v.parentNode.removeChild(v);
+    window.removeEventListener("resize", reacomodar);
+  }
+  v.__cerrar = cerrar;
+  x.addEventListener("click", function(e){ e.stopPropagation(); cerrar(); });
+  v.addEventListener("click", function(e){        // el fondo cierra solo a 1x y si no fue un gesto
+    if(e.target === im || z.s > 1.01 || movio){ movio = false; return; }
+    cerrar();
+  });
+  window.addEventListener("resize", reacomodar);
+  im.addEventListener("load", reacomodar);
   document.body.appendChild(v);
 }
 // 1400 (facundo, 2026-09-15: "las tablas mejor con css normal y no barritas de texto"): un bloque de filas
@@ -8487,7 +8585,7 @@ $("ddfondo").addEventListener("click", cerrarDd);
 // 1558: la pila vive en el molde (`capaRegistrar`); cada overlay dice como se ve abierto y como se cierra. gana el
 // z-index mas alto (selmodal 41, animmenu y votar 40 en este orden, campana 34, menu 32, modal 30, notimodal 28, dd 20)
 capaRegistrar({nombre: "visor", el: "visor", z: 60, abierta: function(){ return !!document.getElementById("visor"); },
-               cerrar: function(){ document.getElementById("visor").click(); }});
+               cerrar: function(){ document.getElementById("visor").__cerrar(); }});   // 1652: cierra con zoom tambien
 capaRegistrar({nombre: "seleccion", el: "selmodal", cerrar: function(){ selCerrar(); }});
 capaRegistrar({nombre: "animmenu", el: "animmenu", cerrar: function(){
   $("amtxt").value = "";
