@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.290">
-<link rel="manifest" href="manifest.json?v=4.290">
+<meta name="agente-web-version" content="4.291">
+<link rel="manifest" href="manifest.json?v=4.291">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -127,8 +127,14 @@
      un solo lugar por estilo: todo modal, votacion o boton nuevo reusa estas clases (docs/componentes-web.md) y nace con
      los gustos de facundo: texto hasta --texto-max, esc cierra (pila `capaRegistrar`), decisiones con glifos sin borde
      `✕` roja · `–` blanca · `✓` verde. el id del componente pone solo lo propio (z-index, ancho, gap, padding). */
-  .capa{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;box-sizing:border-box;
+  .capa{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;box-sizing:border-box;
     padding:calc(10px + env(safe-area-inset-top)) 10px calc(10px + env(safe-area-inset-bottom)) 10px;background:var(--capa-fondo)}
+  /* 1642 (facundo, 2026-09-15 18:48 y 18:55): centro optico. si la caja deja al menos 5% libre arriba y abajo (mide hasta
+     el 80% del alto), `capaOptico` pone `.optico` y un espacio de 10% abajo sube su centro al 45%; si no, centro real.
+     nunca sube de 45% ni se corta arriba */
+  .capa::after{content:"";flex:0 0 0;min-height:0}
+  .capa.optico::after{flex-basis:10%}
+  .capa > *{flex-shrink:0}
   .capa.oculta{display:none!important}
   .mcaja{background:#000;border:1px solid var(--verde);border-radius:4px}
   .mhead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;color:var(--verde);font-size:12px}
@@ -156,9 +162,13 @@
   .bglifo{min-height:38px;padding:5px 9px;background:none;border:0;font:inherit;font-size:var(--texto-max);font-weight:bold;
     line-height:1;cursor:pointer;touch-action:manipulation}
   .bglifo:active{opacity:.45}
-  .bglifo.b-no{color:var(--rojo)}
-  .bglifo.b-queda{color:var(--blanco)}
-  .bglifo.b-atras{color:var(--blanco)}   /* 1640: el back de la tarjeta, `-_-` en el medio */
+  /* 1642 (facundo desde el iphone: "no veo los botones blancos"): en safari un <button> puede quedar con la apariencia
+     nativa o el `text-fill` del sistema; se apagan los dos y el color va en hex antes de la variable */
+  .bglifo{-webkit-appearance:none;appearance:none;-webkit-text-fill-color:currentColor;opacity:1;min-width:38px}
+  .bglifo.b-no{color:#ff4d4d;color:var(--rojo)}
+  .bglifo.b-queda{color:#e8e8e8;color:var(--blanco)}
+  .bglifo.b-atras{color:#e8e8e8;color:var(--blanco)}   /* 1640: el back de la tarjeta, `-_-` en el medio */
+  .bglifo.b-atras.apagado{color:#666;color:var(--gris)}   /* 1642: sin nada que deshacer se ve apagado, nunca invisible */
   /* `modalMolde`: la caja de un modal nuevo */
   .mmolde{width:100%;max-width:360px;max-height:100%;overflow-y:auto;box-sizing:border-box;display:flex;flex-direction:column;
     gap:8px;padding:12px;font-size:12px}
@@ -208,7 +218,8 @@
      queda arriba del teclado (`body.teclado`, visualViewport) */
   #selmodal .selcaja{width:100%;max-width:520px;max-height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;
     padding:10px}
-  body.teclado #selmodal{bottom:auto;height:var(--alto,100dvh);align-items:flex-end;padding-top:4px;padding-bottom:4px}
+  body.teclado #selmodal{bottom:auto;height:var(--alto,100dvh);justify-content:flex-end;padding-top:4px;padding-bottom:4px}
+  body.teclado #selmodal::after{display:none}   /* 1642: con teclado la caja va pegada abajo, sin el espacio del centro optico */
   body.teclado #selcont{display:none!important}
   #selcuenta{white-space:nowrap}
   #sellista{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:6px}
@@ -255,7 +266,8 @@
   #seltarjeta .tjchip.tag{color:var(--magenta);border-color:currentColor}
   /* 1495 (facundo, 2026-09-15): la foto de perfil arriba y grande, siempre; abajo nombre, marca, estado y en comun */
   #seltarjeta .tjfotos{display:flex;justify-content:center}
-  #seltarjeta .tjppal{flex:0 0 auto;width:min(220px,60vw);aspect-ratio:1;border-radius:50%;overflow:hidden;display:flex;align-items:center;
+  /* 1642: el cdn da la foto de 150 px (antes se bajaba de 96): el circulo mide lo que mide la foto (96 a 220), nunca la estira */
+  #seltarjeta .tjppal{flex:0 0 auto;width:min(150px,60vw);aspect-ratio:1;border-radius:50%;overflow:hidden;display:flex;align-items:center;
     justify-content:center;background:#111;border:1px solid var(--linea)}
   #seltarjeta .tjmas{flex:1 1 auto;display:flex;gap:6px;flex-wrap:wrap;min-width:0}
   #seltarjeta .tjmas .tjf{width:56px;height:56px;border-radius:4px;overflow:hidden;border:1px solid var(--linea);background:#111}
@@ -265,6 +277,9 @@
   #seltarjeta a.tjcta{color:var(--verde);text-decoration:none}   /* 1515: link al perfil, mismo verde que el `ver` de la lista */
   #seltarjeta .tjdet,#seltarjeta .tjmot{color:var(--gris);font-size:11.5px;word-break:break-word}
   #seltarjeta .tjmot{font-style:italic}
+  /* 1642: seguidores, en comun y reacciones en una fila de texto (sin caja), la bio abajo en blanco apagado */
+  #seltarjeta .tjdatos{display:flex;flex-wrap:wrap;gap:2px 10px;color:var(--cian);font-size:11.5px}
+  #seltarjeta .tjbio{color:#cfcfcf;font-size:11.5px;white-space:pre-line;word-break:break-word}
   #seltarjeta .tjlink{align-self:flex-start;min-height:34px;display:flex;align-items:center;padding:0 10px;color:var(--verde);
     font-size:12px;text-decoration:none;border:1px solid var(--linea);border-radius:4px}
   /* 1561 (facundo, 2026-09-15): "no quiero volver a ver maybes ni si ni no". dos glifos en una fila: `✕` roja (no va)
@@ -1164,7 +1179,21 @@ function capaZ(c){
 function capaTope(){
   return CAPAS.filter(capaAbierta).sort(function(a, b){ return capaZ(b) - capaZ(a) || a.orden - b.orden; })[0] || null;
 }
-function capaMostrar(id, fondo){ $(id).classList.remove("oculta"); if(fondo) $(fondo).classList.remove("oculta"); }
+function capaMostrar(id, fondo){ $(id).classList.remove("oculta"); if(fondo) $(fondo).classList.remove("oculta"); capaOptico($(id)); }
+// 1642 (facundo, 2026-09-15 18:55): centro optico solo si sobra lugar. la caja sube al 45% (`.optico`) si deja al
+// menos 5% libre arriba y abajo, o sea si mide hasta el 80% del alto; si no, centro real y nunca se corta arriba.
+// se recalcula cuando cambia el alto de la caja (otra tarjeta) o de la pantalla
+var CAPA_OPTICO_MAX = 0.8, capaRO = window.ResizeObserver ? new ResizeObserver(function(es){
+  es.forEach(function(e){ capaOptico(e.target.classList.contains("capa") ? e.target : e.target.parentElement); });
+}) : null;
+function capaOptico(capa){
+  if(!capa || !capa.classList || !capa.classList.contains("capa")) return;
+  var caja = capa.firstElementChild;
+  if(!caja) return;
+  if(capaRO && !capa.__optico){ capa.__optico = true; capaRO.observe(capa); capaRO.observe(caja); }
+  var H = capa.clientHeight, h = caja.getBoundingClientRect().height;
+  capa.classList.toggle("optico", H > 0 && h > 0 && h <= H * CAPA_OPTICO_MAX);
+}
 function capaOcultar(id, fondo){ $(id).classList.add("oculta"); if(fondo) $(fondo).classList.add("oculta"); }
 var GLIFOS = {no: ["✕", "no va"], atras: ["-_-", "back"], queda: ["🔥", "queda"]};   // 1640: back en el medio y fueguito   // 1561: "no quiero volver a ver maybes ni si ni no"
 function moldeBoton(o){
@@ -4328,7 +4357,10 @@ function tjPintar(){
   var atras = tjHist(e).length > 0;
   $("selacciones").classList.toggle("oculta", !c && !atras);
   [].forEach.call(document.querySelectorAll("#selacciones .tjbtn"), function(b){
-    b.style.visibility = (b.getAttribute("data-q") === "atras" ? atras : !!c) ? "" : "hidden";
+    // 1642: con tarjeta a la vista se ven las tres; el back sin nada que deshacer queda apagado (gris), no invisible
+    var esAtras = b.getAttribute("data-q") === "atras";
+    b.style.visibility = (esAtras ? (atras || !!c) : !!c) ? "" : "hidden";
+    if(esAtras) b.classList.toggle("apagado", !atras);
   });
   if(!c && e && e.continua){   // 1567: la fila no termina: espera a que entren mas
     t.removeAttribute("data-candidata");
@@ -4350,7 +4382,9 @@ function tjPintar(){
     function bajar(){
       bajarImagen(foto).then(function(url){
         if(!tjActual() || tjActual().id !== id) return;
-        var im = document.createElement("img"); im.alt = ""; im.src = url; pp.appendChild(im);
+        var im = document.createElement("img"); im.alt = "";
+        im.onload = function(){ if(im.naturalWidth) pp.style.width = "min(" + Math.max(96, Math.min(220, im.naturalWidth)) + "px,60vw)"; };   // 1642
+        im.src = url; pp.appendChild(im);
       }).catch(function(){
         if(!tjActual() || tjActual().id !== id) return;
         if(intento >= TJ_REINTENTOS.length) return tjSacar(id);
@@ -4375,7 +4409,17 @@ function tjPintar(){
   (c.etiquetas || []).forEach(function(x){ chip(x, "tag"); });
   if(c.estado) est.appendChild(document.createTextNode(c.estado));
   t.appendChild(est);
-  if(c.detalle){ var x = document.createElement("div"); x.className = "tjdet"; x.textContent = c.detalle; t.appendChild(x); }
+  // 1642: lo que el embudo ya sabe (seguidores, en comun, reacciones), la bio y el motivo; la linea igual al nombre no va
+  if((c.datos || []).length){
+    var ds = document.createElement("div"); ds.className = "tjdatos";
+    c.datos.forEach(function(s){ var y = document.createElement("span"); y.textContent = s; ds.appendChild(y); });
+    t.appendChild(ds);
+  }
+  function renglon(txt, cls){ var x = document.createElement("div"); x.className = cls; x.textContent = txt; t.appendChild(x); }
+  var mismo = function(s){ return String(s || "").trim().toLowerCase(); };
+  if(c.detalle && mismo(c.detalle) !== mismo(c.titulo) && mismo(c.detalle) !== mismo(c.cuenta)) renglon(c.detalle, "tjdet");
+  if(c.bio) renglon(c.bio, "tjbio");
+  if(c.motivo) renglon(c.motivo, "tjmot");
   t.scrollTop = 0;
 }
 // 1495: cada voto firma la tarjeta a la vista (`candidata_id` y `cuenta`). el server rechaza el que no los trae.
@@ -5783,6 +5827,12 @@ function mandarAdjunto(texto){
 var DICT_LANGS = ["es-AR", "es-419", "es-ES"];
 var DICT_GRACIA = 2500;        // ms de gracia despues del stop(), esperando el ultimo resultado final
 var MARCA_CELU = "(audio de facundo, transcripto en el celu): ";   // la lee `recetas/transcribir_audio.py`
+// ---------- audio del chat: solo el texto transcripto, sin audio, hasta nuevo aviso (facundo, 2026-09-15, orden 1646) ----------
+// "cuando mando un audio ... no aparezca ni siquiera se manda ... la transcripcion del audio como dice el texto pero sin el
+// audio". con texto del celu no se sube el archivo, no hay adjunto ni reproductor y no va `MARCA_CELU`: el texto queda en
+// la caja como si lo hubiera tipeado (desde el modal de una push sale directo). sin texto, el audio sigue como siempre.
+// revertir: `false`.
+var AUDIO_SOLO_TEXTO = true;
 var dictStub = null;           // `prueba_web_audio` enchufa un reconocedor de mentira
 var dictado = null;            // el reconocedor de esta grabacion: {rec, partes, local, err, cerrado}
 var dictOnDevice = null;       // "available" | "downloadable" | "unavailable" | "sin_dato" | null (sin api)
@@ -5981,6 +6031,21 @@ function terminarGrabacion(enviar){
     }
     // el texto del celu se espera aca (1209): al soltar ya casi siempre esta, y como mucho DICT_GRACIA
     return terminarDictado().then(function(d){
+      if(AUDIO_SOLO_TEXTO && d && d.texto){       // 1646: solo el texto, el blob se descarta
+        var dd = audioDestino; audioDestino = null;
+        if(dd){
+          mandarAparte = true;
+          try{ var pr = mandar(dd.cita + d.texto, dd.tema, false, Date.now()); }finally{ mandarAparte = false; }
+          return Promise.resolve(pr).then(function(r){
+            if(dd.noti) marcarLeidos([dd.noti]);
+            estadoNotiPush("mandado a " + dd.tema);
+            return r;
+          });
+        }
+        ponerCaja(((txt.value || "") + " " + d.texto).trim());
+        txt.focus();
+        return null;
+      }
       // 1350: la voz del modal de una push sale ya, a su tema y con la cita (no hay adjunto que revisar)
       if(audioDestino){
         var ad = audioDestino; audioDestino = null;
@@ -8810,6 +8875,8 @@ window.__agente = {
   // dictado en el celu (1209): la prueba enchufa un reconocedor falso y chequea los dos caminos
   hayDictado: hayDictado, prepararDictado: prepararDictado, empezarDictado: empezarDictado,
   terminarDictado: terminarDictado, cortarDictado: cortarDictado, marcaCelu: MARCA_CELU,
+  soloTexto: function(v){ if(v !== undefined) AUDIO_SOLO_TEXTO = !!v; return AUDIO_SOLO_TEXTO; },
+  audioDestino: function(d){ audioDestino = d || null; },    // la voz del modal de una push, sin abrir el modal
   audioBps: AUDIO_BPS, audioPista: AUDIO_PISTA, dictGracia: DICT_GRACIA,
   stubDictado: function(s){ dictStub = s || null; dictOnDevice = null; },
   ponerCaja: ponerCaja,
