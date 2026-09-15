@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.261">
-<link rel="manifest" href="manifest.json?v=4.261">
+<meta name="agente-web-version" content="4.262">
+<link rel="manifest" href="manifest.json?v=4.262">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -988,6 +988,28 @@ var REPO = "facundopichetto/agente-buzon";
 // jsonl y del buzon no cambian, solo lo que se ve.
 var QUIEN_F = "f", QUIEN_AGENTE = "flaudio";   // antes claudio (2026-09-14, etapa 1 del rename)
 var ISSUE = 1;
+// el buzón ROTA de issue (2026-09-15 02:40: github cortó el #1 con "Commenting is disabled on issues with more
+// than 2500 comments" y la web quedó muda). el número vivo está en `buzon.json` del repo (lo escribe el daemon
+// al rotar, `buzon_rotar`): se arranca con el último conocido (localStorage), se relee al entrar, cada 5 min
+// desde `tick` y en el acto cuando github contesta ese 403 o 404 del issue (y el pedido se repite al nuevo).
+try{ ISSUE = parseInt(localStorage.getItem("agente_issue"), 10) || ISSUE; }catch(x){}
+var issueUlt = 0, issueEnVuelo = null;
+function cargarIssue(forzar){
+  if(!forzar && Date.now() - issueUlt < 300000) return Promise.resolve(false);
+  if(issueEnVuelo) return issueEnVuelo;
+  issueUlt = Date.now();
+  issueEnVuelo = api("GET", "/repos/" + REPO + "/contents/buzon.json", null, null, "application/vnd.github.raw+json")
+    .then(function(r){
+      var n = r && r.json && parseInt(r.json.issue, 10);
+      if(!n || n === ISSUE) return false;
+      ISSUE = n; etagCom = null; etagIssue = null;
+      try{ localStorage.setItem("agente_issue", String(n)); }catch(x){}
+      return true;
+    })
+    .catch(function(){ return false; })
+    .then(function(c){ issueEnVuelo = null; return c; });
+  return issueEnVuelo;
+}
 var MARCA = "<!--agente-->";
 var API = "https://api.github.com";
 
@@ -3059,6 +3081,14 @@ function api(metodo, ruta, cuerpo, etag, accept){
           pedirToken("token rechazado por github (401): " + msg);
           throw new Error("401");
         }
+        // el issue del buzón se llenó (2500 comments): releo `buzon.json` y repito el pedido al nuevo
+        if(/more than 2500 comments/i.test(msg) && ruta.indexOf("/issues/" + ISSUE) >= 0){
+          var viejo = ISSUE;
+          return cargarIssue(true).then(function(cambio){
+            if(cambio) return api(metodo, ruta.replace("/issues/" + viejo, "/issues/" + ISSUE), cuerpo, null, accept);
+            throw new Error("el buzón se llenó (2500 comentarios) y el daemon todavía no abrió el nuevo: probá en un minuto");
+          });
+        }
         // 403 puede ser rate limit (frena) o falta de permisos (el token no sirve para este repo)
         var lim = limiteGithub(r.status, r.headers, msg);
         if(lim){
@@ -3071,6 +3101,13 @@ function api(metodo, ruta, cuerpo, etag, accept){
       });
     }
     if(!r.ok){
+      if(r.status === 404 && ruta.indexOf("/issues/" + ISSUE) >= 0){   // issue borrado o rotado: releo buzon.json
+        var viejo404 = ISSUE;
+        return cargarIssue(true).then(function(cambio){
+          if(cambio) return api(metodo, ruta.replace("/issues/" + viejo404, "/issues/" + ISSUE), cuerpo, null, accept);
+          throw new Error("http 404 issue " + ISSUE);
+        });
+      }
       return r.json().catch(function(){ return {}; }).then(function(j){
         throw new Error("http " + r.status + ((j && j.message) ? " " + j.message : ""));
       });
@@ -3281,6 +3318,7 @@ function chatDeTab(tema){
 function tick(){
   if(Date.now() - lan.ult > LAN_CADA) probarLan();   // lan primero: cada 60 s se vuelve a probar el endpoint
   vaciarSalida();   // lo que github freno sale solo apenas levanta el freno
+  cargarIssue(false);   // cada 5 min: si el daemon rotó el issue del buzón, el próximo tick ya va al nuevo
   Promise.all([cargarEstado(), cargarComentarios(false)])
     .catch(function(e){ if(ruidoso(e)) sistema("error: " + e.message, "error"); });
   // los widgets y las pestañas van a 30 s a la vista y 120 s en background (facundo, 2026-09-13):
@@ -7378,7 +7416,7 @@ function arrancar(t){
   mezclar(); render(); vistos = {}; etagCom = null; etagIssue = null;
   etagWid = null; widUlt = 0;
   etagTabs = null; shaTabs = null; tabsUlt = 0; tabsListo = false; tabsSync = true;
-  sincronizar(true)
+  cargarIssue(true).then(function(){ return sincronizar(true); })   // primero el número de issue vivo del buzón
     .then(function(){ reprogramar(); votArrancar(); selArrancar(); })   // 1373: animaciones y votacion abierta; 1388: seleccion
     .catch(function(e){
       if(ruidoso(e)) sistema("error: " + e.message, "error");
