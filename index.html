@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.257">
-<link rel="manifest" href="manifest.json?v=4.257">
+<meta name="agente-web-version" content="4.258">
+<link rel="manifest" href="manifest.json?v=4.258">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -5822,6 +5822,25 @@ function cajaSaludPersonal(p){
   return caja("salud personal", extra, limFilas("salud_personal", filas).join("\n"), false, "salud_personal");
 }
 
+function cajaSeguidores(p){
+  // instagram de facundo (tema personal, orden 1393): una foto por dia, bajas y altas de 7 dias y cuantos no te
+  // siguen. lo arma `recetas/ig_seguidores.py` (`widget()`), cero tokens y sin push.
+  if(p.error) return caja("seguidores", "", vacio(p.error), false, "seguidores");
+  var extra = '<span class="b">' + (p.seguidores || 0) + '</span> <span class="g">te siguen ·</span> <span class="b">' +
+              (p.seguidos || 0) + '</span> <span class="g">seguís</span>';
+  var filas = [], quien = function(u){ return "@" + esc(u.usuario) + (u.nombre ? ' <span class="g">' + esc(u.nombre) + "</span>" : ""); };
+  (p.dejaron || []).forEach(function(u){ filas.push('<span class="r">-</span> ' + quien(u) + ' <span class="g">' + esc(u.fecha.slice(5)) + "</span>"); });
+  (p.nuevos || []).forEach(function(u){ filas.push('<span class="v">+</span> ' + quien(u) + ' <span class="g">' + esc(u.fecha.slice(5)) + "</span>"); });
+  if(!filas.length) filas.push(vacio("sin bajas ni altas en " + (p.dias || 7) + " días"));
+  var pie = "no te siguen <b>" + (p.no_me_siguen === null || p.no_me_siguen === undefined ? "?" : p.no_me_siguen) + "</b>";
+  if((p.dejaste || []).length || (p.seguiste || []).length)
+    pie += ' <span class="g">· vos: -' + (p.dejaste || []).length + " +" + (p.seguiste || []).length + "</span>";
+  if(p.fecha) pie += ' <span class="g">· foto ' + esc(p.fecha.slice(5)) + "</span>";
+  filas.push(pie);
+  if(p.problema) filas.push('<span class="a">' + esc(p.problema) + "</span>");
+  return caja("seguidores", extra, limFilas("seguidores", filas).join("\n"), false, "seguidores");
+}
+
 function cajaMail(p){
   // el chequeo del mail: adaptativo (facundo, 2026-09-12). 15 min de base, 2 min con conversacion
   // abierta, y vuelve a 15 al enfriarse. lo decide `recetas/mail_fuzzer.py` (`intervalo()`).
@@ -6197,7 +6216,8 @@ function pintarWidgets(d, err){
     ["dj", cajaDj(d.dj || {})],
     ["mail", cajaMail(d.mail || {})],
     ["que_ver", cajaQueVer(d.que_ver || {})],
-    ["salud_personal", d.salud_personal ? cajaSaludPersonal(d.salud_personal) : ""]
+    ["salud_personal", d.salud_personal ? cajaSaludPersonal(d.salud_personal) : ""],
+    ["seguidores", d.seguidores ? cajaSeguidores(d.seguidores) : ""]
   ];
   var mapa = {}, hay = [];
   partes.forEach(function(pa){ if(pa[1]){ mapa[pa[0]] = pa[1]; hay.push(pa[0]); } });
