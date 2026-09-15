@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.289">
-<link rel="manifest" href="manifest.json?v=4.289">
+<meta name="agente-web-version" content="4.290">
+<link rel="manifest" href="manifest.json?v=4.290">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -158,6 +158,7 @@
   .bglifo:active{opacity:.45}
   .bglifo.b-no{color:var(--rojo)}
   .bglifo.b-queda{color:var(--blanco)}
+  .bglifo.b-atras{color:var(--blanco)}   /* 1640: el back de la tarjeta, `-_-` en el medio */
   /* `modalMolde`: la caja de un modal nuevo */
   .mmolde{width:100%;max-width:360px;max-height:100%;overflow-y:auto;box-sizing:border-box;display:flex;flex-direction:column;
     gap:8px;padding:12px;font-size:12px}
@@ -267,7 +268,9 @@
   #seltarjeta .tjlink{align-self:flex-start;min-height:34px;display:flex;align-items:center;padding:0 10px;color:var(--verde);
     font-size:12px;text-decoration:none;border:1px solid var(--linea);border-radius:4px}
   /* 1561 (facundo, 2026-09-15): "no quiero volver a ver maybes ni si ni no". dos glifos en una fila: `✕` roja (no va)
-     y `→` blanca (queda). sin `escribir` ni campo de texto en la tarjeta */
+     y `→` blanca (queda). sin `escribir` ni campo de texto en la tarjeta.
+     1640 (facundo, 2026-09-15 18:3x): tres glifos: `✕` no va, `-_-` blanco en el medio (back: deshace el ultimo voto y
+     vuelve la tarjeta) y `🔥` a la derecha (queda). sin tarjeta a la vista, `✕` y `🔥` quedan invisibles en su lugar */
   #selacciones{display:flex;flex-wrap:wrap;gap:6px}
   #selacciones.oculta,#selmodal #seltxt.oculta{display:none!important}
   #selacciones .tjbtn{flex:1 1 0}
@@ -1090,7 +1093,7 @@
     <div id="selcont" class="oculta" aria-live="polite"></div>
     <div id="sellista"></div>
     <div id="seltarjeta" class="oculta"></div>
-    <div id="selacciones" class="oculta"><button class="tjbtn ignorar bglifo b-no" type="button" data-q="ignorar" aria-label="no va" title="no va">✕</button><button class="tjbtn queda bglifo b-queda" type="button" data-q="queda" aria-label="queda" title="queda">→</button></div>
+    <div id="selacciones" class="oculta"><button class="tjbtn ignorar bglifo b-no" type="button" data-q="ignorar" aria-label="no va" title="no va">✕</button><button class="tjbtn atras bglifo b-atras" type="button" data-q="atras" aria-label="back" title="back">-_-</button><button class="tjbtn queda bglifo b-queda" type="button" data-q="queda" aria-label="queda" title="queda">🔥</button></div>
     <textarea id="seltxt" placeholder="algo para sumar (opcional)" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
     <div class="selbtns mfila"><button id="selaceptar" class="selbtn bverde llena" type="button">aceptar</button><button id="selmandar" class="selbtn bverde llena" type="button">enviar texto</button></div>
     <div class="selpie mpie"><span id="selestado" class="mestado" aria-live="polite"></span><button id="selcerrar" class="mcerrar" type="button">cerrar</button></div>
@@ -1163,7 +1166,7 @@ function capaTope(){
 }
 function capaMostrar(id, fondo){ $(id).classList.remove("oculta"); if(fondo) $(fondo).classList.remove("oculta"); }
 function capaOcultar(id, fondo){ $(id).classList.add("oculta"); if(fondo) $(fondo).classList.add("oculta"); }
-var GLIFOS = {no: ["✕", "no va"], queda: ["→", "queda"]};   // 1561: "no quiero volver a ver maybes ni si ni no"
+var GLIFOS = {no: ["✕", "no va"], atras: ["-_-", "back"], queda: ["🔥", "queda"]};   // 1640: back en el medio y fueguito   // 1561: "no quiero volver a ver maybes ni si ni no"
 function moldeBoton(o){
   var b = document.createElement("button");
   b.type = "button";
@@ -4257,7 +4260,10 @@ function filaMarcar(col, id){
 }
 function filaVotadas(col){
   var o = Object.assign({}, selLeer("fila", {})[col] || {});
-  selLeer("pend", []).forEach(function(p){ if(p && p.col === col && p.r && p.r.candidata_id) o[p.r.candidata_id] = true; });
+  selLeer("pend", []).forEach(function(p){   // 1640: en orden; un `deshacer` sin subir borra el voto de atras
+    if(!p || p.col !== col || !p.r || !p.r.candidata_id) return;
+    if(p.r.tipo === "deshacer") delete o[p.r.candidata_id]; else o[p.r.candidata_id] = true;
+  });
   return o;
 }
 function filaFaltan(e){
@@ -4318,7 +4324,12 @@ function tjPintar(){
   t.textContent = "";
   $("seltxt").classList.add("oculta"); $("seltxt").value = "";
   tjContar();
-  $("selacciones").classList.toggle("oculta", !c);
+  // 1640: con el back, la fila de glifos se ve si hay tarjeta o algo que deshacer; lo que no aplica queda invisible en su lugar
+  var atras = tjHist(e).length > 0;
+  $("selacciones").classList.toggle("oculta", !c && !atras);
+  [].forEach.call(document.querySelectorAll("#selacciones .tjbtn"), function(b){
+    b.style.visibility = (b.getAttribute("data-q") === "atras" ? atras : !!c) ? "" : "hidden";
+  });
   if(!c && e && e.continua){   // 1567: la fila no termina: espera a que entren mas
     t.removeAttribute("data-candidata");
     var w = document.createElement("div"); w.className = "tjdet tjespera";
@@ -4381,7 +4392,38 @@ function tjVoto(e, c, q, txt){
   var pend = selLeer("pend", []); pend.push({col: e.coleccion, r: r}); selEscribir("pend", pend);
   $("selestado").textContent = (q === "ignorar" ? "no va" : q) + " @" + (c.cuenta || c.id);
   sel.tjVotos = (sel.tjVotos || 0) + 1;   // 1524: sin al menos una, `tjFin` no manda `fin`
+  (sel.tjHistorial = sel.tjHistorial || []).push({col: e.coleccion, c: c, q: q});   // 1640: lo que el back deshace
   sel.tj += 1;
+  tjPintar();
+  selSubir();
+  return true;
+}
+// 1640 (facundo, 2026-09-15: "agregá un back por si quiero cambiar mi voto"): el `-_-` del medio deshace el ultimo
+// voto de esta coleccion en esta carga de la pagina: manda un registro `deshacer` (el server vuelve la persona a
+// `candidata` y la tarjeta a la fila, sin push) y la tarjeta vuelve a la vista. se puede tocar varias veces seguidas.
+function tjHist(e){
+  return e ? (sel.tjHistorial || []).filter(function(h){ return h.col === e.coleccion; }) : [];
+}
+function tjAtras(){
+  var e = sel.actual, hs = sel.tjHistorial || [], i = hs.length - 1;
+  if(!e) return false;
+  while(i >= 0 && hs[i].col !== e.coleccion) i--;
+  if(i < 0) return false;
+  if(Date.now() - (sel.tjUlt || 0) < TJ_TOQUE_MS) return false;   // el doble toque cuenta una vez, igual que un voto
+  sel.tjUlt = Date.now();
+  var h = hs.splice(i, 1)[0], c = h.c;
+  if(e.continua){
+    var f = selLeer("fila", {});
+    if(f[e.coleccion]){ delete f[e.coleccion][c.id]; selEscribir("fila", f); }
+  }
+  var r = {id: lidNuevo(), tipo: "deshacer", ts: Date.now(), candidata_id: c.id, cuenta: c.cuenta || "", texto: ""};
+  var pend = selLeer("pend", []); pend.push({col: e.coleccion, r: r}); selEscribir("pend", pend);
+  var k = -1;
+  e.candidatas.forEach(function(x, j){ if(x.id === c.id && k < 0) k = j; });
+  if(k >= 0){ e.candidatas.splice(k, 1); if(k < sel.tj) sel.tj -= 1; }
+  e.candidatas.splice(sel.tj, 0, c);
+  sel.tjVotos = Math.max(0, (sel.tjVotos || 0) - 1);
+  $("selestado").textContent = "back @" + (c.cuenta || c.id);
   tjPintar();
   selSubir();
   return true;
@@ -4615,7 +4657,7 @@ $("seltxt").addEventListener("focus", function(){
 });
 // 1561: los dos glifos de la tarjeta, uno por decision
 [].forEach.call(document.querySelectorAll("#selacciones .tjbtn"), function(b){
-  b.addEventListener("click", function(){ tjDecidir(b.getAttribute("data-q")); });
+  b.addEventListener("click", function(){ var q = b.getAttribute("data-q"); if(q === "atras") tjAtras(); else tjDecidir(q); });
 });
 
 // ---------- mensaje en vuelo (facundo, 2026-09-13: "ver que pasa mientras espero") ----------
@@ -8500,6 +8542,7 @@ window.__agente = {
   selEsTarjetas: selEsTarjetas,   // 1440: modo tarjetas y su fallback sin `modo` del server
   tjPintarCon: function(e, i){ sel.actual = e; sel.tj = i || 0; if(!i){ sel.tjVotos = 0; sel.tjFallidas = []; } tjPintar(); return sel.tj; },   // 1515: `prueba_ig_embudo_tarjetas`
   tjIndice: function(){ return sel.tj; },
+  tjAtras: tjAtras, tjHistorial: function(){ return (sel.tjHistorial || []).map(function(h){ return h.col + ":" + h.c.id + ":" + h.q; }); },   // 1640: el back
   filaFaltan: filaFaltan, filaSumar: filaSumar, tjToqueMs: function(ms){ TJ_TOQUE_MS = ms; },   // 1567: fila continua
   tjAbrir: tjAbrir, tjReintentos: function(a){ TJ_REINTENTOS = a; },   // 1524: fotos que no bajan
   tjEstado: function(){ return {votos: sel.tjVotos || 0, fallidas: sel.tjFallidas || [], n: sel.actual ? sel.actual.candidatas.length : null}; },
@@ -8514,7 +8557,7 @@ window.__agente = {
   selPutStub: function(f){ selPutStub = f; },
   selEstado: function(){ return {abierto: !!sel.actual, col: sel.actual && sel.actual.coleccion, pend: selLeer("pend", []), fuente: sel.fuente,
                                  marcadas: selMarcadas(), abiertas: sel.abiertas.map(function(a){ return a.coleccion; })}; },
-  selReset: function(){ sel.actual = null; sel.abiertas = []; sel.ignorada = {};
+  selReset: function(){ sel.actual = null; sel.abiertas = []; sel.ignorada = {}; sel.tjHistorial = [];
                         ["pend", "hechas", "fila"].forEach(function(s){ try{ localStorage.removeItem("agente_sel_" + s); }catch(x){} }); },
   selFila: function(){ return selLeer("fila", {}); },   // correccion 18:12
   animRanking: animRanking, animSpinner: animSpinner, animSinVer: animSinVer, animValida: animValida,

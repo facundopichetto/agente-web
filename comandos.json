@@ -55,7 +55,7 @@
     },
     {
      "cmd": "salud",
-     "que": "la tabla de credenciales (`salud fresco` la vuelve a medir)",
+     "que": "la tabla de credenciales (salud fresco la vuelve a medir)",
      "escribe": null,
      "offline": "cola"
     },
@@ -96,13 +96,13 @@
     },
     {
      "cmd": "cerrar N",
-     "que": "la orden N queda hecha `[x]`",
+     "que": "la orden N queda hecha [x]",
      "escribe": "cerrar ",
      "offline": "cola"
     },
     {
      "cmd": "marcar N !",
-     "que": "la orden N queda fallida `[!]`",
+     "que": "la orden N queda fallida [!]",
      "escribe": "marcar ",
      "offline": "cola"
     },
@@ -155,7 +155,7 @@
     },
     {
      "cmd": "cuenta nombre",
-     "que": "pasa a esa cuenta (`auto` reparte solo)",
+     "que": "pasa a esa cuenta (auto reparte solo)",
      "escribe": "cuenta ",
      "offline": "cola"
     },
@@ -333,7 +333,7 @@
     },
     {
      "cmd": "que ver",
-     "que": "qué ver hoy (`que ver otra` cambia)",
+     "que": "qué ver hoy (que ver otra cambia)",
      "escribe": null,
      "offline": "cola"
     }
