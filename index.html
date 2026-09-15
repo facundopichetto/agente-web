@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.249">
-<link rel="manifest" href="manifest.json?v=4.249">
+<meta name="agente-web-version" content="4.250">
+<link rel="manifest" href="manifest.json?v=4.250">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -685,6 +685,55 @@
   #modal .macc button.principal{color:var(--verde);border-color:var(--verde)}
   #modal .macc .let{color:var(--verde);font-weight:600;margin-right:6px}
 
+  /* ---------- tocar una push (facundo, 2026-09-14, notimodal 1350) ----------
+     del tamaño del area del chat, encima del chat y de las pestañas, con el titulo centrado a la altura de la barra.
+     la posicion la pone `posNotiModal` con el rect de #panel-chat (igual en el celu y en la mac). */
+  #notimodal{
+    position:fixed;z-index:28;display:flex;flex-direction:column;box-sizing:border-box;overflow:hidden;
+    background:#000;border:1px solid var(--verde);border-radius:4px;
+    box-shadow:0 0 0 1px #06210a,0 10px 40px rgba(0,0,0,.85);
+  }
+  #notimodal.oculta{display:none}
+  #notimodal .nmtit{
+    position:relative;flex:0 0 auto;display:flex;align-items:center;justify-content:center;box-sizing:border-box;
+    padding:0 44px;border-bottom:1px solid var(--linea);color:var(--verde);font-size:10.5px;
+  }
+  #nmtitulo{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
+  #notimodal .nmx{
+    position:absolute;right:5px;top:50%;transform:translateY(-50%);background:#000;color:var(--gris);
+    border:1px solid var(--linea);border-radius:4px;padding:0 8px;font:inherit;font-size:13px;line-height:18px;cursor:pointer;
+  }
+  #notimodal .nmcuerpo{
+    flex:1 1 auto;overflow-y:auto;padding:10px;font-size:12px;line-height:1.55;color:var(--blanco);
+    -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+  }
+  #notimodal .nmtexto{white-space:pre-wrap;word-break:break-word}
+  #notimodal .nmtexto a{color:var(--cian);text-decoration:none;border-bottom:1px dotted #1f3a44}
+  #notimodal .nmopc{display:flex;flex-direction:column;gap:5px;margin-top:10px}
+  #notimodal .nmop{
+    background:#000;color:var(--cian);border:1px solid var(--linea);border-radius:4px;
+    padding:8px 10px;font:inherit;font-size:11.5px;text-align:left;cursor:pointer;
+  }
+  #notimodal .nmop .let{color:var(--verde);font-weight:600;margin-right:6px}
+  #notimodal .nmop.sel{color:#000;background:var(--verde);border-color:var(--verde)}
+  #notimodal .nmop.sel .let{color:#000}
+  #notimodal .nmmeta{margin-top:10px;font-size:10px}
+  #notimodal .nmpie{
+    flex:0 0 auto;display:flex;flex-direction:column;gap:5px;border-top:1px solid var(--linea);
+    padding:6px 8px calc(6px + env(safe-area-inset-bottom)) 8px;
+  }
+  #notimodal .nmfila{display:flex;align-items:center;gap:6px;min-height:18px}
+  #nmoir{display:flex;align-items:center;gap:4px;color:var(--gris);font-size:10.5px}
+  #nmoir .nmhabla{background:none;border:0;color:var(--cian);font:inherit;font-size:11px;padding:0;cursor:pointer}
+  #nmestado{color:var(--gris);font-size:10px;margin-left:auto}
+  #nmtxt{
+    flex:1 1 auto;min-width:0;background:#000;color:var(--blanco);border:1px solid var(--linea);border-radius:4px;
+    font:inherit;font-size:12px;padding:6px;resize:none;
+  }
+  #nmgrabar{color:var(--magenta);touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+  #nmmandar{color:var(--verde)}
+  #nmgrabar.grabando{color:var(--rojo);background:#1a0000;animation:lat 1s steps(2,start) infinite}
+
   /* ---------- menu contextual (facundo, 2026-09-11) ----------
      tap and hold en el celu, click derecho en desktop, sobre un mensaje del chat, una fila de widget
      o una pestaña. mismo look terminal que el modal, pero pegado a donde se toco. */
@@ -788,6 +837,19 @@
   <div class="mtit"><span id="mtitulo"></span><button id="mcerrar" class="mx" type="button">esc ×</button></div>
   <div class="mcuerpo" id="mcuerpo"></div>
   <div class="macc" id="macc"></div>
+</div>
+
+<div id="notimodal" class="oculta" role="dialog" aria-modal="true" aria-labelledby="nmtitulo">
+  <div id="nmtit" class="nmtit"><span id="nmtitulo"></span><button id="nmcerrar" class="nmx" type="button" title="cerrar" aria-label="cerrar">×</button></div>
+  <div id="nmcuerpo" class="nmcuerpo"></div>
+  <div class="nmpie">
+    <div class="nmfila"><span id="nmoir"></span><span id="nmestado" aria-live="polite"></span></div>
+    <div class="nmfila">
+      <textarea id="nmtxt" rows="1" placeholder="contestar sobre esta notificación" enterkeyhint="send" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
+      <button id="nmgrabar" class="ico" type="button" title="mantené apretado para contestar con voz" aria-label="contestar con voz"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg></button>
+      <button id="nmmandar" class="ico" type="button" title="mandar" aria-label="mandar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 3 10 14"/><path d="M21 3 14 21l-4-7-7-4z"/></svg></button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -2988,13 +3050,14 @@ function recibirChat(tema, d){
       // la respuesta se pinta con la hora en que se escribio (`ts_llegada`); la pregunta, con la de envio
       out.push({id: "h:" + base + ":r", clase: "agente", quien: QUIEN_AGENTE, texto: r, iso: f.ts_llegada || f.ts,
                 clave: "r:" + t + "|" + (f.ts_llegada || f.ts || "") + "|" + hashTexto(r),   // 1211: no por posicion
-                tema: t, explicito: true, tag: t, audio: f.audio || null, nodo: nodo,
+                tema: t, explicito: true, tag: t, audio: f.audio || null, nodo: nodo, tarea: f.tarea || null,
                 modelo: f.nodo && f.modelo ? modeloCorto(f.modelo) : null,
                 duracion_s: f.duracion_s !== undefined ? f.duracion_s : null, cuello: f.cuello || null,
                 opciones: f.opciones || null});
     }
   });
   msgsHist[t] = out;
+  if(notiPush) setTimeout(refrescarNotiPush, 0);   // 1350: llego la fila de la tarea del modal abierto
   return out.length;
 }
 function cargarChatTema(tema){
@@ -3366,6 +3429,7 @@ var ultimoTexto = "", ultimoTs = 0;
 // `tsEnvio` (1191): cuando facundo apreto mandar. lo pasan la foto y el audio, que salen recien
 // despues de subirse; para un texto es ahora mismo. de ahi sale el `[enviado: ...]` y la hora que se pinta.
 function mandar(texto, tema, crudo, tsEnvio){
+  var aparte = mandarAparte;   // 1350: sale del modal de una push: no toca la caja, ni borradores, ni el scroll
   texto = (texto || "").trim();
   if(!texto) return;
   if(enviando) return;                                          // hay uno saliendo: este enter no cuenta
@@ -3376,15 +3440,19 @@ function mandar(texto, tema, crudo, tsEnvio){
   var caja = temaCaja;
   ultimoTexto = texto; ultimoTs = Date.now();
   if(Date.now() < frenoHasta){                                   // github frenado: ni lo intento, queda guardado
-    if(txt.value.trim() === texto){ txt.value = ""; txt.style.height = ""; }
-    borrarBorrador(tema); if(caja && caja !== tema) borrarBorrador(caja);
+    if(!aparte){
+      if(txt.value.trim() === texto){ txt.value = ""; txt.style.height = ""; }
+      borrarBorrador(tema); if(caja && caja !== tema) borrarBorrador(caja);
+    }
     guardarSalida(texto, tema, cuerpo);
     return Promise.resolve();
   }
   enviando++;
   $("mandar").disabled = true;
-  if(txt.value.trim() === texto){ txt.value = ""; txt.style.height = ""; }   // la caja se vacia ya
-  borrarBorrador(tema); if(caja && caja !== tema) borrarBorrador(caja);      // y su tumba se publica ya
+  if(!aparte){
+    if(txt.value.trim() === texto){ txt.value = ""; txt.style.height = ""; }   // la caja se vacia ya
+    borrarBorrador(tema); if(caja && caja !== tema) borrarBorrador(caja);      // y su tumba se publica ya
+  }
   return api("POST", "/repos/" + REPO + "/issues/" + ISSUE + "/comments", {body: cuerpo})
     .then(function(r){
       if(r.json && !vistos[r.json.id]){
@@ -3394,8 +3462,10 @@ function mandar(texto, tema, crudo, tsEnvio){
                  explicito: true, tema: tema, creado: r.json.created_at || null, disp: dispDe(sacarDesde(cuerpo).desde) || null,
                  modo: modoDe(sacarDesde(cuerpo).desde) || null};
         msgsCom.push(m); msgs.push(m); pintarMsg(m, false);
-        vueloIniciar(m, cuerpo);   // spinner + fase + eta hasta que llegue la respuesta
-        alFinal();
+        if(!aparte){
+          vueloIniciar(m, cuerpo);   // spinner + fase + eta hasta que llegue la respuesta
+          alFinal();
+        }
       }
       etagCom = null;
     })
@@ -3763,7 +3833,8 @@ function iniciarPush(){
   }).catch(function(){});
   navigator.serviceWorker.addEventListener("message", function(e){
     var d = e.data || {};
-    if(d.tipo === "abrir") irTemaPush(d.tema);
+    if(d.tipo === "noti") abrirNotiPush(d);                 // 1350: modal encima, la pestaña no se mueve
+    if(d.tipo === "abrir") abrirNotiPush({tema: d.tema});   // un sw viejo todavia manda esto
     if(d.tipo === "push" && !document.hidden) pushVisto(true);
   });
 }
@@ -3828,6 +3899,236 @@ function irTemaPush(tema){
   try{ verPanel("chat"); }catch(x){}
   return true;
 }
+
+// ---------- tocar una push: modal encima del chat, sin mover la pestaña (facundo, 2026-09-14, notimodal 1350) ----------
+// "cuando toco una notificacion no me lleves a una pestaña que esta con cualquier otra cosa: un modal tamaño chat, por
+// arriba del chat y de las pestañas, con el titulo centrado a la altura de las pestañas". el sw manda {tipo: "noti", id,
+// tema, ts, titulo, cuerpo} o abre `?noti=<json>`. el detalle se busca por id: aviso de `notificaciones` (el id de
+// `w_notificaciones`, `push.ref_aviso`) o fila del chat (`tarea-<n>`); si no esta, queda el texto de la push.
+// contestar (cajas, texto o voz) va al tema de la notificacion con la cita y no toca la pestaña, la caja ni el scroll;
+// cerrar deja todo exactamente como estaba.
+var notiPush = null, notiVuelta = null, notiClave = "", audioDestino = null, notiHabla = null, mandarAparte = false;
+function buscarNotiPush(p){
+  p = p || {};
+  var id = String(p.id || ""), tema = p.tema && esTema(normTema(p.tema)) ? normTema(p.tema) : null;
+  var ns = Array.isArray((widDatos || {}).notificaciones) ? widDatos.notificaciones : [], n = null;
+  if(id && !/^tarea-/.test(id)){
+    ns.forEach(function(x){
+      if(x && x.id && (x.id === id || String(x.id).indexOf(id + "-") === 0) && (!n || (+x.ts || 0) >= (+n.ts || 0))) n = x;
+    });
+  }
+  if(n) return {noti: n, texto: n.texto || "", tema: tema || temaNoti(n), fecha: horaNoti(n)};
+  var mt = /^tarea-(\d+)$/.exec(id), m = null;
+  (tema ? [tema] : Object.keys(msgsHist)).forEach(function(t){
+    (msgsHist[t] || []).forEach(function(x){
+      if(x.clase !== "agente") return;
+      if(mt){ if(String(x.tarea) === mt[1]) m = x; return; }
+      // sin id (push vieja o un `abrir` de un sw viejo): la ultima respuesta del tema, cerca de la hora de la push
+      if(!id && tema && (!p.ts || Math.abs((fecha(x.iso) || 0) - p.ts) < 15 * 60000)) m = x;
+    });
+  });
+  if(m) return {m: m, texto: m.texto || "", tema: m.tema || tema || "tools", fecha: hhmmDe(m)};
+  var d = p.ts ? new Date(+p.ts) : null;
+  return {texto: [p.cuerpo].filter(Boolean).join("\n") || p.titulo || "(la notificación no trajo texto)",
+          tema: tema || "tools", fecha: d ? pad2(d.getHours()) + ":" + pad2(d.getMinutes()) : ""};
+}
+function claveNotiCtx(c){ return (c.noti ? "n:" + c.noti.id : c.m ? "m:" + c.m.id : "p") + "|" + (c.texto || "").length; }
+function citaNotiPush(c){
+  if(c.m) return citaCaja(c.m);
+  if(c.noti) return citaNoti(c.noti);
+  return "> aviso " + (c.fecha || "") + ": " + unaLinea(c.texto, ESC_CHARS) + "\n\n";
+}
+function estadoNotiPush(t){ var e = $("nmestado"); if(e) e.textContent = t || ""; }
+// el modal ocupa el area del chat: desde la barra de pestañas hasta abajo. en el celu con los widgets a la vista
+// (#panel-chat oculto) toma el cuerpo entero
+function posNotiModal(){
+  var el = $("notimodal");
+  if(!el || el.classList.contains("oculta")) return;
+  var pc = $("panel-chat").getBoundingClientRect(), tb = $("tabs").getBoundingClientRect();
+  var hayChat = pc.width > 40 && pc.height > 80, r = hayChat ? pc : $("cuerpo").getBoundingClientRect();
+  if(r.width < 40 || r.height < 80) r = {left: 0, top: 0, width: window.innerWidth, bottom: window.innerHeight};   // todavia en el login
+  var top = hayChat && tb.height ? Math.min(tb.top, pc.top) : r.top;
+  el.style.left = Math.round(r.left) + "px"; el.style.top = Math.round(top) + "px";
+  el.style.width = Math.round(r.width) + "px"; el.style.height = Math.max(160, Math.round(r.bottom - top)) + "px";
+  $("nmtit").style.height = Math.max(26, Math.round(tb.height || 0)) + "px";
+}
+function leibleNoti(t){
+  return String(t || "").replace(/```[\s\S]*?```/g, " ").replace(/https?:\/\/\S+/g, "link")
+    .replace(/[`*_#>|]/g, " ").replace(/\s+/g, " ").trim().slice(0, 1500);
+}
+function pararHablaNoti(){
+  if(notiHabla){ try{ speechSynthesis.cancel(); }catch(e){} }
+  notiHabla = null;
+  var b = $("nmoir") && $("nmoir").querySelector(".nmhabla");
+  if(b) b.textContent = "[▶] escuchar";
+}
+function pintarOirNoti(c, leer){
+  var o = $("nmoir");
+  if(sonando && sonando.__parar && o.contains(sonando)) sonando.__parar();
+  pararHablaNoti();
+  o.innerHTML = "";
+  if(c.m && c.m.audio){                 // la respuesta ya tiene su m4a (`recetas/audio_respuesta`): ese mismo
+    o.appendChild(reproductor(c.m.audio, "escuchar"));
+    o.appendChild(document.createTextNode("escuchar"));
+    return;
+  }
+  if(!window.speechSynthesis || !window.SpeechSynthesisUtterance) return;   // un aviso no tiene m4a: la voz del equipo
+  var b = document.createElement("button");
+  b.type = "button"; b.className = "nmhabla"; b.textContent = "[▶] escuchar";
+  b.addEventListener("click", function(){
+    if(notiHabla){ pararHablaNoti(); return; }
+    var u = new SpeechSynthesisUtterance(leibleNoti(leer));
+    u.lang = "es-AR";
+    var vs = (speechSynthesis.getVoices && speechSynthesis.getVoices()) || [];
+    u.voice = vs.filter(function(v){ return /^es/i.test(v.lang); })[0] || null;
+    u.onend = u.onerror = function(){ if(notiHabla === u) pararHablaNoti(); };
+    notiHabla = u;
+    b.textContent = "[■] parar";
+    try{ speechSynthesis.cancel(); speechSynthesis.speak(u); }catch(e){ pararHablaNoti(); }
+  });
+  o.appendChild(b);
+}
+function pintarNotiPush(){
+  var p = notiPush;
+  if(!p) return;
+  var c = buscarNotiPush(p);
+  p.ctx = c; notiClave = claveNotiCtx(c);
+  $("nmtitulo").textContent = unaLinea(p.titulo || (c.noti ? tituloNoti(c.noti) : "") ||
+                                       (c.m ? "flaudio · " + c.tema : "aviso"), 90);
+  var o = c.m ? cajasDe(c.m) : opcionesDe(c.texto);
+  var dr = draftsDe(o.lista.length && o.cuerpo !== null ? o.cuerpo : c.texto);
+  var cu = $("nmcuerpo");
+  cu.innerHTML = "";
+  var tx = document.createElement("div");
+  tx.className = "nmtexto";
+  tx.innerHTML = resaltar(dr.cuerpo);   // el mismo render del chat: negritas, `code`, tablas y links
+  cu.appendChild(tx);
+  if(dr.bloques.length) cu.appendChild(nodoDrafts(dr.bloques));
+  if(o.lista.length){
+    var w = document.createElement("div");
+    w.className = "nmopc";
+    o.lista.forEach(function(op){
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "nmop"; b.dataset.letra = op.letra;
+      b.innerHTML = '<span class="let">' + esc(op.letra) + ")</span>" + esc(op.texto);
+      b.addEventListener("click", function(){
+        if(b.classList.contains("sel")) return;
+        if(responderNotiPush(op.cmd || (op.letra + ": " + op.texto), !!op.cmd)) b.classList.add("sel");
+      });
+      w.appendChild(b);
+    });
+    cu.appendChild(w);
+  }
+  var meta = document.createElement("div");
+  meta.className = "nmmeta";
+  meta.innerHTML = '<span class="g">' + esc(c.fecha || "") + '</span> <span class="g">tema</span> <span class="c">' + esc(c.tema) + "</span>";
+  cu.appendChild(meta);
+  pintarOirNoti(c, dr.cuerpo + (o.lista.length ? ". " + o.lista.map(function(x){ return "opción " + x.letra + ": " + x.texto; }).join(". ") : ""));
+}
+function refrescarNotiPush(){
+  if(!notiPush || grabador || audioDestino || notiHabla) return;
+  if(claveNotiCtx(buscarNotiPush(notiPush)) !== notiClave) pintarNotiPush();
+}
+function abrirNotiPush(p){
+  p = p || {};
+  if(!notiVuelta){
+    notiVuelta = {tema: temaActivo(), scroll: hist.scrollTop, abajo: pegadoAbajo(), alto: hist.scrollHeight,
+                  widgets: document.body.classList.contains("ver-widgets")};
+  }
+  notiPush = {id: p.id || null, tema: p.tema || null, ts: p.ts || null, titulo: p.titulo || "", cuerpo: p.cuerpo || ""};
+  $("nmtxt").value = "";
+  estadoNotiPush("");
+  $("notimodal").classList.remove("oculta");
+  pintarNotiPush();
+  posNotiModal();
+  var c = notiPush.ctx;
+  // la fila de la tarea puede no estar bajada (tema sin abrir) o ser mas nueva que lo bajado
+  if(!c.noti && !c.m && token && c.tema && c.tema !== AUTO) cargarChatTema(c.tema).catch(function(){});
+  try{ pushVisto(true); }catch(x){}
+  return true;
+}
+function responderNotiPush(texto, crudo){
+  texto = String(texto || "").trim();
+  var p = notiPush;
+  if(!p || !texto) return false;
+  if(enviando){ estadoNotiPush("hay un mensaje saliendo: probá en un segundo"); return false; }
+  var c = p.ctx || buscarNotiPush(p);
+  mandarAparte = true;
+  try{ mandar(crudo ? texto : citaNotiPush(c) + texto, c.tema, crudo); }
+  finally{ mandarAparte = false; }
+  if(c.noti) marcarLeidos([c.noti.id]);
+  estadoNotiPush("mandado a " + c.tema);
+  return true;
+}
+function cerrarNotiPush(){
+  if(!notiPush) return false;
+  var c = notiPush.ctx, v = notiVuelta;
+  if(grabador && audioDestino) terminarGrabacion(false);
+  audioDestino = null;
+  var o = $("nmoir");
+  if(sonando && sonando.__parar && o.contains(sonando)) sonando.__parar();
+  pararHablaNoti();
+  o.innerHTML = "";
+  notiPush = null; notiVuelta = null;
+  $("notimodal").classList.add("oculta");
+  if(c && c.noti) marcarLeidos([c.noti.id]);
+  // el modal nunca cambia la pestaña: si igual cambio (llego tabs.json en el arranque en frio) no se pisa
+  if(v && temaActivo() === v.tema && v.alto > 0){
+    if(document.body.classList.contains("ver-widgets") !== v.widgets){
+      document.body.classList.toggle("ver-widgets", v.widgets);
+      $("ver-chat").classList.toggle("on", !v.widgets);
+      $("ver-widgets").classList.toggle("on", v.widgets);
+    }
+    var volver = function(){ if(v.abajo) hist.scrollTop = hist.scrollHeight; else hist.scrollTop = v.scroll; };
+    volver();
+    requestAnimationFrame(volver);
+  }
+  return true;
+}
+$("nmcerrar").addEventListener("click", cerrarNotiPush);
+$("nmmandar").addEventListener("click", function(){
+  var t = $("nmtxt");
+  if(responderNotiPush(t.value)) t.value = ""; else t.focus();
+});
+$("nmtxt").addEventListener("keydown", function(e){
+  if(e.key === "Enter" && !e.shiftKey && !esVistaMobile()){ e.preventDefault(); $("nmmandar").click(); }
+});
+window.addEventListener("resize", posNotiModal);
+if(window.visualViewport) visualViewport.addEventListener("resize", posNotiModal);
+// voz: mantener apretado graba con el mismo micro de la app (1349) y soltar manda al tema de la notificacion
+(function(){
+  var b = $("nmgrabar"), apretado = false;
+  b.addEventListener("pointerdown", function(e){
+    e.preventDefault();
+    if(!notiPush || grabador || subiendoAudio) return;
+    apretado = true;
+    if(b.setPointerCapture && e.pointerId != null){ try{ b.setPointerCapture(e.pointerId); }catch(err){} }
+    var c = notiPush.ctx || buscarNotiPush(notiPush);
+    audioDestino = {tema: c.tema, cita: citaNotiPush(c), noti: c.noti ? c.noti.id : null};
+    pararHablaNoti();
+    b.classList.add("grabando");
+    estadoNotiPush("grabando...");
+    empezarGrabacion().then(function(ok){
+      if(!ok){ audioDestino = null; b.classList.remove("grabando"); estadoNotiPush("no pude usar el micro"); return; }
+      if(!apretado) terminarGrabacion(false);   // se solto antes de que el micro terminara de abrir
+    });
+  });
+  function soltar(enviar){
+    return function(e){
+      if(!apretado) return;
+      apretado = false;
+      if(e) e.preventDefault();
+      b.classList.remove("grabando");
+      if(!grabador) return;
+      estadoNotiPush(enviar ? "subiendo el audio..." : "");
+      terminarGrabacion(enviar);
+    };
+  }
+  b.addEventListener("pointerup", soltar(true));
+  b.addEventListener("pointercancel", soltar(false));
+  b.addEventListener("pointerleave", soltar(false));
+  b.addEventListener("contextmenu", function(e){ e.preventDefault(); });
+})();
 // el camino entero: comprimir -> hash -> subir -> mandar el mensaje de la pestaña activa.
 function mandarFoto(file, pieTexto, tsEnvio){
   if(!file) return Promise.resolve();
@@ -4196,13 +4497,17 @@ function terminarGrabacion(enviar){
     try{ g.stop(); }catch(e){ res(null); }
   }).then(function(blob){
     soltarMicro();
-    if(!enviar){ cortarDictado(); return null; }
+    if(!enviar){ audioDestino = null; cortarDictado(); return null; }
     if(!blob || !blob.size){
       olvidarMicro(true);              // un micro que no grabo nada no se reusa: la proxima lo pide de nuevo
       // el micro no dejo nada (en ios el reconocedor puede pelearle la sesion de audio): si el celu igual
       // entendio algo, el texto **no se pierde**, queda escrito en el input para mandarlo a mano
       return terminarDictado().then(function(d){
-        if(d && d.texto){
+        var ad = audioDestino; audioDestino = null;
+        if(ad && d && d.texto){                    // desde el modal de una push: el texto queda en su caja
+          $("nmtxt").value = (($("nmtxt").value || "") + " " + d.texto).trim();
+          estadoNotiPush("el micro no grabó nada: te dejé lo que entendió el celu");
+        }else if(d && d.texto){
           ponerCaja(((txt.value || "") + " " + d.texto).trim());
           sistema("el micro no grabó nada, te dejé lo que entendió el celu en el input", "sistema");
         }
@@ -4211,14 +4516,24 @@ function terminarGrabacion(enviar){
     }
     // el texto del celu se espera aca (1209): al soltar ya casi siempre esta, y como mucho DICT_GRACIA
     return terminarDictado().then(function(d){
+      // 1350: la voz del modal de una push sale ya, a su tema y con la cita (no hay adjunto que revisar)
+      if(audioDestino){
+        var ad = audioDestino; audioDestino = null;
+        return mandarAudio(blob, mime, undefined, undefined, d, ad).then(function(ruta){
+          if(ruta && ad.noti) marcarLeidos([ad.noti]);
+          estadoNotiPush(ruta ? "audio mandado a " + ad.tema : "no salió el audio");
+          return ruta;
+        });
+      }
       // no se manda al soltar (facundo, 2026-09-12): queda como adjunto pendiente con play y `×`
       return adjuntarAudio(blob, mime, ms, d);
     });
-  }, function(){ soltarMicro(); cortarDictado(); return null; });
+  }, function(){ audioDestino = null; soltarMicro(); cortarDictado(); return null; });
 }
 function nombreAudio(hash, mime){ return "audio/" + hash + "." + extAudio(mime); }
 // el camino entero: blob -> hash -> subir al buzon -> mandar el mensaje de la pestaña activa.
-function mandarAudio(blob, mime, pieTexto, tsEnvio, dicho){
+// `destino` {tema, cita} (1350): viene del modal de una push; no toca la caja ni la pestaña activa.
+function mandarAudio(blob, mime, pieTexto, tsEnvio, dicho, destino){
   if(subiendoAudio) return Promise.resolve(null);
   // subir el audio y transcribirlo tarda: la hora del mensaje es esta, no la de cuando termina (1191)
   tsEnvio = tsEnvio || Date.now();
@@ -4244,10 +4559,17 @@ function mandarAudio(blob, mime, pieTexto, tsEnvio, dicho){
     });
   }).then(function(){
     audioUrls[ruta] = URL.createObjectURL(blob);      // ya lo tengo: no lo bajo para reproducirlo
-    var pie = (pieTexto !== undefined ? pieTexto : txt.value || "").trim();
-    txt.value = ""; txt.style.height = "";
     // si el celu lo transcribio, el texto va en el mensaje marcado como audio y whisper no corre (1209)
     var dictado_ = (dicho && (dicho.texto || (typeof dicho === "string" ? dicho : ""))) || "";
+    if(destino){
+      mandarAparte = true;
+      try{
+        return mandar(destino.cita + (dictado_ ? MARCA_CELU + dictado_ + "\n" : "") + "[audio](" + ruta + ")",
+                      destino.tema, false, tsEnvio);
+      }finally{ mandarAparte = false; }
+    }
+    var pie = (pieTexto !== undefined ? pieTexto : txt.value || "").trim();
+    txt.value = ""; txt.style.height = "";
     return mandar((pie ? pie + "\n" : "") + (dictado_ ? MARCA_CELU + dictado_ + "\n" : "") +
                   "[audio](" + ruta + ")", temaActivo(), false, tsEnvio);
   }).catch(function(e){
@@ -5261,6 +5583,7 @@ function tituloNoti(n){ return unaLinea(n.titulo || n.texto, 160); }
 function cortoNoti(n){ return unaLinea(n.titulo ? n.titulo + (n.cuerpo ? " · " + n.cuerpo : "") : n.texto, 200); }
 var notisEl = null;
 function pintarNotis(){
+  if(notiPush) setTimeout(refrescarNotiPush, 0);   // 1350: llego widgets.json con el aviso del modal abierto
   if(!notisEl) notisEl = $("notis");
   if(!notisEl) return;
   var ns = notisNoLeidas();
@@ -6483,7 +6806,7 @@ if(mqMobile){
 })();
 $("ddfondo").addEventListener("click", cerrarDd);
 document.addEventListener("keydown", function(e){
-  if(e.key === "Escape"){ cerrarMenu(); cerrarDd(); cerrarModal(); cerrarCampana(); return; }
+  if(e.key === "Escape"){ cerrarMenu(); cerrarDd(); cerrarModal(); cerrarCampana(); cerrarNotiPush(); return; }
   // con el modal abierto, a/b/c dispara la accion de esa letra
   if(!modalAbierto || e.metaKey || e.ctrlKey || e.altKey) return;
   if(e.target && /^(TEXTAREA|INPUT)$/.test(e.target.tagName || "")) return;   // escribiendo (la respuesta de un aviso)
@@ -6597,11 +6920,14 @@ if(urlSucia) sistema("el token venía en la url: lo guardé acá y limpié la di
 // push: registrar el sw (si hay soporte) y, si se abrio desde una notificacion, ir a la pestaña del tema
 iniciarPush();
 prepararDictado();     // 1209: preguntar una vez si el celu puede transcribir on-device
+// 1350: la app abre en la ultima pestaña y el modal de la notificacion arriba (`?noti=<json>`; `?tema=` es de un sw viejo)
 (function(){
-  var q = new URLSearchParams(location.search), t = q.get("tema");
-  if(!t) return;
-  irTemaPush(t);
-  q.delete("tema");
+  var q = new URLSearchParams(location.search), t = q.get("tema"), nq = q.get("noti");
+  if(!t && !nq) return;
+  var p = null;
+  try{ p = nq ? JSON.parse(nq) : null; }catch(x){ p = null; }
+  abrirNotiPush(p || {tema: t});
+  q.delete("tema"); q.delete("noti");
   try{ history.replaceState(null, "", location.pathname + (q.toString() ? "?" + q.toString() : "")); }catch(x){}
 })();
 
@@ -6641,6 +6967,22 @@ window.__agente = {
   pintarNodos: function(n){ pintarNodos(n); },
   // notificaciones (1162): la tira, el detalle, responder y las leidas sincronizadas
   pintarNotis: pintarNotis, abrirNoti: abrirNoti, responderNoti: responderNoti, citaNoti: citaNoti,
+  // 1350 notimodal: tocar una push abre el modal encima del chat sin mover la pestaña (`prueba_web_notimodal`)
+  abrirNotiPush: abrirNotiPush, cerrarNotiPush: cerrarNotiPush, responderNotiPush: responderNotiPush,
+  ponerChatHist: function(t, filas){ recibirChat(t, {filas: filas}); mezclar(); render(); },
+  notiModal: function(){
+    var el = $("notimodal"), r = el.getBoundingClientRect(), pc = $("panel-chat").getBoundingClientRect(),
+        tb = $("tabs").getBoundingClientRect(), ti = $("nmtitulo").getBoundingClientRect(), bar = $("nmtit").getBoundingClientRect();
+    function rr(x){ return {l: Math.round(x.left), t: Math.round(x.top), w: Math.round(x.width), h: Math.round(x.height)}; }
+    return {abierto: !el.classList.contains("oculta") && r.height > 0, rect: rr(r), chat: rr(pc), tabs: rr(tb),
+            titulo: $("nmtitulo").textContent, tituloRect: rr(ti), barra: rr(bar),
+            texto: ($("nmcuerpo").querySelector(".nmtexto") || {}).textContent || "",
+            drafts: $("nmcuerpo").querySelectorAll(".draft").length,
+            cajas: [].map.call($("nmcuerpo").querySelectorAll(".nmop"), function(b){ return {letra: b.dataset.letra, sel: b.classList.contains("sel")}; }),
+            oir: ($("nmoir").querySelector("button") || {}).className || "", micro: !!$("nmgrabar").offsetHeight,
+            estado: $("nmestado").textContent, tema: notiPush && notiPush.ctx ? notiPush.ctx.tema : null,
+            activo: temaActivo(), scroll: hist.scrollTop};
+  },
   marcarLeidos: marcarLeidos, recibirLeidos: recibirLeidos,
   leidos: function(){ return JSON.parse(JSON.stringify(avLeidos)); },
   borrarLeidos: function(){ avLeidos = {}; guardarCache(); pintarNotis(); },
