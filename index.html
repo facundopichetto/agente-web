@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.286">
-<link rel="manifest" href="manifest.json?v=4.286">
+<meta name="agente-web-version" content="4.287">
+<link rel="manifest" href="manifest.json?v=4.287">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -35,6 +35,9 @@
     --naranja:#ff9f1a;
     /* 1541 (facundo, 2026-09-15): ningun texto del board mas grande que el del chat (`.msg`); lo que resalta usa peso o color */
     --texto-max:12px;
+    /* molde de componentes (1558): el fondo de las capas y la sombra de los modales, un solo lugar */
+    --capa-fondo:rgba(0,0,0,.9);
+    --modal-sombra:0 0 0 1px #06210a,0 10px 40px rgba(0,0,0,.85);
     /* ---------- tonos de fondo (facundo, 2026-09-13, orden 1190) ----------
        look plano: chat, panel de widgets y cajas casi del mismo tono, la diferencia justa para
        distinguir el panel. se ajusta en un solo lugar: `--tono-paso` es cuanto aclara cada nivel
@@ -120,31 +123,67 @@
   /* el ancho lo da un cuadro invisible de alto 0 (`data-medida`): `Nch` se quedaba corto con fuentes cuyo `0` no mide
      lo mismo que el resto y cortaba las de 9+ caracteres */
   .anim::after{content:attr(data-medida);display:block;height:0;visibility:hidden}
+  /* ---------- molde de componentes (facundo, 2026-09-15, orden 1558) ----------
+     un solo lugar por estilo: todo modal, votacion o boton nuevo reusa estas clases (docs/componentes-web.md) y nace con
+     los gustos de facundo: texto hasta --texto-max, esc cierra (pila `capaRegistrar`), decisiones con glifos sin borde
+     `✕` roja · `–` blanca · `✓` verde. el id del componente pone solo lo propio (z-index, ancho, gap, padding). */
+  .capa{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;box-sizing:border-box;
+    padding:calc(10px + env(safe-area-inset-top)) 10px calc(10px + env(safe-area-inset-bottom)) 10px;background:var(--capa-fondo)}
+  .capa.oculta{display:none!important}
+  .mcaja{background:#000;border:1px solid var(--verde);border-radius:4px}
+  .mhead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;color:var(--verde);font-size:12px}
+  .mcuenta,.mestado{color:var(--gris);font-size:10.5px}
+  .mestado{min-height:1em}
+  .mfila{display:flex;gap:8px}
+  .mpie{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .mcerrar{background:none;border:0;color:var(--gris);font:inherit;font-size:var(--texto-max);padding:6px 2px;cursor:pointer}
+  .mlink,#modal .mcuerpo a,#notimodal .nmtexto a{color:var(--cian);text-decoration:none;border-bottom:1px dotted #1f3a44}
+  /* a/b/c con look terminal (#modal, notimodal, `modalMolde` tipo `term`) */
+  .bterm{background:#000;color:var(--cian);border:1px solid var(--linea);border-radius:4px;padding:8px 10px;font:inherit;
+    font-size:11.5px;cursor:pointer;text-align:left}
+  .bterm:active{background:#111}
+  .bterm.principal{color:var(--verde);border-color:var(--verde)}
+  .bterm .let{color:var(--verde);font-weight:600;margin-right:6px}
+  /* accion verde con borde (aceptar, mandar, basta): `b36`/`b52` = alto, `rojo` = la que corta, `llena` = se pinta al tocar */
+  .bverde{min-height:38px;padding:6px 10px;background:#000;color:var(--verde);border:1px solid var(--verde);border-radius:6px;
+    font:inherit;font-size:var(--texto-max);cursor:pointer;touch-action:manipulation}
+  .bverde.b36{min-height:36px;padding:4px 8px}
+  .bverde.b52{min-height:52px;padding:12px}
+  .bverde.rojo{color:var(--rojo);border-color:var(--rojo)}
+  .bverde.llena:active{background:var(--verde);color:#000}
+  .bverde.llena.rojo:active{background:var(--rojo)}
+  /* decision no va / queda (1556, 1561): solo el glifo, sin borde ni caja, 38 px tocables, el nombre en aria-label */
+  .bglifo{min-height:38px;padding:5px 9px;background:none;border:0;font:inherit;font-size:var(--texto-max);font-weight:bold;
+    line-height:1;cursor:pointer;touch-action:manipulation}
+  .bglifo:active{opacity:.45}
+  .bglifo.b-no{color:var(--rojo)}
+  .bglifo.b-queda{color:var(--blanco)}
+  /* `modalMolde`: la caja de un modal nuevo */
+  .mmolde{width:100%;max-width:360px;max-height:100%;overflow-y:auto;box-sizing:border-box;display:flex;flex-direction:column;
+    gap:8px;padding:12px;font-size:12px}
+  .mmolde .mcuerpo2{color:var(--blanco);line-height:1.5;white-space:pre-wrap;word-break:break-word}
+  .mmolde .mbotones{flex-wrap:wrap}
+  .mmolde .mbotones > *{flex:1 1 0}
   /* 1453: tocar el spinner abre un menu chico (mas de esto / esta no / ...), nunca el votador */
-  #animmenu{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;box-sizing:border-box;padding:10px;background:rgba(0,0,0,.75)}
-  #animmenu.oculta,#animmenu .oculta{display:none!important}
-  #animmenu .amcaja{width:100%;max-width:260px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;padding:12px;
-    background:#000;border:1px solid var(--verde);border-radius:4px;font-size:12px}
+  #animmenu{z-index:40;padding:10px;background:rgba(0,0,0,.75)}
+  #animmenu .oculta{display:none!important}
+  #animmenu .amcaja{width:100%;max-width:260px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;padding:12px;font-size:12px}
   #animmenu .amtit{display:flex;align-items:center;gap:8px;color:var(--gris)}
   #animmenu .amtit .anim{color:var(--verde);font-size:var(--texto-max);font-weight:bold}
   #amnom{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  #amcerrar{background:none;border:0;color:var(--gris);font:inherit;font-size:var(--texto-max);cursor:pointer;padding:4px 6px}
+  #amcerrar{padding:4px 6px}
   #animmenu .ambtn{min-height:40px;padding:8px 10px;text-align:left;background:#000;color:var(--verde);border:1px solid var(--linea);
     border-radius:4px;font:inherit;font-size:12px;cursor:pointer}
   #animmenu .ambtn[data-tipo="mas"]{border-color:var(--verde)}
   #amnota{display:flex;flex-direction:column;gap:6px}
   #amtxt{width:100%;box-sizing:border-box;min-height:56px;padding:6px;background:#000;color:var(--verde);border:1px solid var(--linea);
     border-radius:4px;font:inherit;font-size:12px;resize:vertical}
-  #amestado{color:var(--gris);font-size:10.5px;min-height:1em}
   /* votador por pares (1373): dos animaciones en vivo, `esta` debajo de cada una y `basta`. lado a lado en la mac,
      una arriba de la otra si no entran (celu) */
-  #votar{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;box-sizing:border-box;
-    padding:calc(10px + env(safe-area-inset-top)) 10px calc(10px + env(safe-area-inset-bottom)) 10px;background:rgba(0,0,0,.9)}
-  #votar.oculta,#votar .oculta{display:none!important}
+  #votar{z-index:40}
+  #votar .oculta{display:none!important}
   #votar .vtcaja{width:100%;max-width:360px;max-height:100%;overflow-y:auto;box-sizing:border-box;display:flex;
-    flex-direction:column;gap:12px;padding:14px;background:#000;border:1px solid var(--verde);border-radius:4px}
-  #votar .vttit{display:flex;justify-content:space-between;align-items:baseline;gap:8px;color:var(--verde);font-size:12px}
-  #vtcuenta{color:var(--gris);font-size:10.5px}
+    flex-direction:column;gap:12px;padding:14px}
   /* 1382: facundo pidio "mas angosta aun": cada tarjeta a la mitad (360 -> 180 px en la mac), el alto no cambia */
   #votar .vtpar{display:flex;flex-wrap:wrap;justify-content:center;gap:12px}
   /* 1510: "muy anchas": tarjeta 180 -> 150 px y animacion 28 -> 20 px; la caja de la animacion sigue de 62 px de alto
@@ -155,32 +194,22 @@
   #votar .vtchico{text-align:center;font-size:12px;color:var(--gris)}
   #votar .vtchico .anim{color:var(--verde)}
   #votar .vtnom{text-align:center;font-size:10.5px;color:var(--gris)}
-  #votar .vtbtn{min-height:52px;padding:12px;background:#000;color:var(--verde);border:1px solid var(--verde);border-radius:6px;
-    font:inherit;font-size:var(--texto-max);cursor:pointer;touch-action:manipulation}
-  #votar .vtbtn:active{background:var(--verde);color:#000}
-  #vtbasta.vtbtn{color:var(--rojo);border-color:var(--rojo)}
-  #vtbasta.vtbtn:active{background:var(--rojo);color:#000}
   #votar .vtfin{display:flex;flex-direction:column;gap:8px}
   #vttxt{min-height:90px;padding:8px;background:#000;color:var(--blanco);border:1px solid var(--linea);border-radius:4px;
     font:inherit;font-size:var(--texto-max);resize:vertical}
-  #vtfinbtns{display:flex;gap:8px}
   #vtfinbtns .vtbtn{flex:1 1 0}
-  #vtestado{color:var(--gris);font-size:10.5px;min-height:1em}
   /* seleccion con checkboxes (1388): modal generico, un renglon tocable por candidata (entero, no solo el cuadradito),
      texto libre, `aceptar` y `enviar texto`. en el celu ocupa el ancho y scrollea la lista; textarea a 16 px para que
      ios no haga zoom al tocarla */
-  #selmodal{position:fixed;inset:0;z-index:41;display:flex;align-items:center;justify-content:center;box-sizing:border-box;
-    padding:calc(10px + env(safe-area-inset-top)) 10px calc(10px + env(safe-area-inset-bottom)) 10px;background:rgba(0,0,0,.9)}
-  #selmodal.oculta{display:none!important}
+  #selmodal{z-index:41}
   /* 1533 (facundo, 2026-09-15, desde el iphone): "el modal tiene cosas muy grandes y el texto que escribí no lo puedo
      leer". todo baja a la escala del board (12-13 px, botones de 38, foto de 32) y el campo crece con lo escrito y se
      queda arriba del teclado (`body.teclado`, visualViewport) */
   #selmodal .selcaja{width:100%;max-width:520px;max-height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;
-    padding:10px;background:#000;border:1px solid var(--verde);border-radius:4px}
+    padding:10px}
   body.teclado #selmodal{bottom:auto;height:var(--alto,100dvh);align-items:flex-end;padding-top:4px;padding-bottom:4px}
   body.teclado #selcont{display:none!important}
-  #selmodal .seltit{display:flex;justify-content:space-between;align-items:baseline;gap:8px;color:var(--verde);font-size:12px}
-  #selcuenta{color:var(--gris);font-size:10.5px;white-space:nowrap}
+  #selcuenta{white-space:nowrap}
   #sellista{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:6px}
   #sellista .selitem{flex:0 0 auto;display:flex;align-items:flex-start;gap:8px;min-height:38px;padding:5px 8px;box-sizing:border-box;
     border:1px solid var(--linea);border-radius:4px;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
@@ -212,14 +241,8 @@
     caret-color:var(--verde);border:1px solid #555;border-radius:4px;font:inherit;font-size:var(--texto-max);line-height:1.45;resize:none;overflow-y:auto}
   #seltxt::placeholder{color:#8a8a8a}
   #seltxt:focus{outline:none;border-color:var(--verde)}
-  #selmodal .selbtns{display:flex;gap:8px}
   #selmodal .selbtns.oculta{display:none!important}   /* 1440: en tarjetas mandan los cuatro botones, no `aceptar` */
-  #selmodal .selbtn{flex:1 1 0;min-height:38px;padding:6px 10px;background:#000;color:var(--verde);border:1px solid var(--verde);
-    border-radius:6px;font:inherit;font-size:var(--texto-max);cursor:pointer;touch-action:manipulation}
-  #selmodal .selbtn:active{background:var(--verde);color:#000}
-  #selmodal .selpie{display:flex;justify-content:space-between;align-items:center;gap:8px}
-  #selestado{color:var(--gris);font-size:10.5px;min-height:1em}
-  #selcerrar{background:none;border:0;color:var(--gris);font:inherit;font-size:12px;padding:6px 2px;cursor:pointer}
+  #selmodal .selbtn{flex:1 1 0}
   /* 1440 (facundo, 2026-09-15, por audio): modo `tarjetas`. de a UNA candidata: foto grande, el estado arriba, la
      marca publica/privada y las etiquetas, y cuatro botones grandes abajo. nada de grillas ni de listas largas. */
   #seltarjeta{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:8px}
@@ -243,23 +266,14 @@
   #seltarjeta .tjmot{font-style:italic}
   #seltarjeta .tjlink{align-self:flex-start;min-height:34px;display:flex;align-items:center;padding:0 10px;color:var(--verde);
     font-size:12px;text-decoration:none;border:1px solid var(--linea);border-radius:4px}
-  /* 1495: tres botones chicos en una sola linea. `escribir` abre el campo y `guardar texto`, nada mas */
-  /* 1546: `no` · `maybe` · `sí` en una fila (rojo, blanco, verde) y `escribir` abajo, secundario y chico */
+  /* 1561 (facundo, 2026-09-15): "no quiero volver a ver maybes ni si ni no". dos glifos en una fila: `✕` roja (no va)
+     y `→` blanca (queda). sin `escribir` ni campo de texto en la tarjeta */
   #selacciones{display:flex;flex-wrap:wrap;gap:6px}
-  #selacciones.oculta,#tjguardar.oculta,#selmodal #seltxt.oculta{display:none!important}
-  #selacciones .tjbtn,#tjguardar .tjbtn{flex:1 1 0;min-height:36px;padding:4px 8px;background:#000;color:var(--verde);border:1px solid var(--verde);
-    border-radius:6px;font:inherit;font-size:12px;cursor:pointer;touch-action:manipulation}
-  #tjguardar{display:flex}
+  #selacciones.oculta,#selmodal #seltxt.oculta{display:none!important}
+  #selacciones .tjbtn{flex:1 1 0}
   /* 1556 (facundo, desde el iphone): "abajo los botones no tienen borde. izquierda en rojo una X, en el medio en blanco
      un guion, derecha un tick verde, tamaño 12px". sin borde ni caja, glifo de 12px y 38 px tocables; el nombre va en aria-label */
-  #selacciones .tjbtn.ignorar,#selacciones .tjbtn.maybe,#selacciones .tjbtn.aceptar{min-height:38px;background:none;border:0;
-    padding:5px 9px;font-size:var(--texto-max);font-weight:bold;line-height:1}
-  #selacciones .tjbtn.ignorar{color:var(--rojo)}
-  #selacciones .tjbtn.maybe{color:var(--blanco)}
-  #selacciones .tjbtn.aceptar{color:var(--verde)}
-  #selacciones .tjbtn.escribir{flex:1 1 100%;min-height:28px;color:var(--gris);border-color:transparent}
-  #selacciones .tjbtn.escribir:active,#tjguardar .tjbtn:active{background:currentColor;color:#000}
-  #selacciones .tjbtn.ignorar:active,#selacciones .tjbtn.maybe:active,#selacciones .tjbtn.aceptar:active{opacity:.45}
+  /* el glifo, el color y el toque (opacidad) viven en el molde: `.bglifo.b-no` · `.b-queda` */
   .msg .quien,.msg .ts{user-select:none}
   .msg .quien{color:var(--magenta)}
   .agente .quien{color:var(--magenta)}
@@ -848,9 +862,7 @@
   #mfondo.oculta,#modal.oculta{display:none}
   #modal{
     position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:30;
-    width:min(560px,calc(100vw - 20px));max-height:82dvh;overflow-y:auto;
-    background:#000;border:1px solid var(--verde);border-radius:6px;
-    box-shadow:0 0 0 1px #06210a,0 10px 40px rgba(0,0,0,.85);
+    width:min(560px,calc(100vw - 20px));max-height:82dvh;overflow-y:auto;border-radius:6px;box-shadow:var(--modal-sombra);
     -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
   }
   #modal .mtit{
@@ -866,23 +878,13 @@
     padding:9px;font-size:11.5px;line-height:1.55;color:var(--blanco);
     white-space:pre-wrap;word-break:break-word;
   }
-  #modal .mcuerpo a{color:var(--cian);text-decoration:none;border-bottom:1px dotted #1f3a44}
   #modal .macc{display:flex;flex-direction:column;gap:5px;padding:0 9px 10px 9px}
-  #modal .macc button{
-    background:#000;color:var(--cian);border:1px solid var(--linea);border-radius:4px;
-    padding:8px 10px;font:inherit;font-size:11.5px;cursor:pointer;text-align:left;
-  }
-  #modal .macc button:active{background:#111}
-  #modal .macc button.principal{color:var(--verde);border-color:var(--verde)}
-  #modal .macc .let{color:var(--verde);font-weight:600;margin-right:6px}
 
   /* ---------- tocar una push (facundo, 2026-09-14, notimodal 1350) ----------
      del tamaño del area del chat, encima del chat y de las pestañas, con el titulo centrado a la altura de la barra.
      la posicion la pone `posNotiModal` con el rect de #panel-chat (igual en el celu y en la mac). */
   #notimodal{
-    position:fixed;z-index:28;display:flex;flex-direction:column;box-sizing:border-box;overflow:hidden;
-    background:#000;border:1px solid var(--verde);border-radius:4px;
-    box-shadow:0 0 0 1px #06210a,0 10px 40px rgba(0,0,0,.85);
+    position:fixed;z-index:28;display:flex;flex-direction:column;box-sizing:border-box;overflow:hidden;box-shadow:var(--modal-sombra);
   }
   #notimodal.oculta{display:none}
   #notimodal .nmtit{
@@ -899,13 +901,7 @@
     -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
   }
   #notimodal .nmtexto{white-space:pre-wrap;word-break:break-word}
-  #notimodal .nmtexto a{color:var(--cian);text-decoration:none;border-bottom:1px dotted #1f3a44}
   #notimodal .nmopc{display:flex;flex-direction:column;gap:5px;margin-top:10px}
-  #notimodal .nmop{
-    background:#000;color:var(--cian);border:1px solid var(--linea);border-radius:4px;
-    padding:8px 10px;font:inherit;font-size:11.5px;text-align:left;cursor:pointer;
-  }
-  #notimodal .nmop .let{color:var(--verde);font-weight:600;margin-right:6px}
   #notimodal .nmop.sel{color:#000;background:var(--verde);border-color:var(--verde)}
   #notimodal .nmop.sel .let{color:#000}
   #notimodal .nmmeta{margin-top:10px;font-size:10px}
@@ -1025,13 +1021,13 @@
 <div id="nlista" class="oculta" role="menu" aria-label="notificaciones"></div>
 
 <div id="mfondo" class="oculta"></div>
-<div id="modal" class="oculta" role="dialog" aria-modal="true">
+<div id="modal" class="mcaja oculta" role="dialog" aria-modal="true">
   <div class="mtit"><span id="mtitulo"></span><button id="mcerrar" class="mx" type="button">esc ×</button></div>
   <div class="mcuerpo" id="mcuerpo"></div>
   <div class="macc" id="macc"></div>
 </div>
 
-<div id="notimodal" class="oculta" role="dialog" aria-modal="true" aria-labelledby="nmtitulo">
+<div id="notimodal" class="mcaja oculta" role="dialog" aria-modal="true" aria-labelledby="nmtitulo">
   <div id="nmtit" class="nmtit"><span id="nmtitulo"></span><button id="nmcerrar" class="nmx" type="button" title="cerrar" aria-label="cerrar">×</button></div>
   <div id="nmcuerpo" class="nmcuerpo"></div>
   <div class="nmpie">
@@ -1044,42 +1040,41 @@
   </div>
 </div>
 
-<div id="votar" class="oculta" role="dialog" aria-modal="true" aria-labelledby="vttitulo">
-  <div class="vtcaja">
-    <div class="vttit"><span id="vttitulo">cuál te gusta más</span><span id="vtcuenta"></span></div>
+<div id="votar" class="capa oculta" role="dialog" aria-modal="true" aria-labelledby="vttitulo">
+  <div class="vtcaja mcaja">
+    <div class="vttit mhead"><span id="vttitulo">cuál te gusta más</span><span id="vtcuenta" class="mcuenta"></span></div>
     <div id="vtpar" class="vtpar">
-      <div class="vtlado"><div class="vtanim"><span class="anim"></span></div><div class="vtchico">en el chat: <span class="anim"></span> opus: pensando...</div><div class="vtnom"></div><button class="vtbtn vtesta" data-lado="0" type="button">esta</button></div>
-      <div class="vtlado"><div class="vtanim"><span class="anim"></span></div><div class="vtchico">en el chat: <span class="anim"></span> opus: pensando...</div><div class="vtnom"></div><button class="vtbtn vtesta" data-lado="1" type="button">esta</button></div>
+      <div class="vtlado"><div class="vtanim"><span class="anim"></span></div><div class="vtchico">en el chat: <span class="anim"></span> opus: pensando...</div><div class="vtnom"></div><button class="vtbtn bverde b52 llena vtesta" data-lado="0" type="button">esta</button></div>
+      <div class="vtlado"><div class="vtanim"><span class="anim"></span></div><div class="vtchico">en el chat: <span class="anim"></span> opus: pensando...</div><div class="vtnom"></div><button class="vtbtn bverde b52 llena vtesta" data-lado="1" type="button">esta</button></div>
     </div>
-    <button id="vtbasta" class="vtbtn" type="button">basta</button>
+    <button id="vtbasta" class="vtbtn bverde b52 llena rojo" type="button">basta</button>
     <div id="vtfin" class="vtfin oculta">
       <textarea id="vttxt" placeholder="qué hacemos con esto (va al chat de tools)" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
-      <div id="vtfinbtns"><button id="vtmandar" class="vtbtn" type="button">mandar</button><button id="vtcerrar" class="vtbtn" type="button">cerrar</button></div>
+      <div id="vtfinbtns" class="mfila"><button id="vtmandar" class="vtbtn bverde b52 llena" type="button">mandar</button><button id="vtcerrar" class="vtbtn bverde b52 llena" type="button">cerrar</button></div>
     </div>
-    <div id="vtestado" aria-live="polite"></div>
+    <div id="vtestado" class="mestado" aria-live="polite"></div>
   </div>
 </div>
-<div id="animmenu" class="oculta" role="dialog" aria-modal="true" aria-labelledby="amnom">
-  <div class="amcaja">
-    <div class="amtit"><span class="anim" id="amanim"></span><span id="amnom"></span><button id="amcerrar" type="button" aria-label="cerrar">×</button></div>
+<div id="animmenu" class="capa oculta" role="dialog" aria-modal="true" aria-labelledby="amnom">
+  <div class="amcaja mcaja">
+    <div class="amtit"><span class="anim" id="amanim"></span><span id="amnom"></span><button id="amcerrar" class="mcerrar" type="button" aria-label="cerrar">×</button></div>
     <button class="ambtn" data-tipo="mas" type="button">a) más de esto</button>
     <button class="ambtn" data-tipo="no" type="button">b) esta no</button>
     <button class="ambtn" data-tipo="nota" type="button">c) ...</button>
     <div id="amnota" class="oculta"><textarea id="amtxt" placeholder="qué te gusta o no de esta" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea><button id="amguardar" class="ambtn" type="button">guardar</button></div>
-    <div id="amestado" aria-live="polite"></div>
+    <div id="amestado" class="mestado" aria-live="polite"></div>
   </div>
 </div>
-<div id="selmodal" class="oculta" role="dialog" aria-modal="true" aria-labelledby="seltitulo">
-  <div class="selcaja">
-    <div class="seltit"><span id="seltitulo"></span><span id="selcuenta"></span></div>
+<div id="selmodal" class="capa oculta" role="dialog" aria-modal="true" aria-labelledby="seltitulo">
+  <div class="selcaja mcaja">
+    <div class="seltit mhead"><span id="seltitulo"></span><span id="selcuenta" class="mcuenta"></span></div>
     <div id="selcont" class="oculta" aria-live="polite"></div>
     <div id="sellista"></div>
     <div id="seltarjeta" class="oculta"></div>
-    <div id="selacciones" class="oculta"><button class="tjbtn ignorar" type="button" data-q="ignorar" aria-label="no" title="no">✕</button><button class="tjbtn maybe" type="button" data-q="maybe" aria-label="maybe" title="maybe">–</button><button class="tjbtn aceptar" type="button" data-q="aceptar" aria-label="sí" title="sí">✓</button><button class="tjbtn escribir" type="button" data-q="escribir">escribir</button></div>
-    <div id="tjguardar" class="oculta"><button class="tjbtn" type="button">guardar texto</button></div>
+    <div id="selacciones" class="oculta"><button class="tjbtn ignorar bglifo b-no" type="button" data-q="ignorar" aria-label="no va" title="no va">✕</button><button class="tjbtn queda bglifo b-queda" type="button" data-q="queda" aria-label="queda" title="queda">→</button></div>
     <textarea id="seltxt" placeholder="algo para sumar (opcional)" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
-    <div class="selbtns"><button id="selaceptar" class="selbtn" type="button">aceptar</button><button id="selmandar" class="selbtn" type="button">enviar texto</button></div>
-    <div class="selpie"><span id="selestado" aria-live="polite"></span><button id="selcerrar" type="button">cerrar</button></div>
+    <div class="selbtns mfila"><button id="selaceptar" class="selbtn bverde llena" type="button">aceptar</button><button id="selmandar" class="selbtn bverde llena" type="button">enviar texto</button></div>
+    <div class="selpie mpie"><span id="selestado" class="mestado" aria-live="polite"></span><button id="selcerrar" class="mcerrar" type="button">cerrar</button></div>
   </div>
 </div>
 
@@ -1118,6 +1113,114 @@ var MARCA = "<!--agente-->";
 var API = "https://api.github.com";
 
 var $ = function(id){ return document.getElementById(id); };
+// ---------- molde de modales y overlays (facundo, 2026-09-15, orden 1558) ----------
+// "guardá la idea de los modales para reusar": todo modal, votacion u overlay del board pasa por aca.
+// - `capaRegistrar({nombre, el, abierta?, cerrar, z?})` lo suma a la pila que usa `esc` (`capaTope`): gana el z-index
+//   mas alto y, empatados, el registrado primero. esc = cerrar sin mandar nada (1455).
+// - `capaMostrar(id[, fondo])` / `capaOcultar(id[, fondo])` prenden y apagan con `.oculta`, un solo lugar.
+// - `moldeBoton({tipo, txt, letra, principal, clase, aria, accion})`: `term` a/b/c, `no`/`queda` glifos sin
+//   borde (1556, 1561: sin maybe ni si), `verde`/`rojo` accion con borde. #modal, notimodal y `modalMolde` arman sus botones con esto.
+// - `modalMolde({id, z, confirmar, sinServer, alCerrar})` arma uno nuevo con las reglas de facundo de fabrica: abre solo
+//   si `confirmar(datos)` (el server, ahora) dice que si (1441), esc y `cerrar` cierran sin mandar, texto hasta
+//   --texto-max. receta completa en `docs/componentes-web.md`.
+var CAPAS = [], capaSeq = 0;
+function capaRegistrar(c){
+  CAPAS = CAPAS.filter(function(x){ return x.nombre !== c.nombre; });
+  c.orden = capaSeq++;
+  CAPAS.push(c);
+  return c;
+}
+function capaAbierta(c){
+  if(c.abierta) return !!c.abierta();
+  var el = document.getElementById(c.el);
+  return !!el && !el.classList.contains("oculta");
+}
+function capaZ(c){
+  var el = c.el && document.getElementById(c.el), z = el ? parseInt(getComputedStyle(el).zIndex, 10) : NaN;
+  return isNaN(z) ? (c.z || 0) : z;
+}
+function capaTope(){
+  return CAPAS.filter(capaAbierta).sort(function(a, b){ return capaZ(b) - capaZ(a) || a.orden - b.orden; })[0] || null;
+}
+function capaMostrar(id, fondo){ $(id).classList.remove("oculta"); if(fondo) $(fondo).classList.remove("oculta"); }
+function capaOcultar(id, fondo){ $(id).classList.add("oculta"); if(fondo) $(fondo).classList.add("oculta"); }
+var GLIFOS = {no: ["✕", "no va"], queda: ["→", "queda"]};   // 1561: "no quiero volver a ver maybes ni si ni no"
+function moldeBoton(o){
+  var b = document.createElement("button");
+  b.type = "button";
+  if(o.tipo === "term"){
+    b.className = "bterm" + (o.principal ? " principal" : "");
+    b.innerHTML = (o.letra ? '<span class="let">' + esc(o.letra) + ")</span>" : "") + esc(o.txt || "");
+  } else if(GLIFOS[o.tipo]){
+    b.className = "bglifo b-" + o.tipo;
+    b.textContent = o.txt || GLIFOS[o.tipo][0];
+    b.setAttribute("aria-label", o.aria || GLIFOS[o.tipo][1]);
+    b.title = o.aria || GLIFOS[o.tipo][1];
+  } else {
+    b.className = "bverde llena" + (o.tipo === "rojo" ? " rojo" : "");
+    b.textContent = o.txt || "";
+  }
+  if(o.clase) String(o.clase).split(/\s+/).forEach(function(k){ if(k) b.classList.add(k); });
+  if(o.accion) b.addEventListener("click", o.accion);
+  return b;
+}
+var moldeSeq = 0;
+function modalMolde(o){
+  o = o || {};
+  var id = o.id || ("molde" + (++moldeSeq)), capa = document.getElementById(id);
+  if(!capa){
+    capa = document.createElement("div");
+    capa.id = id; capa.className = "capa oculta";
+    capa.setAttribute("role", "dialog"); capa.setAttribute("aria-modal", "true");
+    capa.style.zIndex = String(o.z || 42);   // arriba de selmodal (41), abajo del visor (60)
+    capa.innerHTML = '<div class="mcaja mmolde"><div class="mhead"><span class="mtitulo"></span><span class="mcuenta"></span></div>' +
+      '<div class="mcuerpo2"></div><div class="mfila mbotones"></div>' +
+      '<div class="mpie"><span class="mestado" aria-live="polite"></span><button class="mcerrar" type="button">cerrar</button></div></div>';
+    document.body.appendChild(capa);
+  }
+  var q = function(s){ return capa.querySelector(s); };
+  var m = {id: id, el: capa, abierto: false, datos: null};
+  m.estado = function(t){ q(".mestado").textContent = t || ""; };
+  m.pintar = function(d){
+    d = d || {};
+    m.datos = d;
+    q(".mtitulo").textContent = d.titulo || "";
+    q(".mcuenta").textContent = d.cuenta || "";
+    var cu = q(".mcuerpo2");
+    cu.textContent = "";
+    if(d.cuerpo && d.cuerpo.nodeType) cu.appendChild(d.cuerpo);
+    else if(d.html) cu.innerHTML = d.html;
+    else cu.textContent = d.texto || "";
+    var bs = q(".mbotones");
+    bs.textContent = "";
+    (d.botones || []).forEach(function(x, i){
+      bs.appendChild(moldeBoton(Object.assign({}, x, {letra: x.tipo === "term" ? (x.letra || LETRAS[i]) : "",
+                                                      accion: x.accion && function(ev){ x.accion(m, ev); }})));
+    });
+    m.estado("");
+  };
+  m.abrir = function(d){
+    if(!o.confirmar && !o.sinServer) return Promise.resolve(false);   // 1441: sin confirmacion del server no se abre
+    var pedir = o.confirmar ? Promise.resolve().then(function(){ return o.confirmar(d); }) : Promise.resolve(true);
+    return pedir.then(function(si){
+      if(!si) return false;
+      m.pintar(d);
+      capaMostrar(id);
+      m.abierto = true;
+      return true;
+    }).catch(function(){ return false; });
+  };
+  m.cerrar = function(porEsc){
+    if(!m.abierto) return false;
+    m.abierto = false;
+    capaOcultar(id);
+    if(o.alCerrar) o.alCerrar(!!porEsc, m);
+    return true;
+  };
+  q(".mcerrar").addEventListener("click", function(){ m.cerrar(false); });
+  capaRegistrar({nombre: id, el: id, abierta: function(){ return m.abierto; }, cerrar: function(){ m.cerrar(true); }});
+  return m;
+}
 var hist = $("hist"), lista = $("lista"), login = $("login"), pie = $("pie");
 var cabecera = $("cabecera"), txt = $("txt");
 var alfinal = $("alfinal"), envoltorio = $("envoltorio");
@@ -3822,13 +3925,13 @@ function votAbrir(){
   votAbierto = true;
   $("vtpar").classList.remove("oculta"); $("vtbasta").classList.remove("oculta"); $("vtfin").classList.add("oculta");
   $("vtestado").textContent = "";
-  $("votar").classList.remove("oculta");
+  capaMostrar("votar");
   votPintar();
   return true;
 }
 function votCerrar(){
   votAbierto = false;
-  $("votar").classList.add("oculta");
+  capaOcultar("votar");
   animSacar($("votar"));
 }
 function votElegir(k){
@@ -3931,13 +4034,13 @@ function animMenuAbrir(a){
   animPoner($("amanim"), a);
   $("amnom").textContent = a.nombre || a.id;
   $("amnota").classList.add("oculta"); $("amtxt").value = ""; $("amestado").textContent = "";
-  $("animmenu").classList.remove("oculta");
+  capaMostrar("animmenu");
   return true;
 }
 function animMenuCerrar(){
   if(amTimer){ clearTimeout(amTimer); amTimer = null; }
   amAnim = null;
-  $("animmenu").classList.add("oculta");
+  capaOcultar("animmenu");
   animSacar($("animmenu"));
 }
 function animGusto(tipo, texto){
@@ -4090,15 +4193,15 @@ function selAbrir(e){
   $("seltxt").value = ""; $("selestado").textContent = "";
   $("seltxt").placeholder = "algo para sumar (va al chat de " + (e.tema || "tools") + ")";
   selCuenta();
-  $("selmodal").classList.remove("oculta");
+  capaMostrar("selmodal");
   ls.scrollTop = 0;
   return true;
 }
 // ---------- 1440: modo tarjetas (facundo, 2026-09-15, por audio) ----------
 // "nada de modales grandes ni grilla": una candidata por tarjeta, foto de perfil siempre (y 3 del feed si el perfil
 // es publico), arriba el estado (te sigue / la seguis / ninguno / hay charla previa) y la marca publica/privada, y
-// cuatro botones: `subir` (al escalon de arriba), `ignorar` (no se sugiere nunca mas), `escribir` (deja el draft del
-// dm, no lo manda) y `pasar` (decidir despues). cada toque manda SU registro (`tipo: "tarjeta"`), asi que cerrar el
+// 1561: dos glifos, `✕` (no va: a ignoradas para siempre) y `→` (queda: a la lista corta). nada de si/maybe/no ni
+// `escribir`. cada toque manda SU registro (`tipo: "tarjeta"`), asi que cerrar el
 // modal a la mitad no pierde ninguna decision; cuando no queda ninguna, un `aceptar` cierra la tanda y el server
 // arma y abre la siguiente (`recetas/ig_embudo.py`).
 // el modo viene del server (`modo: "tarjetas"`), pero un server viejo que todavia no recargo la receta no lo manda:
@@ -4113,8 +4216,7 @@ function selModoLista(lista){
   $("sellista").classList.toggle("oculta", !lista);
   $("seltarjeta").classList.toggle("oculta", lista);
   $("selacciones").classList.toggle("oculta", lista);
-  $("seltxt").classList.toggle("oculta", !lista);   // 1495: en tarjetas el campo aparece solo con `escribir`
-  $("tjguardar").classList.add("oculta");
+  $("seltxt").classList.toggle("oculta", !lista);   // 1561: en tarjetas no hay campo de texto
   var b = document.querySelector("#selmodal .selbtns");
   if(b) b.classList.toggle("oculta", !lista);
 }
@@ -4126,9 +4228,8 @@ function tjAbrir(e){
   selModoLista(false);
   $("seltitulo").textContent = e.titulo || e.coleccion;
   $("seltxt").value = ""; $("selestado").textContent = "";
-  $("seltxt").placeholder = "lo que quieras anotar de ella (no se manda nada)";
   tjPintar();
-  $("selmodal").classList.remove("oculta");
+  capaMostrar("selmodal");
   return true;
 }
 function tjActual(){
@@ -4138,7 +4239,7 @@ function tjActual(){
 function tjPintar(){
   var e = sel.actual, c = tjActual(), t = $("seltarjeta");
   t.textContent = "";
-  $("seltxt").classList.add("oculta"); $("tjguardar").classList.add("oculta"); $("seltxt").value = "";
+  $("seltxt").classList.add("oculta"); $("seltxt").value = "";
   $("selcuenta").textContent = c ? (sel.tj + 1) + " de " + e.candidatas.length : "listo";
   if(!c){ tjFin(); return; }
   t.setAttribute("data-candidata", c.id);   // 1495: la tarjeta a la vista, la que firma el voto
@@ -4184,25 +4285,13 @@ function tjPintar(){
 // 1495: cada voto firma la tarjeta a la vista (`candidata_id` y `cuenta`). el server rechaza el que no los trae.
 function tjDecidir(q){
   var e = sel.actual, c = tjActual();
-  if(!e || !c || ["aceptar", "maybe", "ignorar", "escribir"].indexOf(q) < 0) return false;   // 1546: sí / maybe / no
-  if(q === "escribir"){   // abre el campo y nada mas; lo guarda `guardar texto`
-    $("seltxt").classList.remove("oculta"); $("tjguardar").classList.remove("oculta");
-    $("seltxt").focus();
-    $("selestado").textContent = "no se manda nada, queda anotado";
-    return true;
-  }
+  if(!e || !c || ["ignorar", "queda"].indexOf(q) < 0) return false;   // 1561: no va / queda, nada mas
   return tjVoto(e, c, q, "");
-}
-function tjGuardar(){
-  var e = sel.actual, c = tjActual(), txt = $("seltxt").value.trim();
-  if(!e || !c) return false;
-  if(!txt){ $("selestado").textContent = "escribí algo primero"; return false; }
-  return tjVoto(e, c, "escribir", txt);
 }
 function tjVoto(e, c, q, txt){
   var r = {id: lidNuevo(), tipo: "tarjeta", ts: Date.now(), candidata_id: c.id, cuenta: c.cuenta || "", decision: q, texto: txt};
   var pend = selLeer("pend", []); pend.push({col: e.coleccion, r: r}); selEscribir("pend", pend);
-  $("selestado").textContent = q + " @" + (c.cuenta || c.id);
+  $("selestado").textContent = (q === "ignorar" ? "no va" : q) + " @" + (c.cuenta || c.id);
   sel.tjVotos = (sel.tjVotos || 0) + 1;   // 1524: sin al menos una, `tjFin` no manda `fin`
   sel.tj += 1;
   tjPintar();
@@ -4226,7 +4315,7 @@ function tjSinFotos(e){
   var pend = selLeer("pend", []); pend.push({col: e.coleccion, r: r}); selEscribir("pend", pend);
   sel.actual = null;
   selModoLista(true);
-  $("selmodal").classList.add("oculta");
+  capaOcultar("selmodal");
   selBoton();
   selSubir();
 }
@@ -4242,7 +4331,7 @@ function tjFin(){
   var pend = selLeer("pend", []); pend.push({col: e.coleccion, r: r}); selEscribir("pend", pend);
   sel.actual = null;
   selModoLista(true);
-  $("selmodal").classList.add("oculta");
+  capaOcultar("selmodal");
   selBoton();
   selSubir();
 }
@@ -4250,7 +4339,7 @@ function selCerrar(){
   if(sel.actual) sel.ignorada[sel.actual.coleccion] = sel.actual.abrir_ts;
   sel.actual = null;
   selModoLista(true);   // 1440: la proxima puede ser una de checkboxes
-  $("selmodal").classList.add("oculta");
+  capaOcultar("selmodal");
   selBoton();
 }
 function selEncolar(tipo){
@@ -4267,7 +4356,7 @@ function selAceptar(){
   if(!e || !selEncolar("aceptar")) return false;
   var h = selLeer("hechas", {}); h[e.coleccion] = e.abrir_ts; selEscribir("hechas", h);
   sel.actual = null;
-  $("selmodal").classList.add("oculta");
+  capaOcultar("selmodal");
   selBoton();
   selSubir();
   return true;
@@ -4431,11 +4520,10 @@ $("seltxt").addEventListener("focus", function(){
   function ver(){ ajustarAlto(); selTxtCrecer(); try { $("seltxt").scrollIntoView({block: "nearest"}); } catch(_){} }
   ver(); setTimeout(ver, 150); setTimeout(ver, 400);
 });
-// 1495: los tres botones de la tarjeta, uno por decision, y `guardar texto` de `escribir`
+// 1561: los dos glifos de la tarjeta, uno por decision
 [].forEach.call(document.querySelectorAll("#selacciones .tjbtn"), function(b){
   b.addEventListener("click", function(){ tjDecidir(b.getAttribute("data-q")); });
 });
-document.querySelector("#tjguardar .tjbtn").addEventListener("click", tjGuardar);
 
 // ---------- mensaje en vuelo (facundo, 2026-09-13: "ver que pasa mientras espero") ----------
 // al mandar, abajo del mensaje aparece `agente> hh:mm` con un spinner de texto, la fase que publica el daemon
@@ -5180,9 +5268,8 @@ function pintarNotiPush(){
     var w = document.createElement("div");
     w.className = "nmopc";
     o.lista.forEach(function(op){
-      var b = document.createElement("button");
-      b.type = "button"; b.className = "nmop"; b.dataset.letra = op.letra;
-      b.innerHTML = '<span class="let">' + esc(op.letra) + ")</span>" + esc(op.texto);
+      var b = moldeBoton({tipo: "term", letra: op.letra, txt: op.texto, clase: "nmop"});
+      b.dataset.letra = op.letra;
       b.addEventListener("click", function(){
         if(b.classList.contains("sel")) return;
         if(responderNotiPush(op.cmd || (op.letra + ": " + op.texto), !!op.cmd)) b.classList.add("sel");
@@ -5218,7 +5305,7 @@ function abrirNotiPush(p){
   notiPush = {id: p.id || null, tema: p.tema || null, ts: p.ts || null, titulo: p.titulo || "", cuerpo: p.cuerpo || ""};
   $("nmtxt").value = "";
   estadoNotiPush("");
-  $("notimodal").classList.remove("oculta");
+  capaMostrar("notimodal");
   pintarNotiPush();
   posNotiModal();
   var c = notiPush.ctx;
@@ -5250,7 +5337,7 @@ function cerrarNotiPush(){
   pararHablaNoti();
   o.innerHTML = "";
   notiPush = null; notiVuelta = null;
-  $("notimodal").classList.add("oculta");
+  capaOcultar("notimodal");
   if(c && c.noti) marcarLeidos([c.noti.id]);
   // el modal nunca cambia la pestaña: si igual cambio (llego tabs.json en el arranque en frio) no se pisa
   if(v && temaActivo() === v.tema && v.alto > 0){
@@ -7666,22 +7753,14 @@ function pintarModal(m){
   $("mcuerpo").innerHTML = m.cuerpo || "";
   var acc = $("macc");
   acc.innerHTML = "";
-  (m.acciones || []).forEach(function(a, i){
-    var b = document.createElement("button");
-    b.type = "button";
-    if(a[2]) b.className = "principal";
-    if(a[3]) b.classList.add(a[3]);
-    b.innerHTML = '<span class="let">' + LETRAS[i] + ")</span>" + esc(a[0]);
-    b.addEventListener("click", a[1]);
-    acc.appendChild(b);
+  (m.acciones || []).forEach(function(a, i){   // accion = [texto, fn, principal, clase]: el boton lo arma el molde
+    acc.appendChild(moldeBoton({tipo: "term", letra: LETRAS[i], txt: a[0], principal: a[2], clase: a[3], accion: a[1]}));
   });
-  $("modal").classList.remove("oculta");
-  $("mfondo").classList.remove("oculta");
+  capaMostrar("modal", "mfondo");
 }
 function cerrarModal(){
   modalAbierto = null;
-  $("modal").classList.add("oculta");
-  $("mfondo").classList.add("oculta");
+  capaOcultar("modal", "mfondo");
   $("macc").innerHTML = "";
 }
 $("mfondo").addEventListener("click", cerrarModal);
@@ -8047,22 +8126,29 @@ $("ddfondo").addEventListener("click", cerrarDd);
 // 1455 (facundo, 2026-09-15): `esc` cierra el modal u overlay de mas arriba, uno por toque, tambien escribiendo en un
 // campo. cerrar con esc = cerrar/basta sin mandar: no sube votos, no marca nada y no se reabre solo en esta carga
 // (el votador queda con `votAuto`, la seleccion en `sel.ignorada`). orden = z-index, del mas alto al mas bajo.
+// 1558: la pila vive en el molde (`capaRegistrar`); cada overlay dice como se ve abierto y como se cierra. gana el
+// z-index mas alto (selmodal 41, animmenu y votar 40 en este orden, campana 34, menu 32, modal 30, notimodal 28, dd 20)
+capaRegistrar({nombre: "visor", el: "visor", z: 60, abierta: function(){ return !!document.getElementById("visor"); },
+               cerrar: function(){ document.getElementById("visor").click(); }});
+capaRegistrar({nombre: "seleccion", el: "selmodal", cerrar: function(){ selCerrar(); }});
+capaRegistrar({nombre: "animmenu", el: "animmenu", cerrar: function(){
+  $("amtxt").value = "";
+  try{ $("amtxt").blur(); }catch(x){}
+  animMenuCerrar();
+}});
+capaRegistrar({nombre: "votar", el: "votar", cerrar: function(){ votCerrar(); }});
+capaRegistrar({nombre: "campana", el: "nlista", abierta: function(){ return !!campanaAbierta; }, cerrar: function(){ cerrarCampana(); }});
+capaRegistrar({nombre: "menu", el: "ctx", abierta: function(){ return !!menuAbierto || !$("ctx").classList.contains("oculta"); },
+               cerrar: function(){ cerrarMenu(); }});
+capaRegistrar({nombre: "modal", el: "modal", abierta: function(){ return !!modalAbierto || !$("modal").classList.contains("oculta"); },
+               cerrar: function(){ cerrarModal(); }});
+capaRegistrar({nombre: "notimodal", el: "notimodal", abierta: function(){ return !!notiPush; }, cerrar: function(){ cerrarNotiPush(); }});
+capaRegistrar({nombre: "dd", el: "dd", cerrar: function(){ cerrarDd(); }});
 function escTope(){
-  var v = document.getElementById("visor");
-  if(v){ v.click(); return "visor"; }
-  if(!$("selmodal").classList.contains("oculta")){ selCerrar(); return "seleccion"; }
-  if(!$("animmenu").classList.contains("oculta")){
-    $("amtxt").value = "";
-    try{ $("amtxt").blur(); }catch(x){}
-    animMenuCerrar(); return "animmenu";
-  }
-  if(!$("votar").classList.contains("oculta")){ votCerrar(); return "votar"; }
-  if(campanaAbierta){ cerrarCampana(); return "campana"; }
-  if(menuAbierto || !$("ctx").classList.contains("oculta")){ cerrarMenu(); return "menu"; }
-  if(modalAbierto || !$("modal").classList.contains("oculta")){ cerrarModal(); return "modal"; }
-  if(notiPush){ cerrarNotiPush(); return "notimodal"; }
-  if(!$("dd").classList.contains("oculta")){ cerrarDd(); return "dd"; }
-  return null;
+  var c = capaTope();
+  if(!c) return null;
+  c.cerrar();
+  return c.nombre;
 }
 document.addEventListener("keydown", function(e){
   if(e.key !== "Escape" && e.key !== "Esc") return;
@@ -8229,7 +8315,7 @@ window.__agente = {
   animRanking: animRanking, animSpinner: animSpinner, animSinVer: animSinVer, animValida: animValida,
   // 1453: rotacion y menu del toque
   animRotable: animRotable, animGus: animGus, animMenuAbrir: animMenuAbrir, animMenuCerrar: animMenuCerrar,
-  escTope: escTope, verImagen: verImagen,   // 1455: esc cierra el de mas arriba (`prueba_web_votar`)
+  escTope: escTope, capaTope: function(){ var c = capaTope(); return c && c.nombre; }, modalMolde: modalMolde, moldeBoton: moldeBoton, verImagen: verImagen,   // 1455: esc cierra el de mas arriba (`prueba_web_votar`)
   animGusto: animGusto, animGustosSubir: animGustosSubir,
   amEstado: function(){ return {abierto: !$("animmenu").classList.contains("oculta"), anim: amAnim && amAnim.id,
                                  pend: votLeer("gustos_pend", []), loc: votLeer("gustos_loc", null), gustos: anims.gustos,
