@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.288">
-<link rel="manifest" href="manifest.json?v=4.288">
+<meta name="agente-web-version" content="4.289">
+<link rel="manifest" href="manifest.json?v=4.289">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -4245,10 +4245,18 @@ function selModoLista(lista){
 // queda abierto esperando (`al día`) y nunca manda `fin`. el boton `votar` cuenta tarjetas, no colecciones. un dato
 // que no confirmo el server (widgets.json viejo) solo puede sacar tarjetas, nunca sumar.
 var TJ_TOQUE_MS = 350;   // 1567: dos toques en menos de esto son un voto (si no, el segundo votaba la tarjeta siguiente)
-sel.hechasFila = {};
+// correccion de facundo 18:12: la votada sale de la fila tambien en el `localStorage` (`agente_sel_fila`), asi cerrar
+// y reabrir (o recargar) no la vuelve a mostrar aunque el server tarde en sacarla. se olvida a los 7 dias.
+var FILA_RECUERDA_MS = 7 * 86400000;
 function tjConFoto(c){ return !!(c && c.fotos && /^img\//.test(c.fotos[0] || "")); }
+function filaMarcar(col, id){
+  var f = selLeer("fila", {}), ahora = Date.now(), m = f[col] = f[col] || {};
+  m[id] = ahora;
+  Object.keys(m).forEach(function(k){ if(ahora - m[k] > FILA_RECUERDA_MS) delete m[k]; });
+  selEscribir("fila", f);
+}
 function filaVotadas(col){
-  var o = Object.assign({}, sel.hechasFila[col] || {});
+  var o = Object.assign({}, selLeer("fila", {})[col] || {});
   selLeer("pend", []).forEach(function(p){ if(p && p.col === col && p.r && p.r.candidata_id) o[p.r.candidata_id] = true; });
   return o;
 }
@@ -4368,7 +4376,7 @@ function tjDecidir(q){
 function tjVoto(e, c, q, txt){
   if(Date.now() - (sel.tjUlt || 0) < TJ_TOQUE_MS) return false;   // 1567: el doble toque cuenta una vez
   sel.tjUlt = Date.now();
-  if(e.continua) (sel.hechasFila[e.coleccion] = sel.hechasFila[e.coleccion] || {})[c.id] = true;
+  if(e.continua) filaMarcar(e.coleccion, c.id);
   var r ={id: lidNuevo(), tipo: "tarjeta", ts: Date.now(), candidata_id: c.id, cuenta: c.cuenta || "", decision: q, texto: txt};
   var pend = selLeer("pend", []); pend.push({col: e.coleccion, r: r}); selEscribir("pend", pend);
   $("selestado").textContent = (q === "ignorar" ? "no va" : q) + " @" + (c.cuenta || c.id);
@@ -8507,7 +8515,8 @@ window.__agente = {
   selEstado: function(){ return {abierto: !!sel.actual, col: sel.actual && sel.actual.coleccion, pend: selLeer("pend", []), fuente: sel.fuente,
                                  marcadas: selMarcadas(), abiertas: sel.abiertas.map(function(a){ return a.coleccion; })}; },
   selReset: function(){ sel.actual = null; sel.abiertas = []; sel.ignorada = {};
-                        ["pend", "hechas"].forEach(function(s){ try{ localStorage.removeItem("agente_sel_" + s); }catch(x){} }); },
+                        ["pend", "hechas", "fila"].forEach(function(s){ try{ localStorage.removeItem("agente_sel_" + s); }catch(x){} }); },
+  selFila: function(){ return selLeer("fila", {}); },   // correccion 18:12
   animRanking: animRanking, animSpinner: animSpinner, animSinVer: animSinVer, animValida: animValida,
   // 1453: rotacion y menu del toque
   animRotable: animRotable, animGus: animGus, animMenuAbrir: animMenuAbrir, animMenuCerrar: animMenuCerrar,
