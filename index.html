@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.298">
-<link rel="manifest" href="manifest.json?v=4.298">
+<meta name="agente-web-version" content="4.299">
+<link rel="manifest" href="manifest.json?v=4.299">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -169,11 +169,21 @@
   .bglifo{-webkit-appearance:none;appearance:none;-webkit-text-fill-color:currentColor;opacity:1;min-width:38px}
   .bglifo.b-no{color:#ff4d4d;color:var(--rojo)}
   .bglifo.b-queda{color:#e8e8e8;color:var(--blanco)}
-  .bglifo.b-maybe{color:#e8e8e8;color:var(--blanco)}   /* 1657: `-_-` es maybe (al limbo), en el medio de la fila de votos */
+  .bglifo.b-maybe{color:#e8e8e8;color:var(--blanco)}   /* 1657, 1667: `-_-` es maybe (a la lista `maybe`), en el medio de la fila de votos */
   /* 1657 (facundo, 2026-09-15, "como te dije mil veces"): el back es `←` y vive FUERA de la fila de votos, arriba a la
      izquierda del modal; apagado en gris cuando no hay nada que deshacer, blanco cuando si */
   .bglifo.b-atras{color:#e8e8e8;color:var(--blanco)}
   .bglifo.b-atras.apagado{color:#666;color:var(--gris)}
+  /* interruptor de N posiciones (1659, el modo de modelo del widget CLAUDE): una sola fila, la puesta en verde y
+     las otras en gris. sin fondo, sin borde de color y sin nada mas grande que --texto-max, como el resto. */
+  .msw{display:flex;align-items:stretch;gap:0;border:1px solid var(--linea);border-radius:6px;overflow:hidden}
+  .msw .mswb{flex:1 1 0;min-height:30px;padding:4px 6px;background:#000;color:#8a8a8a;color:var(--gris);border:0;
+    border-left:1px solid var(--linea);font:inherit;font-size:10.5px;line-height:1.2;cursor:pointer;
+    touch-action:manipulation;-webkit-appearance:none;appearance:none;-webkit-text-fill-color:currentColor}
+  .msw .mswb:first-child{border-left:0}
+  .msw .mswb.puesto{color:#4ad07d;color:var(--verde)}
+  .msw .mswb:active{background:#111}
+  .msw .mswb[disabled]{cursor:default;opacity:.6}
   /* `modalMolde`: la caja de un modal nuevo */
   .mmolde{width:100%;max-width:360px;max-height:100%;overflow-y:auto;box-sizing:border-box;display:flex;flex-direction:column;
     gap:8px;padding:12px;font-size:12px}
@@ -292,7 +302,7 @@
     font-size:12px;text-decoration:none;border:1px solid var(--linea);border-radius:4px}
   /* 1561 (facundo, 2026-09-15): "no quiero volver a ver maybes ni si ni no". dos glifos en una fila: `✕` roja (no va)
      y `→` blanca (queda). sin `escribir` ni campo de texto en la tarjeta.
-     1657 (facundo, 2026-09-15): tres glifos de VOTO: `✕` no va, `-_-` blanco en el medio (maybe: al limbo) y `🔥` a la
+     1657 (facundo, 2026-09-15): tres glifos de VOTO: `✕` no va, `-_-` blanco en el medio (maybe: a la lista `maybe`) y `🔥` a la
      derecha (queda). el back (`←`) nunca va en esta fila: vive en la cabecera del modal (`#selback`) */
   /* 1657: la flecha de back, arriba a la izquierda del modal, en otro contexto que los votos */
   #selmodal .seltit{align-items:center}
@@ -664,6 +674,11 @@
   /* widget `CLAUDE` (ordenes 1376/1377/1379, facundo 2026-09-14): linea de reparto, color por cuenta, bateria, semana */
   /* orden 1396: la linea entera en varios renglones (en el celu se cortaba con `...`) */
   .usage .urep{margin:0 0 6px 0;white-space:normal;overflow-wrap:anywhere;color:var(--blanco)}
+  /* 1659: el interruptor del modo de modelo y, abajo, que sale hoy en cada cuenta */
+  .usage .usw{margin:0 0 7px 0}
+  .usage .uswl{margin-top:3px;font-size:10px;line-height:1.35;color:var(--blanco);overflow-wrap:anywhere}
+  .usage .uswl.g{color:var(--gris)}
+  .usage .uswl b{color:var(--verde);font-weight:600}
   .usage .ucol .cta .nom.e-ok{color:#a6f5a0}
   .usage .ucol .cta .nom.e-warn{color:var(--amarillo)}
   .usage .ucol .cta .nom.e-mal{color:var(--rojo)}
@@ -1236,6 +1251,28 @@ function moldeBoton(o){
   if(o.accion) b.addEventListener("click", o.accion);
   return b;
 }
+// interruptor de N posiciones (1659): se pinta como HTML (los widgets se arman en string, no en DOM) y el click lo
+// atiende un solo listener delegado contra `MOLDE_SW`. `nombre` es la clave del registro; `accion(valor)` corre solo
+// si la posicion tocada no es la que ya estaba puesta.
+var MOLDE_SW = {};
+function moldeSwitchReg(nombre, accion){ MOLDE_SW[nombre] = accion; }
+function moldeSwitch(o){
+  return '<div class="msw" role="group"' + (o.aria ? ' aria-label="' + esc(o.aria) + '"' : "") + ">" +
+    (o.opciones || []).map(function(x){
+      var v = x.valor === undefined ? x : x.valor, txt = x.txt === undefined ? v : x.txt;
+      var puesto = String(v) === String(o.valor);
+      return '<button class="mswb' + (puesto ? " puesto" : "") + '" type="button" data-sw="' + esc(o.nombre) +
+        '" data-swv="' + esc(v) + '"' + (x.title ? ' title="' + esc(x.title) + '"' : "") +
+        ' aria-pressed="' + (puesto ? "true" : "false") + '">' + esc(txt) + "</button>";
+    }).join("") + "</div>";
+}
+document.addEventListener("click", function(ev){
+  var b = ev.target.closest && ev.target.closest(".mswb[data-sw]");
+  if(!b || b.disabled) return;
+  ev.preventDefault(); ev.stopPropagation();
+  var fn = MOLDE_SW[b.getAttribute("data-sw")];
+  if(fn && !b.classList.contains("puesto")) fn(b.getAttribute("data-swv"), b);
+}, true);
 var moldeSeq = 0;
 function modalMolde(o){
   o = o || {};
@@ -4370,7 +4407,7 @@ function selAbrir(e){
 // ---------- 1440: modo tarjetas (facundo, 2026-09-15, por audio) ----------
 // "nada de modales grandes ni grilla": una candidata por tarjeta, foto de perfil siempre (y 3 del feed si el perfil
 // es publico), arriba el estado (te sigue / la seguis / ninguno / hay charla previa) y la marca publica/privada, y
-// 1657: tres glifos de voto, `✕` (no va: a ignoradas para siempre), `-_-` (maybe: al limbo) y `🔥` (queda: a la lista
+// 1657: tres glifos de voto, `✕` (no va: a ignoradas para siempre), `-_-` (maybe: a la lista `maybe`) y `🔥` (queda: a la lista
 // corta), y el back `←` aparte arriba. sin `escribir`. cada toque manda SU registro (`tipo: "tarjeta"`), asi que cerrar el
 // modal a la mitad no pierde ninguna decision; cuando no queda ninguna, un `aceptar` cierra la tanda y el server
 // arma y abre la siguiente (`recetas/ig_embudo.py`).
@@ -6710,6 +6747,42 @@ function cajaSalud(s){
 // modelo (a que cuenta va y por que, corto) y abajo las dos cuentas en DOS COLUMNAS (facu izquierda, orugote
 // derecha) con `5h`, `week` y `fable` a la misma altura. un numero por barra; el tick de la linea sigue igual.
 // caidas de hoy quedan en el dato esencial del header. todo lo calcula python (`proyeccion_uso`, `reparto_cuentas`).
+// interruptor del modo de modelo (facundo, 2026-09-15, orden 1659): `reparto` (lo decide el script cada 5 min mirando
+// week y fable de cada cuenta), `opus` y `fable` (override a mano, se respeta hasta que lo saque). manda el comando
+// `modelos <modo>` a la pestaña tools sin tocar la caja del chat, y lo contesta el daemon sin modelo.
+// abajo, una linea por cuenta con que modelo sale hoy ahi. usa el molde `moldeSwitch` (docs/componentes-web.md).
+var swEspera = null, swUltimo = null, SW_ESPERA_MS = 30 * 1000;
+moldeSwitchReg("modelomodo", function(v){
+  swEspera = {modo: v, ts: Date.now()};
+  swUltimo = {cmd: "modelos " + v, tema: "tools", aparte: true};   // lo lee `prueba_web_modelos` (como `spEstado`)
+  mandarAparte = true;
+  try{ mandar(swUltimo.cmd, "tools", false); }
+  finally{ mandarAparte = false; }
+  repintarWidgets();
+});
+function swEstado(){ return {ultimo: swUltimo, esperando: swEspera && swEspera.modo}; }
+function swModelo(rep){
+  var modo = (rep || {}).modelo_modo, d = (rep || {}).modelo || {};
+  if(!modo) return "";
+  // mientras el server no confirma, la posicion tocada queda puesta (y se dice): nunca un switch que no se mueve
+  var esperando = swEspera && Date.now() - swEspera.ts < SW_ESPERA_MS && swEspera.modo !== modo;
+  if(swEspera && swEspera.modo === modo) swEspera = null;
+  var puesto = esperando ? swEspera.modo : modo;
+  var filas = (d.cuentas || []).map(function(c){
+    return esc(c.nombre) + " <b>" + esc(c.decision || "?") + "</b>";
+  }).join(" · ");
+  var carriles = ["cola", "chat"].map(function(k){
+    return (d[k] || {}).modelo ? k + " " + d[k].modelo + " en " + ((d[k] || {}).cuenta || "?") : "";
+  }).filter(Boolean).join(", ");
+  return '<div class="usw">' +
+    moldeSwitch({nombre: "modelomodo", valor: puesto, aria: "modo de modelo",
+                 opciones: [{valor: "reparto", title: "lo decide el script, por cuenta"},
+                            {valor: "opus", title: "todo con opus hasta que lo saques"},
+                            {valor: "fable", title: "todo con fable hasta que lo saques"}]}) +
+    (esperando ? '<div class="uswl g">mandando…</div>'
+               : (filas ? '<div class="uswl">' + filas + "</div>" : "")) +
+    (carriles && !esperando ? '<div class="uswl g">' + esc(carriles) + "</div>" : "") + "</div>";
+}
 var USAGE_ORDEN = ["facu", "orugote"];
 var USAGE_BARRAS = [["five_hour", "5h"], ["seven_day", "week"], ["fable", "fable"]];
 function cajaUsage(u){
@@ -6730,6 +6803,7 @@ function cajaUsage(u){
     html += it({tipo: "reparto", tema: "tools", d: rep,
                 completo: rep.linea + (rep.porque && rep.porque !== rep.linea ? " (" + rep.porque + ")" : "")},
                '<div class="urep">' + esc(rep.linea) + "</div>");
+  html += swModelo(rep);
   // las dos columnas: el nombre pintado por `estado` (ok verde clarito, warn amarillo, mal rojo)
   var cols = cuentas.map(function(cu){
     var est = cu.estado || (cu.sin_login ? "mal" : "");
@@ -8800,7 +8874,7 @@ window.__agente = {
   animRanking: animRanking, animSpinner: animSpinner, animSinVer: animSinVer, animValida: animValida,
   // 1453: rotacion y menu del toque
   animRotable: animRotable, animGus: animGus, animMenuAbrir: animMenuAbrir, animMenuCerrar: animMenuCerrar,
-  escTope: escTope, capaTope: function(){ var c = capaTope(); return c && c.nombre; }, modalMolde: modalMolde, moldeBoton: moldeBoton, verImagen: verImagen,   // 1455: esc cierra el de mas arriba (`prueba_web_votar`)
+  escTope: escTope, capaTope: function(){ var c = capaTope(); return c && c.nombre; }, modalMolde: modalMolde, moldeBoton: moldeBoton, moldeSwitch: moldeSwitch, swModelo: swModelo, swEstado: swEstado, verImagen: verImagen,   // 1455: esc cierra el de mas arriba (`prueba_web_votar`)
   glifos: function(){ var o = {}; Object.keys(GLIFOS).forEach(function(k){ o[k] = GLIFOS[k][0]; }); return o; },   // 1657: `prueba_web_votar` chequea que `-_-` sea maybe y `←` el back
   animGusto: animGusto, animGustosSubir: animGustosSubir,
   amEstado: function(){ return {abierto: !$("animmenu").classList.contains("oculta"), anim: amAnim && amAnim.id,
