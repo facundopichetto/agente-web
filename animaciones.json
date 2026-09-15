@@ -4,12 +4,14 @@
    "id": "rebote",
    "nombre": "pelota",
    "frames": [
-    "(●  )",
-    "( ● )",
-    "(  ●)",
-    "( ● )"
+    "●   ",
+    " ●  ",
+    "  ● ",
+    "   ●",
+    "  ● ",
+    " ●  "
    ],
-   "intervalo": 110,
+   "intervalo": 60,
    "alta": "2026-09-15",
    "origen": "inicial"
   },
@@ -17,17 +19,17 @@
    "id": "latido",
    "nombre": "latido",
    "frames": [
-    "__/\\/",
-    "_/\\/\\",
-    "/\\/\\_",
-    "\\/\\__",
-    "/\\___",
-    "\\____",
-    "_____",
-    "____/",
-    "___/\\"
+    "__/\\",
+    "_/\\/",
+    "/\\/\\",
+    "\\/\\_",
+    "/\\__",
+    "\\___",
+    "____",
+    "____",
+    "___/"
    ],
-   "intervalo": 90,
+   "intervalo": 55,
    "alta": "2026-09-15",
    "origen": "inicial"
   },
@@ -35,16 +37,16 @@
    "id": "ecualizador",
    "nombre": "ecualizador",
    "frames": [
-    "▂▅▇",
-    "▃▇▅",
-    "▅▅▃",
-    "▇▃▂",
-    "▅▂▁",
-    "▃▁▂",
-    "▂▂▃",
-    "▁▃▅"
+    "▂▅",
+    "▃▇",
+    "▅▅",
+    "▇▃",
+    "▅▂",
+    "▃▁",
+    "▂▂",
+    "▁▃"
    ],
-   "intervalo": 110,
+   "intervalo": 60,
    "alta": "2026-09-15",
    "origen": "inicial"
   },
@@ -52,12 +54,12 @@
    "id": "mate",
    "nombre": "mate",
    "frames": [
-    "c[_] ",
-    "c[_].",
-    "c[_]°",
-    "c[_]·"
+    "[_] ",
+    "[_].",
+    "[_]°",
+    "[_]·"
    ],
-   "intervalo": 200,
+   "intervalo": 80,
    "alta": "2026-09-15",
    "origen": "inicial"
   },
@@ -72,7 +74,7 @@
     "  C ",
     "  c "
    ],
-   "intervalo": 140,
+   "intervalo": 70,
    "alta": "2026-09-15",
    "origen": "inicial"
   },
@@ -85,7 +87,7 @@
     "░░▓▓",
     "▓░░▓"
    ],
-   "intervalo": 120,
+   "intervalo": 60,
    "alta": "2026-09-15",
    "origen": "inicial"
   },
@@ -93,13 +95,16 @@
    "id": "pensando",
    "nombre": "pensando",
    "frames": [
-    "(o_o)",
-    "(o_o)",
-    "(-_-)",
-    "(o_O)",
-    "(O_O)"
+    "o_o",
+    "o_o",
+    "o_o",
+    "-_-",
+    "o_o",
+    "o_O",
+    "O_O",
+    "O_o"
    ],
-   "intervalo": 300,
+   "intervalo": 70,
    "alta": "2026-09-15",
    "origen": "inicial"
   },
@@ -107,22 +112,22 @@
    "id": "ola",
    "nombre": "ola",
    "frames": [
-    "▁▂▃▄",
-    "▂▃▄▅",
-    "▃▄▅▆",
-    "▄▅▆▇",
-    "▅▆▇█",
-    "▆▇█▇",
-    "▇█▇▆",
-    "█▇▆▅",
-    "▇▆▅▄",
-    "▆▅▄▃",
-    "▅▄▃▂",
-    "▄▃▂▁",
-    "▃▂▁▂",
-    "▂▁▂▃"
+    "▁",
+    "▂",
+    "▃",
+    "▄",
+    "▅",
+    "▆",
+    "▇",
+    "█",
+    "▇",
+    "▆",
+    "▅",
+    "▄",
+    "▃",
+    "▂"
    ],
-   "intervalo": 90,
+   "intervalo": 50,
    "alta": "2026-09-15",
    "origen": "inicial"
   },
@@ -137,7 +142,7 @@
     "hmm ",
     "hmm▌"
    ],
-   "intervalo": 160,
+   "intervalo": 80,
    "alta": "2026-09-15",
    "origen": "inicial"
   },
@@ -145,16 +150,62 @@
    "id": "cometa",
    "nombre": "cometa",
    "frames": [
-    "*    ",
-    "°*   ",
-    "·°*  ",
-    " ·°* ",
-    "  ·°*",
-    "   ·°",
-    "    ·",
-    "     "
+    "*   ",
+    "°*  ",
+    "·°* ",
+    " ·°*",
+    "  ·°",
+    "   ·",
+    "    "
    ],
-   "intervalo": 90,
+   "intervalo": 55,
+   "alta": "2026-09-15",
+   "origen": "inicial"
+  },
+  {
+   "id": "estallido",
+   "nombre": "estallido",
+   "frames": [
+    " · ",
+    " + ",
+    "·*·",
+    "*O*",
+    "* *",
+    "° °",
+    "   "
+   ],
+   "intervalo": 55,
+   "alta": "2026-09-15",
+   "origen": "inicial"
+  },
+  {
+   "id": "chispas",
+   "nombre": "chispas",
+   "frames": [
+    " *  ",
+    "·+· ",
+    "× · ",
+    " · ×",
+    "° × ",
+    " . °",
+    "    "
+   ],
+   "intervalo": 50,
+   "alta": "2026-09-15",
+   "origen": "inicial"
+  },
+  {
+   "id": "anillo",
+   "nombre": "anillo",
+   "frames": [
+    " · ",
+    " o ",
+    "(O)",
+    "( )",
+    "· ·",
+    "   "
+   ],
+   "intervalo": 60,
    "alta": "2026-09-15",
    "origen": "inicial"
   }

@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.259">
-<link rel="manifest" href="manifest.json?v=4.259">
+<meta name="agente-web-version" content="4.260">
+<link rel="manifest" href="manifest.json?v=4.260">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -3409,7 +3409,10 @@ function animValida(a){
   var n = animLargo(a.frames[0]);
   return n > 0 && a.frames.every(function(f){ return typeof f === "string" && animLargo(f) === n; });
 }
-function animCuadro(a, ms){ return a.frames[Math.floor(Math.max(0, ms) / (a.intervalo || 120)) % a.frames.length]; }
+function animIdx(a, ms){ return Math.floor(Math.max(0, ms) / (a.intervalo || 120)) % a.frames.length; }
+function animCuadro(a, ms){ return a.frames[animIdx(a, ms)]; }
+// 1397: color por cuadro (`colores`, uno por cuadro, #rrggbb); sin colores hereda el del texto
+function animColor(a, ms){ return a.colores && a.colores.length === a.frames.length ? a.colores[animIdx(a, ms)] : ""; }
 function animPoner(el, a, t0){
   if(!el || !a) return;
   el.classList.add("anim");
@@ -3419,13 +3422,18 @@ function animPoner(el, a, t0){
   var x = {el: el, a: a, t0: t0 || Date.now()};
   animEls.push(x);
   el.textContent = animCuadro(a, Date.now() - x.t0);
+  x.co = animColor(a, Date.now() - x.t0); el.style.color = x.co;
   if(!animTimer) animTimer = setInterval(animTick, ANIM_TICK);
 }
 function animSacar(dentro){ animEls = animEls.filter(function(x){ return !dentro.contains(x.el); }); }
 function animTick(){
   var ahora = Date.now();
   animEls = animEls.filter(function(x){ return x.el.isConnected; });
-  animEls.forEach(function(x){ var c = animCuadro(x.a, ahora - x.t0); if(x.el.textContent !== c) x.el.textContent = c; });
+  animEls.forEach(function(x){
+    var c = animCuadro(x.a, ahora - x.t0), co = animColor(x.a, ahora - x.t0);
+    if(x.el.textContent !== c) x.el.textContent = c;
+    if(x.co !== co){ x.co = co; x.el.style.color = co; }
+  });
   if(!animEls.length){ clearInterval(animTimer); animTimer = null; }
 }
 function votLeer(s, def){
@@ -3664,7 +3672,7 @@ function selAbrir(e){
       var s = document.createElement("span"); s.className = p[0]; s.textContent = p[1]; t.appendChild(s);
     });
     l.appendChild(i);
-    var an = c.anim && {id: "sel-" + c.id, frames: c.anim.frames, intervalo: c.anim.intervalo};
+    var an = c.anim && {id: "sel-" + c.id, frames: c.anim.frames, intervalo: c.anim.intervalo, colores: c.anim.colores};
     if(an && animValida(an)){   // 1398: la animacion corriendo en el renglon
       var w = document.createElement("span"), s = document.createElement("span");
       w.className = "selanim"; w.appendChild(s); l.appendChild(w); l.appendChild(t); ls.appendChild(l);
@@ -4545,6 +4553,14 @@ function refrescarNotiPush(){
 }
 function abrirNotiPush(p){
   p = p || {};
+  // 1397: push `votar` (`recetas/push_votar.py`, id `votar-<coleccion>`): abre esa votacion en vez del modal de la noti
+  if(p.id && /^votar-/.test(String(p.id))){
+    var vc = String(p.id).slice(6);
+    try{ delete sel.ignorada[vc]; }catch(x){}
+    if(vc === "animaciones") votArrancar(); else selMirar();
+    try{ pushVisto(true); }catch(x){}
+    return true;
+  }
   if(!notiVuelta){
     notiVuelta = {tema: temaActivo(), scroll: hist.scrollTop, abajo: pegadoAbajo(), alto: hist.scrollHeight,
                   widgets: document.body.classList.contains("ver-widgets")};
