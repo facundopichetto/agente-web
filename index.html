@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.285">
-<link rel="manifest" href="manifest.json?v=4.285">
+<meta name="agente-web-version" content="4.286">
+<link rel="manifest" href="manifest.json?v=4.286">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -250,10 +250,16 @@
   #selacciones .tjbtn,#tjguardar .tjbtn{flex:1 1 0;min-height:36px;padding:4px 8px;background:#000;color:var(--verde);border:1px solid var(--verde);
     border-radius:6px;font:inherit;font-size:12px;cursor:pointer;touch-action:manipulation}
   #tjguardar{display:flex}
-  #selacciones .tjbtn.ignorar{color:var(--rojo);border-color:var(--rojo)}
-  #selacciones .tjbtn.maybe{color:var(--blanco);border-color:var(--blanco)}
+  /* 1556 (facundo, desde el iphone): "abajo los botones no tienen borde. izquierda en rojo una X, en el medio en blanco
+     un guion, derecha un tick verde, tamaño 12px". sin borde ni caja, glifo de 12px y 38 px tocables; el nombre va en aria-label */
+  #selacciones .tjbtn.ignorar,#selacciones .tjbtn.maybe,#selacciones .tjbtn.aceptar{min-height:38px;background:none;border:0;
+    padding:5px 9px;font-size:var(--texto-max);font-weight:bold;line-height:1}
+  #selacciones .tjbtn.ignorar{color:var(--rojo)}
+  #selacciones .tjbtn.maybe{color:var(--blanco)}
+  #selacciones .tjbtn.aceptar{color:var(--verde)}
   #selacciones .tjbtn.escribir{flex:1 1 100%;min-height:28px;color:var(--gris);border-color:transparent}
-  #selacciones .tjbtn:active,#tjguardar .tjbtn:active{background:currentColor;color:#000}
+  #selacciones .tjbtn.escribir:active,#tjguardar .tjbtn:active{background:currentColor;color:#000}
+  #selacciones .tjbtn.ignorar:active,#selacciones .tjbtn.maybe:active,#selacciones .tjbtn.aceptar:active{opacity:.45}
   .msg .quien,.msg .ts{user-select:none}
   .msg .quien{color:var(--magenta)}
   .agente .quien{color:var(--magenta)}
@@ -1069,7 +1075,7 @@
     <div id="selcont" class="oculta" aria-live="polite"></div>
     <div id="sellista"></div>
     <div id="seltarjeta" class="oculta"></div>
-    <div id="selacciones" class="oculta"><button class="tjbtn ignorar" type="button" data-q="ignorar">no</button><button class="tjbtn maybe" type="button" data-q="maybe">maybe</button><button class="tjbtn aceptar" type="button" data-q="aceptar">sí</button><button class="tjbtn escribir" type="button" data-q="escribir">escribir</button></div>
+    <div id="selacciones" class="oculta"><button class="tjbtn ignorar" type="button" data-q="ignorar" aria-label="no" title="no">✕</button><button class="tjbtn maybe" type="button" data-q="maybe" aria-label="maybe" title="maybe">–</button><button class="tjbtn aceptar" type="button" data-q="aceptar" aria-label="sí" title="sí">✓</button><button class="tjbtn escribir" type="button" data-q="escribir">escribir</button></div>
     <div id="tjguardar" class="oculta"><button class="tjbtn" type="button">guardar texto</button></div>
     <textarea id="seltxt" placeholder="algo para sumar (opcional)" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
     <div class="selbtns"><button id="selaceptar" class="selbtn" type="button">aceptar</button><button id="selmandar" class="selbtn" type="button">enviar texto</button></div>
