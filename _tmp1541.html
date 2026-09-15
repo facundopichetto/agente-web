@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.284">
-<link rel="manifest" href="manifest.json?v=4.284">
+<meta name="agente-web-version" content="4.282">
+<link rel="manifest" href="manifest.json?v=4.282">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -33,8 +33,6 @@
     --magenta:#ff4fd8; --rojo:#ff4d4d; --amarillo:#ffd60a; --linea:#1c1c1c;
     --verde-tenue:#1f7a12; --linea-clara:#3a3a3a; --yo:#9be88a;
     --naranja:#ff9f1a;
-    /* 1541 (facundo, 2026-09-15): ningun texto del board mas grande que el del chat (`.msg`); lo que resalta usa peso o color */
-    --texto-max:12px;
     /* ---------- tonos de fondo (facundo, 2026-09-13, orden 1190) ----------
        look plano: chat, panel de widgets y cajas casi del mismo tono, la diferencia justa para
        distinguir el panel. se ajusta en un solo lugar: `--tono-paso` es cuanto aclara cada nivel
@@ -126,9 +124,9 @@
   #animmenu .amcaja{width:100%;max-width:260px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;padding:12px;
     background:#000;border:1px solid var(--verde);border-radius:4px;font-size:12px}
   #animmenu .amtit{display:flex;align-items:center;gap:8px;color:var(--gris)}
-  #animmenu .amtit .anim{color:var(--verde);font-size:var(--texto-max);font-weight:bold}
+  #animmenu .amtit .anim{color:var(--verde);font-size:18px}
   #amnom{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  #amcerrar{background:none;border:0;color:var(--gris);font:inherit;font-size:var(--texto-max);cursor:pointer;padding:4px 6px}
+  #amcerrar{background:none;border:0;color:var(--gris);font:inherit;font-size:14px;cursor:pointer;padding:4px 6px}
   #animmenu .ambtn{min-height:40px;padding:8px 10px;text-align:left;background:#000;color:var(--verde);border:1px solid var(--linea);
     border-radius:4px;font:inherit;font-size:12px;cursor:pointer}
   #animmenu .ambtn[data-tipo="mas"]{border-color:var(--verde)}
@@ -150,19 +148,19 @@
   /* 1510: "muy anchas": tarjeta 180 -> 150 px y animacion 28 -> 20 px; la caja de la animacion sigue de 62 px de alto
      (no salta). en el celu siguen una arriba de la otra, con el mismo ancho angosto */
   #votar .vtlado{flex:0 1 150px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid var(--linea);border-radius:4px}
-  #votar .vtanim{display:flex;align-items:center;justify-content:center;height:62px;font-size:var(--texto-max);color:var(--verde)}
+  #votar .vtanim{display:flex;align-items:center;justify-content:center;height:62px;font-size:20px;color:var(--verde)}
   @media (max-width:600px){ #votar .vtpar{flex-direction:column;align-items:center} #votar .vtlado{flex:none;width:150px} }
   #votar .vtchico{text-align:center;font-size:12px;color:var(--gris)}
   #votar .vtchico .anim{color:var(--verde)}
   #votar .vtnom{text-align:center;font-size:10.5px;color:var(--gris)}
   #votar .vtbtn{min-height:52px;padding:12px;background:#000;color:var(--verde);border:1px solid var(--verde);border-radius:6px;
-    font:inherit;font-size:var(--texto-max);cursor:pointer;touch-action:manipulation}
+    font:inherit;font-size:16px;cursor:pointer;touch-action:manipulation}
   #votar .vtbtn:active{background:var(--verde);color:#000}
   #vtbasta.vtbtn{color:var(--rojo);border-color:var(--rojo)}
   #vtbasta.vtbtn:active{background:var(--rojo);color:#000}
   #votar .vtfin{display:flex;flex-direction:column;gap:8px}
   #vttxt{min-height:90px;padding:8px;background:#000;color:var(--blanco);border:1px solid var(--linea);border-radius:4px;
-    font:inherit;font-size:var(--texto-max);resize:vertical}
+    font:inherit;font-size:14px;resize:vertical}
   #vtfinbtns{display:flex;gap:8px}
   #vtfinbtns .vtbtn{flex:1 1 0}
   #vtestado{color:var(--gris);font-size:10.5px;min-height:1em}
@@ -187,35 +185,35 @@
   #sellista .selitem.on{border-color:var(--verde)}
   #sellista input{flex:0 0 auto;width:18px;height:18px;margin:2px 0 0 0;accent-color:var(--verde);cursor:pointer}
   #sellista .seltxt{display:flex;flex-direction:column;gap:1px;min-width:0}
-  #sellista .selnom{color:var(--blanco);font-size:var(--texto-max)}
+  #sellista .selnom{color:var(--blanco);font-size:13px}
   #sellista .seldet,#sellista .selmot{color:var(--gris);font-size:11px;word-break:break-word}
   #sellista .selmot{font-style:italic}
   /* 1404: foto redonda (96 px servida por chat_lan, se pinta a 32 desde 1533) y `@cuenta` al lado del nombre. sin
      foto o mientras baja, la inicial sobre gris neutro: se lee igual con fondo oscuro y claro */
   #sellista .selfoto{flex:0 0 auto;width:32px;height:32px;border-radius:50%;overflow:hidden;align-self:center;display:flex;
-    align-items:center;justify-content:center;background:#8a8a8a;color:#fff;font-size:var(--texto-max);border:1px solid var(--linea)}
+    align-items:center;justify-content:center;background:#8a8a8a;color:#fff;font-size:13px;border:1px solid var(--linea)}
   #sellista .selfoto img{width:100%;height:100%;object-fit:cover;display:block}
   #sellista .selcta{color:var(--gris);font-size:11px;margin-left:6px;word-break:break-all}
   /* 1398: la candidata puede traer su animacion corriendo en el renglon (`anim`), a la derecha del checkbox */
-  #sellista .selanim{flex:0 0 auto;min-width:4ch;color:var(--verde);font-size:var(--texto-max);text-align:center}
+  #sellista .selanim{flex:0 0 auto;min-width:4ch;color:var(--verde);font-size:14px;text-align:center}
   /* 1394: plantilla contador + meta + lista premarcada + ok = accion. arriba el contador en vivo (`actual - marcadas`
      contra la meta), link al perfil al costado de cada renglon, y el boton dice la accion y cuantas */
   #selcont{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;color:var(--gris);font-size:12px}
   #selcont.oculta{display:none}
-  #selcont .selnum{color:var(--blanco);font-size:var(--texto-max);font-weight:bold;line-height:1}
+  #selcont .selnum{color:var(--blanco);font-size:18px;line-height:1}
   #selcont.llego .selnum{color:var(--verde)}
   #sellista .sellink{flex:0 0 auto;margin-left:auto;align-self:center;min-width:44px;min-height:32px;display:flex;align-items:center;
     justify-content:center;color:var(--verde);font-size:12px;text-decoration:none;border:1px solid var(--linea);border-radius:4px}
   /* 1533: el campo crece con lo escrito (`selTxtCrecer`, hasta 40% del alto visible) en vez de scrollear adentro de
      64 px, letra de 13 px casi blanca sobre gris muy oscuro y borde verde con foco: se lee mientras se escribe */
   #seltxt{flex:0 0 auto;min-height:52px;max-height:40vh;padding:7px 9px;box-sizing:border-box;background:#0b0b0b;color:#f2f2f2;
-    caret-color:var(--verde);border:1px solid #555;border-radius:4px;font:inherit;font-size:var(--texto-max);line-height:1.45;resize:none;overflow-y:auto}
+    caret-color:var(--verde);border:1px solid #555;border-radius:4px;font:inherit;font-size:13px;line-height:1.45;resize:none;overflow-y:auto}
   #seltxt::placeholder{color:#8a8a8a}
   #seltxt:focus{outline:none;border-color:var(--verde)}
   #selmodal .selbtns{display:flex;gap:8px}
   #selmodal .selbtns.oculta{display:none!important}   /* 1440: en tarjetas mandan los cuatro botones, no `aceptar` */
   #selmodal .selbtn{flex:1 1 0;min-height:38px;padding:6px 10px;background:#000;color:var(--verde);border:1px solid var(--verde);
-    border-radius:6px;font:inherit;font-size:var(--texto-max);cursor:pointer;touch-action:manipulation}
+    border-radius:6px;font:inherit;font-size:13px;cursor:pointer;touch-action:manipulation}
   #selmodal .selbtn:active{background:var(--verde);color:#000}
   #selmodal .selpie{display:flex;justify-content:space-between;align-items:center;gap:8px}
   #selestado{color:var(--gris);font-size:10.5px;min-height:1em}
@@ -236,23 +234,21 @@
   #seltarjeta .tjmas{flex:1 1 auto;display:flex;gap:6px;flex-wrap:wrap;min-width:0}
   #seltarjeta .tjmas .tjf{width:56px;height:56px;border-radius:4px;overflow:hidden;border:1px solid var(--linea);background:#111}
   #seltarjeta .tjfotos img{width:100%;height:100%;object-fit:cover;display:block}
-  #seltarjeta .tjnom{color:var(--blanco);font-size:var(--texto-max);font-weight:bold;word-break:break-word}
-  #seltarjeta .tjcta{color:var(--gris);font-size:var(--texto-max);margin-left:6px;word-break:break-all}
+  #seltarjeta .tjnom{color:var(--blanco);font-size:17px;word-break:break-word}
+  #seltarjeta .tjcta{color:var(--gris);font-size:13px;margin-left:6px;word-break:break-all}
   #seltarjeta a.tjcta{color:var(--verde);text-decoration:none}   /* 1515: link al perfil, mismo verde que el `ver` de la lista */
   #seltarjeta .tjdet,#seltarjeta .tjmot{color:var(--gris);font-size:11.5px;word-break:break-word}
   #seltarjeta .tjmot{font-style:italic}
   #seltarjeta .tjlink{align-self:flex-start;min-height:34px;display:flex;align-items:center;padding:0 10px;color:var(--verde);
     font-size:12px;text-decoration:none;border:1px solid var(--linea);border-radius:4px}
   /* 1495: tres botones chicos en una sola linea. `escribir` abre el campo y `guardar texto`, nada mas */
-  /* 1546: `no` · `maybe` · `sí` en una fila (rojo, blanco, verde) y `escribir` abajo, secundario y chico */
-  #selacciones{display:flex;flex-wrap:wrap;gap:6px}
+  #selacciones{display:flex;gap:6px}
   #selacciones.oculta,#tjguardar.oculta,#selmodal #seltxt.oculta{display:none!important}
   #selacciones .tjbtn,#tjguardar .tjbtn{flex:1 1 0;min-height:36px;padding:4px 8px;background:#000;color:var(--verde);border:1px solid var(--verde);
     border-radius:6px;font:inherit;font-size:12px;cursor:pointer;touch-action:manipulation}
   #tjguardar{display:flex}
   #selacciones .tjbtn.ignorar{color:var(--rojo);border-color:var(--rojo)}
-  #selacciones .tjbtn.maybe{color:var(--blanco);border-color:var(--blanco)}
-  #selacciones .tjbtn.escribir{flex:1 1 100%;min-height:28px;color:var(--gris);border-color:transparent}
+  #selacciones .tjbtn.escribir{color:var(--gris);border-color:var(--linea)}
   #selacciones .tjbtn:active,#tjguardar .tjbtn:active{background:currentColor;color:#000}
   .msg .quien,.msg .ts{user-select:none}
   .msg .quien{color:var(--magenta)}
@@ -359,7 +355,7 @@
     display:flex;align-items:center;justify-content:center;cursor:zoom-out
   }
   #visor img{max-width:100%;height:auto}
-  #visor .cerrar{position:fixed;top:8px;right:12px;color:var(--verde);font-size:var(--texto-max)}
+  #visor .cerrar{position:fixed;top:8px;right:12px;color:var(--verde);font-size:13px}
   #pie{
     flex:0 0 auto;border-top:0;background:transparent;
     padding:4px 10px calc(4px + env(safe-area-inset-bottom)) 10px;
@@ -429,7 +425,7 @@
   #camara{color:var(--cian)}
   #camara:active{background:#001a1a}
   #camara:disabled{color:var(--gris)}
-  #foto{display:none;font-size:var(--texto-max)}
+  #foto{display:none}
   /* grabar un audio (facundo, 2026-09-11: "estaria bueno poder mandarte audios como en whatsapp").
      tap and hold como whatsapp: se aprieta y graba, se suelta y manda. */
   #grabar{color:var(--magenta);touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
@@ -509,7 +505,7 @@
   /* iconos mas grandes y la `x` que oculta la caja (facundo, 2026-09-13, orden 1166) */
   .wbtn{
     background:transparent;color:var(--gris);border:none;border-radius:4px;
-    font:inherit;font-size:var(--texto-max);line-height:1;padding:2px 5px;cursor:pointer;
+    font:inherit;font-size:17px;line-height:1;padding:2px 5px;cursor:pointer;
   }
   .wbtn:hover{color:var(--verde)}
   .wbtn:active{color:var(--verde)}
@@ -643,7 +639,7 @@
   #nodos .luz.gris{background:var(--gris)}
   /* campana y persona (facundo, 2026-09-13, orden 1166): iconos svg sin look de boton, como la barra de nodos.
      el cartel `lan / tailscale / buzón` se saco del header: vive en el menu del nodo server ("habla por"). */
-  .ib{flex:0 0 auto;position:relative;background:none;border:0;padding:0;margin:0;color:var(--blanco);font-size:var(--texto-max);
+  .ib{flex:0 0 auto;position:relative;background:none;border:0;padding:0;margin:0;color:var(--blanco);
     width:26px;height:24px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;
     -webkit-tap-highlight-color:transparent}
   .ib svg{width:14px;height:14px}   /* facundo 2026-09-14 (1342): un poco mas chicos */
@@ -677,7 +673,7 @@
   #nlista .nt{overflow:hidden;text-overflow:ellipsis;min-width:0}
   #nlista .nacc{flex:0 0 auto;background:none;border:0;color:var(--gris);font:inherit;font-size:10px;padding:0 6px;
     height:30px;cursor:pointer;-webkit-tap-highlight-color:transparent}
-  #nlista .nacc.nx{font-size:var(--texto-max);width:30px;padding:0}
+  #nlista .nacc.nx{font-size:14px;width:30px;padding:0}
   #nlista .nacc:hover,#nlista .nacc:active{color:var(--blanco)}
   #nlista .ntodas{background:none;border:0;border-top:1px solid var(--linea);margin-top:2px;color:var(--cian);font:inherit;
     font-size:10px;padding:6px;text-align:left;cursor:pointer}
@@ -704,7 +700,7 @@
     .bb{height:32px;padding:4px 6px;gap:4px}
     #nodos .nodo{min-height:32px}   /* dedo: el label se toca aunque no parezca boton */
     #notis .noti{min-height:40px;font-size:12px}   /* dedo: el aviso y su `x` se tocan con el pulgar */
-    #mcuerpo textarea.nresp{font-size:var(--texto-max)}   /* ios no zoomea al enfocar */
+    #mcuerpo textarea.nresp{font-size:16px}   /* ios no zoomea al enfocar */
     #nodos{gap:10px}
     #vistas{gap:5px}
     #cabecera{gap:6px}
@@ -718,7 +714,7 @@
     #nlista .ntodas{min-height:40px;font-size:11px}
     #ctx button{min-height:40px}
     /* dedo: los botones del header de cada widget con area tactil de 40px (facundo, 2026-09-12) */
-    .caja > .tit > .wacc .wbtn{min-width:40px;min-height:40px;font-size:var(--texto-max);padding:0}
+    .caja > .tit > .wacc .wbtn{min-width:40px;min-height:40px;font-size:20px;padding:0}
     .caja > .tit{min-height:40px}
     #panel-widgets{flex:1 1 auto;padding-bottom:calc(14px + env(safe-area-inset-bottom))}
     #sep{display:none}
@@ -728,7 +724,7 @@
     /* ios zoomea al enfocar un input de menos de 16px: lo frena maximum-scale=1 en el
        viewport, asi que el input del chat va chico como el resto del chat. los de login
        quedan en 16 (se tocan una vez y ahi no molesta). */
-    #login input,#clave,#tok{font-size:var(--texto-max)}
+    #login input,#clave,#tok{font-size:16px}
     /* dedo: los tres iconos del input con area de toque de 40px (facundo, 2026-09-13) */
     .ico{width:40px;height:40px}
     /* la caja mide lo mismo que los iconos: el texto queda centrado y los chips siguen pegados arriba */
@@ -777,7 +773,7 @@
   #notis .nh{color:var(--gris);flex:0 0 auto}
   #notis .nt{overflow:hidden;text-overflow:ellipsis;min-width:0}
   #notis .nx{flex:0 0 auto;width:40px;height:40px;margin:-11px 0;display:flex;align-items:center;justify-content:center;
-    background:none;border:0;padding:0;color:var(--gris);font:inherit;font-size:var(--texto-max);cursor:pointer;
+    background:none;border:0;padding:0;color:var(--gris);font:inherit;font-size:13px;cursor:pointer;
     -webkit-tap-highlight-color:transparent}
   #notis .nx:active{color:var(--blanco)}
   #mcuerpo textarea.nresp{display:block;width:100%;box-sizing:border-box;margin-top:10px;background:#000;color:var(--blanco);
@@ -884,7 +880,7 @@
   #nmtitulo{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
   #notimodal .nmx{
     position:absolute;right:5px;top:50%;transform:translateY(-50%);background:#000;color:var(--gris);
-    border:1px solid var(--linea);border-radius:4px;padding:0 8px;font:inherit;font-size:var(--texto-max);line-height:18px;cursor:pointer;
+    border:1px solid var(--linea);border-radius:4px;padding:0 8px;font:inherit;font-size:13px;line-height:18px;cursor:pointer;
   }
   #notimodal .nmcuerpo{
     flex:1 1 auto;overflow-y:auto;padding:10px;font-size:12px;line-height:1.55;color:var(--blanco);
@@ -1067,7 +1063,7 @@
     <div id="selcont" class="oculta" aria-live="polite"></div>
     <div id="sellista"></div>
     <div id="seltarjeta" class="oculta"></div>
-    <div id="selacciones" class="oculta"><button class="tjbtn ignorar" type="button" data-q="ignorar">no</button><button class="tjbtn maybe" type="button" data-q="maybe">maybe</button><button class="tjbtn aceptar" type="button" data-q="aceptar">sí</button><button class="tjbtn escribir" type="button" data-q="escribir">escribir</button></div>
+    <div id="selacciones" class="oculta"><button class="tjbtn aceptar" type="button" data-q="aceptar">aceptar</button><button class="tjbtn ignorar" type="button" data-q="ignorar">ignorar</button><button class="tjbtn escribir" type="button" data-q="escribir">escribir</button></div>
     <div id="tjguardar" class="oculta"><button class="tjbtn" type="button">guardar texto</button></div>
     <textarea id="seltxt" placeholder="algo para sumar (opcional)" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
     <div class="selbtns"><button id="selaceptar" class="selbtn" type="button">aceptar</button><button id="selmandar" class="selbtn" type="button">enviar texto</button></div>
@@ -1214,10 +1210,7 @@ var vistas = {};
 // notificaciones leidas o cerradas (1162): `{id: ts}`. viajan en el mismo `tabs.json` y se **suman** entre
 // dispositivos (una leida no vuelve a no leida), asi lo que cerraste en el celu no reaparece en la mac.
 var avLeidos = {};
-// 1553: hora en que cada respuesta llego y se dibujo, `{tema|hash: [ms dibujada, ms server]}` (ver `horaLlegada`)
-var llegadas = {};
-var LLEG_TOPE = 400, LLEG_FRESCA = 120000;
-var AVL_TOPE = 400;              // ids guardados como mucho (los mas nuevos): avisos.md se poda solo
+var AVL_TOPE = 400;               // ids guardados como mucho (los mas nuevos): avisos.md se poda solo
 // ancho de los dos paneles (chat | widgets): el porcentaje de #cuerpo que ocupa el chat, elegido
 // arrastrando el separador
 // (facundo, 2026-09-11). viaja en el mismo `tabs.json` y se resuelve **por su propio `ts`**, como los
@@ -1361,8 +1354,7 @@ function guardarCache(){
     localStorage.setItem("agente_tabs", JSON.stringify(
       {tabs: tabs, activo: activo, ts: layoutTs, origen: DISPOSITIVO,
        borradores: borradoresLimpios(), vistas: vistasLimpias(), split: splitLimpio(),
-       wsets: wsetsLimpias(), orden_widgets: ordenLimpio(), avisos_leidos: leidosLimpios(),
-       llegadas: llegadasLimpias()}));
+       wsets: wsetsLimpias(), orden_widgets: ordenLimpio(), avisos_leidos: leidosLimpios()}));
   }catch(x){}
 }
 // cambio local: sube el reloj, guarda el cache y encola la publicacion. si el layout quedo igual
@@ -1787,7 +1779,6 @@ function borrarBorrador(tema){
     if(L && L.wsets) recibirWsets(L.wsets);
     if(L && L.orden_widgets) recibirOrden(L.orden_widgets);
     if(L && L.avisos_leidos) recibirLeidos(L.avisos_leidos);
-    if(L && L.llegadas) recibirLlegadas(L.llegadas);
   }catch(x){}
   aplicarSplit();
   layoutFirma = firmaLayout(layoutActual());
@@ -1849,13 +1840,11 @@ function recibirTabs(L){
   var orw = recibirOrden(L.orden_widgets);
   // las notificaciones leidas se suman: si el otro tiene alguna que yo no, se la agrego; si yo tengo de mas, publico
   var avl = recibirLeidos(L.avisos_leidos);
-  // 1553: la hora en que llego cada respuesta: se suman y gana la mas temprana
-  var lle = recibirLlegadas(L.llegadas);
   // la ultima vez que facundo miro el board (el daemon lo usa para poner el badge en 0): gana el mayor
   if(+L.push_leido > pushLeido) pushLeido = +L.push_leido;
   if(ts > layoutTs){ aplicarLayout(L, ts); return "remoto"; }
   if(layoutTs > ts && L.origen !== DISPOSITIVO){ publicarTabs(true); return "mio"; }
-  if(borr || vis || sp || ws || orw || avl === "mio" || lle === "mio") publicarTabs();   // mezcle los dos lados: que el otro vea el resultado
+  if(borr || vis || sp || ws || orw || avl === "mio") publicarTabs();   // mezcle los dos lados: que el otro vea el resultado
   return "igual";
 }
 // agrupa los cambios seguidos (abrir una pestaña, cambiar de pestaña, mover el separador) en una
@@ -1878,7 +1867,6 @@ function ponerTabs(reintento){
   L.wsets = wsetsLimpias();
   L.orden_widgets = ordenLimpio();
   L.avisos_leidos = leidosLimpios();
-  L.llegadas = llegadasLimpias();
   if(pushLeido) L.push_leido = pushLeido;
   var cuerpo = {message: "tabs " + DISPOSITIVO, content: textoAb64(JSON.stringify(L))};
   if(shaTabs) cuerpo.sha = shaTabs;
@@ -2053,13 +2041,14 @@ var enPausa = false;
 var timer = null;
 
 // ---------- utilidades ----------
-// 1553: `hh:mm` siempre de buenos aires, sea cual sea la zona del dispositivo
-function desde(iso){ return hhmmBA(fecha(iso)) || "--:--"; }
+function desde(iso){
+  var d = new Date(fecha(iso)), h = d.getHours(), m = d.getMinutes();
+  return (h < 10 ? "0" : "") + h + ":" + (m < 10 ? "0" : "") + m;
+}
 function fecha(s){
-  // el daemon escribe "2026-09-08 04:55:12" en hora de buenos aires (UTC-3, sin horario de verano); safari no
-  // parsea eso con new Date(). 1553: se lee como -03:00 y no como la zona del dispositivo
+  // el daemon escribe "2026-09-08 04:55:12" en hora local; safari no parsea eso con new Date()
   var m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/.exec(String(s || ""));
-  if(m) return Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4] + 3, +m[5], +(m[6] || 0));
+  if(m) return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0)).getTime();
   var d = new Date(s).getTime();
   return isNaN(d) ? 0 : d;
 }
@@ -2383,25 +2372,8 @@ function mezclarOrdenadas(listas){
     out.push(listas[mejor][i[mejor]++]);
   }
 }
-// 1553: cada respuesta toma su hora de llegada (una respuesta nunca antes de su pregunta) y la lista se reordena
-// por esas horas, estable: el orden del chat sigue lo que se ve en las cabeceras
-function conLlegadas(l){
-  var nuevo = false, ultQ = 0;
-  l.forEach(function(m){
-    if(m.clase === "yo"){ ultQ = fecha(m.iso); return; }
-    if(horaLlegada(m)) nuevo = true;
-    if(m.srv && ultQ && fecha(m.iso) < ultQ) m.iso = new Date(ultQ).toISOString();
-  });
-  var ix = l.map(function(m, i){ return [fecha(m.iso), i, m]; });
-  ix.sort(function(a, b){ return a[0] - b[0] || a[1] - b[1]; });
-  ix.forEach(function(x, i){ l[i] = x[2]; });
-  return nuevo;
-}
 function mezclar(){
-  var porClave = {}, listas = [], lleNuevas = false;
-  Object.keys(msgsHist).forEach(function(t){ if(conLlegadas(msgsHist[t] || [])) lleNuevas = true; });
-  if(conLlegadas(msgsCom)) lleNuevas = true;
-  if(lleNuevas){ guardarCache(); publicarTabs(); }
+  var porClave = {}, listas = [];
   Object.keys(msgsHist).sort().forEach(function(t){
     var l = msgsHist[t] || [];
     if(l.length) listas.push(l);
@@ -2664,48 +2636,9 @@ function respuestaA(m){
 }
 var RE_ELEGIDAS = /^([ABC](?:\s*(?:y|,)\s*[ABC]){0,2})\s*(?::|$)/;
 var RE_ARREPENTI = /^me\s+arrepent[ií]\s*:\s*([ABC](?:\s*(?:y|,)\s*[ABC]){0,2})\s*:/i;
-function hhmmDe(m){ return hhmmBA(fecha(m && m.iso || "")); }   // 1553: la de buenos aires, como la cabecera
-// 1553 (facundo, 2026-09-15): cada respuesta de flaudio muestra la hora en que LLEGO y se dibujo en el cliente,
-// no la de inicio ni la de escritura en el daemon. el primer dispositivo que la dibuja fresca (hasta
-// `LLEG_FRESCA` despues de que el server la escribio) anota `llegadas[tema|hash] = [ms dibujada, ms server]`;
-// viaja en `tabs.json` y entre dispositivos gana la mas temprana, asi recargar o abrir el otro no la mueve.
-// una que nadie dibujo fresca (el board estaba cerrado) queda con la hora del server.
-function llaveLlegada(m){ return normTema(m.tag || m.tema || "") + "|" + hashTexto(m.texto); }
-function horaLlegada(m){
-  var srv = +m.srv || 0;
-  if(m.clase !== "agente" || !srv) return false;
-  var k = llaveLlegada(m), e = llegadas[k], nuevo = false;
-  if(!(e && Math.abs(e[1] - srv) < CERCA)){
-    var ahora = Date.now();
-    if(ahora - srv >= LLEG_FRESCA){ m.iso = new Date(srv).toISOString(); return false; }
-    e = llegadas[k] = [Math.max(ahora, srv), srv]; nuevo = true;
-  }
-  m.iso = new Date(e[0]).toISOString();
-  return nuevo;
-}
-function llegadasLimpias(){
-  var ks = Object.keys(llegadas);
-  if(!ks.length) return null;
-  ks.sort(function(a, b){ return llegadas[b][0] - llegadas[a][0]; });
-  var o = {};
-  ks.slice(0, LLEG_TOPE).forEach(function(k){ o[k] = llegadas[k]; });
-  return o;
-}
-// las del otro dispositivo: se suman y, si los dos la dibujaron, queda la mas temprana. "mio" = tengo alguna que
-// el otro no (o mas temprana): hay que publicar; "remoto" = tome alguna; "igual"; false si no vino nada
-function recibirLlegadas(rem){
-  if(!rem || typeof rem !== "object") return false;
-  var tome = false, tengo = false;
-  Object.keys(rem).forEach(function(k){
-    var r = rem[k];
-    if(!r || !(+r[0] > 0) || !(+r[1] > 0)) return;
-    var e = llegadas[k];
-    if(!e || Math.abs(e[1] - r[1]) >= CERCA || +r[0] < e[0]){ llegadas[k] = [+r[0], +r[1]]; tome = true; }
-    else if(e[0] < +r[0]) tengo = true;
-  });
-  Object.keys(llegadas).forEach(function(k){ if(!(k in rem)) tengo = true; });
-  if(tome){ guardarCache(); if(typeof msgs !== "undefined" && msgs && msgs.length){ mezclar(); render(); } }
-  return tengo ? "mio" : tome ? "remoto" : "igual";
+function hhmmDe(m){
+  var d = new Date(m && m.iso || "");
+  return isNaN(d) ? "" : pad2(d.getHours()) + ":" + pad2(d.getMinutes());
 }
 // 1203: `hh:mm` de buenos aires (no la del dispositivo: facundo mira el mismo board desde el celu y la compu).
 // si el navegador no tiene esa zona, cae a la hora local antes que no mostrar nada.
@@ -3319,7 +3252,7 @@ function agregar(c, arriba){
     // 1237: los `aviso: ...` que el daemon viejo comentaba en el buzon no se pintan: van a la campanita
     if(/^aviso: /.test(cuerpo)) return null;
     if(mt && esTema(mt[1])){ tag = normTema(mt[1]); cuerpo = cuerpo.slice(mt[0].length); }
-    m = {id: c.id, clase: "agente", quien: QUIEN_AGENTE, texto: cuerpo, iso: c.created_at, srv: fecha(c.created_at), tag: tag,
+    m = {id: c.id, clase: "agente", quien: QUIEN_AGENTE, texto: cuerpo, iso: c.created_at, tag: tag,
          nodo: mm.nodo || null, modelo: mm.modelo ? modeloCorto(mm.modelo) : null,
          duracion_s: mm.dur !== undefined ? mm.dur : null, cuello: mm.cuello || null};
   }else{
@@ -3409,10 +3342,8 @@ function recibirChat(tema, d){
     if(r && !resp[k]){
       resp[k] = true;
       // nodo, modelo y mini estado solo en las filas que los traen (las viejas no tienen `nodo`: no se pinta nada)
-      // la pregunta se pinta con la hora de envio; la respuesta, con la que llego al cliente (1553, `horaLlegada`
-      // en `mezclar`), y si nadie la dibujo fresca con la que se escribio (`ts_llegada`). la clave no cambia
+      // la respuesta se pinta con la hora en que se escribio (`ts_llegada`); la pregunta, con la de envio
       out.push({id: "h:" + base + ":r", clase: "agente", quien: QUIEN_AGENTE, texto: r, iso: f.ts_llegada || f.ts,
-                srv: fecha(f.ts_llegada || f.ts),
                 clave: "r:" + t + "|" + (f.ts_llegada || f.ts || "") + "|" + hashTexto(r),   // 1211: no por posicion
                 tema: t, explicito: true, tag: t, audio: f.audio || null, nodo: nodo, tarea: f.tarea || null,
                 modelo: f.nodo && f.modelo ? modeloCorto(f.modelo) : null,
@@ -4173,7 +4104,7 @@ function tjPintar(){
 // 1495: cada voto firma la tarjeta a la vista (`candidata_id` y `cuenta`). el server rechaza el que no los trae.
 function tjDecidir(q){
   var e = sel.actual, c = tjActual();
-  if(!e || !c || ["aceptar", "maybe", "ignorar", "escribir"].indexOf(q) < 0) return false;   // 1546: sí / maybe / no
+  if(!e || !c || ["aceptar", "ignorar", "escribir"].indexOf(q) < 0) return false;
   if(q === "escribir"){   // abre el campo y nada mas; lo guarda `guardar texto`
     $("seltxt").classList.remove("oculta"); $("tjguardar").classList.remove("oculta");
     $("seltxt").focus();
@@ -7755,11 +7686,11 @@ function gestos(el, pedir){
 }
 
 // fallback de seleccion: safari ios no copia con `a.select()` a secas, necesita un rango sobre el nodo y
-// `setSelectionRange`; `readonly` para que no abra el teclado (el zoom lo frena maximum-scale=1; tope 1541).
+// `setSelectionRange`; `readonly` y 16px para que no abra el teclado ni haga zoom.
 function copiaSeleccion(texto){
   var a = document.createElement("textarea"), pudo = false;
   a.value = texto; a.setAttribute("readonly", ""); a.contentEditable = "true";
-  a.style.cssText = "position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;border:0;padding:0;font-size:var(--texto-max)";
+  a.style.cssText = "position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;border:0;padding:0;font-size:16px";
   document.body.appendChild(a);
   var antes = document.activeElement;
   try{
@@ -8332,12 +8263,8 @@ window.__agente = {
   guardarLayout: guardarLayout, layoutRemoto: function(){
     var L = layoutActual(); L.v = 1; L.ts = layoutTs; L.origen = DISPOSITIVO;
     L.borradores = borradoresLimpios(); L.vistas = vistasLimpias(); L.split = splitLimpio();
-    L.wsets = wsetsLimpias(); L.orden_widgets = ordenLimpio(); L.llegadas = llegadasLimpias(); return L;
+    L.wsets = wsetsLimpias(); L.orden_widgets = ordenLimpio(); return L;
   },
-  // 1553: horas de llegada de las respuestas (`prueba_web_tabs`)
-  llegadas: function(){ return JSON.parse(JSON.stringify(llegadas)); },
-  recibirLlegadas: recibirLlegadas, borrarLlegadas: function(){ llegadas = {}; guardarCache(); },
-  desde: desde, fecha: fecha,
   abrirTab: abrirTab, renombrarTab: renombrarTab,
   // header de cada widget: [↻] actualizar, [⚙] settings, plegar tocando el titulo
   wsets: function(){ return wsetsLimpias(); },
