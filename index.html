@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.263">
-<link rel="manifest" href="manifest.json?v=4.263">
+<meta name="agente-web-version" content="4.264">
+<link rel="manifest" href="manifest.json?v=4.264">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -615,6 +615,11 @@
   /* chat | widgets sin borde; el que no esta activo en blanco (facundo, 2026-09-14, 1288) */
   #vistas button{border-color:transparent;color:var(--blanco)}
   #vistas button.on{color:var(--verde)}
+  /* 1407: `votar` en celeste a la izquierda de chat, solo con una votacion abierta sin votar en este dispositivo.
+     se ve en la mac (sin chat | widgets) y en el celu; al tocarlo abre el modal de esa votacion */
+  #ver-votar{color:var(--cian);border-color:var(--cian);font-weight:600;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+  #ver-votar:active{background:var(--cian);color:#000}
+  #ver-votar.oculta{display:none!important}
   body.sinlogin #cabecera,body.sinlogin #cuerpo{display:none}
   /* vista mobile: una vista a la vez, la elige la barra de arriba. puro css, sin js de layout.
      entra cuando la ventana es angosta (celu) O cuando es mas alta que ancha (facundo, 2026-09-11:
@@ -884,6 +889,7 @@
 
 <div id="cabecera">
   <div id="nodos"></div>
+  <button id="ver-votar" class="bb oculta" type="button" title="hay una votación abierta">votar</button>
   <div id="vistas">
     <button id="ver-chat" class="bb on" type="button">chat</button>
     <button id="ver-widgets" class="bb" type="button">widgets</button>
@@ -3714,7 +3720,7 @@ $("vtcerrar").addEventListener("click", votCerrar);
 // veces y es el que lo manda al chat de la pestaña del tema (`seleccion <coleccion>: ...`). `cerrar` solo la esconde
 // hasta recargar; `aceptar` la cierra para todos.
 var SEL_CADA = 30000;
-var sel = {abiertas: [], actual: null, subiendo: null, otra: false, timer: null, ignorada: {}};
+var sel = {abiertas: [], actual: null, subiendo: null, otra: false, timer: null, ignorada: {}, wid: null, fuente: null};
 function selLeer(s, def){
   try{ var v = localStorage.getItem("agente_sel_" + s); return v === null ? def : JSON.parse(v); }catch(x){ return def; }
 }
@@ -3796,6 +3802,7 @@ function selCerrar(){
   if(sel.actual) sel.ignorada[sel.actual.coleccion] = sel.actual.abrir_ts;
   sel.actual = null;
   $("selmodal").classList.add("oculta");
+  selBoton();
 }
 function selEncolar(tipo){
   var e = sel.actual;
@@ -3812,6 +3819,7 @@ function selAceptar(){
   var h = selLeer("hechas", {}); h[e.coleccion] = e.abrir_ts; selEscribir("hechas", h);
   sel.actual = null;
   $("selmodal").classList.add("oculta");
+  selBoton();
   selSubir();
   return true;
 }
@@ -3824,7 +3832,24 @@ function selEnviarTexto(){
   selSubir();
   return true;
 }
-// sube lo pendiente, una coleccion por POST; lo que el server rechaza (400/404: ya no existe) se descarta
+// 1407: sin lan (desde pages el celu solo llega por el https de tailscale) cada registro va al buzon como
+// `seleccion-web/<col>--<id>.json` y el daemon lo levanta (`script_votos_buzon`, dedup por id). 422 = ya estaba.
+var SEL_BUZON_DIR = "seleccion-web", selPutStub = null;
+function selBuzon(col, regs){
+  return regs.reduce(function(pr, x){
+    return pr.then(function(){
+      var ruta = "/repos/" + REPO + "/contents/" + SEL_BUZON_DIR + "/" + encodeURIComponent(col + "--" + x.id + ".json");
+      var o = {method: "PUT", cache: "no-store", keepalive: true,
+               headers: {"authorization": "Bearer " + token, "accept": "application/vnd.github+json", "content-type": "application/json"},
+               body: JSON.stringify({message: "seleccion " + col, content: textoAb64(JSON.stringify(x))})};
+      // fetch propio y no `api()`: un 403 de escritura no desloguea
+      return (selPutStub ? Promise.resolve(selPutStub(ruta, o)) : fetch(API + ruta, o)).then(function(r){
+        if(!r || (!r.ok && r.status !== 422)) throw new Error("buzón " + (r && r.status));
+      });
+    });
+  }, Promise.resolve());
+}
+// sube lo pendiente, una coleccion por POST a la lan (o al buzon si no hay); lo que el server rechaza (400/404) se descarta
 function selSubir(){
   if(sel.subiendo){ sel.otra = true; return sel.subiendo; }
   var pend = selLeer("pend", []);
@@ -3832,15 +3857,16 @@ function selSubir(){
   var cols = [];
   pend.forEach(function(p){ if(cols.indexOf(p.col) < 0) cols.push(p.col); });
   sel.subiendo = votLan().then(function(base){
-    if(!base) throw new Error("sin lan");
     return cols.reduce(function(pr, col){
       return pr.then(function(){
         var regs = pend.filter(function(p){ return p.col === col; }).map(function(p){ return p.r; });
-        return lanFetch(selUrl(base, col), {method: "POST", cache: "no-store",
+        var viaLan = !base ? Promise.reject(new Error("sin lan")) : lanFetch(selUrl(base, col), {method: "POST", cache: "no-store",
           headers: {"authorization": "Bearer " + token, "content-type": "application/json"},
           body: JSON.stringify({registros: regs})
         }).then(function(r){
           if(!r || (!r.ok && r.status !== 400 && r.status !== 404)) throw new Error("http " + (r && r.status));
+        });
+        return viaLan.catch(function(){ return selBuzon(col, regs); }).then(function(){
           var ids = {};
           regs.forEach(function(x){ ids[x.id] = true; });
           selEscribir("pend", selLeer("pend", []).filter(function(p){ return !ids[p.r.id]; }));
@@ -3854,26 +3880,54 @@ function selSubir(){
   });
   return sel.subiendo;
 }
-// trae las abiertas y abre la primera que no se acepto ni se cerro aca (misma apertura: `abrir_ts`)
+// 1407: las abiertas sin votar en este dispositivo, la mas vieja primero (la que ya estaba lista)
+function selPendientes(){
+  var h = selLeer("hechas", {});
+  return sel.abiertas.filter(function(a){ return h[a.coleccion] !== a.abrir_ts; })
+    .sort(function(a, b){ return (a.abrir_ts || 0) - (b.abrir_ts || 0); });
+}
+function selBoton(){
+  var n = selPendientes().length, b = $("ver-votar");
+  b.textContent = "votar" + (n > 1 ? " " + n : "");
+  b.classList.toggle("oculta", !n || !!sel.actual);
+}
+// el boton abre la primera que no cerraste; si cerraste todas, vuelve a la primera
+function selVotar(){
+  if(sel.actual) return false;
+  var p = selPendientes(), e = p.filter(function(a){ return sel.ignorada[a.coleccion] !== a.abrir_ts; })[0] || p[0];
+  if(!e) return false;
+  delete sel.ignorada[e.coleccion];
+  var ok = selAbrir(e);
+  selBoton();
+  return ok;
+}
+// abre sola la primera que no se acepto ni se cerro aca (misma apertura: `abrir_ts`)
+function selPoner(abiertas, fuente){
+  sel.abiertas = abiertas || [];
+  sel.fuente = fuente;
+  if(sel.actual){
+    if(!sel.abiertas.some(function(a){ return a.coleccion === sel.actual.coleccion; })) selCerrar();   // la cerraron en otro lado
+  } else {
+    var e = selPendientes().filter(function(a){ return sel.ignorada[a.coleccion] !== a.abrir_ts; })[0];
+    if(e) selAbrir(e);
+  }
+  selBoton();
+  return true;
+}
+function selDesdeWidgets(j){
+  var vt = j && j.votaciones;
+  if(!vt || !vt.abiertas) return false;
+  sel.wid = vt.abiertas;
+  return lan.base ? false : selPoner(sel.wid, "buzón");
+}
+// trae las abiertas de la lan; sin lan, las del ultimo `widgets.json` (`votaciones`, 1407)
 function selMirar(){
   return votLan().then(function(base){
-    if(!base) return false;
+    if(!base) throw new Error("sin lan");
     return lanFetch(selUrl(base), {method: "GET", cache: "no-store", headers: {"authorization": "Bearer " + token}})
       .then(function(r){ if(!r || !r.ok) throw new Error("http " + (r && r.status)); return r.json(); })
-      .then(function(j){
-        sel.abiertas = (j && j.abiertas) || [];
-        if(sel.actual){
-          if(!sel.abiertas.some(function(a){ return a.coleccion === sel.actual.coleccion; })) selCerrar();   // la cerraron en otro lado
-          return true;
-        }
-        var h = selLeer("hechas", {});
-        var e = sel.abiertas.filter(function(a){
-          return h[a.coleccion] !== a.abrir_ts && sel.ignorada[a.coleccion] !== a.abrir_ts;
-        })[0];
-        if(e) selAbrir(e);
-        return true;
-      });
-  }).catch(function(){ return false; });
+      .then(function(j){ return selPoner((j && j.abiertas) || [], "lan"); });
+  }).catch(function(){ return sel.wid ? selPoner(sel.wid, "buzón") : false; });
 }
 function selArrancar(){
   var tick = function(){ return selSubir().then(selMirar); };
@@ -3883,6 +3937,7 @@ function selArrancar(){
   }
   return tick();
 }
+$("ver-votar").addEventListener("click", selVotar);
 $("selaceptar").addEventListener("click", selAceptar);
 $("selmandar").addEventListener("click", selEnviarTexto);
 $("selcerrar").addEventListener("click", selCerrar);
@@ -6408,6 +6463,7 @@ function cargarWidgets(){
     if(r.status === 304){ pintarWidgets(null); return; }
     etagWid = r.etag;
     lanAnuncio(r.json);
+    selDesdeWidgets(r.json);   // 1407: respaldo del modal y del boton `votar` sin lan
     pintarWidgets(r.json);
   });
 }
@@ -7435,8 +7491,10 @@ function arrancar(t){
   mezclar(); render(); vistos = {}; etagCom = null; etagIssue = null;
   etagWid = null; widUlt = 0;
   etagTabs = null; shaTabs = null; tabsUlt = 0; tabsListo = false; tabsSync = true;
+  // 1388/1407: la seleccion arranca aparte: si github falla al sincronizar (buzón lleno, freno), el modal y `votar` igual
+  selArrancar();
   cargarIssue(true).then(function(){ return sincronizar(true); })   // primero el número de issue vivo del buzón
-    .then(function(){ reprogramar(); votArrancar(); selArrancar(); })   // 1373: animaciones y votacion abierta; 1388: seleccion
+    .then(function(){ reprogramar(); votArrancar(); })   // 1373: animaciones y votacion abierta
     .catch(function(e){
       if(ruidoso(e)) sistema("error: " + e.message, "error");
       if(e && e.message !== "401") reprogramar();
@@ -7535,7 +7593,11 @@ window.__agente = {
   // 1388: seleccion con checkboxes (`prueba_seleccion`)
   selArrancar: selArrancar, selMirar: selMirar, selSubir: selSubir, selAbrir: selAbrir, selAceptar: selAceptar,
   selEnviarTexto: selEnviarTexto, selCerrar: selCerrar,
-  selEstado: function(){ return {abierto: !!sel.actual, col: sel.actual && sel.actual.coleccion, pend: selLeer("pend", []),
+  // 1407: boton `votar` y respaldo por el buzon (`prueba_web_votar`)
+  selPoner: selPoner, selVotar: selVotar, selBoton: selBoton, selPendientes: selPendientes,
+  selDesdeWidgets: selDesdeWidgets,
+  selPutStub: function(f){ selPutStub = f; },
+  selEstado: function(){ return {abierto: !!sel.actual, col: sel.actual && sel.actual.coleccion, pend: selLeer("pend", []), fuente: sel.fuente,
                                  marcadas: selMarcadas(), abiertas: sel.abiertas.map(function(a){ return a.coleccion; })}; },
   selReset: function(){ sel.actual = null; sel.abiertas = []; sel.ignorada = {};
                         ["pend", "hechas"].forEach(function(s){ try{ localStorage.removeItem("agente_sel_" + s); }catch(x){} }); },
