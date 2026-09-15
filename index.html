@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.253">
-<link rel="manifest" href="manifest.json?v=4.253">
+<meta name="agente-web-version" content="4.254">
+<link rel="manifest" href="manifest.json?v=4.254">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -405,7 +405,9 @@
   .caja.fantasma{background:#0d1411}
   body.arrastrando-w{user-select:none;-webkit-user-select:none}
   body.arrastrando-w #panel-widgets{overflow:hidden}
-  .wbtn.oc{color:var(--cian);padding:1px 4px}
+  /* los ocultos del pie (orden 1378): texto de la linea, sin pinta de boton, se siguen tocando */
+  .wbtn.oc{font:inherit;font-size:inherit;line-height:inherit;color:inherit;letter-spacing:inherit;
+           padding:0;margin:0;border:0;background:none;text-decoration:underline dotted;text-underline-offset:2px}
   .caja.plegada > .cuerpo{display:none}
   .caja .cuerpo{white-space:pre-wrap;word-break:break-word;font-size:11px;line-height:1.5}
   .caja .cuerpo.tabla{white-space:pre;overflow-x:auto;-webkit-overflow-scrolling:touch}
@@ -467,6 +469,25 @@
   .usage .ucols .ub-n{flex:0 0 28px}
   .usage .ucols .ub-p{flex:0 0 30px}
   .usage .ucols .ub-hueco{height:13px;margin:0 0 5px 0}
+  /* widget `CLAUDE` (ordenes 1376/1377/1379, facundo 2026-09-14): linea de reparto, color por cuenta, bateria, semana */
+  .usage .urep{margin:0 0 6px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--blanco)}
+  .usage .ucol .cta .nom.e-ok{color:#a6f5a0}
+  .usage .ucol .cta .nom.e-warn{color:var(--amarillo)}
+  .usage .ucol .cta .nom.e-mal{color:var(--rojo)}
+  .ubat{display:inline-block;vertical-align:middle;position:relative;width:20px;height:9px;margin:0 5px 0 2px;
+        border:1px solid #555;border-radius:2px;padding:1px;box-sizing:border-box}
+  .ubat::after{content:"";position:absolute;right:-3px;top:2px;width:2px;height:3px;background:#555;border-radius:0 1px 1px 0}
+  .ubat .ubat-c{display:block;height:100%;background:var(--verde);border-radius:1px}
+  .ubat.baja{border-color:var(--rojo)}
+  .ubat.baja::after{background:var(--rojo)}
+  .usage .usem{margin:8px 0 0 0}
+  .usage .usem-g{position:relative;display:flex;align-items:flex-end;gap:3px;height:22px;border-bottom:1px solid #333}
+  .usage .usem-g .usd{flex:1 1 0;background:var(--verde);opacity:.75;border-radius:1px 1px 0 0}
+  .usage .usem-g .usd.sobre{background:var(--amarillo)}
+  .usage .usem-g .usd.sin{opacity:0}
+  .usage .usem-g .usem-l{position:absolute;left:0;right:0;height:0;border-top:1px dashed var(--blanco);opacity:.7;pointer-events:none}
+  .usage .usem-et{display:flex;gap:3px;font-size:8px;color:var(--gris);line-height:1.2}
+  .usage .usem-et span{flex:1 1 0;text-align:center}
   .ub.n-sin .ub-lleno{background:#333}
   .v{color:var(--verde)} .r{color:var(--rojo)} .a{color:var(--amarillo)}
   .c{color:var(--cian)} .m{color:var(--magenta)} .g{color:var(--gris)}
@@ -5273,55 +5294,15 @@ function cajaUsage(u){
     var ix = USAGE_ORDEN.indexOf(x.nombre), iy = USAGE_ORDEN.indexOf(y.nombre);
     return (ix < 0 ? 9 : ix) - (iy < 0 ? 9 : iy);
   });
-  var ca = u.caidas || {};
-  // 1. proyeccion general: a este ritmo, cuanto del tanque de las dos cuentas se usa al reset
-  // orden 1279 (facundo, 2026-09-14): tres barras generales, `5h` / `week` / `fable`. la barra es el tanque de
-  // las dos cuentas en ese rango, el color y el `→ N%` son el ritmo (100 rojo solo si las dos lo agotan).
-  var rgs = (pr.rangos || []).filter(function(r){ return r.tanque !== null && r.tanque !== undefined; });
-  if(rgs.length){
-    html += it({tipo: "cuenta", tema: "tools", d: pr, completo: pr.texto || pr.lectura || ""},
-      '<div class="uproy">' + rgs.map(function(r){
-        var tq = Math.round(r.tanque), ri = Math.round(r.ritmo || 0), col = colorUso(r.color);
-        return '<div class="ub urango" title="' + esc(r.nombre + ": tanque " + tq + "%, ritmo " + ri + "%") + '">' +
-          '<span class="ub-n">' + esc(r.nombre) + "</span>" +
-          '<span class="ub-pista"><span class="ub-lleno" style="width:' + Math.max(0, Math.min(100, tq)) + "%" +
-          (col ? ";background:" + col : "") + '"></span></span>' +
-          '<span class="ub-p">' + tq + "%</span>" +
-          '<span class="ub-r"' + (col ? ' style="color:' + col + '"' : "") + ">&rarr; " + ri + "%</span></div>";
-      }).join("") +
-      '<span class="lect">' + esc(pr.lectura || "") + "</span></div>");
-  } else if(pr.combinada !== null && pr.combinada !== undefined){
-    var pc = Math.round(pr.combinada), col = colorUso(pr.color);
-    html += it({tipo: "cuenta", tema: "tools", d: pr, completo: pr.texto || pr.corto || ""},
-      '<div class="uproy">' +
-      '<div class="ub"><span class="ub-n">tanque</span>' +
-      '<span class="ub-pista"><span class="ub-lleno" style="width:' + Math.max(0, Math.min(100, pc)) + "%" +
-      (col ? ";background:" + col : "") + '"></span></span>' +
-      '<span class="ub-p"' + (col ? ' style="color:' + col + '"' : "") + ">" + pc + "%</span></div>" +
-      '<span class="lect">' + esc(pr.corto || "") + "</span></div>");
-  }
-  // 2. una linea por modelo: a que cuenta sale y el motivo corto
-  (rep.modelos || []).forEach(function(mo){
-    html += it({tipo: "cuenta", tema: "tools", d: mo, completo: mo.porque || mo.linea || ""},
-      '<div class="umod"><span class="g">' + esc(mo.modelo || "") + '</span><span class="nom">' +
-      esc(mo.elegida || "") + '</span><span class="por">' + esc(mo.corto || mo.linea || "") + "</span></div>");
-  });
-  // 2b. freno duro de facundo (2026-09-14): "facu excluida hasta mie 16/09 18:00 (pedido de facundo)"
-  (rep.excluidas || []).forEach(function(tx){
-    html += '<div class="umod"><span class="r b">excluida</span><span class="por">' + esc(tx) + "</span></div>";
-  });
-  // 2c. brecha fable - week por cuenta (facundo, 2026-09-14): "orugote fable 69 / week 55: brecha +14, tareas opus acá"
-  (rep.brecha || []).forEach(function(tx){
-    html += '<div class="umod"><span class="g">brecha</span><span class="por">' + esc(tx) + "</span></div>";
-  });
-  // 3. las dos columnas
-  var proyDe = {};
-  (pr.cuentas || []).forEach(function(c){ proyDe[c.nombre] = c.proyectado_duro; });
+  // orden 1376/1377 (facundo, 2026-09-14): el titulo dice `CLAUDE` y al lado va solo la bateria. afuera la
+  // proyeccion general, las lineas por modelo, excluidas y brecha. arriba de las cuentas UNA linea del reparto.
+  if(rep.linea)
+    html += it({tipo: "cuenta", tema: "tools", d: rep, completo: rep.porque || rep.linea},
+               '<div class="urep">' + esc(rep.linea) + "</div>");
+  // las dos columnas: el nombre pintado por `estado` (ok verde clarito, warn amarillo, mal rojo)
   var cols = cuentas.map(function(cu){
-    var pj = proyDe[cu.nombre];
-    var cab = '<span class="cta"><span class="nom">' + esc(cu.nombre) + "</span>" +
-      (cu.excluida ? '<span class="r b">excluida</span>' : cu.sin_login ? '<span class="r b">sin login</span>' :
-       (pj === null || pj === undefined ? "" : '<span class="pj">&rarr; ' + Math.round(pj) + "%</span>")) + "</span>";
+    var est = cu.estado || (cu.sin_login ? "mal" : "");
+    var cab = '<span class="cta"><span class="nom' + (est ? " e-" + esc(est) : "") + '">' + esc(cu.nombre) + "</span></span>";
     var cuerpo;
     if(cu.sin_login){
       // sin login propio: no se repiten los numeros de la otra, pero el hueco guarda la altura de las barras
@@ -5337,25 +5318,37 @@ function cajaUsage(u){
       it({tipo: "cuenta", tema: "tools", d: cu, completo: cu.motivo || ""}, cab) + cuerpo + "</div>";
   });
   if(cols.length) html += '<div class="ucols">' + cols.join("") + "</div>";
-  // dato esencial: por cuenta, el limite mas cerca de la linea (el `peor` que ya calcula el reparto)
-  var ese = cuentas.map(function(cu){
-    if(cu.sin_login) return '<span class="b">' + esc(cu.nombre) + '</span> <span class="r">sin login</span>';
-    // `peor` es el NOMBRE de la barra (5h / week / fable) que calcula reparto_cuentas; si no vino,
-    // la de ratio mas alto (la mas pasada de la linea).
-    var bs = cu.barras || [];
-    var b = bs.filter(function(x){ return x.nombre === cu.peor; })[0];
-    if(!b) b = bs.slice().sort(function(x, y){ return (y.ratio || 0) - (x.ratio || 0); })[0];
-    if(!b) return esc(cu.nombre);
-    var col = colorUso(b.color);
-    return '<span class="b">' + esc(cu.nombre) + "</span> " +
-           '<span class="uw n-' + esc(b.nivel || "sin") + '"' + (col ? ' style="color:' + col + '"' : "") +
-           ">" + esc(b.nombre) + " " +
-           (b.pct === null || b.pct === undefined ? "?" : Math.round(b.pct)) + "%</span>";
-  }).join('<span class="g"> · </span>');
-  if(ca.n) ese += '<span class="g"> · </span><span class="' + (ca.abierta ? "r" : "a") +
-                  '">' + esc(String(ca.n)) + " caida" + (ca.n > 1 ? "s" : "") + " hoy</span>";
-  return caja("usage", ese, '<div class="usage">' + (html || vacio("sin datos")) + "</div>",
+  html += graficoSemana(u.semana);
+  // al lado del titulo solo la bateria: sin numero, sin texto y sin tooltip
+  return caja("CLAUDE", bateriaUso(u.bateria), '<div class="usage">' + (html || vacio("sin datos")) + "</div>",
               false, "usage");
+}
+// orden 1377: lo que QUEDA (promedio de week y fable del tanque de las dos cuentas, lo calcula widgets_json).
+// llena = verde, se vacia proporcional, con 15% o menos le aparece el borde rojo.
+function bateriaUso(b){
+  if(!b || b.carga === null || b.carga === undefined) return "";
+  var c = Math.max(0, Math.min(100, +b.carga || 0));
+  return '<span class="ubat' + (c <= 15 ? " baja" : "") + '"><span class="ubat-c" style="width:' + c + '%"></span></span>';
+}
+// orden 1379: una barrita por dia de los ultimos 7 (uso sumado de las dos cuentas en % de un cupo) y la linea de
+// cuanto usar por dia para llegar al 100% de week en cada reset. los dias viejos son aproximados (ver uso_historial.py).
+function graficoSemana(s){
+  if(!s || !(s.dias || []).length) return "";
+  var mx = Math.max(+s.max || 1, 1);
+  var alto = function(v){ return Math.max(0, Math.min(100, Math.round(v / mx * 100))); };
+  var barras = s.dias.map(function(d){
+    var sin = d.pct === null || d.pct === undefined;
+    var sobre = !sin && s.linea !== null && s.linea !== undefined && d.pct > s.linea;
+    return '<span class="usd' + (sin ? " sin" : "") + (sobre ? " sobre" : "") + '" style="height:' +
+           (sin ? 0 : Math.max(6, alto(d.pct))) + '%"></span>';
+  }).join("");
+  var ln = (s.linea === null || s.linea === undefined) ? "" :
+           '<span class="usem-l" style="bottom:' + alto(s.linea) + '%"></span>';
+  var ets = s.dias.map(function(d){ return "<span>" + esc(d.et || "") + "</span>"; }).join("");
+  return it({tipo: "cuenta", tema: "tools", d: s,
+             completo: "uso por dia de las dos cuentas (% de un cupo semanal); la linea es " + s.linea +
+                       "% por dia para llegar al 100% de week en cada reset" + (s.aprox ? ". los dias viejos son aproximados" : "")},
+            '<div class="usem"><div class="usem-g">' + ln + barras + '</div><div class="usem-et">' + ets + "</div></div>");
 }
 
 // el nombre de una palabra de la tarea primero y el numero chico (facundo, 2026-09-13, 1165)
@@ -6261,9 +6254,13 @@ widgetsEl.addEventListener("click", function(e){
   if(set){ abrirSets(set.dataset.set); return; }
   var ocw = e.target.closest("button[data-ocultar]");     // [×] oculta la caja (1166): vuelve desde settings del board
   if(ocw){ guardarWset(ocw.dataset.ocultar, "oculto", true); return; }
-  var fold = e.target.closest("[data-fold]");             // tocar el titulo pliega y despliega
+  // tocar el titulo (o el header fuera de botones, links e items) pliega y despliega (orden 1378). el click que
+  // viene atras de un arrastre ya se corto arriba (`arrUlt`). `plegado` viaja en tabs.json con su ts: mac y celu.
+  var fold = e.target.closest("[data-fold]") ||
+             (!e.target.closest("a,button,input,select,textarea,[data-it]") && cajaDeHeader(e.target));
   if(fold){
-    guardarWset(fold.dataset.fold, "plegado", !wset(fold.dataset.fold, "plegado"));
+    var fk = fold.dataset.fold || fold.dataset.w;
+    guardarWset(fk, "plegado", !wset(fk, "plegado"));
     return;
   }
   var pod = e.target.closest("button[data-pod]");
@@ -6346,7 +6343,9 @@ function escribirWidget(clave){
   var c = document.querySelector('#widgets .caja[data-w="' + clave + '"]');
   var tit = c && c.querySelector(".wtit"), ese = c && c.querySelector(".wesc");
   var nombre = tit ? tit.textContent : clave;
-  var dato = unaLinea(ese ? ese.textContent : "", ESC_CHARS);
+  // `CLAUDE` no tiene texto al lado del titulo (solo la bateria): la cita lleva la linea del reparto
+  var txEse = ese ? ese.textContent.trim() : "", rep = c && c.querySelector(".usage .urep");
+  var dato = unaLinea(txEse || (rep ? rep.textContent : ""), ESC_CHARS);
   escribirEn(temaWidget(clave), "> widget " + nombre + ":" + (dato ? " " + dato : ""));
 }
 // la clave del widget donde esta pintada una fila (el item no la sabe: se busca en el dom)
