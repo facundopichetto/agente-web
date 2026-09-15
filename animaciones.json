@@ -1875,6 +1875,438 @@
     "#e0b000",
     "#20b85a"
    ]
+  },
+  {
+   "id": "estallido-4",
+   "nombre": "estallido central",
+   "frames": [
+    "    ",
+    " ·· ",
+    "·++·",
+    "+**+",
+    "*##*",
+    "#@@#",
+    "*  *",
+    "·  ·",
+    "    "
+   ],
+   "intervalo": 50,
+   "alta": "2026-09-15",
+   "origen": "largo-4",
+   "colores": [
+    "#e0b000",
+    "#e0b000",
+    "#f59e0b",
+    "#f97316",
+    "#e8233a",
+    "#e8233a",
+    "#e040a0",
+    "#9b5cff",
+    "#9b5cff"
+   ]
+  },
+  {
+   "id": "braille-orbita-4",
+   "nombre": "orbita braille",
+   "frames": [
+    "⠁⠂⠄⡀",
+    "⠂⠄⡀⢀",
+    "⠄⡀⢀⠠",
+    "⡀⢀⠠⠐",
+    "⢀⠠⠐⠈",
+    "⠠⠐⠈⠁",
+    "⠐⠈⠁⠂",
+    "⠈⠁⠂⠄"
+   ],
+   "intervalo": 50,
+   "alta": "2026-09-15",
+   "origen": "largo-4",
+   "colores": [
+    "#00b0cc",
+    "#2f8cff",
+    "#9b5cff",
+    "#e040a0",
+    "#00b0cc",
+    "#2f8cff",
+    "#9b5cff",
+    "#e040a0"
+   ]
+  },
+  {
+   "id": "braille-spin-4",
+   "nombre": "spinner braille arcoiris",
+   "frames": [
+    "⠋⠙⠹⠸",
+    "⠙⠹⠸⠼",
+    "⠹⠸⠼⠴",
+    "⠸⠼⠴⠦",
+    "⠼⠴⠦⠧",
+    "⠴⠦⠧⠇",
+    "⠦⠧⠇⠏",
+    "⠧⠇⠏⠋",
+    "⠇⠏⠋⠙",
+    "⠏⠋⠙⠹"
+   ],
+   "intervalo": 50,
+   "alta": "2026-09-15",
+   "origen": "largo-4",
+   "colores": [
+    "#e8233a",
+    "#f97316",
+    "#e0b000",
+    "#20b85a",
+    "#00b0cc",
+    "#2f8cff",
+    "#9b5cff",
+    "#e040a0",
+    "#e8233a",
+    "#f97316"
+   ]
+  },
+  {
+   "id": "glitch-simbolos-4",
+   "nombre": "glitch de simbolos",
+   "frames": [
+    "#%&$",
+    "%&$@",
+    "&$@!",
+    "$@!?",
+    "@!?#",
+    "!?#%",
+    "?#%&",
+    "    "
+   ],
+   "intervalo": 50,
+   "alta": "2026-09-15",
+   "origen": "largo-4",
+   "colores": [
+    "#e8233a",
+    "#f97316",
+    "#e0b000",
+    "#20b85a",
+    "#00b0cc",
+    "#2f8cff",
+    "#9b5cff",
+    "#9b5cff"
+   ]
+  },
+  {
+   "id": "barras-espejo-4",
+   "nombre": "barras en espejo",
+   "frames": [
+    "▁██▁",
+    "▃▆▆▃",
+    "▅▄▄▅",
+    "▇▂▂▇",
+    "█▁▁█",
+    "▆▃▃▆",
+    "▄▅▅▄",
+    "▂▇▇▂"
+   ],
+   "intervalo": 50,
+   "alta": "2026-09-15",
+   "origen": "largo-4",
+   "colores": [
+    "#20b85a",
+    "#00b0cc",
+    "#2f8cff",
+    "#9b5cff",
+    "#e8233a",
+    "#f97316",
+    "#e0b000",
+    "#20b85a"
+   ]
+  },
+  {
+   "id": "lunas-4",
+   "nombre": "lunas girando",
+   "frames": [
+    "◐◓◑◒",
+    "◓◑◒◐",
+    "◑◒◐◓",
+    "◒◐◓◑"
+   ],
+   "intervalo": 60,
+   "alta": "2026-09-15",
+   "origen": "largo-4",
+   "colores": [
+    "#2f8cff",
+    "#9b5cff",
+    "#e040a0",
+    "#00b0cc"
+   ]
+  },
+  {
+   "id": "pelota-4",
+   "nombre": "pelota que rebota",
+   "frames": [
+    "●   ",
+    " ●  ",
+    "  ● ",
+    "   ●",
+    "  ● ",
+    " ●  ",
+    "◉   ",
+    "○   ",
+    "    "
+   ],
+   "intervalo": 55,
+   "alta": "2026-09-15",
+   "origen": "largo-4",
+   "colores": [
+    "#e8233a",
+    "#e040a0",
+    "#9b5cff",
+    "#2f8cff",
+    "#00b0cc",
+    "#20b85a",
+    "#e0b000",
+    "#e8233a",
+    "#e8233a"
+   ]
+  },
+  {
+   "id": "onda-o-4",
+   "nombre": "onda de o",
+   "frames": [
+    "    ",
+    " ·  ",
+    "·o· ",
+    "oOo·",
+    "O@Oo",
+    "@#@O",
+    "#*#@",
+    "* **",
+    "·  ·",
+    "    "
+   ],
+   "intervalo": 50,
+   "alta": "2026-09-15",
+   "origen": "largo-4",
+   "colores": [
+    "#e0b000",
+    "#e0b000",
+    "#f59e0b",
+    "#f97316",
+    "#e8233a",
+    "#e8233a",
+    "#e040a0",
+    "#f97316",
+    "#f59e0b",
+    "#f59e0b"
+   ]
+  },
+  {
+   "id": "circulos-4",
+   "nombre": "circulos alternados",
+   "frames": [
+    "·●·●",
+    "•◉•◉",
+    "●◎●◎",
+    "◉○◉○",
+    "◎·◎·",
+    "○•○•"
+   ],
+   "intervalo": 55,
+   "alta": "2026-09-15",
+   "origen": "largo-4",
+   "colores": [
+    "#e8233a",
+    "#e040a0",
+    "#9b5cff",
+    "#2f8cff",
+    "#e040a0",
+    "#e8233a"
+   ]
+  },
+  {
+   "id": "cinta-particulas-4",
+   "nombre": "cinta de particulas",
+   "frames": [
+    "·+*#",
+    "+*#@",
+    "*#@%",
+    "#@%·",
+    "@%·+",
+    "%·+*"
+   ],
+   "intervalo": 55,
+   "alta": "2026-09-15",
+   "origen": "largo-4",
+   "colores": [
+    "#e0b000",
+    "#f59e0b",
+    "#f97316",
+    "#e8233a",
+    "#e040a0",
+    "#f59e0b"
+   ]
+  },
+  {
+   "id": "luces-4",
+   "nombre": "luces de fiesta",
+   "frames": [
+    "● ● ",
+    " ● ●",
+    "●●●●",
+    " ◉◉ ",
+    "◎  ◎",
+    "   ○",
+    "○   ",
+    "    "
+   ],
+   "intervalo": 60,
+   "alta": "2026-09-15",
+   "origen": "largo-4",
+   "colores": [
+    "#20b85a",
+    "#e0b000",
+    "#e8233a",
+    "#e040a0",
+    "#9b5cff",
+    "#2f8cff",
+    "#00b0cc",
+    "#00b0cc"
+   ]
+  },
+  {
+   "id": "simbolos-locos-4",
+   "nombre": "simbolos locos",
+   "frames": [
+    "?!#@",
+    "!#@%",
+    "#@%&",
+    "@%&$",
+    "%&$?",
+    "&$?!",
+    "$?!#",
+    "    "
+   ],
+   "intervalo": 50,
+   "alta": "2026-09-15",
+   "origen": "largo-4",
+   "colores": [
+    "#e8233a",
+    "#e0b000",
+    "#9b5cff",
+    "#00b0cc",
+    "#f97316",
+    "#20b85a",
+    "#e040a0",
+    "#e040a0"
+   ]
+  },
+  {
+   "id": "ola-barras-4",
+   "nombre": "ola de barras",
+   "frames": [
+    "_▂▄▆",
+    "▂▄▆█",
+    "▄▆█▆",
+    "▆█▆▄",
+    "█▆▄▂",
+    "▆▄▂_",
+    "▄▂_▂",
+    "▂_▂▄"
+   ],
+   "intervalo": 50,
+   "alta": "2026-09-15",
+   "origen": "largo-4",
+   "colores": [
+    "#2f8cff",
+    "#00b0cc",
+    "#20b85a",
+    "#e0b000",
+    "#e8233a",
+    "#e0b000",
+    "#20b85a",
+    "#00b0cc"
+   ]
+  },
+  {
+   "id": "latido-punto-4",
+   "nombre": "latido de punto",
+   "frames": [
+    "· · ",
+    ".o.o",
+    "·O·O",
+    "oOoO",
+    "O@O@",
+    "*#*#",
+    "+*+*",
+    "·+·+",
+    "    "
+   ],
+   "intervalo": 50,
+   "alta": "2026-09-15",
+   "origen": "largo-4",
+   "colores": [
+    "#e0b000",
+    "#f59e0b",
+    "#f97316",
+    "#e8233a",
+    "#e8233a",
+    "#e040a0",
+    "#9b5cff",
+    "#2f8cff",
+    "#2f8cff"
+   ]
+  },
+  {
+   "id": "anillo-4",
+   "nombre": "anillo que colapsa",
+   "frames": [
+    "○  ○",
+    "◎  ◎",
+    "◉  ◉",
+    "●  ●",
+    " ●● ",
+    " ◉◉ ",
+    " ◎◎ ",
+    " ○○ ",
+    "    "
+   ],
+   "intervalo": 55,
+   "alta": "2026-09-15",
+   "origen": "largo-4",
+   "colores": [
+    "#00b0cc",
+    "#2f8cff",
+    "#9b5cff",
+    "#e040a0",
+    "#e8233a",
+    "#f97316",
+    "#e0b000",
+    "#20b85a",
+    "#20b85a"
+   ]
+  },
+  {
+   "id": "lluvia-braille-4",
+   "nombre": "lluvia braille",
+   "frames": [
+    "⠁ ⠈ ",
+    "⠂⠁⠐⠈",
+    "⠄⠂⠠⠐",
+    "⡀⠄⢀⠠",
+    "⢀⡀⠠⢀",
+    " ⢀ ⠠",
+    "    ",
+    "⠈ ⠁ "
+   ],
+   "intervalo": 50,
+   "alta": "2026-09-15",
+   "origen": "largo-4",
+   "colores": [
+    "#00b0cc",
+    "#2f8cff",
+    "#9b5cff",
+    "#e040a0",
+    "#e8233a",
+    "#f97316",
+    "#e0b000",
+    "#00b0cc"
+   ]
   }
  ]
 }
