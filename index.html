@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.274">
-<link rel="manifest" href="manifest.json?v=4.274">
+<meta name="agente-web-version" content="4.275">
+<link rel="manifest" href="manifest.json?v=4.275">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -199,12 +199,41 @@
   #seltxt{min-height:64px;padding:8px;background:#000;color:var(--blanco);border:1px solid var(--linea);border-radius:4px;
     font:inherit;font-size:16px;resize:vertical}
   #selmodal .selbtns{display:flex;gap:8px}
+  #selmodal .selbtns.oculta{display:none!important}   /* 1440: en tarjetas mandan los cuatro botones, no `aceptar` */
   #selmodal .selbtn{flex:1 1 0;min-height:48px;padding:10px;background:#000;color:var(--verde);border:1px solid var(--verde);
     border-radius:6px;font:inherit;font-size:15px;cursor:pointer;touch-action:manipulation}
   #selmodal .selbtn:active{background:var(--verde);color:#000}
   #selmodal .selpie{display:flex;justify-content:space-between;align-items:center;gap:8px}
   #selestado{color:var(--gris);font-size:10.5px;min-height:1em}
   #selcerrar{background:none;border:0;color:var(--gris);font:inherit;font-size:12px;padding:6px 2px;cursor:pointer}
+  /* 1440 (facundo, 2026-09-15, por audio): modo `tarjetas`. de a UNA candidata: foto grande, el estado arriba, la
+     marca publica/privada y las etiquetas, y cuatro botones grandes abajo. nada de grillas ni de listas largas. */
+  #seltarjeta{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:8px}
+  #seltarjeta.oculta,#sellista.oculta{display:none!important}
+  #seltarjeta .tjestado{display:flex;align-items:center;gap:6px;flex-wrap:wrap;color:var(--gris);font-size:11px}
+  #seltarjeta .tjchip{padding:2px 7px;border:1px solid var(--linea);border-radius:999px;font-size:10.5px;color:var(--gris)}
+  #seltarjeta .tjchip.priv{color:var(--amarillo,#d8b25a);border-color:currentColor}
+  #seltarjeta .tjchip.pub{color:var(--verde);border-color:currentColor}
+  #seltarjeta .tjchip.tag{color:var(--magenta);border-color:currentColor}
+  #seltarjeta .tjfotos{display:flex;gap:6px;align-items:flex-start}
+  #seltarjeta .tjppal{flex:0 0 auto;width:120px;height:120px;border-radius:6px;overflow:hidden;display:flex;align-items:center;
+    justify-content:center;background:#8a8a8a;color:#fff;font-size:44px;border:1px solid var(--linea)}
+  #seltarjeta .tjmas{flex:1 1 auto;display:flex;gap:6px;flex-wrap:wrap;min-width:0}
+  #seltarjeta .tjmas .tjf{width:56px;height:56px;border-radius:4px;overflow:hidden;border:1px solid var(--linea);background:#111}
+  #seltarjeta .tjfotos img{width:100%;height:100%;object-fit:cover;display:block}
+  #seltarjeta .tjnom{color:var(--blanco);font-size:17px;word-break:break-word}
+  #seltarjeta .tjcta{color:var(--gris);font-size:13px;margin-left:6px;word-break:break-all}
+  #seltarjeta .tjdet,#seltarjeta .tjmot{color:var(--gris);font-size:11.5px;word-break:break-word}
+  #seltarjeta .tjmot{font-style:italic}
+  #seltarjeta .tjlink{align-self:flex-start;min-height:34px;display:flex;align-items:center;padding:0 10px;color:var(--verde);
+    font-size:12px;text-decoration:none;border:1px solid var(--linea);border-radius:4px}
+  #selacciones{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  #selacciones.oculta{display:none!important}
+  #selacciones .tjbtn{min-height:52px;padding:10px;background:#000;color:var(--verde);border:1px solid var(--verde);
+    border-radius:6px;font:inherit;font-size:15px;cursor:pointer;touch-action:manipulation}
+  #selacciones .tjbtn.ignorar{color:var(--rojo);border-color:var(--rojo)}
+  #selacciones .tjbtn.pasar{color:var(--gris);border-color:var(--linea)}
+  #selacciones .tjbtn:active{background:currentColor;color:#000}
   .msg .quien,.msg .ts{user-select:none}
   .msg .quien{color:var(--magenta)}
   .agente .quien{color:var(--magenta)}
@@ -1013,6 +1042,8 @@
     <div class="seltit"><span id="seltitulo"></span><span id="selcuenta"></span></div>
     <div id="selcont" class="oculta" aria-live="polite"></div>
     <div id="sellista"></div>
+    <div id="seltarjeta" class="oculta"></div>
+    <div id="selacciones" class="oculta"><button class="tjbtn subir" type="button" data-q="subir">subir</button><button class="tjbtn escribir" type="button" data-q="escribir">escribir</button><button class="tjbtn ignorar" type="button" data-q="ignorar">ignorar</button><button class="tjbtn pasar" type="button" data-q="pasar">pasar</button></div>
     <textarea id="seltxt" placeholder="algo para sumar (opcional)" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
     <div class="selbtns"><button id="selaceptar" class="selbtn" type="button">aceptar</button><button id="selmandar" class="selbtn" type="button">enviar texto</button></div>
     <div class="selpie"><span id="selestado" aria-live="polite"></span><button id="selcerrar" type="button">cerrar</button></div>
@@ -3879,7 +3910,7 @@ $("vtcerrar").addEventListener("click", votCerrar);
 // veces y es el que lo manda al chat de la pestaña del tema (`seleccion <coleccion>: ...`). `cerrar` solo la esconde
 // hasta recargar; `aceptar` la cierra para todos.
 var SEL_CADA = 30000;
-var sel = {abiertas: [], actual: null, subiendo: null, otra: false, timer: null, ignorada: {}, wid: null, widFresco: null, fuente: null};
+var sel = {abiertas: [], actual: null, tj: 0, subiendo: null, otra: false, timer: null, ignorada: {}, wid: null, widFresco: null, fuente: null};
 function selLeer(s, def){
   try{ var v = localStorage.getItem("agente_sel_" + s); return v === null ? def : JSON.parse(v); }catch(x){ return def; }
 }
@@ -3910,7 +3941,9 @@ function selCuenta(){
 }
 function selAbrir(e){
   if(!e || !e.candidatas || !e.candidatas.length) return false;
+  if(e.modo === "tarjetas") return tjAbrir(e);   // 1440: de a una, con foto y cuatro botones
   sel.actual = e;
+  selModoLista(true);
   $("seltitulo").textContent = e.titulo || e.coleccion;
   var ls = $("sellista");
   ls.textContent = "";
@@ -3957,9 +3990,110 @@ function selAbrir(e){
   ls.scrollTop = 0;
   return true;
 }
+// ---------- 1440: modo tarjetas (facundo, 2026-09-15, por audio) ----------
+// "nada de modales grandes ni grilla": una candidata por tarjeta, foto de perfil siempre (y 3 del feed si el perfil
+// es publico), arriba el estado (te sigue / la seguis / ninguno / hay charla previa) y la marca publica/privada, y
+// cuatro botones: `subir` (al escalon de arriba), `ignorar` (no se sugiere nunca mas), `escribir` (deja el draft del
+// dm, no lo manda) y `pasar` (decidir despues). cada toque manda SU registro (`tipo: "tarjeta"`), asi que cerrar el
+// modal a la mitad no pierde ninguna decision; cuando no queda ninguna, un `aceptar` cierra la tanda y el server
+// arma y abre la siguiente (`recetas/ig_embudo.py`).
+function selModoLista(lista){
+  $("sellista").classList.toggle("oculta", !lista);
+  $("seltarjeta").classList.toggle("oculta", lista);
+  $("selacciones").classList.toggle("oculta", lista);
+  var b = document.querySelector("#selmodal .selbtns");
+  if(b) b.classList.toggle("oculta", !lista);
+}
+function tjAbrir(e){
+  sel.actual = e; sel.tj = 0;
+  selModoLista(false);
+  $("seltitulo").textContent = e.titulo || e.coleccion;
+  $("seltxt").value = ""; $("selestado").textContent = "";
+  $("seltxt").placeholder = "algo sobre ella (va al chat de " + (e.tema || "tools") + ")";
+  tjPintar();
+  $("selmodal").classList.remove("oculta");
+  return true;
+}
+function tjActual(){
+  var e = sel.actual;
+  return e && e.candidatas && sel.tj < e.candidatas.length ? e.candidatas[sel.tj] : null;
+}
+function tjFoto(caja, ruta, ini){
+  if(ini !== undefined){ caja.textContent = ini; }
+  bajarImagen(ruta).then(function(url){
+    var im = document.createElement("img"); im.alt = ""; im.src = url;
+    caja.textContent = ""; caja.appendChild(im);
+  }).catch(function(){});   // sin foto queda la inicial (o el cuadro vacio)
+}
+function tjPintar(){
+  var e = sel.actual, c = tjActual(), t = $("seltarjeta");
+  t.textContent = "";
+  $("selcuenta").textContent = c ? (sel.tj + 1) + " de " + e.candidatas.length : "listo";
+  if(!c){ tjFin(); return; }
+  var est = document.createElement("div"); est.className = "tjestado";
+  function chip(txt, cls){ var x = document.createElement("span"); x.className = "tjchip " + (cls || ""); x.textContent = txt; est.appendChild(x); }
+  if(c.estado) est.appendChild(document.createTextNode(c.estado));
+  if(c.privada !== undefined) chip(c.privada ? "privada" : "pública", c.privada ? "priv" : "pub");
+  (c.etiquetas || []).forEach(function(x){ chip(x, "tag"); });
+  t.appendChild(est);
+  var fs = document.createElement("div"); fs.className = "tjfotos";
+  var pp = document.createElement("div"); pp.className = "tjppal";
+  var fotos = (c.fotos && c.fotos.length ? c.fotos : (c.foto ? [c.foto] : [])).filter(function(f){ return /^img\//.test(f); });
+  pp.textContent = (c.titulo || c.id).charAt(0).toUpperCase();
+  if(fotos[0]) tjFoto(pp, fotos[0], pp.textContent);
+  fs.appendChild(pp);
+  if(fotos.length > 1){   // solo los perfiles publicos traen fotos del feed
+    var mas = document.createElement("div"); mas.className = "tjmas";
+    fotos.slice(1, 4).forEach(function(f){
+      var q = document.createElement("div"); q.className = "tjf"; mas.appendChild(q); tjFoto(q, f);
+    });
+    fs.appendChild(mas);
+  }
+  t.appendChild(fs);
+  var nom = document.createElement("div"); nom.className = "tjnom"; nom.textContent = c.titulo || c.id;
+  if(c.cuenta){ var k = document.createElement("span"); k.className = "tjcta"; k.textContent = "@" + c.cuenta; nom.appendChild(k); }
+  t.appendChild(nom);
+  [["tjdet", c.detalle], ["tjmot", c.motivo]].forEach(function(pr){
+    if(!pr[1]) return;
+    var x = document.createElement("div"); x.className = pr[0]; x.textContent = pr[1]; t.appendChild(x);
+  });
+  if(c.link && /^https:\/\//.test(c.link)){
+    var a = document.createElement("a");
+    a.className = "tjlink"; a.href = c.link; a.target = "_blank"; a.rel = "noopener"; a.textContent = "ver el perfil";
+    t.appendChild(a);
+  }
+  t.scrollTop = 0;
+}
+function tjDecidir(q){
+  var e = sel.actual, c = tjActual();
+  if(!e || !c || ["subir", "ignorar", "escribir", "pasar"].indexOf(q) < 0) return false;
+  var dec = {}; dec[c.id] = q;
+  var r = {id: lidNuevo(), tipo: "tarjeta", ts: Date.now(), decisiones: dec, texto: $("seltxt").value.trim()};
+  var pend = selLeer("pend", []); pend.push({col: e.coleccion, r: r}); selEscribir("pend", pend);
+  $("seltxt").value = "";
+  $("selestado").textContent = q === "escribir" ? "queda el draft del dm (no se manda)" : q;
+  sel.tj += 1;
+  tjPintar();
+  selSubir();
+  return true;
+}
+function tjFin(){
+  // la tanda entera decidida: un `aceptar` la cierra y el server arma y abre la siguiente
+  var e = sel.actual;
+  if(!e) return;
+  var hs = selLeer("hechas", {}); hs[e.coleccion] = e.abrir_ts; selEscribir("hechas", hs);
+  var r = {id: lidNuevo(), tipo: "aceptar", ts: Date.now(), marcadas: [], texto: ""};
+  var pend = selLeer("pend", []); pend.push({col: e.coleccion, r: r}); selEscribir("pend", pend);
+  sel.actual = null;
+  selModoLista(true);
+  $("selmodal").classList.add("oculta");
+  selBoton();
+  selSubir();
+}
 function selCerrar(){
   if(sel.actual) sel.ignorada[sel.actual.coleccion] = sel.actual.abrir_ts;
   sel.actual = null;
+  selModoLista(true);   // 1440: la proxima puede ser una de checkboxes
   $("selmodal").classList.add("oculta");
   selBoton();
 }
@@ -4128,6 +4262,10 @@ $("ver-votar").addEventListener("click", selVotar);
 $("selaceptar").addEventListener("click", selAceptar);
 $("selmandar").addEventListener("click", selEnviarTexto);
 $("selcerrar").addEventListener("click", selCerrar);
+// 1440: los cuatro botones de la tarjeta, uno por decision
+[].forEach.call(document.querySelectorAll("#selacciones .tjbtn"), function(b){
+  b.addEventListener("click", function(){ tjDecidir(b.getAttribute("data-q")); });
+});
 
 // ---------- mensaje en vuelo (facundo, 2026-09-13: "ver que pasa mientras espero") ----------
 // al mandar, abajo del mensaje aparece `agente> hh:mm` con un spinner de texto, la fase que publica el daemon
