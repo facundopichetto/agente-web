@@ -1374,6 +1374,507 @@
     "#e0b000",
     "#20b85a"
    ]
+  },
+  {
+   "id": "chispa-central-3",
+   "nombre": "chispa central",
+   "frames": [
+    "·  ",
+    " · ",
+    "·+·",
+    "+*+",
+    "*#*",
+    "#@#",
+    "* *",
+    "·  ",
+    "   "
+   ],
+   "intervalo": 55,
+   "alta": "2026-09-15",
+   "origen": "largo-3",
+   "colores": [
+    "#e0b000",
+    "#f59e0b",
+    "#f97316",
+    "#e8233a",
+    "#e8233a",
+    "#e040a0",
+    "#f97316",
+    "#f59e0b",
+    "#f59e0b"
+   ]
+  },
+  {
+   "id": "onda-braille-3",
+   "nombre": "onda braille",
+   "frames": [
+    "⠁⠂⠄",
+    "⠂⠄⡀",
+    "⠄⡀⢀",
+    "⡀⢀⠠",
+    "⢀⠠⠐",
+    "⠠⠐⠈",
+    "⠐⠈⠁",
+    "⠈⠁⠂"
+   ],
+   "intervalo": 50,
+   "alta": "2026-09-15",
+   "origen": "largo-3",
+   "colores": [
+    "#00b0cc",
+    "#2f8cff",
+    "#9b5cff",
+    "#e040a0",
+    "#00b0cc",
+    "#2f8cff",
+    "#9b5cff",
+    "#e040a0"
+   ]
+  },
+  {
+   "id": "spinner-triple-3",
+   "nombre": "spinner triple",
+   "frames": [
+    "⠋⠙⠹",
+    "⠙⠹⠸",
+    "⠹⠸⠼",
+    "⠸⠼⠴",
+    "⠼⠴⠦",
+    "⠴⠦⠧",
+    "⠦⠧⠇",
+    "⠧⠇⠏",
+    "⠇⠏⠋",
+    "⠏⠋⠙"
+   ],
+   "intervalo": 50,
+   "alta": "2026-09-15",
+   "origen": "largo-3",
+   "colores": [
+    "#e8233a",
+    "#f97316",
+    "#e0b000",
+    "#20b85a",
+    "#00b0cc",
+    "#2f8cff",
+    "#9b5cff",
+    "#e040a0",
+    "#e8233a",
+    "#f97316"
+   ]
+  },
+  {
+   "id": "glitch-simbolos-3",
+   "nombre": "glitch de simbolos",
+   "frames": [
+    "#%&",
+    "%&$",
+    "&$@",
+    "$@!",
+    "@!?",
+    "!?#",
+    "?#%",
+    "   "
+   ],
+   "intervalo": 50,
+   "alta": "2026-09-15",
+   "origen": "largo-3",
+   "colores": [
+    "#e8233a",
+    "#f97316",
+    "#e0b000",
+    "#20b85a",
+    "#00b0cc",
+    "#2f8cff",
+    "#9b5cff",
+    "#9b5cff"
+   ]
+  },
+  {
+   "id": "barras-eq-3",
+   "nombre": "ecualizador loco",
+   "frames": [
+    "▁█▁",
+    "▃▆▃",
+    "▅▄▅",
+    "▇▂▇",
+    "█▁█",
+    "▆▃▆",
+    "▄▅▄",
+    "▂▇▂"
+   ],
+   "intervalo": 50,
+   "alta": "2026-09-15",
+   "origen": "largo-3",
+   "colores": [
+    "#20b85a",
+    "#00b0cc",
+    "#2f8cff",
+    "#9b5cff",
+    "#e8233a",
+    "#f97316",
+    "#e0b000",
+    "#20b85a"
+   ]
+  },
+  {
+   "id": "lunas-fase-3",
+   "nombre": "lunas desfasadas",
+   "frames": [
+    "◐◓◑",
+    "◓◑◒",
+    "◑◒◐",
+    "◒◐◓"
+   ],
+   "intervalo": 60,
+   "alta": "2026-09-15",
+   "origen": "largo-3",
+   "colores": [
+    "#2f8cff",
+    "#9b5cff",
+    "#e040a0",
+    "#00b0cc"
+   ]
+  },
+  {
+   "id": "rebote-punto-3",
+   "nombre": "punto que rebota",
+   "frames": [
+    "●  ",
+    " ● ",
+    "  ●",
+    " ● ",
+    "●  ",
+    "◉  ",
+    "○  ",
+    "   "
+   ],
+   "intervalo": 55,
+   "alta": "2026-09-15",
+   "origen": "largo-3",
+   "colores": [
+    "#e8233a",
+    "#e040a0",
+    "#9b5cff",
+    "#2f8cff",
+    "#00b0cc",
+    "#e8233a",
+    "#e8233a",
+    "#e8233a"
+   ]
+  },
+  {
+   "id": "detonacion-3",
+   "nombre": "detonacion",
+   "frames": [
+    "   ",
+    " · ",
+    "·o·",
+    "oOo",
+    "O@O",
+    "@#@",
+    "#*#",
+    "* *",
+    "·  ",
+    "   "
+   ],
+   "intervalo": 50,
+   "alta": "2026-09-15",
+   "origen": "largo-3",
+   "colores": [
+    "#e0b000",
+    "#e0b000",
+    "#f59e0b",
+    "#f97316",
+    "#e8233a",
+    "#e8233a",
+    "#e040a0",
+    "#f97316",
+    "#f59e0b",
+    "#f59e0b"
+   ]
+  },
+  {
+   "id": "diamantes-3",
+   "nombre": "diamantes pulsando",
+   "frames": [
+    "◇◆◇",
+    "◆◈◆",
+    "◈◆◈",
+    "◆◇◆",
+    "◇ ◇",
+    " ◇ "
+   ],
+   "intervalo": 60,
+   "alta": "2026-09-15",
+   "origen": "largo-3",
+   "colores": [
+    "#00b0cc",
+    "#2f8cff",
+    "#9b5cff",
+    "#e040a0",
+    "#2f8cff",
+    "#00b0cc"
+   ]
+  },
+  {
+   "id": "equis-chispa-3",
+   "nombre": "equis y chispa",
+   "frames": [
+    "+x+",
+    "x*x",
+    "*X*",
+    "X#X",
+    "#*#",
+    "*x*",
+    "x+x",
+    "   "
+   ],
+   "intervalo": 50,
+   "alta": "2026-09-15",
+   "origen": "largo-3",
+   "colores": [
+    "#e0b000",
+    "#f59e0b",
+    "#e0b000",
+    "#f97316",
+    "#e8233a",
+    "#f97316",
+    "#f59e0b",
+    "#f59e0b"
+   ]
+  },
+  {
+   "id": "lluvia-puntos-3",
+   "nombre": "lluvia de puntos",
+   "frames": [
+    ".  ",
+    ": .",
+    "i: ",
+    "!i:",
+    "|!i",
+    "!|!",
+    ":!|",
+    ". :",
+    "  ."
+   ],
+   "intervalo": 50,
+   "alta": "2026-09-15",
+   "origen": "largo-3",
+   "colores": [
+    "#e0b000",
+    "#f59e0b",
+    "#f97316",
+    "#e8233a",
+    "#e8233a",
+    "#f97316",
+    "#f59e0b",
+    "#e0b000",
+    "#e0b000"
+   ]
+  },
+  {
+   "id": "circulos-expande-3",
+   "nombre": "circulos expandiendo",
+   "frames": [
+    "·●·",
+    "•◉•",
+    "●◎●",
+    "◉○◉",
+    "◎·◎",
+    "○•○"
+   ],
+   "intervalo": 55,
+   "alta": "2026-09-15",
+   "origen": "largo-3",
+   "colores": [
+    "#e8233a",
+    "#e040a0",
+    "#9b5cff",
+    "#2f8cff",
+    "#e040a0",
+    "#e8233a"
+   ]
+  },
+  {
+   "id": "barra-corre-3",
+   "nombre": "barra que corre",
+   "frames": [
+    "|//",
+    "/-\\",
+    "-\\|",
+    "\\|/",
+    "X#X",
+    "#X#",
+    "* *",
+    "   "
+   ],
+   "intervalo": 50,
+   "alta": "2026-09-15",
+   "origen": "largo-3",
+   "colores": [
+    "#e0b000",
+    "#00b0cc",
+    "#e0b000",
+    "#00b0cc",
+    "#e8233a",
+    "#e040a0",
+    "#f59e0b",
+    "#f59e0b"
+   ]
+  },
+  {
+   "id": "tres-fuegos-3",
+   "nombre": "tres fuegos",
+   "frames": [
+    "·+*",
+    "+*#",
+    "*#@",
+    "#@%",
+    "@%·",
+    "%·+"
+   ],
+   "intervalo": 55,
+   "alta": "2026-09-15",
+   "origen": "largo-3",
+   "colores": [
+    "#e0b000",
+    "#f59e0b",
+    "#f97316",
+    "#e8233a",
+    "#e040a0",
+    "#f59e0b"
+   ]
+  },
+  {
+   "id": "parpadeo-hueco-3",
+   "nombre": "parpadeo hueco",
+   "frames": [
+    "● ●",
+    " ● ",
+    "●●●",
+    " ◉ ",
+    "◎ ◎",
+    "  ○",
+    "○  ",
+    "   "
+   ],
+   "intervalo": 60,
+   "alta": "2026-09-15",
+   "origen": "largo-3",
+   "colores": [
+    "#20b85a",
+    "#e0b000",
+    "#e8233a",
+    "#e040a0",
+    "#9b5cff",
+    "#2f8cff",
+    "#00b0cc",
+    "#00b0cc"
+   ]
+  },
+  {
+   "id": "ruido-ascii-3",
+   "nombre": "ruido ascii",
+   "frames": [
+    "?!#",
+    "!#@",
+    "#@%",
+    "@%&",
+    "%&$",
+    "&$?",
+    "$?!",
+    "   "
+   ],
+   "intervalo": 50,
+   "alta": "2026-09-15",
+   "origen": "largo-3",
+   "colores": [
+    "#e8233a",
+    "#e0b000",
+    "#9b5cff",
+    "#00b0cc",
+    "#f97316",
+    "#20b85a",
+    "#e040a0",
+    "#e040a0"
+   ]
+  },
+  {
+   "id": "cero-orbita-3",
+   "nombre": "orbita de ceros",
+   "frames": [
+    "O0o",
+    "0o°",
+    "o°o",
+    "°oO",
+    "oO0",
+    "O0o"
+   ],
+   "intervalo": 60,
+   "alta": "2026-09-15",
+   "origen": "largo-3",
+   "colores": [
+    "#e040a0",
+    "#9b5cff",
+    "#2f8cff",
+    "#00b0cc",
+    "#2f8cff",
+    "#9b5cff"
+   ]
+  },
+  {
+   "id": "tres-spin-3",
+   "nombre": "barras encontradas",
+   "frames": [
+    "/|\\",
+    "|\\/",
+    "\\/|",
+    "/|\\",
+    "X X",
+    " # ",
+    "* *",
+    "   "
+   ],
+   "intervalo": 50,
+   "alta": "2026-09-15",
+   "origen": "largo-3",
+   "colores": [
+    "#e0b000",
+    "#f59e0b",
+    "#f97316",
+    "#e8233a",
+    "#e040a0",
+    "#e8233a",
+    "#f59e0b",
+    "#f59e0b"
+   ]
+  },
+  {
+   "id": "mezcla-total-3",
+   "nombre": "mezcla total",
+   "frames": [
+    "▌▐▌",
+    "▚▞▚",
+    "◆◇◆",
+    "●○●",
+    "·°·",
+    "°·°",
+    "○●○",
+    "◇◆◇"
+   ],
+   "intervalo": 55,
+   "alta": "2026-09-15",
+   "origen": "largo-3",
+   "colores": [
+    "#00b0cc",
+    "#2f8cff",
+    "#9b5cff",
+    "#e040a0",
+    "#e8233a",
+    "#f97316",
+    "#e0b000",
+    "#20b85a"
+   ]
   }
  ]
 }
