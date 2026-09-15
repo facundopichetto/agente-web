@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.273">
-<link rel="manifest" href="manifest.json?v=4.273">
+<meta name="agente-web-version" content="4.274">
+<link rel="manifest" href="manifest.json?v=4.274">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -3563,6 +3563,15 @@ function votLeer(s, def){
 }
 function votEscribir(s, v){ try{ localStorage.setItem("agente_votos_" + VOT_COL + "_" + s, JSON.stringify(v)); }catch(x){} }
 function votMs(ts){ ts = Number(ts) || 0; return ts > 1e11 ? ts : ts * 1000; }
+// 1441 (facundo, 2026-09-15: el ipad abria el modal viejo): el server confirmo que la votacion esta cerrada, asi que
+// lo guardado en este equipo se tira (`basta` y los votos que nunca subieron) y el modal, si estaba abierto, se cierra.
+// nada de esto la puede reabrir despues: `votAutoAbrir` pide `abierta === true` y eso solo lo dice el server.
+function votCerrada(){
+  votEscribir("pend", []);
+  votEscribir("basta", false);
+  // si acabas de tocar `basta` estas escribiendo en la caja de `vtfin`: eso no se cierra solo
+  if(votAbierto && $("vtfin").classList.contains("oculta")) votCerrar();
+}
 function votRecibir(e, fuente){
   if(!e || !e.items) return false;
   // 1453: solo las marcadas de cada largo hasta 4 (`origen: largo-N`); la cache vieja y las iniciales no entran
@@ -3573,7 +3582,12 @@ function votRecibir(e, fuente){
   if(e.gustos) anims.gustos = {mas: e.gustos.mas || {}, no: e.gustos.no || []};
   // 1442: `abierta` solo la cree si viene del server; la cache y el `animaciones.json` de pages no la confirman
   fuente = fuente || "server";
-  if(typeof e.abierta === "boolean" && fuente === "server") anims.abierta = e.abierta;
+  // 1442: `abierta` solo del server. 1441: y un `false` del server borra lo que quedo guardado aca (el `basta` y los
+  // votos pendientes de un modal viejo), asi ni el cache ni una recarga lo pueden resucitar.
+  if(typeof e.abierta === "boolean" && fuente === "server"){
+    anims.abierta = e.abierta;
+    if(e.abierta === false) votCerrada();
+  }
   anims.fuente = fuente;
   votEscribir("cache", {items: anims.items, votos: anims.votos, gustos: anims.gustos});
   return true;
@@ -3865,7 +3879,7 @@ $("vtcerrar").addEventListener("click", votCerrar);
 // veces y es el que lo manda al chat de la pestaña del tema (`seleccion <coleccion>: ...`). `cerrar` solo la esconde
 // hasta recargar; `aceptar` la cierra para todos.
 var SEL_CADA = 30000;
-var sel = {abiertas: [], actual: null, subiendo: null, otra: false, timer: null, ignorada: {}, wid: null, fuente: null};
+var sel = {abiertas: [], actual: null, subiendo: null, otra: false, timer: null, ignorada: {}, wid: null, widFresco: null, fuente: null};
 function selLeer(s, def){
   try{ var v = localStorage.getItem("agente_sel_" + s); return v === null ? def : JSON.parse(v); }catch(x){ return def; }
 }
@@ -4046,30 +4060,52 @@ function selVotar(){
   selBoton();
   return ok;
 }
-// abre sola la primera que no se acepto ni se cerro aca (misma apertura: `abrir_ts`)
-function selPoner(abiertas, fuente){
+// 1441: lo que quedo guardado en el equipo de un modal viejo (un `aceptar` sin marcar nada, o el `basta`) no sube a
+// una votacion que el server ya cerro: se tira. lo que tiene marcadas o texto es algo que facundo eligio de verdad y
+// se sigue mandando aunque llegue tarde. misma regla que `seleccion.sumar` del server.
+function selLimpiar(){
+  var abierta = {};
+  sel.abiertas.forEach(function(a){ abierta[a.coleccion] = true; });
+  var pend = selLeer("pend", []);
+  var q = pend.filter(function(p){
+    var r = p && p.r || {};
+    return abierta[p.col] || (r.marcadas || []).length > 0 || String(r.texto || "").trim() !== "";
+  });
+  if(q.length !== pend.length) selEscribir("pend", q);
+  return pend.length - q.length;
+}
+// abre sola la primera que no se acepto ni se cerro aca (misma apertura: `abrir_ts`).
+// 1441: `auto = false` (widgets.json viejo) solo cierra y repinta el boton: con datos que no se confirmaron contra
+// el server no se abre ningun modal.
+function selPoner(abiertas, fuente, auto){
   sel.abiertas = abiertas || [];
   sel.fuente = fuente;
+  if(auto !== false) selLimpiar();
   if(sel.actual){
     if(!sel.abiertas.some(function(a){ return a.coleccion === sel.actual.coleccion; })) selCerrar();   // la cerraron en otro lado
-  } else {
+  } else if(auto !== false){
     var e = selPendientes().filter(function(a){ return sel.ignorada[a.coleccion] !== a.abrir_ts; })[0];
     if(e) selAbrir(e);
   }
   selBoton();
   return true;
 }
+// 1441 (facundo, 2026-09-15, el modal viejo en el ipad): sin lan todo esto sale de `widgets.json`, que lo publica el
+// daemon cada 60 s. si el daemon dejo de publicar, ese json sigue diciendo `abierta: true` de algo que el server ya
+// cerro. asi que un widgets.json de mas de WID_FRESCO_MS **solo puede cerrar**, nunca abrir un modal.
+var WID_FRESCO_MS = 900000;
 function selDesdeWidgets(j){
   var vt = j && j.votaciones;
   if(!vt || !vt.abiertas) return false;
+  var t0 = fecha(j && j.ts), fresco = !!t0 && Date.now() - t0 < WID_FRESCO_MS;
   // 1442: sin lan, el estado del votador de animaciones sale de aca (lo arma el server): cierra el que quedo abierto
   if(typeof vt.anim_abierta === "boolean" && !lan.base){
-    anims.abierta = vt.anim_abierta;
-    if(!vt.anim_abierta && votAbierto) votCerrar(); else votAutoAbrir();
+    if(!vt.anim_abierta){ anims.abierta = false; votCerrada(); }
+    else if(fresco){ anims.abierta = true; votAutoAbrir(); }
   }
   if(vt.anim_gustos && !lan.base) anims.gustos = {mas: vt.anim_gustos.mas || {}, no: vt.anim_gustos.no || []};   // 1453
-  sel.wid = vt.abiertas;
-  return lan.base ? false : selPoner(sel.wid, "buzón");
+  sel.wid = vt.abiertas; sel.widFresco = fresco;
+  return lan.base ? false : selPoner(sel.wid, "buzón", fresco);
 }
 // trae las abiertas de la lan; sin lan, las del ultimo `widgets.json` (`votaciones`, 1407)
 function selMirar(){
@@ -4078,7 +4114,7 @@ function selMirar(){
     return lanFetch(selUrl(base), {method: "GET", cache: "no-store", headers: {"authorization": "Bearer " + token}})
       .then(function(r){ if(!r || !r.ok) throw new Error("http " + (r && r.status)); return r.json(); })
       .then(function(j){ return selPoner((j && j.abiertas) || [], "lan"); });
-  }).catch(function(){ return sel.wid ? selPoner(sel.wid, "buzón") : false; });
+  }).catch(function(){ return sel.wid ? selPoner(sel.wid, "buzón", sel.widFresco !== false) : false; });
 }
 function selArrancar(){
   var tick = function(){ return selSubir().then(selMirar); };
@@ -7868,6 +7904,7 @@ prepararDictado();     // 1209: preguntar una vez si el celu puede transcribir o
 
 window.__agente = {
   fmtTiempo: fmtTiempo,
+  mirarVersion: mirarVersion,   // 1441: `prueba_autoupdate` fuerza el chequeo (en headless `document.hidden` no baja)
   // 1432: widget de salud personal (`prueba_web_salud`)
   spCaja: function(p){ widDatos = widDatos || {}; widDatos.salud_personal = p; return cajaSaludPersonal(p); },
   spItems: function(){ return itemsW; }, abrirModal: abrirModal, cerrarModal: cerrarModal, spConfirmo: spConfirmo,
@@ -7882,6 +7919,10 @@ window.__agente = {
   // 1407: boton `votar` y respaldo por el buzon (`prueba_web_votar`)
   selPoner: selPoner, selVotar: selVotar, selBoton: selBoton, selPendientes: selPendientes,
   selDesdeWidgets: selDesdeWidgets,
+  // 1441: modal viejo en el ipad (`prueba_web_votar`, `prueba_seleccion`)
+  selLimpiar: selLimpiar, votCerrada: votCerrada, widFrescoMs: WID_FRESCO_MS,
+  selSembrarPend: function(ps){ selEscribir("pend", ps || []); },
+  votSembrar: function(o){ Object.keys(o || {}).forEach(function(k){ votEscribir(k, o[k]); }); },
   selPutStub: function(f){ selPutStub = f; },
   selEstado: function(){ return {abierto: !!sel.actual, col: sel.actual && sel.actual.coleccion, pend: selLeer("pend", []), fuente: sel.fuente,
                                  marcadas: selMarcadas(), abiertas: sel.abiertas.map(function(a){ return a.coleccion; })}; },
