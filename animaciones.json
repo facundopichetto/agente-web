@@ -13,7 +13,15 @@
    ],
    "intervalo": 60,
    "alta": "2026-09-15",
-   "origen": "inicial"
+   "origen": "inicial",
+   "colores": [
+    "#20b85a",
+    "#00b0cc",
+    "#2f8cff",
+    "#9b5cff",
+    "#e040a0",
+    "#f97316"
+   ]
   },
   {
    "id": "latido",
@@ -31,7 +39,18 @@
    ],
    "intervalo": 55,
    "alta": "2026-09-15",
-   "origen": "inicial"
+   "origen": "inicial",
+   "colores": [
+    "#e8233a",
+    "#e8233a",
+    "#e8233a",
+    "#e8233a",
+    "#e8233a",
+    "#e040a0",
+    "#e040a0",
+    "#e040a0",
+    "#e040a0"
+   ]
   },
   {
    "id": "ecualizador",
@@ -48,7 +67,17 @@
    ],
    "intervalo": 60,
    "alta": "2026-09-15",
-   "origen": "inicial"
+   "origen": "inicial",
+   "colores": [
+    "#20b85a",
+    "#e0b000",
+    "#f97316",
+    "#e8233a",
+    "#f97316",
+    "#e0b000",
+    "#20b85a",
+    "#00b0cc"
+   ]
   },
   {
    "id": "mate",
@@ -61,7 +90,13 @@
    ],
    "intervalo": 80,
    "alta": "2026-09-15",
-   "origen": "inicial"
+   "origen": "inicial",
+   "colores": [
+    "#20b85a",
+    "#20b85a",
+    "#e0b000",
+    "#f59e0b"
+   ]
   },
   {
    "id": "pacman",
@@ -76,7 +111,15 @@
    ],
    "intervalo": 70,
    "alta": "2026-09-15",
-   "origen": "inicial"
+   "origen": "inicial",
+   "colores": [
+    "#e0b000",
+    "#e0b000",
+    "#e0b000",
+    "#f59e0b",
+    "#f59e0b",
+    "#f59e0b"
+   ]
   },
   {
    "id": "gusano",
@@ -89,7 +132,13 @@
    ],
    "intervalo": 60,
    "alta": "2026-09-15",
-   "origen": "inicial"
+   "origen": "inicial",
+   "colores": [
+    "#20b85a",
+    "#00b0cc",
+    "#2f8cff",
+    "#00b0cc"
+   ]
   },
   {
    "id": "pensando",
@@ -106,7 +155,17 @@
    ],
    "intervalo": 70,
    "alta": "2026-09-15",
-   "origen": "inicial"
+   "origen": "inicial",
+   "colores": [
+    "#00b0cc",
+    "#00b0cc",
+    "#00b0cc",
+    "#2f8cff",
+    "#00b0cc",
+    "#9b5cff",
+    "#e040a0",
+    "#9b5cff"
+   ]
   },
   {
    "id": "ola",
@@ -129,7 +188,23 @@
    ],
    "intervalo": 50,
    "alta": "2026-09-15",
-   "origen": "inicial"
+   "origen": "inicial",
+   "colores": [
+    "#2f8cff",
+    "#2f8cff",
+    "#00b0cc",
+    "#00b0cc",
+    "#20b85a",
+    "#20b85a",
+    "#e0b000",
+    "#f97316",
+    "#f97316",
+    "#e8233a",
+    "#e8233a",
+    "#e040a0",
+    "#e040a0",
+    "#9b5cff"
+   ]
   },
   {
    "id": "tipeo",
@@ -144,7 +219,15 @@
    ],
    "intervalo": 80,
    "alta": "2026-09-15",
-   "origen": "inicial"
+   "origen": "inicial",
+   "colores": [
+    "#00b0cc",
+    "#00b0cc",
+    "#00b0cc",
+    "#20b85a",
+    "#e0b000",
+    "#20b85a"
+   ]
   },
   {
    "id": "cometa",
@@ -160,7 +243,16 @@
    ],
    "intervalo": 55,
    "alta": "2026-09-15",
-   "origen": "inicial"
+   "origen": "inicial",
+   "colores": [
+    "#e0b000",
+    "#f59e0b",
+    "#f97316",
+    "#e8233a",
+    "#e040a0",
+    "#9b5cff",
+    "#2f8cff"
+   ]
   },
   {
    "id": "estallido",
@@ -176,7 +268,16 @@
    ],
    "intervalo": 55,
    "alta": "2026-09-15",
-   "origen": "inicial"
+   "origen": "inicial",
+   "colores": [
+    "#e0b000",
+    "#e0b000",
+    "#f59e0b",
+    "#f97316",
+    "#e8233a",
+    "#e8233a",
+    "#e040a0"
+   ]
   },
   {
    "id": "chispas",
@@ -192,7 +293,16 @@
    ],
    "intervalo": 50,
    "alta": "2026-09-15",
-   "origen": "inicial"
+   "origen": "inicial",
+   "colores": [
+    "#e0b000",
+    "#e040a0",
+    "#00b0cc",
+    "#20b85a",
+    "#9b5cff",
+    "#f97316",
+    "#2f8cff"
+   ]
   },
   {
    "id": "anillo",
@@ -207,7 +317,15 @@
    ],
    "intervalo": 60,
    "alta": "2026-09-15",
-   "origen": "inicial"
+   "origen": "inicial",
+   "colores": [
+    "#e0b000",
+    "#f59e0b",
+    "#f97316",
+    "#e8233a",
+    "#e040a0",
+    "#9b5cff"
+   ]
   }
  ]
 }
