@@ -856,6 +856,524 @@
     "#2f8cff",
     "#2f8cff"
    ]
+  },
+  {
+   "id": "chispa-doble",
+   "nombre": "chispa doble",
+   "frames": [
+    "··",
+    "·+",
+    "+*",
+    "**",
+    "*#",
+    "#*",
+    "*+",
+    "+·"
+   ],
+   "intervalo": 55,
+   "alta": "2026-09-15",
+   "origen": "largo-2",
+   "colores": [
+    "#e0b000",
+    "#f59e0b",
+    "#f97316",
+    "#e8233a",
+    "#e8233a",
+    "#f97316",
+    "#f59e0b",
+    "#e0b000"
+   ]
+  },
+  {
+   "id": "estallido-lateral",
+   "nombre": "estallido lateral",
+   "frames": [
+    "· ",
+    "o ",
+    "O ",
+    "@ ",
+    "*o",
+    "·O",
+    " @",
+    " *",
+    " ·"
+   ],
+   "intervalo": 50,
+   "alta": "2026-09-15",
+   "origen": "largo-2",
+   "colores": [
+    "#e0b000",
+    "#f59e0b",
+    "#f97316",
+    "#e8233a",
+    "#f97316",
+    "#f59e0b",
+    "#e8233a",
+    "#f97316",
+    "#e0b000"
+   ]
+  },
+  {
+   "id": "braille-orbita",
+   "nombre": "braille orbita",
+   "frames": [
+    "⠁⠈",
+    "⠂⠐",
+    "⠄⠠",
+    "⡀⢀",
+    "⠄⠠",
+    "⠂⠐"
+   ],
+   "intervalo": 50,
+   "alta": "2026-09-15",
+   "origen": "largo-2",
+   "colores": [
+    "#00b0cc",
+    "#2f8cff",
+    "#9b5cff",
+    "#e040a0",
+    "#9b5cff",
+    "#2f8cff"
+   ]
+  },
+  {
+   "id": "nucleo-caliente",
+   "nombre": "nucleo caliente",
+   "frames": [
+    "··",
+    "oo",
+    "OO",
+    "@@",
+    "##",
+    "**",
+    "··",
+    "  "
+   ],
+   "intervalo": 55,
+   "alta": "2026-09-15",
+   "origen": "largo-2",
+   "colores": [
+    "#e0b000",
+    "#f59e0b",
+    "#f97316",
+    "#e8233a",
+    "#e040a0",
+    "#f97316",
+    "#f59e0b",
+    "#f59e0b"
+   ]
+  },
+  {
+   "id": "rebote-punto",
+   "nombre": "rebote del punto",
+   "frames": [
+    "● ",
+    "○●",
+    " ●",
+    "●○",
+    "● ",
+    "◉ "
+   ],
+   "intervalo": 60,
+   "alta": "2026-09-15",
+   "origen": "largo-2",
+   "colores": [
+    "#e8233a",
+    "#e040a0",
+    "#9b5cff",
+    "#2f8cff",
+    "#00b0cc",
+    "#e8233a"
+   ]
+  },
+  {
+   "id": "tijera",
+   "nombre": "tijera",
+   "frames": [
+    "/\\",
+    "||",
+    "\\/",
+    "--",
+    "X ",
+    " X",
+    "##",
+    "  "
+   ],
+   "intervalo": 50,
+   "alta": "2026-09-15",
+   "origen": "largo-2",
+   "colores": [
+    "#e0b000",
+    "#f59e0b",
+    "#f97316",
+    "#e8233a",
+    "#e040a0",
+    "#9b5cff",
+    "#e8233a",
+    "#e8233a"
+   ]
+  },
+  {
+   "id": "lunas-opuestas",
+   "nombre": "lunas opuestas",
+   "frames": [
+    "◐◑",
+    "◓◒",
+    "◑◐",
+    "◒◓"
+   ],
+   "intervalo": 60,
+   "alta": "2026-09-15",
+   "origen": "largo-2",
+   "colores": [
+    "#2f8cff",
+    "#9b5cff",
+    "#e040a0",
+    "#00b0cc"
+   ]
+  },
+  {
+   "id": "ruido-ascii",
+   "nombre": "ruido ascii",
+   "frames": [
+    "#%",
+    "%&",
+    "&$",
+    "$@",
+    "@!",
+    "!?",
+    "?#",
+    "  "
+   ],
+   "intervalo": 50,
+   "alta": "2026-09-15",
+   "origen": "largo-2",
+   "colores": [
+    "#e8233a",
+    "#f97316",
+    "#e0b000",
+    "#20b85a",
+    "#00b0cc",
+    "#2f8cff",
+    "#9b5cff",
+    "#9b5cff"
+   ]
+  },
+  {
+   "id": "cuartos-caos",
+   "nombre": "cuartos en caos",
+   "frames": [
+    "▖▝",
+    "▘▗",
+    "▝▖",
+    "▗▘",
+    "▚▞",
+    "▞▚",
+    "██",
+    "  "
+   ],
+   "intervalo": 55,
+   "alta": "2026-09-15",
+   "origen": "largo-2",
+   "colores": [
+    "#00b0cc",
+    "#20b85a",
+    "#e0b000",
+    "#e040a0",
+    "#9b5cff",
+    "#2f8cff",
+    "#e8233a",
+    "#e8233a"
+   ]
+  },
+  {
+   "id": "mecha",
+   "nombre": "mecha",
+   "frames": [
+    " ·",
+    " +",
+    " *",
+    "·#",
+    "+@",
+    "*%",
+    "#·",
+    "  "
+   ],
+   "intervalo": 55,
+   "alta": "2026-09-15",
+   "origen": "largo-2",
+   "colores": [
+    "#e0b000",
+    "#e0b000",
+    "#f59e0b",
+    "#f97316",
+    "#e8233a",
+    "#e040a0",
+    "#f59e0b",
+    "#f59e0b"
+   ]
+  },
+  {
+   "id": "diamantes",
+   "nombre": "diamantes",
+   "frames": [
+    "◇◆",
+    "◆◈",
+    "◈◆",
+    "◆◇",
+    "◇ ",
+    " ◇"
+   ],
+   "intervalo": 60,
+   "alta": "2026-09-15",
+   "origen": "largo-2",
+   "colores": [
+    "#00b0cc",
+    "#2f8cff",
+    "#9b5cff",
+    "#e040a0",
+    "#2f8cff",
+    "#00b0cc"
+   ]
+  },
+  {
+   "id": "barrido-bloque",
+   "nombre": "barrido de bloque",
+   "frames": [
+    "█ ",
+    "▓▁",
+    "▒▄",
+    "░▆",
+    " █",
+    "▁▓",
+    "▄▒",
+    "▆░"
+   ],
+   "intervalo": 50,
+   "alta": "2026-09-15",
+   "origen": "largo-2",
+   "colores": [
+    "#e8233a",
+    "#f97316",
+    "#e0b000",
+    "#20b85a",
+    "#00b0cc",
+    "#2f8cff",
+    "#9b5cff",
+    "#e040a0"
+   ]
+  },
+  {
+   "id": "metralla",
+   "nombre": "metralla",
+   "frames": [
+    "+x",
+    "x*",
+    "*X",
+    "X#",
+    "#*",
+    "*x",
+    "x+",
+    "  "
+   ],
+   "intervalo": 50,
+   "alta": "2026-09-15",
+   "origen": "largo-2",
+   "colores": [
+    "#e0b000",
+    "#f59e0b",
+    "#e0b000",
+    "#f97316",
+    "#e8233a",
+    "#f97316",
+    "#f59e0b",
+    "#f59e0b"
+   ]
+  },
+  {
+   "id": "braille-catarata",
+   "nombre": "braille catarata",
+   "frames": [
+    "⠋⠇",
+    "⠙⠏",
+    "⠹⠋",
+    "⠸⠙",
+    "⠼⠹",
+    "⠴⠸",
+    "⠦⠼",
+    "⠧⠴"
+   ],
+   "intervalo": 50,
+   "alta": "2026-09-15",
+   "origen": "largo-2",
+   "colores": [
+    "#e8233a",
+    "#f97316",
+    "#e0b000",
+    "#20b85a",
+    "#00b0cc",
+    "#2f8cff",
+    "#9b5cff",
+    "#e040a0"
+   ]
+  },
+  {
+   "id": "eco-flash",
+   "nombre": "eco flash",
+   "frames": [
+    ".:",
+    ":i",
+    "i!",
+    "!|",
+    "|!",
+    "!i",
+    "i:",
+    ":."
+   ],
+   "intervalo": 50,
+   "alta": "2026-09-15",
+   "origen": "largo-2",
+   "colores": [
+    "#e0b000",
+    "#f59e0b",
+    "#f97316",
+    "#e8233a",
+    "#e8233a",
+    "#f97316",
+    "#f59e0b",
+    "#e0b000"
+   ]
+  },
+  {
+   "id": "anillos",
+   "nombre": "anillos",
+   "frames": [
+    "·●",
+    "•◉",
+    "●◎",
+    "◉○",
+    "◎·",
+    "○•"
+   ],
+   "intervalo": 55,
+   "alta": "2026-09-15",
+   "origen": "largo-2",
+   "colores": [
+    "#e8233a",
+    "#e040a0",
+    "#9b5cff",
+    "#2f8cff",
+    "#e040a0",
+    "#e8233a"
+   ]
+  },
+  {
+   "id": "corto-electrico",
+   "nombre": "corto electrico",
+   "frames": [
+    "|/",
+    "/-",
+    "-\\",
+    "\\|",
+    "X#",
+    "#X",
+    "* ",
+    "  "
+   ],
+   "intervalo": 50,
+   "alta": "2026-09-15",
+   "origen": "largo-2",
+   "colores": [
+    "#e0b000",
+    "#00b0cc",
+    "#e0b000",
+    "#00b0cc",
+    "#e8233a",
+    "#e040a0",
+    "#f59e0b",
+    "#f59e0b"
+   ]
+  },
+  {
+   "id": "marea",
+   "nombre": "marea",
+   "frames": [
+    "_▇",
+    "▂▆",
+    "▄▄",
+    "▆▂",
+    "█_",
+    "▆▂",
+    "▄▄",
+    "▂▆"
+   ],
+   "intervalo": 50,
+   "alta": "2026-09-15",
+   "origen": "largo-2",
+   "colores": [
+    "#2f8cff",
+    "#00b0cc",
+    "#20b85a",
+    "#e0b000",
+    "#e8233a",
+    "#e0b000",
+    "#20b85a",
+    "#00b0cc"
+   ]
+  },
+  {
+   "id": "chisporroteo",
+   "nombre": "chisporroteo",
+   "frames": [
+    "· ",
+    "·+",
+    " *",
+    "*·",
+    "+ ",
+    " ·",
+    "·*",
+    "  "
+   ],
+   "intervalo": 55,
+   "alta": "2026-09-15",
+   "origen": "largo-2",
+   "colores": [
+    "#e0b000",
+    "#f59e0b",
+    "#f97316",
+    "#e8233a",
+    "#f97316",
+    "#f59e0b",
+    "#e040a0",
+    "#e040a0"
+   ]
+  },
+  {
+   "id": "embudo",
+   "nombre": "embudo",
+   "frames": [
+    "▌▐",
+    "▚▞",
+    "◆◇",
+    "●○",
+    "·°",
+    "°·",
+    "○●",
+    "◇◆"
+   ],
+   "intervalo": 55,
+   "alta": "2026-09-15",
+   "origen": "largo-2",
+   "colores": [
+    "#00b0cc",
+    "#2f8cff",
+    "#9b5cff",
+    "#e040a0",
+    "#e8233a",
+    "#f97316",
+    "#e0b000",
+    "#20b85a"
+   ]
   }
  ]
 }
