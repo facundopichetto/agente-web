@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.281">
-<link rel="manifest" href="manifest.json?v=4.281">
+<meta name="agente-web-version" content="4.282">
+<link rel="manifest" href="manifest.json?v=4.282">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -170,41 +170,50 @@
   #selmodal{position:fixed;inset:0;z-index:41;display:flex;align-items:center;justify-content:center;box-sizing:border-box;
     padding:calc(10px + env(safe-area-inset-top)) 10px calc(10px + env(safe-area-inset-bottom)) 10px;background:rgba(0,0,0,.9)}
   #selmodal.oculta{display:none!important}
-  #selmodal .selcaja{width:100%;max-width:520px;max-height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:10px;
-    padding:14px;background:#000;border:1px solid var(--verde);border-radius:4px}
+  /* 1533 (facundo, 2026-09-15, desde el iphone): "el modal tiene cosas muy grandes y el texto que escribí no lo puedo
+     leer". todo baja a la escala del board (12-13 px, botones de 38, foto de 32) y el campo crece con lo escrito y se
+     queda arriba del teclado (`body.teclado`, visualViewport) */
+  #selmodal .selcaja{width:100%;max-width:520px;max-height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;
+    padding:10px;background:#000;border:1px solid var(--verde);border-radius:4px}
+  body.teclado #selmodal{bottom:auto;height:var(--alto,100dvh);align-items:flex-end;padding-top:4px;padding-bottom:4px}
+  body.teclado #selcont{display:none!important}
   #selmodal .seltit{display:flex;justify-content:space-between;align-items:baseline;gap:8px;color:var(--verde);font-size:12px}
   #selcuenta{color:var(--gris);font-size:10.5px;white-space:nowrap}
   #sellista{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:6px}
-  #sellista .selitem{flex:0 0 auto;display:flex;align-items:flex-start;gap:10px;min-height:44px;padding:8px 10px;box-sizing:border-box;
+  #sellista .selitem{flex:0 0 auto;display:flex;align-items:flex-start;gap:8px;min-height:38px;padding:5px 8px;box-sizing:border-box;
     border:1px solid var(--linea);border-radius:4px;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   #sellista .selitem.on{border-color:var(--verde)}
-  #sellista input{flex:0 0 auto;width:22px;height:22px;margin:0;accent-color:var(--verde);cursor:pointer}
-  #sellista .seltxt{display:flex;flex-direction:column;gap:2px;min-width:0}
-  #sellista .selnom{color:var(--blanco);font-size:14px}
+  #sellista input{flex:0 0 auto;width:18px;height:18px;margin:2px 0 0 0;accent-color:var(--verde);cursor:pointer}
+  #sellista .seltxt{display:flex;flex-direction:column;gap:1px;min-width:0}
+  #sellista .selnom{color:var(--blanco);font-size:13px}
   #sellista .seldet,#sellista .selmot{color:var(--gris);font-size:11px;word-break:break-word}
   #sellista .selmot{font-style:italic}
-  /* 1404: foto redonda (96 px servida por chat_lan, se pinta a 40) y `@cuenta` al lado del nombre. sin foto o
-     mientras baja, la inicial sobre gris neutro: se lee igual con fondo oscuro y claro */
-  #sellista .selfoto{flex:0 0 auto;width:40px;height:40px;border-radius:50%;overflow:hidden;align-self:center;display:flex;
-    align-items:center;justify-content:center;background:#8a8a8a;color:#fff;font-size:16px;border:1px solid var(--linea)}
+  /* 1404: foto redonda (96 px servida por chat_lan, se pinta a 32 desde 1533) y `@cuenta` al lado del nombre. sin
+     foto o mientras baja, la inicial sobre gris neutro: se lee igual con fondo oscuro y claro */
+  #sellista .selfoto{flex:0 0 auto;width:32px;height:32px;border-radius:50%;overflow:hidden;align-self:center;display:flex;
+    align-items:center;justify-content:center;background:#8a8a8a;color:#fff;font-size:13px;border:1px solid var(--linea)}
   #sellista .selfoto img{width:100%;height:100%;object-fit:cover;display:block}
-  #sellista .selcta{color:var(--gris);font-size:12px;margin-left:6px;word-break:break-all}
+  #sellista .selcta{color:var(--gris);font-size:11px;margin-left:6px;word-break:break-all}
   /* 1398: la candidata puede traer su animacion corriendo en el renglon (`anim`), a la derecha del checkbox */
-  #sellista .selanim{flex:0 0 auto;min-width:4ch;color:var(--verde);font-size:18px;text-align:center}
+  #sellista .selanim{flex:0 0 auto;min-width:4ch;color:var(--verde);font-size:14px;text-align:center}
   /* 1394: plantilla contador + meta + lista premarcada + ok = accion. arriba el contador en vivo (`actual - marcadas`
      contra la meta), link al perfil al costado de cada renglon, y el boton dice la accion y cuantas */
   #selcont{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;color:var(--gris);font-size:12px}
   #selcont.oculta{display:none}
-  #selcont .selnum{color:var(--blanco);font-size:28px;line-height:1}
+  #selcont .selnum{color:var(--blanco);font-size:18px;line-height:1}
   #selcont.llego .selnum{color:var(--verde)}
   #sellista .sellink{flex:0 0 auto;margin-left:auto;align-self:center;min-width:44px;min-height:32px;display:flex;align-items:center;
     justify-content:center;color:var(--verde);font-size:12px;text-decoration:none;border:1px solid var(--linea);border-radius:4px}
-  #seltxt{min-height:64px;padding:8px;background:#000;color:var(--blanco);border:1px solid var(--linea);border-radius:4px;
-    font:inherit;font-size:16px;resize:vertical}
+  /* 1533: el campo crece con lo escrito (`selTxtCrecer`, hasta 40% del alto visible) en vez de scrollear adentro de
+     64 px, letra de 13 px casi blanca sobre gris muy oscuro y borde verde con foco: se lee mientras se escribe */
+  #seltxt{flex:0 0 auto;min-height:52px;max-height:40vh;padding:7px 9px;box-sizing:border-box;background:#0b0b0b;color:#f2f2f2;
+    caret-color:var(--verde);border:1px solid #555;border-radius:4px;font:inherit;font-size:13px;line-height:1.45;resize:none;overflow-y:auto}
+  #seltxt::placeholder{color:#8a8a8a}
+  #seltxt:focus{outline:none;border-color:var(--verde)}
   #selmodal .selbtns{display:flex;gap:8px}
   #selmodal .selbtns.oculta{display:none!important}   /* 1440: en tarjetas mandan los cuatro botones, no `aceptar` */
-  #selmodal .selbtn{flex:1 1 0;min-height:48px;padding:10px;background:#000;color:var(--verde);border:1px solid var(--verde);
-    border-radius:6px;font:inherit;font-size:15px;cursor:pointer;touch-action:manipulation}
+  #selmodal .selbtn{flex:1 1 0;min-height:38px;padding:6px 10px;background:#000;color:var(--verde);border:1px solid var(--verde);
+    border-radius:6px;font:inherit;font-size:13px;cursor:pointer;touch-action:manipulation}
   #selmodal .selbtn:active{background:var(--verde);color:#000}
   #selmodal .selpie{display:flex;justify-content:space-between;align-items:center;gap:8px}
   #selestado{color:var(--gris);font-size:10.5px;min-height:1em}
@@ -4329,6 +4338,19 @@ $("ver-votar").addEventListener("click", selVotar);
 $("selaceptar").addEventListener("click", selAceptar);
 $("selmandar").addEventListener("click", selEnviarTexto);
 $("selcerrar").addEventListener("click", selCerrar);
+// 1533 (facundo, desde el iphone): "el texto que escribí no lo puedo leer". el campo crece con lo escrito (tope 40% del
+// alto visible, despues scrollea) y al abrir el teclado se remide el viewport y se lo trae a la vista con los botones
+function selTxtCrecer(){
+  var x = $("seltxt");
+  x.style.height = "auto";
+  x.style.height = Math.min(x.scrollHeight + 2, Math.round((vvActual() ? vvActual().height : innerHeight) * 0.4)) + "px";
+  if(document.activeElement === x) x.scrollTop = x.scrollHeight;
+}
+$("seltxt").addEventListener("input", selTxtCrecer);
+$("seltxt").addEventListener("focus", function(){
+  function ver(){ ajustarAlto(); selTxtCrecer(); try { $("seltxt").scrollIntoView({block: "nearest"}); } catch(_){} }
+  ver(); setTimeout(ver, 150); setTimeout(ver, 400);
+});
 // 1495: los tres botones de la tarjeta, uno por decision, y `guardar texto` de `escribir`
 [].forEach.call(document.querySelectorAll("#selacciones .tjbtn"), function(b){
   b.addEventListener("click", function(){ tjDecidir(b.getAttribute("data-q")); });
