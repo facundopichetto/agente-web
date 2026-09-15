@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.269">
-<link rel="manifest" href="manifest.json?v=4.269">
+<meta name="agente-web-version" content="4.270">
+<link rel="manifest" href="manifest.json?v=4.270">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -3541,9 +3541,11 @@ function votRecibir(e, fuente){
   if(!its.length) return false;
   anims.items = its;
   if(e.votos) anims.votos = e.votos;
-  if(typeof e.abierta === "boolean") anims.abierta = e.abierta;
-  anims.fuente = fuente || "server";
-  votEscribir("cache", {items: anims.items, votos: anims.votos, abierta: anims.abierta});
+  // 1442: `abierta` solo la cree si viene del server; la cache y el `animaciones.json` de pages no la confirman
+  fuente = fuente || "server";
+  if(typeof e.abierta === "boolean" && fuente === "server") anims.abierta = e.abierta;
+  anims.fuente = fuente;
+  votEscribir("cache", {items: anims.items, votos: anims.votos});
   return true;
 }
 // los del server + los que todavia no subieron, sin repetir id, por fecha
@@ -3697,10 +3699,17 @@ function votCargar(){
       .then(function(j){ votRecibir({items: j.animaciones}, "pages"); return false; }, function(){ return false; });
   });
 }
-// al entrar: si la votacion sigue abierta (y no toco `basta` aca), se abre sola
+// al entrar: si el server confirma que sigue abierta (y no toco `basta` aca), se abre sola una vez por carga.
+// 1442: sin lan `abierta` quedaba en null y `!== false` abria un modal que el server ya habia cerrado (ipad)
+var votAuto = false;
+function votAutoAbrir(){
+  if(votAuto || votAbierto || anims.abierta !== true || votLeer("basta", false)) return false;
+  votAuto = true;
+  return votAbrir();
+}
 function votArrancar(){
   return votCargar().then(function(){
-    if(anims.abierta !== false && !votLeer("basta", false) && !votAbierto) votAbrir();
+    votAutoAbrir();
     if(!votCadaTimer) votCadaTimer = setInterval(function(){
       if(votAbierto || votLeer("pend", []).length || votLeer("basta", false)) votSubir();
     }, VOT_CADA);
@@ -3918,6 +3927,11 @@ function selPoner(abiertas, fuente){
 function selDesdeWidgets(j){
   var vt = j && j.votaciones;
   if(!vt || !vt.abiertas) return false;
+  // 1442: sin lan, el estado del votador de animaciones sale de aca (lo arma el server): cierra el que quedo abierto
+  if(typeof vt.anim_abierta === "boolean" && !lan.base){
+    anims.abierta = vt.anim_abierta;
+    if(!vt.anim_abierta && votAbierto) votCerrar(); else votAutoAbrir();
+  }
   sel.wid = vt.abiertas;
   return lan.base ? false : selPoner(sel.wid, "buzón");
 }
@@ -7719,7 +7733,7 @@ window.__agente = {
                                  basta: votLeer("basta", false), items: anims.items.length, votos: votTodos().length,
                                  abierta: anims.abierta, fuente: anims.fuente, animados: animEls.length, timer: !!animTimer,
                                  giro: animEls.some(function(x){ return x.el === document.querySelector("#vuelo .giro"); })}; },
-  votReset: function(){ anims = {items: [], votos: [], abierta: null, fuente: null}; votPar = null; votUlt = 0;
+  votReset: function(){ anims = {items: [], votos: [], abierta: null, fuente: null}; votPar = null; votUlt = 0; votAuto = false;
                         ["pend", "basta", "cache"].forEach(function(s){ try{ localStorage.removeItem("agente_votos_" + VOT_COL + "_" + s); }catch(x){} }); },
   qvOcultos: qvOcultos, qvUmbral: QV_UMBRAL,   // 1229: swipe de `que ver`
   // cajas a/b/c: `prueba_web_tabs` las pinta, elige, manda y chequea que un drag no elija
