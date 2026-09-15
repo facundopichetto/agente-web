@@ -1,0 +1,436 @@
+{
+ "version": 1,
+ "fuente": "recetas/comandos_web.py",
+ "grupos": [
+  {
+   "grupo": "ver qué pasa",
+   "comandos": [
+    {
+     "cmd": "status",
+     "que": "si estoy vivo, qué corre y cuántas esperan",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "cola",
+     "que": "las órdenes: corriendo, pendientes y últimas",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "usage",
+     "que": "los límites 5h, week y modelo de cada cuenta",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "log",
+     "que": "las últimas 10 líneas del log",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "avisos",
+     "que": "lo último que te avisé al celu",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "propuestas",
+     "que": "lo que espera tu ok",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "pendientes",
+     "que": "tus mensajes que quedaron sin contestar por falta de tokens",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "caidas",
+     "que": "las caídas de hoy: hora, causa y cuánto duró cada una",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "salud",
+     "que": "la tabla de credenciales (`salud fresco` la vuelve a medir)",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "ayuda",
+     "que": "la lista corta de comandos, en el chat",
+     "escribe": null,
+     "offline": "cola"
+    }
+   ]
+  },
+  {
+   "grupo": "cola",
+   "comandos": [
+    {
+     "cmd": "pausa",
+     "que": "frena la cola (lo que corre sigue)",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "segui",
+     "que": "suelta la cola",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "dale N",
+     "que": "encola la propuesta N",
+     "escribe": "dale ",
+     "offline": "cola"
+    },
+    {
+     "cmd": "op N X",
+     "que": "elige la opción X de la oportunidad N",
+     "escribe": "op ",
+     "offline": "cola"
+    },
+    {
+     "cmd": "cerrar N",
+     "que": "la orden N queda hecha `[x]`",
+     "escribe": "cerrar ",
+     "offline": "cola"
+    },
+    {
+     "cmd": "marcar N !",
+     "que": "la orden N queda fallida `[!]`",
+     "escribe": "marcar ",
+     "offline": "cola"
+    },
+    {
+     "cmd": "nota N texto",
+     "que": "le pega un texto a la orden N (si corre, le llega viva)",
+     "escribe": "nota ",
+     "offline": "cola"
+    },
+    {
+     "cmd": "mover N tema",
+     "que": "la orden pendiente N pasa a otro tema",
+     "escribe": "mover ",
+     "offline": "cola"
+    },
+    {
+     "cmd": "frenar N",
+     "que": "corta ya la orden N que está corriendo",
+     "escribe": "frenar ",
+     "offline": "cola"
+    },
+    {
+     "cmd": "sueltos",
+     "que": "lo que espera margen de tokens",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "sueltos: texto",
+     "que": "suma algo a sueltos, sale cuando hay margen",
+     "escribe": "sueltos: ",
+     "offline": "cola"
+    },
+    {
+     "cmd": "apagá el loop",
+     "que": "apaga el loop de mejora de la cola",
+     "escribe": null,
+     "offline": "cola"
+    }
+   ]
+  },
+  {
+   "grupo": "cuentas y modelo",
+   "comandos": [
+    {
+     "cmd": "cuenta",
+     "que": "qué cuenta de claude está activa",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "cuenta nombre",
+     "que": "pasa a esa cuenta (`auto` reparte solo)",
+     "escribe": "cuenta ",
+     "offline": "cola"
+    },
+    {
+     "cmd": "modelo chat",
+     "que": "qué modelo contesta en cada pestaña",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "modelo chat tema modelo",
+     "que": "cambia el modelo de una pestaña (opus, fable o default)",
+     "escribe": "modelo chat ",
+     "offline": "cola"
+    },
+    {
+     "cmd": "login cuenta",
+     "que": "arranca el login de claude de esa cuenta",
+     "escribe": "login ",
+     "offline": "cola"
+    },
+    {
+     "cmd": "codigo x",
+     "que": "pega el código que pidió un login",
+     "escribe": "codigo ",
+     "offline": "cola"
+    },
+    {
+     "cmd": "login github",
+     "que": "rehace el login de gh",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "gmail estado",
+     "que": "cómo están las casillas de gmail",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "gmail auth casilla",
+     "que": "reautoriza una casilla de gmail",
+     "escribe": "gmail auth ",
+     "offline": "cola"
+    }
+   ]
+  },
+  {
+   "grupo": "rescate y nodos",
+   "comandos": [
+    {
+     "cmd": "salvame",
+     "que": "intento todo solo: red, oauth, cuenta y reinicio diferido",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "nodos",
+     "que": "server, cloud y mac: quién está y quién tiene la guardia",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "revivir nodo",
+     "que": "levanta ese nodo",
+     "escribe": "revivir ",
+     "offline": "cola"
+    },
+    {
+     "cmd": "guardia nodo",
+     "que": "le pasa la guardia a ese nodo",
+     "escribe": "guardia ",
+     "offline": "cola"
+    },
+    {
+     "cmd": "mac",
+     "que": "si la mac está prendida y qué espera",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "url nube",
+     "que": "la url nueva del login de la vm",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "simulacro estado",
+     "que": "si la prueba de la mula está prendida",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "simulacro off",
+     "que": "apaga la prueba de la mula",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "emergencia",
+     "que": "internet cortado en casa: cloud toma lo que pueda",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "emergencia estado",
+     "que": "el reporte de la emergencia sin tocar nada",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "emergencia fin",
+     "que": "apaga la emergencia y la guardia vuelve al server",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "whatsapp nube estado",
+     "que": "cómo está el whatsapp de cloud",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "vincular whatsapp nube",
+     "que": "arranca el qr del whatsapp de cloud",
+     "escribe": null,
+     "offline": "cola"
+    }
+   ]
+  },
+  {
+   "grupo": "rutina y salud",
+   "comandos": [
+    {
+     "cmd": "rutina",
+     "que": "la rutina de hoy: qué hiciste y qué falta",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "hecho cosa",
+     "que": "marca hecha una cosa de la rutina",
+     "escribe": "hecho ",
+     "offline": "cola"
+    },
+    {
+     "cmd": "deshacer cosa",
+     "que": "desmarca una cosa de la rutina",
+     "escribe": "deshacer ",
+     "offline": "cola"
+    },
+    {
+     "cmd": "rutina libre hoy",
+     "que": "hoy sin rutina",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "rutina vuelve hoy",
+     "que": "hoy vuelve la rutina",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "salud cargar: texto",
+     "que": "anota peso, comida o nota en salud personal",
+     "escribe": "salud cargar: ",
+     "offline": "cola"
+    },
+    {
+     "cmd": "salud deshacer",
+     "que": "borra lo último que cargaste en salud",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "que ver",
+     "que": "qué ver hoy (`que ver otra` cambia)",
+     "escribe": null,
+     "offline": "cola"
+    }
+   ]
+  },
+  {
+   "grupo": "casa, slack y mail",
+   "comandos": [
+    {
+     "cmd": "estoy",
+     "que": "estás en casa: callo las cámaras",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "me fui",
+     "que": "saliste: vuelven los avisos de cámara",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "silencio 2h",
+     "que": "silencia las cámaras un rato",
+     "escribe": "silencio ",
+     "offline": "cola"
+    },
+    {
+     "cmd": "slack",
+     "que": "tu presencia en slack hoy",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "slack libre hoy",
+     "que": "hoy no sostengo tu online",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "slack laburo fecha",
+     "que": "ese día sí laburás",
+     "escribe": "slack laburo ",
+     "offline": "cola"
+    },
+    {
+     "cmd": "mail",
+     "que": "los pedidos de santi y leo esperando respuesta",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "mail contestar id texto",
+     "que": "le contesto eso a santi o leo",
+     "escribe": "mail contestar ",
+     "offline": "cola"
+    }
+   ]
+  },
+  {
+   "grupo": "cómo mandar",
+   "comandos": [
+    {
+     "cmd": "orden: texto",
+     "que": "va a la cola sí o sí, sin charla",
+     "escribe": "orden: ",
+     "offline": "cola"
+    },
+    {
+     "cmd": "urgente: texto",
+     "que": "apaga el simulacro y lo contesta claude",
+     "escribe": "urgente: ",
+     "offline": "cola"
+    },
+    {
+     "cmd": "eco: texto",
+     "que": "contesta un modelo de respaldo, solo propone",
+     "escribe": "eco: ",
+     "offline": "cola"
+    }
+   ]
+  },
+  {
+   "grupo": "en esta pantalla",
+   "comandos": [
+    {
+     "cmd": "en espera",
+     "que": "lo que escribiste sin conexión y todavía no salió",
+     "escribe": null,
+     "offline": "local"
+    },
+    {
+     "cmd": "recargar",
+     "que": "vuelve a bajar el board",
+     "escribe": null,
+     "offline": "local"
+    }
+   ]
+  }
+ ]
+}

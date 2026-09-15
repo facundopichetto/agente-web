@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.287">
-<link rel="manifest" href="manifest.json?v=4.287">
+<meta name="agente-web-version" content="4.288">
+<link rel="manifest" href="manifest.json?v=4.288">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -428,7 +428,22 @@
   /* la fila del input (facundo, 2026-09-13, desde el celu): `f>`, la caja y los tres iconos a la misma altura,
      centrados entre si (align-items:center), y la caja sin borde ni fondo propio: se funde con el panel. */
   #fila{display:flex;gap:4px;align-items:center}
-  #prompt{color:var(--verde);flex:0 0 auto;user-select:none;line-height:1.4;font-size:12px}
+  /* 1631: el `f>` paso a ser el glifo `/` de comandos (molde `.bglifo`: sin fondo ni borde, 38 px tocables).
+     el id solo pone lo propio: color verde y el ancho, asi la caja no se corre. */
+  #prompt{color:var(--verde);flex:0 0 auto;user-select:none;min-width:30px;padding:5px 6px}
+  /* el modal de comandos (`cmdAbrir`, molde `modalMolde`): grupos por tema, una fila tocable por comando */
+  #cmdmodal .mmolde{max-width:420px}
+  #cmdmodal .mcuerpo2{display:flex;flex-direction:column;gap:2px}
+  .cmdgrupo{color:var(--amarillo);font-weight:bold;margin:8px 0 2px}
+  .cmdgrupo:first-child{margin-top:0}
+  .cmdfila{display:flex;align-items:baseline;gap:8px;width:100%;min-height:38px;padding:4px 2px;background:none;border:0;
+    color:var(--blanco);font:inherit;font-size:var(--texto-max);text-align:left;cursor:pointer;touch-action:manipulation}
+  .cmdfila:active{opacity:.45}
+  .cmdfila .cmdc{color:var(--cian);flex:0 0 auto;white-space:nowrap}
+  .cmdfila .cmdq{color:#9a9a9a;flex:1 1 auto;line-height:1.3}
+  .cmdfila .cmdo{flex:0 0 auto;font-size:10px;color:#5f8a58;white-space:nowrap}
+  .cmdfila .cmdo.local{color:var(--verde)}
+  .cmdfila.nuevo .cmdq{color:var(--naranja)}
   #txt{
     flex:1 1 auto;background:transparent;color:var(--blanco);border:0;
     border-radius:0;padding:5px 4px;font:inherit;font-size:12px;line-height:1.4;
@@ -708,8 +723,11 @@
   #vistas button.on{color:var(--verde)}
   /* 1407: `votar` en celeste a la izquierda de chat, solo con una votacion abierta sin votar en este dispositivo.
      se ve en la mac (sin chat | widgets) y en el celu; al tocarlo abre el modal de esa votacion */
-  #ver-votar{color:var(--cian);border-color:var(--cian);font-weight:600;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
-  #ver-votar:active{background:var(--cian);color:#000}
+  /* 1567 (facundo, 2026-09-15): `votar` en celeste al lado de `chat`, sin fondo y sin borde; el 1px del borde vuelve al
+     padding (1557) y el alto lo fija `.bb`. al tocar baja la opacidad, no pinta una caja */
+  #ver-votar{color:var(--cian);background:transparent;border:0;padding-left:9px;padding-right:9px;font-weight:600;
+    touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+  #ver-votar:active{background:transparent;color:var(--cian);opacity:.55}
   #ver-votar.oculta{display:none!important}
   body.sinlogin #cabecera,body.sinlogin #cuerpo{display:none}
   /* vista mobile: una vista a la vez, la elige la barra de arriba. puro css, sin js de layout.
@@ -722,6 +740,7 @@
     .usage .urep{min-height:3.1em}
     /* dedo: los seis botones de la barra se tocan con el pulgar, todos del mismo alto */
     .bb{height:32px;padding:4px 6px;gap:4px}
+    #ver-votar{padding-left:7px;padding-right:7px}
     #nodos .nodo{min-height:32px}   /* dedo: el label se toca aunque no parezca boton */
     #notis .noti{min-height:40px;font-size:12px}   /* dedo: el aviso y su `x` se tocan con el pulgar */
     #mcuerpo textarea.nresp{font-size:var(--texto-max)}   /* ios no zoomea al enfocar */
@@ -997,7 +1016,7 @@
   <div id="adjunto" class="oculta" aria-live="polite"></div>
   <div id="chips" class="oculta"></div>
   <div id="fila">
-    <span id="prompt">f&gt;</span>
+    <button id="prompt" class="bglifo" type="button" title="comandos" aria-label="comandos" aria-haspopup="dialog">/</button>
     <textarea id="txt" rows="1" placeholder="" enterkeyhint="enter" inputmode="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
     <span id="grabinfo" aria-live="polite"></span>
     <button id="grabar" class="ico" type="button" title="mantené apretado para grabar un audio" aria-label="grabar audio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg></button>
@@ -2070,7 +2089,7 @@ function pintarTabs(){
   barra.appendChild(btnBarra("+", "nueva_tab"));
   var r = document.createElement("span"); r.className = "relleno";
   barra.appendChild(r);
-  $("prompt").textContent = "f>";
+  $("prompt").textContent = "/";   // 1631: glifo de comandos (antes `f>`)
   guardarLayout();
   cajaDeTema(temaActivo());     // cada pestaña se lleva su borrador y trae el suyo
   pintarChips();                // y sus sugerencias, que salen de la ultima respuesta de esa pestaña
@@ -4220,10 +4239,60 @@ function selModoLista(lista){
   var b = document.querySelector("#selmodal .selbtns");
   if(b) b.classList.toggle("oculta", !lista);
 }
+// ---------- 1567: fila continua (facundo, 2026-09-15, `votarcontinuo`) ----------
+// la coleccion `continua` no es una tanda: el server manda las pendientes (hasta 30) y cada 30 s las nuevas se suman
+// al final de la fila que se esta votando (`filaSumar`), sin mover la tarjeta a la vista. sin pendientes el modal
+// queda abierto esperando (`al día`) y nunca manda `fin`. el boton `votar` cuenta tarjetas, no colecciones. un dato
+// que no confirmo el server (widgets.json viejo) solo puede sacar tarjetas, nunca sumar.
+var TJ_TOQUE_MS = 350;   // 1567: dos toques en menos de esto son un voto (si no, el segundo votaba la tarjeta siguiente)
+sel.hechasFila = {};
+function tjConFoto(c){ return !!(c && c.fotos && /^img\//.test(c.fotos[0] || "")); }
+function filaVotadas(col){
+  var o = Object.assign({}, sel.hechasFila[col] || {});
+  selLeer("pend", []).forEach(function(p){ if(p && p.col === col && p.r && p.r.candidata_id) o[p.r.candidata_id] = true; });
+  return o;
+}
+function filaFaltan(e){
+  var v = filaVotadas(e.coleccion), ya = 0, cs = e.candidatas || [];
+  cs.forEach(function(c){ if(v[c.id]) ya++; });
+  return Math.max(0, (typeof e.pendientes === "number" ? e.pendientes : cs.length) - ya);
+}
+function filaSumar(e, soloSacar){
+  var a = sel.actual;
+  if(!a || !a.continua) return false;
+  var v = filaVotadas(a.coleccion), vivas = {}, cur = tjActual(), fall = sel.tjFallidas || [];
+  (e.candidatas || []).forEach(function(c){ vivas[c.id] = true; });
+  var hechas = a.candidatas.slice(0, sel.tj);
+  var resto = a.candidatas.slice(sel.tj).filter(function(c){ return vivas[c.id] && !v[c.id]; });
+  if(!soloSacar){
+    var ya = {};
+    hechas.concat(resto).forEach(function(c){ ya[c.id] = true; });
+    (e.candidatas || []).forEach(function(c){
+      if(!ya[c.id] && !v[c.id] && fall.indexOf(c.id) < 0 && tjConFoto(c)){ resto.push(c); ya[c.id] = true; }
+    });
+    a.pendientes = e.pendientes;
+    a.mas = typeof e.pendientes === "number" && e.pendientes > (e.candidatas || []).length;
+  }
+  a.candidatas = hechas.concat(resto);
+  var nuevo = tjActual();
+  if(!cur || !nuevo || cur.id !== nuevo.id) tjPintar(); else tjContar();
+  return true;
+}
+function tjContar(){
+  var e = sel.actual, c = tjActual();
+  if(!e) return;
+  if(e.continua){
+    var q = e.candidatas.length - sel.tj;
+    $("selcuenta").textContent = c ? "quedan " + q + (e.mas ? "+" : "") : "al día";
+  } else $("selcuenta").textContent = c ? (sel.tj + 1) + " de " + e.candidatas.length : "listo";
+}
 function tjAbrir(e){
   // 1495: la tarjeta sin foto de perfil no se muestra (el server ya las saca; esto es la red de abajo)
-  e = Object.assign({}, e, {candidatas: e.candidatas.filter(function(c){ return c.fotos && /^img\//.test(c.fotos[0] || ""); })});
+  var v = e.continua ? filaVotadas(e.coleccion) : {};   // 1567: lo votado aca que el server todavia no saco
+  e = Object.assign({}, e, {candidatas: e.candidatas.filter(function(c){ return !v[c.id] && tjConFoto(c); })});
   if(!e.candidatas.length) return false;
+  if(e.continua) e.mas = typeof e.pendientes === "number" && e.pendientes > e.candidatas.length;
+  sel.tjUlt = 0;   // 1567: el freno del doble toque es de esta apertura (si no, se come el primer toque de la siguiente)
   sel.actual = e; sel.tj = 0; sel.tjVotos = 0; sel.tjFallidas = [];   // 1524: decisiones reales de esta apertura
   selModoLista(false);
   $("seltitulo").textContent = e.titulo || e.coleccion;
@@ -4240,7 +4309,15 @@ function tjPintar(){
   var e = sel.actual, c = tjActual(), t = $("seltarjeta");
   t.textContent = "";
   $("seltxt").classList.add("oculta"); $("seltxt").value = "";
-  $("selcuenta").textContent = c ? (sel.tj + 1) + " de " + e.candidatas.length : "listo";
+  tjContar();
+  $("selacciones").classList.toggle("oculta", !c);
+  if(!c && e && e.continua){   // 1567: la fila no termina: espera a que entren mas
+    t.removeAttribute("data-candidata");
+    var w = document.createElement("div"); w.className = "tjdet tjespera";
+    w.textContent = "no hay más por ahora: las nuevas entran solas al final";
+    t.appendChild(w);
+    return;
+  }
   if(!c){ tjFin(); return; }
   t.setAttribute("data-candidata", c.id);   // 1495: la tarjeta a la vista, la que firma el voto
   // 1495: la foto de perfil arriba y grande. si no baja, la tarjeta no se muestra: se salta sin votar
@@ -4289,7 +4366,10 @@ function tjDecidir(q){
   return tjVoto(e, c, q, "");
 }
 function tjVoto(e, c, q, txt){
-  var r = {id: lidNuevo(), tipo: "tarjeta", ts: Date.now(), candidata_id: c.id, cuenta: c.cuenta || "", decision: q, texto: txt};
+  if(Date.now() - (sel.tjUlt || 0) < TJ_TOQUE_MS) return false;   // 1567: el doble toque cuenta una vez
+  sel.tjUlt = Date.now();
+  if(e.continua) (sel.hechasFila[e.coleccion] = sel.hechasFila[e.coleccion] || {})[c.id] = true;
+  var r ={id: lidNuevo(), tipo: "tarjeta", ts: Date.now(), candidata_id: c.id, cuenta: c.cuenta || "", decision: q, texto: txt};
   var pend = selLeer("pend", []); pend.push({col: e.coleccion, r: r}); selEscribir("pend", pend);
   $("selestado").textContent = (q === "ignorar" ? "no va" : q) + " @" + (c.cuenta || c.id);
   sel.tjVotos = (sel.tjVotos || 0) + 1;   // 1524: sin al menos una, `tjFin` no manda `fin`
@@ -4421,11 +4501,13 @@ function selSubir(){
 // 1407: las abiertas sin votar en este dispositivo, la mas vieja primero (la que ya estaba lista)
 function selPendientes(){
   var h = selLeer("hechas", {});
-  return sel.abiertas.filter(function(a){ return h[a.coleccion] !== a.abrir_ts; })
+  // 1567: una fila continua esta pendiente mientras le quede alguna tarjeta sin votar en este dispositivo
+  return sel.abiertas.filter(function(a){ return a.continua ? filaFaltan(a) > 0 : h[a.coleccion] !== a.abrir_ts; })
     .sort(function(a, b){ return (a.abrir_ts || 0) - (b.abrir_ts || 0); });
 }
 function selBoton(){
-  var n = selPendientes().length, b = $("ver-votar");
+  // 1567: `votar` desde 1 pendiente y oculto con 0; una fila suma sus tarjetas, una tanda cuenta como una
+  var n = selPendientes().reduce(function(s, a){ return s + (a.continua ? filaFaltan(a) : 1); }, 0), b = $("ver-votar");
   b.textContent = "votar" + (n > 1 ? " " + n : "");
   b.classList.toggle("oculta", !n || !!sel.actual);
 }
@@ -4461,7 +4543,10 @@ function selPoner(abiertas, fuente, auto){
   sel.fuente = fuente;
   if(auto !== false) selLimpiar();
   if(sel.actual){
-    if(!sel.abiertas.some(function(a){ return a.coleccion === sel.actual.coleccion; })) selCerrar();   // la cerraron en otro lado
+    var fresca = sel.abiertas.filter(function(a){ return a.coleccion === sel.actual.coleccion; })[0];
+    // 1567: la fila que se esta votando suma al final lo nuevo (solo con dato confirmado) y saca lo que ya no va
+    if(sel.actual.continua) filaSumar(fresca || {coleccion: sel.actual.coleccion, candidatas: [], pendientes: 0}, auto === false || !fresca);
+    else if(!fresca) selCerrar();   // la cerraron en otro lado
   } else if(auto !== false){
     var e = selPendientes().filter(function(a){ return sel.ignorada[a.coleccion] !== a.abrir_ts; })[0];
     if(e) selAbrir(e);
@@ -4707,6 +4792,14 @@ function mandar(texto, tema, crudo, tsEnvio){
     guardarSalida(texto, tema, cuerpo);
     return Promise.resolve();
   }
+  if(sinRed()){                                                  // 1631: pwa sin conexion: queda en espera y sale al volver
+    if(!aparte){
+      if(txt.value.trim() === texto){ txt.value = ""; txt.style.height = ""; }
+      borrarBorrador(tema); if(caja && caja !== tema) borrarBorrador(caja);
+    }
+    guardarSalida(texto, tema, cuerpo, "red");
+    return Promise.resolve();
+  }
   enviando++;
   $("mandar").disabled = true;
   if(!aparte){
@@ -4732,6 +4825,7 @@ function mandar(texto, tema, crudo, tsEnvio){
     .catch(function(e){
       ultimoTexto = ""; ultimoTs = 0;                           // fallo: se puede reintentar igual
       if(e && e.message === "freno"){ guardarSalida(texto, tema, cuerpo); return; }   // sale solo al levantar
+      if(errRed(e)){ guardarSalida(texto, tema, cuerpo, "red"); return; }            // 1631: se corto en el camino
       if(!txt.value.trim()){ ponerCaja(texto); guardarBorrador(caja || tema, texto, true); }
       if(ruidoso(e)) sistema("no se pudo mandar: " + e.message, "error");
     })
@@ -4740,10 +4834,19 @@ function mandar(texto, tema, crudo, tsEnvio){
 // github frenado (403 secondary rate limit, 2026-09-12): el mensaje no vuelve a la caja ni se pierde.
 // queda en `salida` (localStorage `agente_salida`, sobrevive a recargar) y `vaciarSalida` lo manda solo
 // desde `tick` apenas pasa `frenoHasta`, en orden y de a uno.
+// sin conexion (1631) usa la misma salida: `motivo` "red" cambia solo el aviso, y `vaciarSalida` la manda al volver
+// (evento `online` y cada `tick`), por `api`, que prueba la lan primero y cae al buzon.
 var saliendo = false;
-function guardarSalida(texto, tema, cuerpo){
+function sinRed(){ return typeof navigator !== "undefined" && navigator.onLine === false; }
+function errRed(e){ return !!e && (e.name === "TypeError" || /failed to fetch|networkerror|load failed|network/i.test(e.message || "")); }
+function guardarSalida(texto, tema, cuerpo, motivo){
   salida.push({texto: texto, tema: tema, cuerpo: cuerpo, ts: Date.now()});
   try{ localStorage.setItem("agente_salida", JSON.stringify(salida)); }catch(x){}
+  if(motivo === "red"){
+    sistema("sin conexión: quedó en espera y sale solo cuando vuelva" +
+            (salida.length > 1 ? " (" + salida.length + " en espera)." : "."));
+    return;
+  }
   var seg = Math.max(1, Math.round((frenoHasta - Date.now()) / 1000));
   sistema("github frenó las escrituras de este token (límite secundario: muchas escrituras seguidas al buzón). " +
           "tu mensaje quedó guardado y se manda solo en " + fmtTiempo(seg) +
@@ -4752,7 +4855,7 @@ function guardarSalida(texto, tema, cuerpo){
   reprogramar();
 }
 function vaciarSalida(){
-  if(saliendo || !salida.length || Date.now() < frenoHasta) return Promise.resolve();   // sin token: api() da 401 callado
+  if(saliendo || !salida.length || Date.now() < frenoHasta || sinRed()) return Promise.resolve();   // sin token: api() da 401 callado
   saliendo = true;
   var m = salida[0];
   return api("POST", "/repos/" + REPO + "/issues/" + ISSUE + "/comments", {body: m.cuerpo})
@@ -4771,11 +4874,12 @@ function vaciarSalida(){
       }
       etagCom = null;
       saliendo = false;
-      if(!salida.length) sistema("github volvió: salió lo que estaba guardado.");
+      if(!salida.length) sistema("volvió la conexión: salió lo que estaba en espera.");
       return vaciarSalida();
     })
-    .catch(function(e){ saliendo = false; if(ruidoso(e)) sistema("no se pudo mandar lo guardado: " + e.message, "error"); });
+    .catch(function(e){ saliendo = false; if(!errRed(e) && ruidoso(e)) sistema("no se pudo mandar lo guardado: " + e.message, "error"); });
 }
+window.addEventListener("online", function(){ vaciarSalida(); });
 // el mensaje escrito en la pestaña X viaja a otra: X se queda **solo con lo que no viajo** (caja y
 // borrador de `tabs.json`), si no facundo lo ve repetido al volver. va **antes** de `abrirTab`, que
 // guarda la caja como borrador de la pestaña que se deja.
@@ -4807,6 +4911,7 @@ function enviarMensaje(texto){
   // ni preguntar por tema (siempre a la pestaña activa, como antes de que fuera pendiente).
   if(adjunto) return mandarAdjunto(texto);
   if(!texto) return;
+  if(cmdLocal(texto)){ if(txt.value.trim() === texto){ txt.value = ""; txt.style.height = ""; } return; }   // 1631: sin red
   if(RE_CRUDO.test(texto)){ mandar(texto, temaActivo(), true); return; }
   var activo = temaActivo(), c = clasificar(texto);
   if(c.fuente === "prefijo"){
@@ -4821,6 +4926,91 @@ function enviarMensaje(texto){
   }
   mandar(texto, temaActivo());
 }
+
+// ---------- glifo `/` de comandos (facundo, 2026-09-15, orden 1631) ----------
+// reemplaza el `f>`: tocarlo abre un modal (`modalMolde`, esc cierra) con los comandos que el daemon o la web atienden
+// sin modelo. la lista **no se escribe aca**: la genera `recetas/comandos_web.py` leyendo el codigo (`web/comandos.json`,
+// lo sirven pages y `chat_lan`), queda en localStorage para abrir sin red y un comando nuevo aparece solo.
+// tocar uno sin argumento lo manda; con argumento lo deja en la caja con el cursor al final. sin red, los `local` se
+// resuelven aca y los demas quedan en `salida` y salen solos al volver (lan primero, despues el buzon).
+var CMD_LS = "agente_comandos", cmdLista = null, cmdModal = null;
+try{ cmdLista = JSON.parse(localStorage.getItem(CMD_LS) || "null"); }catch(x){ cmdLista = null; }
+function cmdCargar(){
+  if(typeof fetch !== "function" || location.protocol === "file:") return Promise.resolve(cmdLista);
+  return fetch("comandos.json?t=" + Date.now(), {cache: "no-store"})
+    .then(function(r){ if(!r.ok) throw new Error("http " + r.status); return r.json(); })
+    .then(function(j){
+      if(j && j.grupos){ cmdLista = j; try{ localStorage.setItem(CMD_LS, JSON.stringify(j)); }catch(x){} }
+      return cmdLista;
+    })
+    .catch(function(){ return cmdLista; });
+}
+// los que resuelve la web sola: andan sin conexion
+var CMD_LOCALES = {
+  "en espera": function(){
+    if(!salida.length){ sistema("no hay nada en espera: todo lo que escribiste salió."); return; }
+    sistema(salida.length + " en espera (salen solos al volver la conexión):\n" + salida.map(function(m){
+      return "- " + chipRecorte(m.texto, 60);
+    }).join("\n"));
+  },
+  "recargar": function(){ location.reload(); }
+};
+function cmdLocal(texto){
+  var f = CMD_LOCALES[(texto || "").trim().toLowerCase()];
+  if(!f) return false;
+  f();
+  return true;
+}
+function cmdCuerpo(lista){
+  var cu = document.createElement("div");
+  if(!lista || !(lista.grupos || []).length){
+    cu.textContent = "todavía no tengo la lista: abrí el board una vez con conexión.";
+    return cu;
+  }
+  lista.grupos.forEach(function(g){
+    var t = document.createElement("div");
+    t.className = "cmdgrupo"; t.textContent = g.grupo;
+    cu.appendChild(t);
+    (g.comandos || []).forEach(function(c){
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "cmdfila" + (g.grupo === "nuevos" ? " nuevo" : "");
+      b.setAttribute("data-cmd", c.cmd);
+      var local = c.offline === "local";
+      b.innerHTML = '<span class="cmdc">' + esc(c.cmd) + '</span><span class="cmdq">' + esc(c.que || "") + "</span>" +
+        '<span class="cmdo' + (local ? " local" : "") + '" title="' + (local ? "anda sin conexión" : "sin conexión queda en espera y sale solo al volver") +
+        '">' + (local ? "offline" : "en espera") + "</span>";
+      b.addEventListener("click", function(){ cmdTocar(c); });
+      cu.appendChild(b);
+    });
+  });
+  return cu;
+}
+function cmdTocar(c){
+  if(cmdModal) cmdModal.cerrar(false);
+  if(c.escribe){
+    // con argumento: queda escrito y el foco en el mismo toque (el teclado de ios solo abre asi)
+    ponerCaja(c.escribe);
+    guardarBorrador(temaCaja || temaActivo(), c.escribe);
+    txt.focus();
+    try{ txt.setSelectionRange(c.escribe.length, c.escribe.length); }catch(x){}
+    return;
+  }
+  enviarMensaje(c.cmd);
+}
+function cmdAbrir(){
+  if(!cmdModal) cmdModal = modalMolde({id: "cmdmodal", z: 42, sinServer: true});   // lista local: no es una votacion
+  var pintar = function(l){
+    var n = 0;
+    ((l || {}).grupos || []).forEach(function(g){ n += (g.comandos || []).length; });
+    return {titulo: "comandos sin modelo", cuenta: n ? String(n) : "", cuerpo: cmdCuerpo(l)};
+  };
+  var r = cmdModal.abrir(pintar(cmdLista));
+  cmdCargar().then(function(l){ if(cmdModal.abierto && l) cmdModal.pintar(pintar(l)); });
+  return r;
+}
+$("prompt").addEventListener("click", function(){ cmdAbrir(); });
+cmdCargar();
 
 // ---------- sugerencias de respuesta arriba del input (facundo, 2026-09-11) ----------
 // cero tokens y cero red: los chips salen de leer la **ultima respuesta del daemon en esta pestaña**.
@@ -8283,6 +8473,11 @@ prepararDictado();     // 1209: preguntar una vez si el celu puede transcribir o
 
 window.__agente = {
   fmtTiempo: fmtTiempo,
+  // 1631: glifo `/` de comandos (`prueba_web_comandos`)
+  cmdAbrir: cmdAbrir, cmdLocal: cmdLocal, cmdCargar: cmdCargar,
+  cmdPoner: function(l){ cmdLista = l; }, cmdAbierto: function(){ return !!(cmdModal && cmdModal.abierto); },
+  salidaEstado: function(){ return salida.map(function(m){ return {texto: m.texto, tema: m.tema}; }); },
+  vaciarSalida: vaciarSalida,
   mirarVersion: mirarVersion,   // 1441: `prueba_autoupdate` fuerza el chequeo (en headless `document.hidden` no baja)
   // 1432: widget de salud personal (`prueba_web_salud`)
   spCaja: function(p){ widDatos = widDatos || {}; widDatos.salud_personal = p; return cajaSaludPersonal(p); },
@@ -8297,6 +8492,7 @@ window.__agente = {
   selEsTarjetas: selEsTarjetas,   // 1440: modo tarjetas y su fallback sin `modo` del server
   tjPintarCon: function(e, i){ sel.actual = e; sel.tj = i || 0; if(!i){ sel.tjVotos = 0; sel.tjFallidas = []; } tjPintar(); return sel.tj; },   // 1515: `prueba_ig_embudo_tarjetas`
   tjIndice: function(){ return sel.tj; },
+  filaFaltan: filaFaltan, filaSumar: filaSumar, tjToqueMs: function(ms){ TJ_TOQUE_MS = ms; },   // 1567: fila continua
   tjAbrir: tjAbrir, tjReintentos: function(a){ TJ_REINTENTOS = a; },   // 1524: fotos que no bajan
   tjEstado: function(){ return {votos: sel.tjVotos || 0, fallidas: sel.tjFallidas || [], n: sel.actual ? sel.actual.candidatas.length : null}; },
   selEnviarTexto: selEnviarTexto, selCerrar: selCerrar,
