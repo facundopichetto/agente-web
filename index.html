@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.255">
-<link rel="manifest" href="manifest.json?v=4.255">
+<meta name="agente-web-version" content="4.256">
+<link rel="manifest" href="manifest.json?v=4.256">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -143,6 +143,34 @@
   #vtfinbtns{display:flex;gap:8px}
   #vtfinbtns .vtbtn{flex:1 1 0}
   #vtestado{color:var(--gris);font-size:10.5px;min-height:1em}
+  /* seleccion con checkboxes (1388): modal generico, un renglon tocable por candidata (entero, no solo el cuadradito),
+     texto libre, `aceptar` y `enviar texto`. en el celu ocupa el ancho y scrollea la lista; textarea a 16 px para que
+     ios no haga zoom al tocarla */
+  #selmodal{position:fixed;inset:0;z-index:41;display:flex;align-items:center;justify-content:center;box-sizing:border-box;
+    padding:calc(10px + env(safe-area-inset-top)) 10px calc(10px + env(safe-area-inset-bottom)) 10px;background:rgba(0,0,0,.9)}
+  #selmodal.oculta{display:none!important}
+  #selmodal .selcaja{width:100%;max-width:520px;max-height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:10px;
+    padding:14px;background:#000;border:1px solid var(--verde);border-radius:4px}
+  #selmodal .seltit{display:flex;justify-content:space-between;align-items:baseline;gap:8px;color:var(--verde);font-size:12px}
+  #selcuenta{color:var(--gris);font-size:10.5px;white-space:nowrap}
+  #sellista{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:6px}
+  #sellista .selitem{flex:0 0 auto;display:flex;align-items:flex-start;gap:10px;min-height:44px;padding:8px 10px;box-sizing:border-box;
+    border:1px solid var(--linea);border-radius:4px;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+  #sellista .selitem.on{border-color:var(--verde)}
+  #sellista input{flex:0 0 auto;width:22px;height:22px;margin:0;accent-color:var(--verde);cursor:pointer}
+  #sellista .seltxt{display:flex;flex-direction:column;gap:2px;min-width:0}
+  #sellista .selnom{color:var(--blanco);font-size:14px}
+  #sellista .seldet,#sellista .selmot{color:var(--gris);font-size:11px;word-break:break-word}
+  #sellista .selmot{font-style:italic}
+  #seltxt{min-height:64px;padding:8px;background:#000;color:var(--blanco);border:1px solid var(--linea);border-radius:4px;
+    font:inherit;font-size:16px;resize:vertical}
+  #selmodal .selbtns{display:flex;gap:8px}
+  #selmodal .selbtn{flex:1 1 0;min-height:48px;padding:10px;background:#000;color:var(--verde);border:1px solid var(--verde);
+    border-radius:6px;font:inherit;font-size:15px;cursor:pointer;touch-action:manipulation}
+  #selmodal .selbtn:active{background:var(--verde);color:#000}
+  #selmodal .selpie{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  #selestado{color:var(--gris);font-size:10.5px;min-height:1em}
+  #selcerrar{background:none;border:0;color:var(--gris);font:inherit;font-size:12px;padding:6px 2px;cursor:pointer}
   .msg .quien,.msg .ts{user-select:none}
   .msg .quien{color:var(--magenta)}
   .agente .quien{color:var(--magenta)}
@@ -919,6 +947,15 @@
       <div id="vtfinbtns"><button id="vtmandar" class="vtbtn" type="button">mandar</button><button id="vtcerrar" class="vtbtn" type="button">cerrar</button></div>
     </div>
     <div id="vtestado" aria-live="polite"></div>
+  </div>
+</div>
+<div id="selmodal" class="oculta" role="dialog" aria-modal="true" aria-labelledby="seltitulo">
+  <div class="selcaja">
+    <div class="seltit"><span id="seltitulo"></span><span id="selcuenta"></span></div>
+    <div id="sellista"></div>
+    <textarea id="seltxt" placeholder="algo para sumar (opcional)" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
+    <div class="selbtns"><button id="selaceptar" class="selbtn" type="button">aceptar</button><button id="selmandar" class="selbtn" type="button">enviar texto</button></div>
+    <div class="selpie"><span id="selestado" aria-live="polite"></span><button id="selcerrar" type="button">cerrar</button></div>
   </div>
 </div>
 
@@ -3559,6 +3596,150 @@ Array.prototype.forEach.call(document.querySelectorAll("#votar .vtesta"), functi
 $("vtbasta").addEventListener("click", votBasta);
 $("vtmandar").addEventListener("click", votMandarTexto);
 $("vtcerrar").addEventListener("click", votCerrar);
+
+// ---------- seleccion con checkboxes (facundo, 2026-09-15, orden 1388) ----------
+// modal generico para elegir de una coleccion (`recetas/seleccion.py`): un checkbox por candidata (premarcadas segun
+// `premarcada`), texto libre, `aceptar` y `enviar texto`. la web mira `GET /seleccion` al entrar, cada 30 s y al
+// volver a la app; si hay una abierta que no acepto en este dispositivo, abre el modal. cada registro (con id) sale
+// por `POST /seleccion/<coleccion>` y, sin red, queda en localStorage hasta que vuelve: el server no lo cuenta dos
+// veces y es el que lo manda al chat de la pestaña del tema (`seleccion <coleccion>: ...`). `cerrar` solo la esconde
+// hasta recargar; `aceptar` la cierra para todos.
+var SEL_CADA = 30000;
+var sel = {abiertas: [], actual: null, subiendo: null, otra: false, timer: null, ignorada: {}};
+function selLeer(s, def){
+  try{ var v = localStorage.getItem("agente_sel_" + s); return v === null ? def : JSON.parse(v); }catch(x){ return def; }
+}
+function selEscribir(s, v){ try{ localStorage.setItem("agente_sel_" + s, JSON.stringify(v)); }catch(x){} }
+function selUrl(base, col){ return base + "/seleccion" + (col ? "/" + encodeURIComponent(col) : ""); }
+function selMarcadas(){
+  return [].filter.call(document.querySelectorAll("#sellista input"), function(i){ return i.checked; })
+    .map(function(i){ return i.value; });
+}
+function selCuenta(){
+  var n = selMarcadas().length, t = sel.actual ? sel.actual.candidatas.length : 0;
+  $("selcuenta").textContent = n + " de " + t;
+  [].forEach.call(document.querySelectorAll("#sellista .selitem"), function(l){
+    l.classList.toggle("on", l.querySelector("input").checked);
+  });
+}
+function selAbrir(e){
+  if(!e || !e.candidatas || !e.candidatas.length) return false;
+  sel.actual = e;
+  $("seltitulo").textContent = e.titulo || e.coleccion;
+  var ls = $("sellista");
+  ls.textContent = "";
+  e.candidatas.forEach(function(c){
+    var l = document.createElement("label"), i = document.createElement("input"), t = document.createElement("span");
+    l.className = "selitem"; t.className = "seltxt";
+    i.type = "checkbox"; i.value = c.id; i.checked = !!c.premarcada;
+    i.addEventListener("change", selCuenta);
+    [["selnom", c.titulo || c.id], ["seldet", c.detalle], ["selmot", c.motivo]].forEach(function(p){
+      if(!p[1]) return;
+      var s = document.createElement("span"); s.className = p[0]; s.textContent = p[1]; t.appendChild(s);
+    });
+    l.appendChild(i); l.appendChild(t); ls.appendChild(l);
+  });
+  $("seltxt").value = ""; $("selestado").textContent = "";
+  $("seltxt").placeholder = "algo para sumar (va al chat de " + (e.tema || "tools") + ")";
+  selCuenta();
+  $("selmodal").classList.remove("oculta");
+  ls.scrollTop = 0;
+  return true;
+}
+function selCerrar(){
+  if(sel.actual) sel.ignorada[sel.actual.coleccion] = sel.actual.abrir_ts;
+  sel.actual = null;
+  $("selmodal").classList.add("oculta");
+}
+function selEncolar(tipo){
+  var e = sel.actual;
+  if(!e) return null;
+  var r = {id: lidNuevo(), tipo: tipo, ts: Date.now(), marcadas: selMarcadas(), texto: $("seltxt").value.trim()};
+  var pend = selLeer("pend", []);
+  pend.push({col: e.coleccion, r: r});
+  selEscribir("pend", pend);
+  return r;
+}
+function selAceptar(){
+  var e = sel.actual;
+  if(!e || !selEncolar("aceptar")) return false;
+  var h = selLeer("hechas", {}); h[e.coleccion] = e.abrir_ts; selEscribir("hechas", h);
+  sel.actual = null;
+  $("selmodal").classList.add("oculta");
+  selSubir();
+  return true;
+}
+function selEnviarTexto(){
+  if(!sel.actual) return false;
+  if(!$("seltxt").value.trim()){ $("selestado").textContent = "escribí algo primero"; return false; }
+  selEncolar("texto");
+  $("seltxt").value = "";
+  $("selestado").textContent = "texto enviado";
+  selSubir();
+  return true;
+}
+// sube lo pendiente, una coleccion por POST; lo que el server rechaza (400/404: ya no existe) se descarta
+function selSubir(){
+  if(sel.subiendo){ sel.otra = true; return sel.subiendo; }
+  var pend = selLeer("pend", []);
+  if(!pend.length) return Promise.resolve(true);
+  var cols = [];
+  pend.forEach(function(p){ if(cols.indexOf(p.col) < 0) cols.push(p.col); });
+  sel.subiendo = votLan().then(function(base){
+    if(!base) throw new Error("sin lan");
+    return cols.reduce(function(pr, col){
+      return pr.then(function(){
+        var regs = pend.filter(function(p){ return p.col === col; }).map(function(p){ return p.r; });
+        return lanFetch(selUrl(base, col), {method: "POST", cache: "no-store",
+          headers: {"authorization": "Bearer " + token, "content-type": "application/json"},
+          body: JSON.stringify({registros: regs})
+        }).then(function(r){
+          if(!r || (!r.ok && r.status !== 400 && r.status !== 404)) throw new Error("http " + (r && r.status));
+          var ids = {};
+          regs.forEach(function(x){ ids[x.id] = true; });
+          selEscribir("pend", selLeer("pend", []).filter(function(p){ return !ids[p.r.id]; }));
+        });
+      });
+    }, Promise.resolve()).then(function(){ return true; });
+  }).catch(function(){ return false; }).then(function(ok){
+    sel.subiendo = null;
+    if(sel.otra){ sel.otra = false; return selSubir(); }
+    return ok;
+  });
+  return sel.subiendo;
+}
+// trae las abiertas y abre la primera que no se acepto ni se cerro aca (misma apertura: `abrir_ts`)
+function selMirar(){
+  return votLan().then(function(base){
+    if(!base) return false;
+    return lanFetch(selUrl(base), {method: "GET", cache: "no-store", headers: {"authorization": "Bearer " + token}})
+      .then(function(r){ if(!r || !r.ok) throw new Error("http " + (r && r.status)); return r.json(); })
+      .then(function(j){
+        sel.abiertas = (j && j.abiertas) || [];
+        if(sel.actual){
+          if(!sel.abiertas.some(function(a){ return a.coleccion === sel.actual.coleccion; })) selCerrar();   // la cerraron en otro lado
+          return true;
+        }
+        var h = selLeer("hechas", {});
+        var e = sel.abiertas.filter(function(a){
+          return h[a.coleccion] !== a.abrir_ts && sel.ignorada[a.coleccion] !== a.abrir_ts;
+        })[0];
+        if(e) selAbrir(e);
+        return true;
+      });
+  }).catch(function(){ return false; });
+}
+function selArrancar(){
+  var tick = function(){ return selSubir().then(selMirar); };
+  if(!sel.timer){
+    sel.timer = setInterval(function(){ if(!document.hidden) tick(); }, SEL_CADA);
+    document.addEventListener("visibilitychange", function(){ if(!document.hidden) tick(); });
+  }
+  return tick();
+}
+$("selaceptar").addEventListener("click", selAceptar);
+$("selmandar").addEventListener("click", selEnviarTexto);
+$("selcerrar").addEventListener("click", selCerrar);
 
 // ---------- mensaje en vuelo (facundo, 2026-09-13: "ver que pasa mientras espero") ----------
 // al mandar, abajo del mensaje aparece `agente> hh:mm` con un spinner de texto, la fase que publica el daemon
@@ -7071,7 +7252,7 @@ function arrancar(t){
   etagWid = null; widUlt = 0;
   etagTabs = null; shaTabs = null; tabsUlt = 0; tabsListo = false; tabsSync = true;
   sincronizar(true)
-    .then(function(){ reprogramar(); votArrancar(); })   // 1373: animaciones y votacion abierta
+    .then(function(){ reprogramar(); votArrancar(); selArrancar(); })   // 1373: animaciones y votacion abierta; 1388: seleccion
     .catch(function(e){
       if(ruidoso(e)) sistema("error: " + e.message, "error");
       if(e && e.message !== "401") reprogramar();
@@ -7167,6 +7348,13 @@ window.__agente = {
   // 1373: votador por pares y animaciones del spinner (`prueba_web_animaciones`)
   votArrancar: votArrancar, votCargar: votCargar, votSubir: votSubir, votRecibir: votRecibir, votAbrir: votAbrir,
   votElegir: votElegir, votBasta: votBasta, votMandarTexto: votMandarTexto, votCerrar: votCerrar,
+  // 1388: seleccion con checkboxes (`prueba_seleccion`)
+  selArrancar: selArrancar, selMirar: selMirar, selSubir: selSubir, selAbrir: selAbrir, selAceptar: selAceptar,
+  selEnviarTexto: selEnviarTexto, selCerrar: selCerrar,
+  selEstado: function(){ return {abierto: !!sel.actual, col: sel.actual && sel.actual.coleccion, pend: selLeer("pend", []),
+                                 marcadas: selMarcadas(), abiertas: sel.abiertas.map(function(a){ return a.coleccion; })}; },
+  selReset: function(){ sel.actual = null; sel.abiertas = []; sel.ignorada = {};
+                        ["pend", "hechas"].forEach(function(s){ try{ localStorage.removeItem("agente_sel_" + s); }catch(x){} }); },
   animRanking: animRanking, animSpinner: animSpinner, animSinVer: animSinVer, animValida: animValida,
   votEstado: function(){ return {abierto: votAbierto, par: votPar ? [votPar[0].id, votPar[1].id] : null, pend: votLeer("pend", []),
                                  basta: votLeer("basta", false), items: anims.items.length, votos: votTodos().length,
