@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.296">
-<link rel="manifest" href="manifest.json?v=4.296">
+<meta name="agente-web-version" content="4.297">
+<link rel="manifest" href="manifest.json?v=4.297">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2673,6 +2673,13 @@ function conLlegadas(l, ordenar){
   ix.forEach(function(x, i){ l[i] = x[2]; });
   return nuevo;
 }
+// 1658 (facundo, 2026-09-15): un estado transitorio ("subiendo la foto...", "grabando...") no es un mensaje del
+// chat: se ve en el boton, no en la linea de tiempo. si uno quedo pintado en una version vieja (historial del buzon,
+// otro dispositivo), aca no se vuelve a dibujar nunca.
+var TRANSITORIOS = /^(subiendo (la foto|el audio|la imagen)|grabando|mandando|enviando|procesando)\b/i;
+function esEstadoTransitorio(m){
+  return !!m && (m.clase === "sistema" || m.quien === "web") && TRANSITORIOS.test(String(m.texto || "").trim());
+}
 function mezclar(){
   var porClave = {}, listas = [], lleNuevas = false;
   Object.keys(msgsHist).forEach(function(t){ if(conLlegadas(msgsHist[t] || [], true)) lleNuevas = true; });
@@ -2692,7 +2699,7 @@ function mezclar(){
     return !(c && c.some(function(t){ return Math.abs(t - ts) < CERCA; }));
   });
   if(sueltos.length) listas.push(sueltos);
-  msgs = sinDobles(mezclarOrdenadas(listas));
+  msgs = sinDobles(mezclarOrdenadas(listas)).filter(function(m){ return !esEstadoTransitorio(m); });
   recalcularTemas();
   return msgs.length;
 }
@@ -3302,6 +3309,7 @@ function ruidoso(e){  // 401 ya abrio el login y "freno" ya aviso: no repetir en
   return !!m && m !== "401" && m !== "freno";
 }
 function sistema(t, clase){
+  if(esEstadoTransitorio({clase: clase || "sistema", quien: "web", texto: t})) return;   // 1658: el estado va en el boton
   var pego = pegadoAbajo();
   var m = {clase: clase || "sistema", quien: "web", texto: t, iso: new Date().toISOString(),
            explicito: true, tema: temaActivo()};
@@ -5804,8 +5812,8 @@ function mandarFoto(file, pieTexto, tsEnvio){
   tsEnvio = tsEnvio || Date.now();      // se mando ahora, aunque el mensaje salga cuando termine de subir
   if(!token && !fotoStub){ sistema("no se puede subir la foto sin token", "error"); return Promise.resolve(); }
   subiendoFoto = true;
-  $("camara").disabled = true;
-  sistema("subiendo la foto...", "sistema");
+  $("camara").disabled = true;   // 1658: mientras sube alcanza con el boton apagado,
+                               // sin ningun mensaje en el chat (el de la foto sale con `tsEnvio`)
   var blob, ruta;
   return comprimirFoto(file).then(function(b){
     blob = b;
