@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.294">
-<link rel="manifest" href="manifest.json?v=4.294">
+<meta name="agente-web-version" content="4.295">
+<link rel="manifest" href="manifest.json?v=4.295">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2468,7 +2468,7 @@ function verImagen(url, alt){
   }
   v.addEventListener("pointerdown", function(e){
     if(e.target === x) return;
-    if(!Object.keys(ptrs).length) movio = false;
+    if(e.isPrimary){ ptrs = {}; movio = false; }   // primer dedo: si quedo un puntero sin soltar (safari, cancel), se limpia
     ptrs[e.pointerId] = {x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY};
     try{ v.setPointerCapture(e.pointerId); }catch(err){}
     if(Object.keys(ptrs).length >= 2) movio = true;   // dos dedos nunca es un toque que cierra
@@ -2520,6 +2520,7 @@ function verImagen(url, alt){
     window.removeEventListener("resize", reacomodar);
   }
   v.__cerrar = cerrar;
+  v.__z = z;                                        // para las pruebas: escala y corrimiento de adentro
   x.addEventListener("click", function(e){ e.stopPropagation(); cerrar(); });
   v.addEventListener("click", function(e){        // el fondo cierra solo a 1x y si no fue un gesto
     if(e.target === im || z.s > 1.01 || movio){ movio = false; return; }
