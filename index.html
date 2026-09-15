@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.271">
-<link rel="manifest" href="manifest.json?v=4.271">
+<meta name="agente-web-version" content="4.272">
+<link rel="manifest" href="manifest.json?v=4.272">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -3849,15 +3849,7 @@ $("amtxt").addEventListener("keydown", function(ev){
   if(ev.key === "Enter" && !ev.shiftKey){ ev.preventDefault(); animGusto("nota", $("amtxt").value); }
 });
 $("amcerrar").addEventListener("click", animMenuCerrar);
-// correccion de facundo (12:25): `esc` cierra sin guardar nada, tambien con el foco en el campo de `...`
-document.addEventListener("keydown", function(ev){
-  if((ev.key === "Escape" || ev.key === "Esc") && !$("animmenu").classList.contains("oculta")){
-    ev.preventDefault(); ev.stopPropagation();
-    $("amtxt").value = "";
-    try{ $("amtxt").blur(); }catch(x){}
-    animMenuCerrar();
-  }
-}, true);
+// correccion de facundo (12:25): `esc` cierra sin guardar nada, tambien con el foco en el campo de `...` (lo hace escTope)
 $("animmenu").addEventListener("click", function(ev){ if(ev.target === $("animmenu")) animMenuCerrar(); });
 $("vtbasta").addEventListener("click", votBasta);
 $("vtmandar").addEventListener("click", votMandarTexto);
@@ -7721,8 +7713,31 @@ if(mqMobile){
   sep.addEventListener("pointercancel", soltar);
 })();
 $("ddfondo").addEventListener("click", cerrarDd);
+// 1455 (facundo, 2026-09-15): `esc` cierra el modal u overlay de mas arriba, uno por toque, tambien escribiendo en un
+// campo. cerrar con esc = cerrar/basta sin mandar: no sube votos, no marca nada y no se reabre solo en esta carga
+// (el votador queda con `votAuto`, la seleccion en `sel.ignorada`). orden = z-index, del mas alto al mas bajo.
+function escTope(){
+  var v = document.getElementById("visor");
+  if(v){ v.click(); return "visor"; }
+  if(!$("selmodal").classList.contains("oculta")){ selCerrar(); return "seleccion"; }
+  if(!$("animmenu").classList.contains("oculta")){
+    $("amtxt").value = "";
+    try{ $("amtxt").blur(); }catch(x){}
+    animMenuCerrar(); return "animmenu";
+  }
+  if(!$("votar").classList.contains("oculta")){ votCerrar(); return "votar"; }
+  if(campanaAbierta){ cerrarCampana(); return "campana"; }
+  if(menuAbierto || !$("ctx").classList.contains("oculta")){ cerrarMenu(); return "menu"; }
+  if(modalAbierto || !$("modal").classList.contains("oculta")){ cerrarModal(); return "modal"; }
+  if(notiPush){ cerrarNotiPush(); return "notimodal"; }
+  if(!$("dd").classList.contains("oculta")){ cerrarDd(); return "dd"; }
+  return null;
+}
 document.addEventListener("keydown", function(e){
-  if(e.key === "Escape"){ cerrarMenu(); cerrarDd(); cerrarModal(); cerrarCampana(); cerrarNotiPush(); return; }
+  if(e.key !== "Escape" && e.key !== "Esc") return;
+  if(escTope()){ e.preventDefault(); e.stopImmediatePropagation(); }   // capture: ni el campo ni otro handler lo ven
+}, true);
+document.addEventListener("keydown", function(e){
   // con el modal abierto, a/b/c dispara la accion de esa letra
   if(!modalAbierto || e.metaKey || e.ctrlKey || e.altKey) return;
   if(e.target && /^(TEXTAREA|INPUT)$/.test(e.target.tagName || "")) return;   // escribiendo (la respuesta de un aviso)
@@ -7873,6 +7888,7 @@ window.__agente = {
   animRanking: animRanking, animSpinner: animSpinner, animSinVer: animSinVer, animValida: animValida,
   // 1453: rotacion y menu del toque
   animRotable: animRotable, animGus: animGus, animMenuAbrir: animMenuAbrir, animMenuCerrar: animMenuCerrar,
+  escTope: escTope, verImagen: verImagen,   // 1455: esc cierra el de mas arriba (`prueba_web_votar`)
   animGusto: animGusto, animGustosSubir: animGustosSubir,
   amEstado: function(){ return {abierto: !$("animmenu").classList.contains("oculta"), anim: amAnim && amAnim.id,
                                  pend: votLeer("gustos_pend", []), loc: votLeer("gustos_loc", null), gustos: anims.gustos,
