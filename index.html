@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.284">
-<link rel="manifest" href="manifest.json?v=4.284">
+<meta name="agente-web-version" content="4.285">
+<link rel="manifest" href="manifest.json?v=4.285">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -763,6 +763,8 @@
     margin:0 0 3px 5px;
   }
   #tabs .barrabtn:active{background:#111}
+  /* + de pestaña nueva sin borde (facundo, 2026-09-15, orden 1557): el 1px vuelve al padding, mismo alto */
+  #tabs .barrabtn[data-accion="nueva_tab"]{border:0;padding:3px 8px}
   #tabs .relleno{flex:1 1 auto;min-width:8px}
   /* ---------- notificaciones (facundo, 2026-09-13, orden 1162) ----------
      solo el ultimo aviso sin leer, debajo de las pestañas, en una linea (hora + primeras palabras), sin look de
@@ -2385,13 +2387,16 @@ function mezclarOrdenadas(listas){
 }
 // 1553: cada respuesta toma su hora de llegada (una respuesta nunca antes de su pregunta) y la lista se reordena
 // por esas horas, estable: el orden del chat sigue lo que se ve en las cabeceras
-function conLlegadas(l){
+// los comentarios del buzon (`ordenar` false) solo toman la hora: siguen en el orden en que llegaron, que es del
+// que dependen las cajas (la respuesta a una caja es el mensaje de f que viene despues) y las vistas guardadas
+function conLlegadas(l, ordenar){
   var nuevo = false, ultQ = 0;
   l.forEach(function(m){
     if(m.clase === "yo"){ ultQ = fecha(m.iso); return; }
     if(horaLlegada(m)) nuevo = true;
-    if(m.srv && ultQ && fecha(m.iso) < ultQ) m.iso = new Date(ultQ).toISOString();
+    if(ordenar && m.srv && ultQ && fecha(m.iso) < ultQ) m.iso = new Date(ultQ).toISOString();
   });
+  if(!ordenar) return nuevo;
   var ix = l.map(function(m, i){ return [fecha(m.iso), i, m]; });
   ix.sort(function(a, b){ return a[0] - b[0] || a[1] - b[1]; });
   ix.forEach(function(x, i){ l[i] = x[2]; });
@@ -2399,8 +2404,8 @@ function conLlegadas(l){
 }
 function mezclar(){
   var porClave = {}, listas = [], lleNuevas = false;
-  Object.keys(msgsHist).forEach(function(t){ if(conLlegadas(msgsHist[t] || [])) lleNuevas = true; });
-  if(conLlegadas(msgsCom)) lleNuevas = true;
+  Object.keys(msgsHist).forEach(function(t){ if(conLlegadas(msgsHist[t] || [], true)) lleNuevas = true; });
+  if(conLlegadas(msgsCom, false)) lleNuevas = true;
   if(lleNuevas){ guardarCache(); publicarTabs(); }
   Object.keys(msgsHist).sort().forEach(function(t){
     var l = msgsHist[t] || [];
@@ -8337,7 +8342,7 @@ window.__agente = {
   // 1553: horas de llegada de las respuestas (`prueba_web_tabs`)
   llegadas: function(){ return JSON.parse(JSON.stringify(llegadas)); },
   recibirLlegadas: recibirLlegadas, borrarLlegadas: function(){ llegadas = {}; guardarCache(); },
-  desde: desde, fecha: fecha,
+  hhmmIso: desde, fecha: fecha,
   abrirTab: abrirTab, renombrarTab: renombrarTab,
   // header de cada widget: [↻] actualizar, [⚙] settings, plegar tocando el titulo
   wsets: function(){ return wsetsLimpias(); },
