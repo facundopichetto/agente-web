@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.276">
-<link rel="manifest" href="manifest.json?v=4.276">
+<meta name="agente-web-version" content="4.277">
+<link rel="manifest" href="manifest.json?v=4.277">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -4089,7 +4089,9 @@ function tjFin(){
   var e = sel.actual;
   if(!e) return;
   var hs = selLeer("hechas", {}); hs[e.coleccion] = e.abrir_ts; selEscribir("hechas", hs);
-  var r = {id: lidNuevo(), tipo: "aceptar", ts: Date.now(), marcadas: [], texto: ""};
+  // `fin`: le dice al server que este `aceptar` es el del modal de tarjetas (una tanda entera decidida) y no el
+  // de una pagina vieja que todavia pinta la lista de checkboxes. solo este cierra la tanda.
+  var r = {id: lidNuevo(), tipo: "aceptar", fin: true, ts: Date.now(), marcadas: [], texto: ""};
   var pend = selLeer("pend", []); pend.push({col: e.coleccion, r: r}); selEscribir("pend", pend);
   sel.actual = null;
   selModoLista(true);
