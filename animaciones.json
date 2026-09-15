@@ -326,6 +326,536 @@
     "#e040a0",
     "#9b5cff"
    ]
+  },
+  {
+   "id": "chispazo",
+   "nombre": "chispazo",
+   "frames": [
+    "·",
+    "+",
+    "*",
+    "#",
+    "*",
+    "+"
+   ],
+   "intervalo": 55,
+   "alta": "2026-09-15",
+   "origen": "largo-1",
+   "colores": [
+    "#e0b000",
+    "#f59e0b",
+    "#f97316",
+    "#e8233a",
+    "#f97316",
+    "#f59e0b"
+   ]
+  },
+  {
+   "id": "boom",
+   "nombre": "boom",
+   "frames": [
+    ".",
+    "o",
+    "O",
+    "@",
+    "*",
+    "·",
+    " "
+   ],
+   "intervalo": 60,
+   "alta": "2026-09-15",
+   "origen": "largo-1",
+   "colores": [
+    "#e0b000",
+    "#f59e0b",
+    "#f97316",
+    "#e8233a",
+    "#f97316",
+    "#f59e0b",
+    "#f59e0b"
+   ]
+  },
+  {
+   "id": "latido-0915",
+   "nombre": "latido",
+   "frames": [
+    "·",
+    "•",
+    "●",
+    "◉",
+    "◎",
+    "○"
+   ],
+   "intervalo": 55,
+   "alta": "2026-09-15",
+   "origen": "largo-1",
+   "colores": [
+    "#e8233a",
+    "#e8233a",
+    "#e8233a",
+    "#e040a0",
+    "#e040a0",
+    "#e8233a"
+   ]
+  },
+  {
+   "id": "giro-fuego",
+   "nombre": "giro de fuego",
+   "frames": [
+    "|",
+    "/",
+    "-",
+    "\\"
+   ],
+   "intervalo": 50,
+   "alta": "2026-09-15",
+   "origen": "largo-1",
+   "colores": [
+    "#e0b000",
+    "#f59e0b",
+    "#f97316",
+    "#e8233a"
+   ]
+  },
+  {
+   "id": "glitch",
+   "nombre": "glitch",
+   "frames": [
+    "▓",
+    "░",
+    "█",
+    "▒",
+    "▌",
+    "▐"
+   ],
+   "intervalo": 50,
+   "alta": "2026-09-15",
+   "origen": "largo-1",
+   "colores": [
+    "#00b0cc",
+    "#e040a0",
+    "#20b85a",
+    "#9b5cff",
+    "#00b0cc",
+    "#e040a0"
+   ]
+  },
+  {
+   "id": "estrella",
+   "nombre": "estrella",
+   "frames": [
+    "+",
+    "x",
+    "*",
+    "X",
+    "*",
+    "x"
+   ],
+   "intervalo": 60,
+   "alta": "2026-09-15",
+   "origen": "largo-1",
+   "colores": [
+    "#e0b000",
+    "#f59e0b",
+    "#e0b000",
+    "#f97316",
+    "#e0b000",
+    "#f59e0b"
+   ]
+  },
+  {
+   "id": "semaforo",
+   "nombre": "semaforo loco",
+   "frames": [
+    "●",
+    "●",
+    "●",
+    "○"
+   ],
+   "intervalo": 70,
+   "alta": "2026-09-15",
+   "origen": "largo-1",
+   "colores": [
+    "#20b85a",
+    "#e0b000",
+    "#e8233a",
+    "#e8233a"
+   ]
+  },
+  {
+   "id": "lluvia",
+   "nombre": "lluvia braille",
+   "frames": [
+    "⠁",
+    "⠂",
+    "⠄",
+    "⡀",
+    "⢀",
+    "⠠",
+    "⠐",
+    "⠈"
+   ],
+   "intervalo": 50,
+   "alta": "2026-09-15",
+   "origen": "largo-1",
+   "colores": [
+    "#00b0cc",
+    "#2f8cff",
+    "#9b5cff",
+    "#e040a0",
+    "#00b0cc",
+    "#2f8cff",
+    "#9b5cff",
+    "#e040a0"
+   ]
+  },
+  {
+   "id": "braille-giro",
+   "nombre": "giro braille",
+   "frames": [
+    "⠋",
+    "⠙",
+    "⠹",
+    "⠸",
+    "⠼",
+    "⠴",
+    "⠦",
+    "⠧",
+    "⠇",
+    "⠏"
+   ],
+   "intervalo": 50,
+   "alta": "2026-09-15",
+   "origen": "largo-1",
+   "colores": [
+    "#e8233a",
+    "#f97316",
+    "#e0b000",
+    "#20b85a",
+    "#00b0cc",
+    "#2f8cff",
+    "#9b5cff",
+    "#e040a0",
+    "#e8233a",
+    "#f97316"
+   ]
+  },
+  {
+   "id": "luna",
+   "nombre": "luna loca",
+   "frames": [
+    "◐",
+    "◓",
+    "◑",
+    "◒"
+   ],
+   "intervalo": 60,
+   "alta": "2026-09-15",
+   "origen": "largo-1",
+   "colores": [
+    "#2f8cff",
+    "#9b5cff",
+    "#e040a0",
+    "#00b0cc"
+   ]
+  },
+  {
+   "id": "ecualizador-0915",
+   "nombre": "ecualizador",
+   "frames": [
+    "▁",
+    "▃",
+    "▅",
+    "▇",
+    "█",
+    "▆",
+    "▄",
+    "▂"
+   ],
+   "intervalo": 50,
+   "alta": "2026-09-15",
+   "origen": "largo-1",
+   "colores": [
+    "#20b85a",
+    "#20b85a",
+    "#e0b000",
+    "#f59e0b",
+    "#e8233a",
+    "#f59e0b",
+    "#e0b000",
+    "#20b85a"
+   ]
+  },
+  {
+   "id": "petardo",
+   "nombre": "petardo",
+   "frames": [
+    "i",
+    "!",
+    "*",
+    "#",
+    "%",
+    "·",
+    " "
+   ],
+   "intervalo": 60,
+   "alta": "2026-09-15",
+   "origen": "largo-1",
+   "colores": [
+    "#f59e0b",
+    "#e0b000",
+    "#f97316",
+    "#e8233a",
+    "#e040a0",
+    "#f59e0b",
+    "#f59e0b"
+   ]
+  },
+  {
+   "id": "pixel",
+   "nombre": "pixel",
+   "frames": [
+    "▖",
+    "▘",
+    "▝",
+    "▗",
+    "▚",
+    "▞",
+    "█",
+    " "
+   ],
+   "intervalo": 55,
+   "alta": "2026-09-15",
+   "origen": "largo-1",
+   "colores": [
+    "#00b0cc",
+    "#20b85a",
+    "#e0b000",
+    "#e040a0",
+    "#9b5cff",
+    "#2f8cff",
+    "#e8233a",
+    "#e8233a"
+   ]
+  },
+  {
+   "id": "neon",
+   "nombre": "neon",
+   "frames": [
+    "O",
+    "0",
+    "o",
+    "°",
+    "o",
+    "0"
+   ],
+   "intervalo": 60,
+   "alta": "2026-09-15",
+   "origen": "largo-1",
+   "colores": [
+    "#e040a0",
+    "#9b5cff",
+    "#2f8cff",
+    "#00b0cc",
+    "#2f8cff",
+    "#9b5cff"
+   ]
+  },
+  {
+   "id": "caos",
+   "nombre": "caos",
+   "frames": [
+    "?",
+    "!",
+    "#",
+    "@",
+    "%",
+    "&",
+    "$"
+   ],
+   "intervalo": 50,
+   "alta": "2026-09-15",
+   "origen": "largo-1",
+   "colores": [
+    "#e8233a",
+    "#e0b000",
+    "#9b5cff",
+    "#00b0cc",
+    "#f97316",
+    "#20b85a",
+    "#e040a0"
+   ]
+  },
+  {
+   "id": "anillo-0915",
+   "nombre": "anillo",
+   "frames": [
+    "·",
+    "o",
+    "O",
+    "◎",
+    "○",
+    " "
+   ],
+   "intervalo": 60,
+   "alta": "2026-09-15",
+   "origen": "largo-1",
+   "colores": [
+    "#e0b000",
+    "#f59e0b",
+    "#f97316",
+    "#e8233a",
+    "#e040a0",
+    "#e040a0"
+   ]
+  },
+  {
+   "id": "resorte",
+   "nombre": "resorte",
+   "frames": [
+    "_",
+    "▂",
+    "▄",
+    "▆",
+    "█",
+    "▆",
+    "▄",
+    "▂"
+   ],
+   "intervalo": 50,
+   "alta": "2026-09-15",
+   "origen": "largo-1",
+   "colores": [
+    "#2f8cff",
+    "#00b0cc",
+    "#20b85a",
+    "#e0b000",
+    "#e8233a",
+    "#e0b000",
+    "#20b85a",
+    "#00b0cc"
+   ]
+  },
+  {
+   "id": "ojo",
+   "nombre": "ojo",
+   "frames": [
+    "o",
+    "O",
+    "@",
+    "-",
+    "o",
+    "°"
+   ],
+   "intervalo": 70,
+   "alta": "2026-09-15",
+   "origen": "largo-1",
+   "colores": [
+    "#20b85a",
+    "#00b0cc",
+    "#e040a0",
+    "#20b85a",
+    "#20b85a",
+    "#e0b000"
+   ]
+  },
+  {
+   "id": "rayo",
+   "nombre": "rayo",
+   "frames": [
+    "/",
+    "\\",
+    "|",
+    "X",
+    "#",
+    "*",
+    " "
+   ],
+   "intervalo": 50,
+   "alta": "2026-09-15",
+   "origen": "largo-1",
+   "colores": [
+    "#e0b000",
+    "#00b0cc",
+    "#e0b000",
+    "#00b0cc",
+    "#e8233a",
+    "#f59e0b",
+    "#f59e0b"
+   ]
+  },
+  {
+   "id": "diamante",
+   "nombre": "diamante",
+   "frames": [
+    "◇",
+    "◆",
+    "◈",
+    "◆"
+   ],
+   "intervalo": 60,
+   "alta": "2026-09-15",
+   "origen": "largo-1",
+   "colores": [
+    "#00b0cc",
+    "#2f8cff",
+    "#9b5cff",
+    "#e040a0"
+   ]
+  },
+  {
+   "id": "llama",
+   "nombre": "llama",
+   "frames": [
+    ".",
+    ":",
+    "i",
+    "!",
+    "|",
+    "!",
+    "i",
+    ":"
+   ],
+   "intervalo": 50,
+   "alta": "2026-09-15",
+   "origen": "largo-1",
+   "colores": [
+    "#e0b000",
+    "#f59e0b",
+    "#f97316",
+    "#e8233a",
+    "#e8233a",
+    "#f97316",
+    "#f59e0b",
+    "#e0b000"
+   ]
+  },
+  {
+   "id": "supernova",
+   "nombre": "supernova",
+   "frames": [
+    ".",
+    "*",
+    "@",
+    "#",
+    "@",
+    "*",
+    ".",
+    " "
+   ],
+   "intervalo": 55,
+   "alta": "2026-09-15",
+   "origen": "largo-1",
+   "colores": [
+    "#e0b000",
+    "#e0b000",
+    "#f97316",
+    "#e8233a",
+    "#e040a0",
+    "#9b5cff",
+    "#2f8cff",
+    "#2f8cff"
+   ]
   }
  ]
 }
