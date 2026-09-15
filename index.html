@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.268">
-<link rel="manifest" href="manifest.json?v=4.268">
+<meta name="agente-web-version" content="4.269">
+<link rel="manifest" href="manifest.json?v=4.269">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2854,6 +2854,7 @@ function pintarMsg(m, arriba){
   // reciente, con cita = la de esa respuesta, `me arrepentí` = la reabre)
   if(!arriba && m.clase === "yo" && !renderando) refrescarCajas();
   if(!arriba && m.clase === "agente") pintarChips();   // contesto el daemon: sugerencias nuevas
+  if(!arriba && m.clase === "agente") spConfirmo(m);   // 1432: la confirmacion de una carga del widget de salud
   if(!arriba && vuelo) pintarVuelo();                   // el bloque en vuelo queda siempre al final
 }
 var renderando = false;   // el render entero arma cada caja ya con todos los mensajes: no hace falta refrescar
@@ -6001,18 +6002,74 @@ function cajaDj(p){
   return caja("dj", extra, limFilas("dj", filas).join("\n"), false, "dj");
 }
 
+// carga de salud desde el widget (1432): sale `salud cargar: ...` a la pestaña personal sin tocar la caja del chat
+// (`mandarAparte`) y lo resuelve el daemon sin modelo (`recetas/salud_chat.cmd`). `spCarga` pinta `guardando`
+// hasta que llega la respuesta, y despues su linea de confirmacion unos minutos.
+var spCarga = null, SP_CARGA_MS = 5 * 60 * 1000, spUltimoCmd = "";
+var RE_SP_CONF = /(?:guardé en salud|saqué de salud|corregí en salud|no cargué nada|no había nada para deshacer|no pude:)[^\n]*/;
+function spMandar(cmdTxt, visto){
+  spCarga = {texto: visto, ts: Date.now(), conf: ""};
+  spUltimoCmd = cmdTxt;
+  cerrarModal();
+  mandarAparte = true;
+  try{ mandar(cmdTxt, "personal", false); }
+  finally{ mandarAparte = false; }
+  repintarWidgets();
+}
+function spConfirmo(m){
+  if(!spCarga || spCarga.conf || m.clase !== "agente") return false;
+  var r = RE_SP_CONF.exec(String(m.texto || ""));
+  if(!r) return false;
+  spCarga.conf = r[0].replace(/[`*]/g, "").trim();
+  spCarga.ts = Date.now();
+  repintarWidgets();
+  return true;
+}
+function spDia(fecha, p){
+  return fecha === ((p || {}).hoy || {}).fecha ? "hoy" : fecha === ((p || {}).ayer || {}).fecha ? "ayer" : fecha;
+}
+function spItemTxt(x, p){
+  var dia = spDia(x.fecha, p), v = x.tipo === "peso" ? (+x.valor).toFixed(1) + " kg" : String(x.valor);
+  return x.tipo + " <code>" + esc(unaLinea(v, 60)) + "</code>" + (dia === "hoy" ? "" : ' <span class="g">(' + esc(dia) + ")</span>");
+}
 function cajaSaludPersonal(p){
   // salud de facundo (tema personal, 2026-09-13): peso y tendencia, comidas de hoy, racha y edad.
-  // lo arma `recetas/salud_personal.py` (`widget()`), se carga desde el chat sin modelo.
+  // lo arma `recetas/salud_personal.py` (`widget()`). 1432 (facundo, 2026-09-15: "no puedo cargarle cosas desde
+  // el widget"): la primera fila `+ cargar` abre un modal con texto libre, cada dato de hoy y ayer se toca para
+  // corregir o borrar, y la linea `guardé` (o la ultima carga del json) se toca para deshacer.
   if(p.error) return caja("salud personal", "", vacio(p.error), false, "salud_personal");
   var t = p.tendencia_7;
   var extra = (p.peso ? '<span class="v b">' + (+p.peso).toFixed(1) + " kg</span>" : '<span class="g">sin peso</span>') +
               (t === null || t === undefined ? "" :
                ' <span class="' + (t <= 0 ? "v" : "a") + '">7d ' + (t > 0 ? "+" : "") + (+t).toFixed(1) + "</span>");
-  var filas = [];
-  (p.comidas_hoy || []).forEach(function(c){ filas.push("· " + esc(c)); });
-  if(!filas.length) filas.push(vacio("sin comidas hoy"));
-  (p.notas_hoy || []).forEach(function(n){ filas.push('<span class="g">nota: ' + esc(n) + "</span>"); });
+  var filas = [it({tipo: "salud_cargar", tema: "personal", d: {}},
+                  '<span class="c b">+ cargar</span> <span class="g">comí, peso, nota, ayer...</span>')];
+  if(spCarga && Date.now() - spCarga.ts > SP_CARGA_MS) spCarga = null;
+  if(spCarga) filas.push(it({tipo: "salud_ultima", tema: "personal", d: {}}, spCarga.conf ?
+    '<span class="' + (/^no /.test(spCarga.conf) ? "a" : "v") + '">' + esc(spCarga.conf) + "</span>" :
+    '<span class="g">guardando: ' + esc(unaLinea(spCarga.texto, 80)) + "</span>"));
+  else if(p.ultima && (p.ultima.items || []).length) filas.push(it({tipo: "salud_ultima", tema: "personal", d: p.ultima},
+    '<span class="g">última carga</span> ' + p.ultima.items.map(function(x){ return spItemTxt(x, p); }).join(", ")));
+  [p.hoy, p.ayer].forEach(function(dia, n){
+    if(!dia) return;
+    var dd = [];
+    if(dia.peso) dd.push(it({tipo: "salud_dato", tema: "personal", d: {fecha: dia.fecha, tipo: "peso", valor: dia.peso}},
+                            "peso <b>" + (+dia.peso).toFixed(1) + " kg</b>"));
+    (dia.comidas || []).forEach(function(c, i){
+      dd.push(it({tipo: "salud_dato", tema: "personal", d: {fecha: dia.fecha, tipo: "comida", i: i, valor: c}}, "· " + esc(c)));
+    });
+    (dia.notas || []).forEach(function(c, i){
+      dd.push(it({tipo: "salud_dato", tema: "personal", d: {fecha: dia.fecha, tipo: "nota", i: i, valor: c}},
+                 '<span class="g">nota:</span> ' + esc(c)));
+    });
+    if(!n && !dd.length) dd.push(vacio("hoy todavía nada"));
+    if(dd.length) filas.push('<span class="g b">' + (n ? "ayer" : "hoy") + "</span>");
+    filas = filas.concat(dd);
+  });
+  if(!p.hoy){                                   // json viejo (antes de 1432): lo de siempre
+    (p.comidas_hoy || []).forEach(function(c){ filas.push("· " + esc(c)); });
+    (p.notas_hoy || []).forEach(function(n){ filas.push('<span class="g">nota: ' + esc(n) + "</span>"); });
+  }
   var pie = "racha <b>" + (p.racha || 0) + "d</b>" + (p.edad !== null && p.edad !== undefined ? " · " + p.edad + " años" : "") +
             (p.imc ? " · imc " + p.imc : "");
   if((p.faltan_perfil || []).length) pie += ' <span class="g">· falta ' + esc(p.faltan_perfil.join(", ")) + "</span>";
@@ -6733,7 +6790,7 @@ function accHablar(o, contexto){
 var TEMA_WIDGET = {server: "server", salud: "tools", usage: "tools", agent: "tools", cola: "tools", verificaciones: "awtomic/qa",
                    tickets: "awtomic", oportunidades: "tools", decided: "tools", sombra: "tools",
                    propuestas: "tools", podcast: "podcast", dj: "fuzzer", mail: "fuzzer",
-                   que_ver: "personal"};
+                   que_ver: "personal", salud_personal: "personal"};
 var ESC_CHARS = 300;
 function temaWidget(clave){
   var t = TEMA_WIDGET[clave] || "tools";
@@ -7008,6 +7065,45 @@ function modalDe(o){
       return link(v.url, v.voz + (v.min ? " " + v.min + "m" : ""));
     }).join(" · ");
     m.acciones.push(accHablar(o, "el episodio «" + corto(d.titulo, 60) + "»"));
+  } else if(o.tipo === "salud_cargar"){
+    // 1432: texto libre como en el chat. corregir llega con el dato viejo escrito y lo reemplaza en su dia
+    var p = (widDatos || {}).salud_personal || {};
+    m.titulo = d.corregir ? "corregir " + d.tipo + " de " + spDia(d.fecha, p) : "cargar en salud";
+    m.cuerpo = '<span class="g">como en el chat:</span> <code>ayer comí 250g de ojo de bife</code>, <code>72.8</code>, ' +
+      "<code>hoy no me pesé</code>" +
+      '<textarea id="spcarga" class="nresp" rows="3" enterkeyhint="send" autocomplete="off" autocapitalize="off" ' +
+      'spellcheck="false" placeholder="qué comiste, cuánto pesás o una nota">' +
+      esc(d.corregir ? (d.tipo === "peso" ? (+d.valor).toFixed(1) : d.valor) : "") + "</textarea>";
+    m.foco = "spcarga";
+    m.sinEscribir = true;
+    m.acciones.push(["guardar", function(){
+      var v = ($("spcarga") || {}).value || "";
+      v = v.replace(/\s+/g, " ").trim();
+      if(!v) return;
+      spMandar(d.corregir ? "salud corregir " + d.fecha + " " + d.tipo + (d.i === undefined ? "" : " " + d.i) + ": " + v
+                          : "salud cargar: " + v, v);
+    }, true]);
+    m.acciones.push(["cerrar", cerrarModal]);
+  } else if(o.tipo === "salud_dato"){
+    var p2 = (widDatos || {}).salud_personal || {};
+    m.titulo = "salud · " + d.tipo + " de " + spDia(d.fecha, p2);
+    m.cuerpo = d.tipo === "peso" ? "<b>" + (+d.valor).toFixed(1) + " kg</b>" : esc(d.valor);
+    m.sinEscribir = true;
+    m.acciones.push(["corregir", function(){
+      abrirModal({tipo: "salud_cargar", tema: "personal", d: {corregir: true, fecha: d.fecha, tipo: d.tipo, i: d.i, valor: d.valor}});
+    }, true]);
+    m.acciones.push(["borrar", function(){
+      spMandar("salud borrar " + d.fecha + " " + d.tipo + (d.i === undefined ? "" : " " + d.i), "borrar " + d.tipo);
+    }]);
+    m.acciones.push(["cerrar", cerrarModal]);
+  } else if(o.tipo === "salud_ultima"){
+    m.titulo = "última carga en salud";
+    m.cuerpo = spCarga && spCarga.conf ? esc(spCarga.conf) : spCarga ? '<span class="g">guardando: ' + esc(spCarga.texto) + "</span>" :
+      (d.items || []).map(function(x){ return spItemTxt(x, (widDatos || {}).salud_personal); }).join("\n");
+    m.sinEscribir = true;
+    m.acciones.push(["deshacer", function(){ spMandar("salud deshacer", "deshacer"); }, true]);
+    m.acciones.push(["cargar otra cosa", function(){ abrirModal({tipo: "salud_cargar", tema: "personal", d: {}}); }]);
+    m.acciones.push(["cerrar", cerrarModal]);
   } else if(o.tipo === "salud"){
     m.titulo = "salud · " + (d.nombre || "");
     m.cuerpo = '<span class="' + (SALUD_COLOR[d.estado] || "g") + ' b">' + esc(d.estado || "?") + "</span>" +
@@ -7029,8 +7125,13 @@ var LETRAS = "abcdefghij";
 var modalAbierto = null;
 function abrirModal(o){
   var m = modalDe(o);
-  m.acciones.push(accEscribir(o, m));
+  if(!m.sinEscribir) m.acciones.push(accEscribir(o, m));
   pintarModal(m);
+  if(m.foco && $(m.foco)){                 // en el mismo toque: ios solo abre el teclado asi
+    var f = $(m.foco);
+    f.focus();
+    f.setSelectionRange(f.value.length, f.value.length);
+  }
 }
 
 // ---------- settings de un widget (facundo, 2026-09-12) ----------
@@ -7106,6 +7207,13 @@ function cerrarModal(){
 }
 $("mfondo").addEventListener("click", cerrarModal);
 $("mcerrar").addEventListener("click", cerrarModal);
+// 1432: en la carga de salud enter guarda (shift+enter baja de linea), igual que el chat
+$("mcuerpo").addEventListener("keydown", function(e){
+  if(e.target.id !== "spcarga" || e.key !== "Enter" || e.shiftKey || e.isComposing) return;
+  e.preventDefault();
+  var b = $("macc").querySelector("button.principal");
+  if(b) b.click();
+});
 
 // ---------- menu contextual (facundo, 2026-09-11) ----------
 // tap and hold (~500 ms, sin disparar el scroll ni la seleccion) en el celu y click derecho en desktop:
@@ -7587,6 +7695,11 @@ prepararDictado();     // 1209: preguntar una vez si el celu puede transcribir o
 
 window.__agente = {
   fmtTiempo: fmtTiempo,
+  // 1432: widget de salud personal (`prueba_web_salud`)
+  spCaja: function(p){ widDatos = widDatos || {}; widDatos.salud_personal = p; return cajaSaludPersonal(p); },
+  spItems: function(){ return itemsW; }, abrirModal: abrirModal, cerrarModal: cerrarModal, spConfirmo: spConfirmo,
+  spEstado: function(){ return {carga: spCarga, cmd: spUltimoCmd}; },
+  spReset: function(){ spCarga = null; spUltimoCmd = ""; },
   // 1373: votador por pares y animaciones del spinner (`prueba_web_animaciones`)
   votArrancar: votArrancar, votCargar: votCargar, votSubir: votSubir, votRecibir: votRecibir, votAbrir: votAbrir,
   votElegir: votElegir, votBasta: votBasta, votMandarTexto: votMandarTexto, votCerrar: votCerrar,
