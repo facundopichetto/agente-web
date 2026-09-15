@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.291">
-<link rel="manifest" href="manifest.json?v=4.291">
+<meta name="agente-web-version" content="4.292">
+<link rel="manifest" href="manifest.json?v=4.292">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -233,7 +233,7 @@
   #sellista .selmot{font-style:italic}
   /* 1404: foto redonda (96 px servida por chat_lan, se pinta a 32 desde 1533) y `@cuenta` al lado del nombre. sin
      foto o mientras baja, la inicial sobre gris neutro: se lee igual con fondo oscuro y claro */
-  #sellista .selfoto{flex:0 0 auto;width:32px;height:32px;border-radius:50%;overflow:hidden;align-self:center;display:flex;
+  #sellista .selfoto{flex:0 0 auto;flex-shrink:0;box-sizing:border-box;width:32px;height:32px;min-height:32px;border-radius:50%;overflow:hidden;align-self:center;display:flex;
     align-items:center;justify-content:center;background:#8a8a8a;color:#fff;font-size:var(--texto-max);border:1px solid var(--linea)}
   #sellista .selfoto img{width:100%;height:100%;object-fit:cover;display:block}
   #sellista .selcta{color:var(--gris);font-size:11px;margin-left:6px;word-break:break-all}
@@ -267,8 +267,11 @@
   /* 1495 (facundo, 2026-09-15): la foto de perfil arriba y grande, siempre; abajo nombre, marca, estado y en comun */
   #seltarjeta .tjfotos{display:flex;justify-content:center}
   /* 1642: el cdn da la foto de 150 px (antes se bajaba de 96): el circulo mide lo que mide la foto (96 a 220), nunca la estira */
-  #seltarjeta .tjppal{flex:0 0 auto;width:min(150px,60vw);aspect-ratio:1;border-radius:50%;overflow:hidden;display:flex;align-items:center;
-    justify-content:center;background:#111;border:1px solid var(--linea)}
+  /* 1655: safari del iphone ignoraba `aspect-ratio` con `width:min()` en un item flex y la dibujaba ovalada: ancho y
+     alto explicitos con el mismo valor, sin estirar ni encoger */
+  #seltarjeta .tjppal{flex:0 0 auto;flex-shrink:0;width:min(150px,60vw);height:min(150px,60vw);min-height:0;align-self:center;
+    box-sizing:border-box;border-radius:50%;overflow:hidden;display:block;background:#111;border:1px solid var(--linea)}
+  #seltarjeta .tjppal img{width:100%;height:100%;object-fit:cover;display:block}
   #seltarjeta .tjmas{flex:1 1 auto;display:flex;gap:6px;flex-wrap:wrap;min-width:0}
   #seltarjeta .tjmas .tjf{width:56px;height:56px;border-radius:4px;overflow:hidden;border:1px solid var(--linea);background:#111}
   #seltarjeta .tjfotos img{width:100%;height:100%;object-fit:cover;display:block}
@@ -506,6 +509,8 @@
   .cuerpo .aud{display:inline-flex;align-items:center;gap:6px;color:var(--cian)}
   .cuerpo .aud .play{color:var(--cian)}
   .cuerpo .aud .dur{color:var(--gris);font-size:10px}
+  /* 1650: el audio de facundo mientras sube y se manda, como whatsapp: .8 hasta que el server lo confirma */
+  .msg.enviando{opacity:.8}
   #mandar:disabled{color:var(--gris);border-color:transparent}
   #alfinal{
     position:absolute;right:12px;bottom:8px;z-index:5;display:none;
@@ -2640,7 +2645,7 @@ function modeloCorto(s){
 }
 function nodoMsg(m){
   var div = document.createElement("div");
-  div.className = "msg " + m.clase;
+  div.className = "msg " + m.clase + (m.enviando ? " enviando" : "");
   if(m.id) div.dataset.id = m.id;
   var cab = document.createElement("div");
   cab.innerHTML = '<span class="quien"></span><span class="ts"></span>';
@@ -2670,7 +2675,7 @@ function nodoMsg(m){
   b.className = "cuerpo";
   var ops = m.clase === "agente" ? cajasDe(m) : null;
   var dr = draftsDe(ops && ops.cuerpo !== null ? ops.cuerpo : m.texto);
-  b.innerHTML = resaltar(m.clase === "agente" && dr.bloques.length ? dr.cuerpo : (ops && ops.cuerpo !== null ? ops.cuerpo : m.texto));
+  b.innerHTML = resaltar(m.clase === "agente" && dr.bloques.length ? dr.cuerpo : (ops && ops.cuerpo !== null ? ops.cuerpo : (m.clase === "yo" ? sinDictado(m.texto) : m.texto)));
   div.appendChild(cab); div.appendChild(b);
   if(ops && ops.lista.length) div.appendChild(nodoCajas(m, ops.lista));
   if(m.clase === "agente" && dr.bloques.length) div.appendChild(nodoDrafts(dr.bloques));
@@ -4383,7 +4388,8 @@ function tjPintar(){
       bajarImagen(foto).then(function(url){
         if(!tjActual() || tjActual().id !== id) return;
         var im = document.createElement("img"); im.alt = "";
-        im.onload = function(){ if(im.naturalWidth) pp.style.width = "min(" + Math.max(96, Math.min(220, im.naturalWidth)) + "px,60vw)"; };   // 1642
+        // 1642: el circulo mide lo que la foto. 1655: ancho y alto juntos, si no safari lo deja ovalado
+        im.onload = function(){ if(im.naturalWidth){ var d = "min(" + Math.max(96, Math.min(220, im.naturalWidth)) + "px,60vw)"; pp.style.width = d; pp.style.height = d; } };
         im.src = url; pp.appendChild(im);
       }).catch(function(){
         if(!tjActual() || tjActual().id !== id) return;
@@ -5751,13 +5757,7 @@ function pintarAdjunto(){
     n.textContent = "audio " + mmss(Math.round((adjunto.ms || 0) / 1000));
     info.appendChild(n);
     info.appendChild(document.createTextNode("audio listo, escribí algo y mandá"));
-    if(adjunto.dicho){                       // el celu ya lo transcribio: se lee antes de mandar (1209)
-      var dd = document.createElement("span");
-      dd.className = "adj-dicho";
-      dd.textContent = "«" + adjunto.dicho + "»";
-      dd.title = "lo transcribió el celu: va en el mensaje y el server no usa whisper";
-      info.appendChild(dd);
-    }
+    // 1650: el dictado del celu viaja escondido en el mensaje (lo lee el modelo), facundo no lo ve
   }
   caja.appendChild(info);
   var x = document.createElement("button");
@@ -5790,7 +5790,7 @@ function adjuntarAudio(blob, mime, ms, dicho){
   descartarAdjunto();
   adjunto = {tipo: "aud", blob: blob, mime: mime || blob.type || "audio/webm",
              nombre: "audio", ms: ms || 0, url: URL.createObjectURL(blob),
-             // lo que entendio el celu (1209): se ve antes de mandar y viaja en el mensaje
+             // lo que entendio el celu (1209): viaja en el mensaje, nunca se muestra (1650)
              dicho: (dicho && dicho.texto) || "", dictLocal: !!(dicho && dicho.local)};
   pintarAdjunto();
   return adjunto;
@@ -5826,13 +5826,8 @@ function mandarAdjunto(texto){
 // MediaRecorder, cualquier error se come aca y el archivo se manda igual.
 var DICT_LANGS = ["es-AR", "es-419", "es-ES"];
 var DICT_GRACIA = 2500;        // ms de gracia despues del stop(), esperando el ultimo resultado final
+var DICT_REANUDAR = 40;        // 1650: tope de reanudadas por grabacion (ios corta el `continuous` en cada pausa)
 var MARCA_CELU = "(audio de facundo, transcripto en el celu): ";   // la lee `recetas/transcribir_audio.py`
-// ---------- audio del chat: solo el texto transcripto, sin audio, hasta nuevo aviso (facundo, 2026-09-15, orden 1646) ----------
-// "cuando mando un audio ... no aparezca ni siquiera se manda ... la transcripcion del audio como dice el texto pero sin el
-// audio". con texto del celu no se sube el archivo, no hay adjunto ni reproductor y no va `MARCA_CELU`: el texto queda en
-// la caja como si lo hubiera tipeado (desde el modal de una push sale directo). sin texto, el audio sigue como siempre.
-// revertir: `false`.
-var AUDIO_SOLO_TEXTO = true;
 var dictStub = null;           // `prueba_web_audio` enchufa un reconocedor de mentira
 var dictado = null;            // el reconocedor de esta grabacion: {rec, partes, local, err, cerrado}
 var dictOnDevice = null;       // "available" | "downloadable" | "unavailable" | "sin_dato" | null (sin api)
@@ -5861,7 +5856,8 @@ function empezarDictado(){
   var C = claseDictado();
   if(!C) return null;
   try{
-    var rec = new C(), d = {rec: rec, partes: [], local: dictOnDevice === "available", err: null, cerrado: false, fin: null};
+    var rec = new C(), d = {rec: rec, partes: [], local: dictOnDevice === "available", err: null, cerrado: false, fin: null,
+                            reanudadas: 0, parando: false};
     rec.lang = DICT_LANGS[0];
     try{ rec.continuous = true; rec.interimResults = false; rec.maxAlternatives = 1; }catch(e){}
     if(d.local && "processLocally" in rec){ try{ rec.processLocally = true; }catch(e){} }
@@ -5871,7 +5867,16 @@ function empezarDictado(){
         if(rs[i] && rs[i].isFinal && rs[i][0]) d.partes.push(String(rs[i][0].transcript || "").trim());
     };
     rec.onerror = function(e){ d.err = (e && (e.error || e.message)) || "error"; };
-    rec.onend = function(){ d.cerrado = true; if(d.fin) d.fin(); };
+    // 1650: en ios el `continuous` no es continuo, se cierra solo en cada pausa y se perdia lo que venia
+    // despues. si se cierra con el boton todavia apretado se vuelve a arrancar y las partes se juntan; un
+    // error que no es silencio (permiso, micro) no se reintenta, y hay tope. si no arranca, se cierra normal.
+    rec.onend = function(){
+      if(dictado === d && !d.parando && d.reanudadas < DICT_REANUDAR && (!d.err || d.err === "no-speech")){
+        d.reanudadas++; d.err = null;
+        try{ rec.start(); return; }catch(e){}
+      }
+      d.cerrado = true; if(d.fin) d.fin();
+    };
     rec.start();
     dictado = d;
     return d;
@@ -5881,6 +5886,7 @@ function empezarDictado(){
 function cortarDictado(){
   var d = dictado; dictado = null;
   if(!d) return;
+  d.parando = true;
   try{ if(d.rec.abort) d.rec.abort(); else d.rec.stop(); }catch(e){}
 }
 // el texto final, o null si no hubo dictado / no se entendio nada. nunca tira y nunca espera de mas.
@@ -5895,7 +5901,7 @@ function terminarDictado(){
       var t = d.partes.join(" ").replace(/\s+/g, " ").trim();
       res(t ? {texto: t, local: !!d.local} : null);
     }
-    d.fin = cerrar;
+    d.fin = cerrar; d.parando = true;
     setTimeout(cerrar, DICT_GRACIA);
     try{ d.rec.stop(); }catch(e){ cerrar(); }
     if(d.cerrado) cerrar();
@@ -6031,21 +6037,6 @@ function terminarGrabacion(enviar){
     }
     // el texto del celu se espera aca (1209): al soltar ya casi siempre esta, y como mucho DICT_GRACIA
     return terminarDictado().then(function(d){
-      if(AUDIO_SOLO_TEXTO && d && d.texto){       // 1646: solo el texto, el blob se descarta
-        var dd = audioDestino; audioDestino = null;
-        if(dd){
-          mandarAparte = true;
-          try{ var pr = mandar(dd.cita + d.texto, dd.tema, false, Date.now()); }finally{ mandarAparte = false; }
-          return Promise.resolve(pr).then(function(r){
-            if(dd.noti) marcarLeidos([dd.noti]);
-            estadoNotiPush("mandado a " + dd.tema);
-            return r;
-          });
-        }
-        ponerCaja(((txt.value || "") + " " + d.texto).trim());
-        txt.focus();
-        return null;
-      }
       // 1350: la voz del modal de una push sale ya, a su tema y con la cita (no hay adjunto que revisar)
       if(audioDestino){
         var ad = audioDestino; audioDestino = null;
@@ -6074,7 +6065,7 @@ function mandarAudio(blob, mime, pieTexto, tsEnvio, dicho, destino){
   }
   subiendoAudio = true; $("grabar").disabled = true;
   marcarOcupado("subiendo", true);    // y tampoco mientras el m4a viaja al server
-  sistema("subiendo el audio...", "sistema");
+  var prov = burbujaEnviando(blob, pieTexto, tsEnvio, destino);   // 1650: se ve ya, a .8, en vez de "subiendo..."
   var ruta;
   // **el audio va por la lan y no al buzon** (1209): si la lan no esta marcada se prueba una vez antes de
   // subir, asi el archivo no sale a internet por no haber preguntado. el buzon queda solo de respaldo, para
@@ -6106,10 +6097,35 @@ function mandarAudio(blob, mime, pieTexto, tsEnvio, dicho, destino){
     sistema("no pude subir el audio: " + (e && e.message || e), "error");
     ruta = null;                                  // fallo: el audio vuelve a quedar pendiente
   }).then(function(){
+    sacarEnviando(prov);                          // la real ya se pinto (a 1); si fallo, el audio vuelve al pie
     subiendoAudio = false; $("grabar").disabled = false;
     marcarOcupado("subiendo", false);
     return ruta;
   });
+}
+// 1650 (facundo, 2026-09-15): "yo quiero ver el audio enviado como audio ... estilo whatsapp, con .8 de opacidad
+// mientras se esta enviando". la burbuja sale al toque con el reproductor del blob local y la clase `enviando`; no
+// viaja ni se guarda en ningun lado. cuando el server confirma, `mandar` pinta la de verdad y esta se saca.
+function burbujaEnviando(blob, pieTexto, tsEnvio, destino){
+  try{
+    var src = "audio/enviando-" + tsEnvio + "." + extAudio(blob.type || "audio/webm");
+    audioUrls[src] = URL.createObjectURL(blob);
+    var pie = destino ? "" : (pieTexto !== undefined ? pieTexto : txt.value || "").trim();
+    var m = {id: "env:" + tsEnvio, clase: "yo", quien: QUIEN_F, texto: (pie ? pie + "\n" : "") + "[audio](" + src + ")",
+             iso: new Date(tsEnvio).toISOString(), explicito: true, tema: destino ? destino.tema : temaActivo(),
+             enviando: true, src: src};
+    msgsCom.push(m); msgs.push(m); pintarMsg(m, false);
+    if(!destino) alFinal();
+    return m;
+  }catch(e){ window.__errEnviando = String(e && e.message || e); return null; }   // la burbuja nunca frena el audio
+}
+function sacarEnviando(m){
+  if(!m) return;
+  [msgsCom, msgs].forEach(function(l){ var i = l.indexOf(m); if(i >= 0) l.splice(i, 1); });
+  var n = lista && lista.querySelector('.msg[data-id="' + m.id + '"]');
+  if(n) n.remove();
+  try{ URL.revokeObjectURL(audioUrls[m.src]); }catch(e){}
+  delete audioUrls[m.src];
 }
 // tap and hold: pointer para que valga igual el dedo y el mouse. soltar manda, salirse cancela.
 (function(){
@@ -6195,8 +6211,24 @@ function conAudios(l){
   if(l.indexOf("](audio/") < 0 || !RE_AUD.test(l)) return null;
   RE_AUD.lastIndex = 0;
   return l.replace(RE_AUD, function(m0, alt, src){
+    if(src === AUD_SIN) return '<span class="aud viejo" title="el archivo de este audio no quedó en el historial">' +
+                               '<span class="dur">audio</span></span>';
     return '<span class="aud" data-src="' + att(src) + '"><span class="dur">audio</span></span>';
   });
+}
+// facundo nunca ve el dictado (2026-09-15, orden 1650: "quiero ver el audio enviado como audio", estilo whatsapp).
+// la linea `(audio de facundo, transcripto[ en el celu]): ...` viaja al server y la usa el modelo, pero en su burbuja
+// (al mandar, al recargar y en el otro dispositivo) no se pinta. una fila vieja que perdio el archivo (el server lo
+// sacaba antes de la 1650) queda como una etiqueta `audio` sin play: nunca como texto. literal a proposito, no
+// `MARCA_CELU`: esto puede correr antes de que se defina.
+var AUD_SIN = "audio/sin-archivo";
+var RE_DICTADO = /^([^\n]*?)\(audio de facundo, transcripto(?: en el celu)?\): [^\n]*(\n|$)/gm;
+function sinDictado(t){
+  t = String(t || "");
+  if(t.indexOf("(audio de facundo, transcripto") < 0) return t;
+  var s = t.replace(RE_DICTADO, function(m0, antes){ return antes.trim() ? antes.replace(/\s+$/, "") + "\n" : ""; })
+           .replace(/\n+$/, "");
+  return s.indexOf("](audio/") >= 0 ? s : (s ? s + "\n" : "") + "[audio](" + AUD_SIN + ")";
 }
 function cargarAudios(nodo){
   var spans = nodo.querySelectorAll ? nodo.querySelectorAll(".aud[data-src]") : [];
@@ -8874,8 +8906,7 @@ window.__agente = {
   empezarGrabacion: empezarGrabacion, terminarGrabacion: terminarGrabacion,
   // dictado en el celu (1209): la prueba enchufa un reconocedor falso y chequea los dos caminos
   hayDictado: hayDictado, prepararDictado: prepararDictado, empezarDictado: empezarDictado,
-  terminarDictado: terminarDictado, cortarDictado: cortarDictado, marcaCelu: MARCA_CELU,
-  soloTexto: function(v){ if(v !== undefined) AUDIO_SOLO_TEXTO = !!v; return AUDIO_SOLO_TEXTO; },
+  terminarDictado: terminarDictado, cortarDictado: cortarDictado, marcaCelu: MARCA_CELU, sinDictado: sinDictado,
   audioDestino: function(d){ audioDestino = d || null; },    // la voz del modal de una push, sin abrir el modal
   audioBps: AUDIO_BPS, audioPista: AUDIO_PISTA, dictGracia: DICT_GRACIA,
   stubDictado: function(s){ dictStub = s || null; dictOnDevice = null; },
