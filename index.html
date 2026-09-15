@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.278">
-<link rel="manifest" href="manifest.json?v=4.278">
+<meta name="agente-web-version" content="4.279">
+<link rel="manifest" href="manifest.json?v=4.279">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -139,14 +139,17 @@
   #votar{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;box-sizing:border-box;
     padding:calc(10px + env(safe-area-inset-top)) 10px calc(10px + env(safe-area-inset-bottom)) 10px;background:rgba(0,0,0,.9)}
   #votar.oculta,#votar .oculta{display:none!important}
-  #votar .vtcaja{width:100%;max-width:420px;max-height:100%;overflow-y:auto;box-sizing:border-box;display:flex;
+  #votar .vtcaja{width:100%;max-width:360px;max-height:100%;overflow-y:auto;box-sizing:border-box;display:flex;
     flex-direction:column;gap:12px;padding:14px;background:#000;border:1px solid var(--verde);border-radius:4px}
   #votar .vttit{display:flex;justify-content:space-between;align-items:baseline;gap:8px;color:var(--verde);font-size:12px}
   #vtcuenta{color:var(--gris);font-size:10.5px}
   /* 1382: facundo pidio "mas angosta aun": cada tarjeta a la mitad (360 -> 180 px en la mac), el alto no cambia */
   #votar .vtpar{display:flex;flex-wrap:wrap;justify-content:center;gap:12px}
-  #votar .vtlado{flex:0 1 180px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid var(--linea);border-radius:4px}
-  #votar .vtanim{display:flex;align-items:center;justify-content:center;min-height:62px;font-size:28px;color:var(--verde)}
+  /* 1510: "muy anchas": tarjeta 180 -> 150 px y animacion 28 -> 20 px; la caja de la animacion sigue de 62 px de alto
+     (no salta). en el celu siguen una arriba de la otra, con el mismo ancho angosto */
+  #votar .vtlado{flex:0 1 150px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid var(--linea);border-radius:4px}
+  #votar .vtanim{display:flex;align-items:center;justify-content:center;height:62px;font-size:20px;color:var(--verde)}
+  @media (max-width:600px){ #votar .vtpar{flex-direction:column;align-items:center} #votar .vtlado{flex:none;width:150px} }
   #votar .vtchico{text-align:center;font-size:12px;color:var(--gris)}
   #votar .vtchico .anim{color:var(--verde)}
   #votar .vtnom{text-align:center;font-size:10.5px;color:var(--gris)}
@@ -310,6 +313,7 @@
   .cuerpo .tit{color:var(--magenta);font-weight:600}           /* ## titulo */
   .cuerpo .sep{color:var(--verde-tenue);display:block;height:0;border-top:1px solid currentColor;opacity:.45;margin:6px 0}  /* --- sin guiones (1400) */
   .cuerpo .orden{color:var(--amarillo)}                        /* ORDEN: / PROPUESTA: */
+  .cuerpo .aprendi{color:var(--naranja)}                       /* APRENDÍ: del loop de la cola (1502) */
   .cuerpo .tag{color:var(--verde)}                             /* [tema] / [openrouter/x] */
   .cuerpo .vin{color:var(--verde-tenue)}                       /* el guion de cada bullet */
   /* urls clickeables: una url larga (oauth) se abre tocandola, nunca se copia a mano ni se corta */
@@ -2284,6 +2288,7 @@ function lineaHtml(l, i){
   if(/^\s*&gt;\s?\S/.test(l)) return '<span class="cita">' + enLinea(l) + "</span>";
   if(/^\s*#{1,6}\s+\S/.test(l)) return '<span class="tit">' + enLinea(l) + "</span>";
   if(/^\s*(ORDEN|PROPUESTA|AVISO|PREGUNTA):/.test(l)) return '<span class="orden">' + enLinea(l) + "</span>";
+  if(/^\s*(?:\*\*)?APREND[IÍ](?:\*\*)?:/i.test(l)) return '<span class="aprendi">' + enLinea(l) + "</span>";   // 1502
   var linea = enLinea(l);
   if(i === 0){                                     // [tema] / [openrouter/x] al inicio de la respuesta
     linea = linea.replace(/^(\s*)\[([^\]\n]{1,40})\]/, function(m0, sp, dentro){
