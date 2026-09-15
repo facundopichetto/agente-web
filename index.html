@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.251">
-<link rel="manifest" href="manifest.json?v=4.251">
+<meta name="agente-web-version" content="4.252">
+<link rel="manifest" href="manifest.json?v=4.252">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -3238,7 +3238,10 @@ function mirarVersion(){
       if(!cambio) return;
       // ya recargue por esta version (?v= en la url) y el html sigue viniendo viejo: no entro en loop
       if(new URLSearchParams(location.search).get("v") === j.version){ verEmbebida = j.version; return; }
-      if(txt.value.trim()){ return; }   // estas escribiendo: la recarga espera al proximo chequeo
+      if(grabador) return;              // grabando un audio: la recarga espera al proximo chequeo
+      // estas escribiendo algo que todavia no quedo guardado: espera. si ya es el borrador de la pestaña (va en
+      // el cache y vuelve al recargar) se recarga igual (1372: un borrador viejo dejaba la mac en la version vieja)
+      if(txt.value.trim() && txt.value !== borradorDe(temaActivo())){ return; }
       sistema("version " + j.version + " publicada, recargando...");
       var q = new URLSearchParams(location.search);
       q.set("v", j.version);
@@ -4095,7 +4098,7 @@ $("nmtxt").addEventListener("keydown", function(e){
 });
 window.addEventListener("resize", posNotiModal);
 if(window.visualViewport) visualViewport.addEventListener("resize", posNotiModal);
-// voz: mantener apretado graba con el mismo micro de la app (1349) y soltar manda al tema de la notificacion
+// voz: mantener apretado graba con el micro de siempre (abre al grabar, se para al soltar, 1372) y soltar manda al tema de la notificacion
 (function(){
   var b = $("nmgrabar"), apretado = false;
   b.addEventListener("pointerdown", function(e){
@@ -4388,89 +4391,29 @@ function abrirMicro(){
     return navigator.mediaDevices.getUserMedia({audio: true});
   });
 }
-// ---------- micro una vez por apertura (facundo, 2026-09-14, orden 1349) ----------
-// "cada vez que abro la app me pregunta si le permito el micrófono": safari no guarda el permiso en la pwa
-// y lo pedia en cada grabacion. ahora el `MediaStream` se pide **una vez** y se reusa en todas las
-// grabaciones hasta cerrar la app (facundo acepto el punto naranja prendido mientras esta abierta). al
-// terminar una grabacion se para solo el MediaRecorder, nunca las pistas. si ios mata la pista (llamada,
-// segundo plano) o queda muda, el cache se tira y la proxima grabacion lo pide de nuevo.
-var microCache = null, microPidiendo = null;
-function microVivo(st){
-  var ts = st && st.getAudioTracks ? st.getAudioTracks() : [];
-  // solo `readyState`: en ios la pista puede quedar `muted` un rato mientras el dictado tiene la sesion de
-  // audio, y tirarla por eso volveria a pedir el permiso. si ios la mata de verdad, pasa a `ended`.
-  return ts.length > 0 && ts.every(function(t){ return t.readyState === "live"; });
+// ---------- el micro se pide en cada audio (facundo, 2026-09-14, orden 1372) ----------
+// "prefiero que me pida cada vez que quiero mandar un audio como antes". se saco el reuso de la 1349 (un
+// stream abierto toda la apertura) y el arreglo a medias de la 1357: en **todas las plataformas** cada
+// grabacion abre su `getUserMedia` y `soltarMicro` para todas las pistas. nada se abre al cargar la app, y el
+// punto del micro aparece solo mientras se graba. que safari pida permiso en cada audio es lo esperado.
+var microUltimo = null;       // el ultimo stream abierto: `prueba_web_audio` mira que quede sin pistas `live`
+function pistasVivas(st){
+  return ((st && st.getTracks && st.getTracks()) || []).filter(function(t){ return t.readyState === "live"; }).length;
 }
-function olvidarMicro(parar){
-  var st = microCache; microCache = null;
-  if(parar && st) (st.getTracks() || []).forEach(function(t){ try{ t.stop(); }catch(e){} });
-}
-// 1357 (micmac): el reuso es **solo para la pwa del iphone**. en la mac (la pwa instalada tambien es
-// "standalone") y en la app nativa (1354, el permiso lo guarda ios) el micro se abre al grabar y se para al
-// terminar, asi el punto del micro aparece solo mientras se graba. `microStubIOS` lo fuerza en las pruebas.
-var microStubIOS = null, microUltimo = null;
-function esAppNativa(){
-  try{ return !!(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.flaudio) ||
-              /FlaudioApp/.test(navigator.userAgent); }
-  catch(e){ return false; }
-}
-function microReusable(){
-  if(microStubIOS !== null) return microStubIOS;
-  return esIOS() && esAppInstalada() && !esAppNativa();
-}
-function pedirMicro(){
-  if(!microReusable()){                        // mac y app nativa: un stream nuevo por grabacion
-    if(microCache) olvidarMicro(true);
-    return abrirMicro();
-  }
-  if(microVivo(microCache)) return Promise.resolve(microCache);
-  if(microCache) olvidarMicro(true);           // pista muerta o muda: se suelta y se pide de nuevo
-  if(microPidiendo) return microPidiendo;      // el precalentado y el primer hold no piden dos veces
-  microPidiendo = abrirMicro().then(function(st){
-    microPidiendo = null;
-    microCache = st;
-    (st.getTracks() || []).forEach(function(t){
-      t.addEventListener("ended", function(){ if(microCache === st) microCache = null; });
-    });
-    return st;
-  }, function(e){ microPidiendo = null; throw e; });
-  return microPidiendo;
-}
-// al abrir la app instalada (pwa del celu) se pide ya; si ios no deja sin gesto, en el primer toque. en la
-// mac (navegador comun) no se precalienta: el micro se abre en la primera grabacion y despues se reusa.
-function esAppInstalada(){
-  try{ return !!(navigator.standalone || (window.matchMedia && matchMedia("(display-mode: standalone)").matches)); }
-  catch(e){ return false; }
-}
-function precalentarMicro(){
-  if(!microReusable() || !hayGrabacion() || microVivo(microCache)) return Promise.resolve(false);
-  return pedirMicro().then(function(){ return true; }, function(){ return false; });
-}
-if(microReusable()){
-  precalentarMicro().then(function(ok){
-    if(ok) return;
-    var primer = function(){
-      document.removeEventListener("touchend", primer, true);
-      document.removeEventListener("click", primer, true);
-      precalentarMicro();
-    };
-    document.addEventListener("touchend", primer, true);
-    document.addEventListener("click", primer, true);
-  });
+function pararPistas(st){
+  ((st && st.getTracks && st.getTracks()) || []).forEach(function(t){ try{ t.stop(); }catch(e){} });
 }
 function hayGrabacion(){
   return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && mimeAudio() !== null);
 }
 // **lo que abro lo cierro**: la grabacion se suelta siempre, aunque la subida falle. va en el `finally` de
-// todos los caminos. las pistas del micro **no** se paran (1349): quedan en `microCache` para la proxima, y
-// se sueltan de verdad al cerrar la app (`pagehide`).
+// todos los caminos, y para **todas** las pistas del micro (1372): no queda ningun stream vivo.
 function soltarMicro(){
   marcarOcupado("grabando", false);   // se apaga aca: es el finally de todos los caminos del micro
   if(relojGrab){ clearInterval(relojGrab); relojGrab = null; }
   if(cortarGrab){ clearTimeout(cortarGrab); cortarGrab = null; }
-  if(stream && (stream !== microCache || !microReusable()))
-    (stream.getTracks() || []).forEach(function(t){ try{ t.stop(); }catch(e){} });
-  if(!microReusable() && microCache) olvidarMicro(true);
+  pararPistas(stream);
+  pararPistas(microUltimo);           // por si un camino perdio `stream` antes de llegar aca
   stream = null;
   grabador = null;
   $("grabar").classList.remove("grabando");
@@ -4484,7 +4427,7 @@ function relojTexto(ms){
 function empezarGrabacion(){
   if(grabador || subiendoAudio) return Promise.resolve(false);
   if(!hayGrabacion()){ sistema("este navegador no graba audio", "error"); return Promise.resolve(false); }
-  return pedirMicro().then(function(st){
+  return abrirMicro().then(function(st){
     stream = st; microUltimo = st;
     var mime = mimeAudio();
     grabador = new MediaRecorder(st, mime ? {mimeType: mime, audioBitsPerSecond: AUDIO_BPS} : {});
@@ -4518,7 +4461,6 @@ function terminarGrabacion(enviar){
     soltarMicro();
     if(!enviar){ audioDestino = null; cortarDictado(); return null; }
     if(!blob || !blob.size){
-      olvidarMicro(true);              // un micro que no grabo nada no se reusa: la proxima lo pide de nuevo
       // el micro no dejo nada (en ios el reconocedor puede pelearle la sesion de audio): si el celu igual
       // entendio algo, el texto **no se pierde**, queda escrito en el input para mandarlo a mano
       return terminarDictado().then(function(d){
@@ -4623,9 +4565,9 @@ function mandarAudio(blob, mime, pieTexto, tsEnvio, dicho, destino){
   b.addEventListener("contextmenu", function(e){ e.preventDefault(); });   // el hold del celu no abre el menu
 })();
 // si te vas de la pagina en el medio de una grabacion, el micro se suelta igual
-window.addEventListener("pagehide", function(e){
+window.addEventListener("pagehide", function(){
   if(grabador) terminarGrabacion(false);
-  if(!(e && e.persisted)) olvidarMicro(true);     // la app se cierra de verdad: el micro se suelta (1349)
+  soltarMicro(); cortarDictado();                 // y el dictado tambien (1372): nada queda escuchando
 });
 
 // ---------- reproducir: un [▶] con look terminal, uno solo sonando a la vez ----------
@@ -7201,14 +7143,9 @@ window.__agente = {
   // flag de audio en curso (1204): la prueba stubea la lan y mira que se prenda y se apague
   marcarOcupado: marcarOcupado, pingOcupado: pingOcupado,
   ocupadoTimers: function(){ return Object.keys(ocupadoTimers); },
-  // micro una vez por apertura (1349): la prueba mira que el stream se reuse y que una pista muerta se tire
-  microInfo: function(){ return {cache: !!microCache, vivo: microVivo(microCache),
-                                 id: microCache ? microCache.id : null}; },
-  matarPistaMicro: function(){ if(microCache) microCache.getTracks().forEach(function(t){ t.stop(); t.dispatchEvent(new Event("ended")); }); },
-  olvidarMicro: olvidarMicro, precalentarMicro: precalentarMicro,
-  // 1357: forzar ios (true), mac (false) o lo real (null); `microUltimo` dice si el ultimo stream sigue vivo
-  stubIOSMicro: function(v){ microStubIOS = v; }, microReusable: microReusable,
-  microUltimo: function(){ return {hay: !!microUltimo, vivo: microVivo(microUltimo)}; },
+  // el micro se pide en cada audio (1372): la prueba mira que el ultimo stream no deje pistas `live`
+  microUltimo: function(){ return {hay: !!microUltimo, vivas: pistasVivas(microUltimo),
+                                   id: microUltimo ? microUltimo.id : null}; },
   grabando: function(){ return {grabando: !!grabador, micro: !!stream,
                                 marcado: $("grabar").classList.contains("grabando"),
                                 reloj: $("grabinfo").textContent}; },
