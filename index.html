@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.256">
-<link rel="manifest" href="manifest.json?v=4.256">
+<meta name="agente-web-version" content="4.257">
+<link rel="manifest" href="manifest.json?v=4.257">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -162,6 +162,8 @@
   #sellista .selnom{color:var(--blanco);font-size:14px}
   #sellista .seldet,#sellista .selmot{color:var(--gris);font-size:11px;word-break:break-word}
   #sellista .selmot{font-style:italic}
+  /* 1398: la candidata puede traer su animacion corriendo en el renglon (`anim`), a la derecha del checkbox */
+  #sellista .selanim{flex:0 0 auto;min-width:4ch;color:var(--verde);font-size:18px;text-align:center}
   #seltxt{min-height:64px;padding:8px;background:#000;color:var(--blanco);border:1px solid var(--linea);border-radius:4px;
     font:inherit;font-size:16px;resize:vertical}
   #selmodal .selbtns{display:flex;gap:8px}
@@ -499,7 +501,8 @@
   .usage .ucols .ub-p{flex:0 0 30px}
   .usage .ucols .ub-hueco{height:13px;margin:0 0 5px 0}
   /* widget `CLAUDE` (ordenes 1376/1377/1379, facundo 2026-09-14): linea de reparto, color por cuenta, bateria, semana */
-  .usage .urep{margin:0 0 6px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--blanco)}
+  /* orden 1396: la linea entera en varios renglones (en el celu se cortaba con `...`) */
+  .usage .urep{margin:0 0 6px 0;white-space:normal;overflow-wrap:anywhere;color:var(--blanco)}
   .usage .ucol .cta .nom.e-ok{color:#a6f5a0}
   .usage .ucol .cta .nom.e-warn{color:var(--amarillo)}
   .usage .ucol .cta .nom.e-mal{color:var(--rojo)}
@@ -599,6 +602,8 @@
      el mismo media query vive en el js como `MQ_MOBILE`: si cambia uno, cambia el otro. */
   @media (max-width:899px), (max-aspect-ratio: 1/1){
     #vistas{display:flex}
+    /* orden 1396: la linea del reparto guarda dos renglones, asi el widget no salta de alto en cada refresco */
+    .usage .urep{min-height:3.1em}
     /* dedo: los seis botones de la barra se tocan con el pulgar, todos del mismo alto */
     .bb{height:32px;padding:4px 6px;gap:4px}
     #nodos .nodo{min-height:32px}   /* dedo: el label se toca aunque no parezca boton */
@@ -3637,7 +3642,13 @@ function selAbrir(e){
       if(!p[1]) return;
       var s = document.createElement("span"); s.className = p[0]; s.textContent = p[1]; t.appendChild(s);
     });
-    l.appendChild(i); l.appendChild(t); ls.appendChild(l);
+    l.appendChild(i);
+    var an = c.anim && {id: "sel-" + c.id, frames: c.anim.frames, intervalo: c.anim.intervalo};
+    if(an && animValida(an)){   // 1398: la animacion corriendo en el renglon
+      var w = document.createElement("span"), s = document.createElement("span");
+      w.className = "selanim"; w.appendChild(s); l.appendChild(w); l.appendChild(t); ls.appendChild(l);
+      animPoner(s, an);
+    } else { l.appendChild(t); ls.appendChild(l); }
   });
   $("seltxt").value = ""; $("selestado").textContent = "";
   $("seltxt").placeholder = "algo para sumar (va al chat de " + (e.tema || "tools") + ")";
@@ -5479,7 +5490,9 @@ function cajaUsage(u){
   // orden 1376/1377 (facundo, 2026-09-14): el titulo dice `CLAUDE` y al lado va solo la bateria. afuera la
   // proyeccion general, las lineas por modelo, excluidas y brecha. arriba de las cuentas UNA linea del reparto.
   if(rep.linea)
-    html += it({tipo: "cuenta", tema: "tools", d: rep, completo: rep.porque || rep.linea},
+    // orden 1396 (facundo, 2026-09-15): tipo propio. como `cuenta` salia "cuenta undefined" (el reparto no tiene nombre)
+    html += it({tipo: "reparto", tema: "tools", d: rep,
+                completo: rep.linea + (rep.porque && rep.porque !== rep.linea ? " (" + rep.porque + ")" : "")},
                '<div class="urep">' + esc(rep.linea) + "</div>");
   // las dos columnas: el nombre pintado por `estado` (ok verde clarito, warn amarillo, mal rojo)
   var cols = cuentas.map(function(cu){
@@ -6671,6 +6684,14 @@ function modalDe(o){
     m.acciones.push(["que intente salvarse ahora", function(){ actuar(tema, "salvame", true); }, true]);
     m.acciones.push(["ver el uso de las cuentas", function(){ actuar(tema, "usage", true); }]);
     m.acciones.push(accHablar(o, "las caidas de hoy (" + (d.texto || "") + ")"));
+  } else if(o.tipo === "reparto"){
+    // la linea del reparto entera (en el widget puede ir en varios renglones): que hace el agente y por que
+    m.titulo = "reparto";
+    m.cuerpo = esc(d.linea || "") +
+      (d.porque && d.porque !== d.linea ? '\n\n<span class="g">por que</span>\n' + esc(d.porque) : "") +
+      (d.elegida ? '\n\n<span class="g">ahora usa</span> ' + esc(d.elegida) : "");
+    m.acciones.push(["ver el uso ahora", function(){ actuar(tema, "usage", true); }, true]);
+    m.acciones.push(accHablar(o, "el reparto de cuentas"));
   } else if(o.tipo === "cuenta"){
     m.titulo = "cuenta de claude: " + d.nombre;
     m.cuerpo = (d.activa ? '<span class="v">es la cuenta que usa el agente ahora</span>'
