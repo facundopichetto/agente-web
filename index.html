@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.252">
-<link rel="manifest" href="manifest.json?v=4.252">
+<meta name="agente-web-version" content="4.253">
+<link rel="manifest" href="manifest.json?v=4.253">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -109,7 +109,39 @@
   .msg .mini{margin-left:6px}
   /* mensaje en vuelo: spinner de texto, fase y eta mientras contesta el agente */
   .msg.vuelo .cuerpo{color:var(--gris)}
-  .msg.vuelo .giro{color:var(--verde);display:inline-block;width:1ch}
+  .msg.vuelo .giro{color:var(--verde);display:inline-block;min-width:1ch;cursor:pointer}
+  /* animaciones de caracteres (1373): una linea, todos los cuadros del mismo ancho (`Nch` lo pone animPoner), el
+     alto fijo de una linea: ni saltan de costado ni empujan el renglon */
+  .anim{display:inline-flex;flex-direction:column;white-space:pre;overflow:hidden;vertical-align:top;height:1.25em;line-height:1.25em}
+  /* el ancho lo da un cuadro invisible de alto 0 (`data-medida`): `Nch` se quedaba corto con fuentes cuyo `0` no mide
+     lo mismo que el resto y cortaba las de 9+ caracteres */
+  .anim::after{content:attr(data-medida);display:block;height:0;visibility:hidden}
+  /* votador por pares (1373): dos animaciones en vivo, `esta` debajo de cada una y `basta`. lado a lado en la mac,
+     una arriba de la otra si no entran (celu) */
+  #votar{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;box-sizing:border-box;
+    padding:calc(10px + env(safe-area-inset-top)) 10px calc(10px + env(safe-area-inset-bottom)) 10px;background:rgba(0,0,0,.9)}
+  #votar.oculta,#votar .oculta{display:none!important}
+  #votar .vtcaja{width:100%;max-width:760px;max-height:100%;overflow-y:auto;box-sizing:border-box;display:flex;
+    flex-direction:column;gap:12px;padding:14px;background:#000;border:1px solid var(--verde);border-radius:4px}
+  #votar .vttit{display:flex;justify-content:space-between;align-items:baseline;gap:8px;color:var(--verde);font-size:12px}
+  #vtcuenta{color:var(--gris);font-size:10.5px}
+  #votar .vtpar{display:flex;flex-wrap:wrap;gap:12px}
+  #votar .vtlado{flex:1 1 300px;display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid var(--linea);border-radius:4px}
+  #votar .vtanim{display:flex;align-items:center;justify-content:center;min-height:62px;font-size:28px;color:var(--verde)}
+  #votar .vtchico{text-align:center;font-size:12px;color:var(--gris)}
+  #votar .vtchico .anim{color:var(--verde)}
+  #votar .vtnom{text-align:center;font-size:10.5px;color:var(--gris)}
+  #votar .vtbtn{min-height:52px;padding:12px;background:#000;color:var(--verde);border:1px solid var(--verde);border-radius:6px;
+    font:inherit;font-size:16px;cursor:pointer;touch-action:manipulation}
+  #votar .vtbtn:active{background:var(--verde);color:#000}
+  #vtbasta.vtbtn{color:var(--rojo);border-color:var(--rojo)}
+  #vtbasta.vtbtn:active{background:var(--rojo);color:#000}
+  #votar .vtfin{display:flex;flex-direction:column;gap:8px}
+  #vttxt{min-height:90px;padding:8px;background:#000;color:var(--blanco);border:1px solid var(--linea);border-radius:4px;
+    font:inherit;font-size:14px;resize:vertical}
+  #vtfinbtns{display:flex;gap:8px}
+  #vtfinbtns .vtbtn{flex:1 1 0}
+  #vtestado{color:var(--gris);font-size:10.5px;min-height:1em}
   .msg .quien,.msg .ts{user-select:none}
   .msg .quien{color:var(--magenta)}
   .agente .quien{color:var(--magenta)}
@@ -849,6 +881,22 @@
       <button id="nmgrabar" class="ico" type="button" title="mantené apretado para contestar con voz" aria-label="contestar con voz"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg></button>
       <button id="nmmandar" class="ico" type="button" title="mandar" aria-label="mandar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 3 10 14"/><path d="M21 3 14 21l-4-7-7-4z"/></svg></button>
     </div>
+  </div>
+</div>
+
+<div id="votar" class="oculta" role="dialog" aria-modal="true" aria-labelledby="vttitulo">
+  <div class="vtcaja">
+    <div class="vttit"><span id="vttitulo">cuál te gusta más</span><span id="vtcuenta"></span></div>
+    <div id="vtpar" class="vtpar">
+      <div class="vtlado"><div class="vtanim"><span class="anim"></span></div><div class="vtchico">en el chat: <span class="anim"></span> opus: pensando...</div><div class="vtnom"></div><button class="vtbtn vtesta" data-lado="0" type="button">esta</button></div>
+      <div class="vtlado"><div class="vtanim"><span class="anim"></span></div><div class="vtchico">en el chat: <span class="anim"></span> opus: pensando...</div><div class="vtnom"></div><button class="vtbtn vtesta" data-lado="1" type="button">esta</button></div>
+    </div>
+    <button id="vtbasta" class="vtbtn" type="button">basta</button>
+    <div id="vtfin" class="vtfin oculta">
+      <textarea id="vttxt" placeholder="qué hacemos con esto (va al chat de tools)" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
+      <div id="vtfinbtns"><button id="vtmandar" class="vtbtn" type="button">mandar</button><button id="vtcerrar" class="vtbtn" type="button">cerrar</button></div>
+    </div>
+    <div id="vtestado" aria-live="polite"></div>
   </div>
 </div>
 
@@ -3271,6 +3319,225 @@ function cuerpoMsg(texto, tema, crudo, tsEnvio){
 // idempotente: mientras hay un envio en vuelo no sale nada nuevo, la caja se vacia **al toque** (y con
 // ella el borrador, que si no lo resucita el `tabs.json` del otro dispositivo), y un texto identico al
 // ultimo enviado hace menos de REPE_MS se ignora. si el POST falla, el texto vuelve a la caja.
+// ---------- votador por pares y animaciones del spinner (facundo, 2026-09-14, orden 1373) ----------
+// la ruedita de `estado-chat` se cambia por animaciones de caracteres (`animaciones.json`: una linea por cuadro, todos
+// del mismo ancho). facundo las elige de a pares: dos corriendo en vivo, `esta` debajo de cada una y `basta`. cada
+// voto sale al endpoint de la lan (`/votos/<coleccion>`, `recetas/votador.py`) y, sin red, queda en localStorage hasta
+// que vuelve (id por voto: nunca cuenta dos veces). elo igual al de python; el spinner sale al azar entre las de
+// arriba. `basta` cierra y abre una caja: lo que escribe va al chat de tools como mensaje normal. las nuevas las hace
+// opus en el server cuando quedan 2 sin ver (`recetas/animaciones.py`) y llegan con el proximo GET.
+var VOT_COL = "animaciones", VOT_TOP = 3, ELO_BASE = 1000, ELO_K = 32, ANIM_TICK = 40, VOT_CADA = 30000, VOT_REPE_MS = 200;
+var anims = {items: [], votos: [], abierta: null, fuente: null};
+var votPar = null, votAbierto = false, votSubiendo = null, votOtra = false, votCadaTimer = null, votUlt = 0;
+var animEls = [], animTimer = null;
+function animLargo(s){ return Array.from(String(s)).length; }
+function animValida(a){
+  if(!a || !a.id || !a.frames || a.frames.length < 2) return false;
+  var n = animLargo(a.frames[0]);
+  return n > 0 && a.frames.every(function(f){ return typeof f === "string" && animLargo(f) === n; });
+}
+function animCuadro(a, ms){ return a.frames[Math.floor(Math.max(0, ms) / (a.intervalo || 120)) % a.frames.length]; }
+function animPoner(el, a, t0){
+  if(!el || !a) return;
+  el.classList.add("anim");
+  el.dataset.anim = a.id;
+  el.dataset.medida = a.frames[0];   // todos los cuadros tienen el mismo largo: el ancho no salta
+  animEls = animEls.filter(function(x){ return x.el !== el; });
+  var x = {el: el, a: a, t0: t0 || Date.now()};
+  animEls.push(x);
+  el.textContent = animCuadro(a, Date.now() - x.t0);
+  if(!animTimer) animTimer = setInterval(animTick, ANIM_TICK);
+}
+function animSacar(dentro){ animEls = animEls.filter(function(x){ return !dentro.contains(x.el); }); }
+function animTick(){
+  var ahora = Date.now();
+  animEls = animEls.filter(function(x){ return x.el.isConnected; });
+  animEls.forEach(function(x){ var c = animCuadro(x.a, ahora - x.t0); if(x.el.textContent !== c) x.el.textContent = c; });
+  if(!animEls.length){ clearInterval(animTimer); animTimer = null; }
+}
+function votLeer(s, def){
+  try{ var v = localStorage.getItem("agente_votos_" + VOT_COL + "_" + s); return v === null ? def : JSON.parse(v); }catch(x){ return def; }
+}
+function votEscribir(s, v){ try{ localStorage.setItem("agente_votos_" + VOT_COL + "_" + s, JSON.stringify(v)); }catch(x){} }
+function votMs(ts){ ts = Number(ts) || 0; return ts > 1e11 ? ts : ts * 1000; }
+function votRecibir(e, fuente){
+  if(!e || !e.items) return false;
+  var its = e.items.filter(animValida);
+  if(!its.length) return false;
+  anims.items = its;
+  if(e.votos) anims.votos = e.votos;
+  if(typeof e.abierta === "boolean") anims.abierta = e.abierta;
+  anims.fuente = fuente || "server";
+  votEscribir("cache", {items: anims.items, votos: anims.votos, abierta: anims.abierta});
+  return true;
+}
+// los del server + los que todavia no subieron, sin repetir id, por fecha
+function votTodos(){
+  var ids = {}, out = [];
+  anims.votos.concat(votLeer("pend", [])).forEach(function(v){
+    if(!v || !v.g || !v.p || (v.id && ids[v.id])) return;
+    if(v.id) ids[v.id] = true;
+    out.push({g: v.g, p: v.p, ts: votMs(v.ts), id: v.id});
+  });
+  return out.sort(function(a, b){ return a.ts - b.ts; });
+}
+function animRanking(){
+  var r = {}, g = {}, p = {};
+  anims.items.forEach(function(a){ r[a.id] = ELO_BASE; });
+  votTodos().forEach(function(v){
+    var rg = r[v.g] === undefined ? ELO_BASE : r[v.g], rp = r[v.p] === undefined ? ELO_BASE : r[v.p];
+    var d = ELO_K * (1 - 1 / (1 + Math.pow(10, (rp - rg) / 400)));
+    r[v.g] = rg + d; r[v.p] = rp - d;
+    g[v.g] = (g[v.g] || 0) + 1; p[v.p] = (p[v.p] || 0) + 1;
+  });
+  return anims.items.map(function(a, i){ return {id: a.id, a: a, elo: r[a.id], gano: g[a.id] || 0, perdio: p[a.id] || 0, i: i}; })
+    .sort(function(x, y){ return (y.elo - x.elo) || (y.gano - x.gano) || (x.i - y.i); });
+}
+function animSinVer(){
+  var vistos = {};
+  votTodos().forEach(function(v){ vistos[v.g] = true; vistos[v.p] = true; });
+  return anims.items.filter(function(a){ return !vistos[a.id]; });
+}
+// el spinner: al azar entre las de arriba (las VOT_TOP mejores y las que empatan con la ultima de esas)
+function animSpinner(azar){
+  var rk = animRanking();
+  if(!rk.length) return null;
+  var corte = rk[Math.min(VOT_TOP, rk.length) - 1].elo;
+  var top = rk.filter(function(x){ return x.elo >= corte - 1e-6; });
+  return top[Math.floor((azar === undefined ? Math.random() : azar) * top.length)].a;
+}
+// el par siguiente, igual que `votador.par`: dos sin ver; uno sin ver contra el mejor; si no, dos de elo cercano
+function votElegirPar(azar){
+  azar = azar || Math.random;
+  var sv = animSinVer(), rk = animRanking(), par = null;
+  var antes = votPar ? [votPar[0].id, votPar[1].id].sort().join("|") : "";
+  if(sv.length >= 2){
+    var i = Math.floor(azar() * sv.length), j = Math.floor(azar() * (sv.length - 1));
+    if(j >= i) j++;
+    par = [sv[i], sv[j]];
+  } else if(sv.length === 1 && rk.length >= 2){
+    par = [sv[0], rk.filter(function(x){ return x.id !== sv[0].id; })[0].a];
+  } else if(rk.length >= 2){
+    for(var k = 0; k < 6; k++){
+      var n = Math.floor(azar() * (rk.length - 1));
+      par = [rk[n].a, rk[n + 1].a];
+      if(rk.length === 2 || [par[0].id, par[1].id].sort().join("|") !== antes) break;
+    }
+  }
+  if(par && azar() < 0.5) par = [par[1], par[0]];
+  return par;
+}
+function votPintar(){
+  votPar = votElegirPar();
+  if(!votPar){ $("vtcuenta").textContent = "no hay animaciones para votar"; return; }
+  var lados = $("votar").querySelectorAll(".vtlado"), t0 = Date.now();
+  [0, 1].forEach(function(k){
+    var a = votPar[k], l = lados[k];
+    animPoner(l.querySelector(".vtanim .anim"), a, t0);
+    animPoner(l.querySelector(".vtchico .anim"), a, t0);
+    l.querySelector(".vtnom").textContent = a.nombre || a.id;
+    l.dataset.id = a.id;
+  });
+  var n = votTodos().length;
+  $("vtcuenta").textContent = n + (n === 1 ? " voto" : " votos") + " · " + animSinVer().length + " sin ver";
+}
+function votAbrir(){
+  if(anims.items.length < 2) return false;
+  votAbierto = true;
+  $("vtpar").classList.remove("oculta"); $("vtbasta").classList.remove("oculta"); $("vtfin").classList.add("oculta");
+  $("vtestado").textContent = "";
+  $("votar").classList.remove("oculta");
+  votPintar();
+  return true;
+}
+function votCerrar(){
+  votAbierto = false;
+  $("votar").classList.add("oculta");
+  animSacar($("votar"));
+}
+function votElegir(k){
+  if(!votAbierto || !votPar || Date.now() - votUlt < VOT_REPE_MS) return false;
+  votUlt = Date.now();
+  var pend = votLeer("pend", []);
+  pend.push({g: votPar[k].id, p: votPar[1 - k].id, ts: Date.now(), id: lidNuevo()});
+  votEscribir("pend", pend);
+  votPintar();
+  votSubir();
+  return true;
+}
+function votBasta(){
+  votEscribir("basta", true);
+  anims.abierta = false;
+  $("vtpar").classList.add("oculta"); $("vtbasta").classList.add("oculta"); $("vtfin").classList.remove("oculta");
+  animSacar($("votar"));
+  try{ $("vttxt").focus(); }catch(x){}
+  votSubir();
+}
+function votMandarTexto(){
+  var t = $("vttxt").value.trim();
+  if(t){
+    if(enviando){ $("vtestado").textContent = "hay un mensaje saliendo: probá en un segundo"; return false; }
+    mandarAparte = true;
+    try{ mandar(t, "tools"); }
+    finally{ mandarAparte = false; }
+    $("vttxt").value = "";
+  }
+  votCerrar();
+  return true;
+}
+function votLan(){ return lan.base ? Promise.resolve(lan.base) : probarLan(); }
+// sube lo pendiente (votos y `basta`) y trae el estado del server; sin nada pendiente es un GET
+function votSubir(){
+  if(votSubiendo){ votOtra = true; return votSubiendo; }
+  var pend = votLeer("pend", []), basta = votLeer("basta", false), post = pend.length > 0 || !!basta;
+  votSubiendo = votLan().then(function(base){
+    if(!base) throw new Error("sin lan");
+    var opts = {method: post ? "POST" : "GET", cache: "no-store", headers: {"authorization": "Bearer " + token}};
+    if(post){ opts.headers["content-type"] = "application/json"; opts.body = JSON.stringify({votos: pend, basta: !!basta}); }
+    return lanFetch(base + "/votos/" + VOT_COL, opts);
+  }).then(function(r){
+    if(!r || !r.ok) throw new Error("http " + (r && r.status));
+    return r.json();
+  }).then(function(j){
+    var subidos = {};
+    pend.forEach(function(v){ subidos[v.id] = true; });
+    votEscribir("pend", votLeer("pend", []).filter(function(v){ return !subidos[v.id]; }));
+    if(basta) votEscribir("basta", false);
+    votRecibir(j, "server");
+    return true;
+  }).catch(function(){ return false; }).then(function(ok){
+    votSubiendo = null;
+    if(votOtra){ votOtra = false; return votSubir(); }
+    return ok;
+  });
+  return votSubiendo;
+}
+// server (lan) > lo ultimo guardado > el `animaciones.json` de pages
+function votCargar(){
+  var c = votLeer("cache", null);
+  if(!anims.items.length && c) votRecibir(c, "cache");
+  return votSubir().then(function(ok){
+    if(ok || anims.items.length) return ok;
+    return fetch("animaciones.json?v=" + Date.now(), {cache: "no-store"}).then(function(r){ return r.json(); })
+      .then(function(j){ votRecibir({items: j.animaciones}, "pages"); return false; }, function(){ return false; });
+  });
+}
+// al entrar: si la votacion sigue abierta (y no toco `basta` aca), se abre sola
+function votArrancar(){
+  return votCargar().then(function(){
+    if(anims.abierta !== false && !votLeer("basta", false) && !votAbierto) votAbrir();
+    if(!votCadaTimer) votCadaTimer = setInterval(function(){
+      if(votAbierto || votLeer("pend", []).length || votLeer("basta", false)) votSubir();
+    }, VOT_CADA);
+  });
+}
+Array.prototype.forEach.call(document.querySelectorAll("#votar .vtesta"), function(b){
+  b.addEventListener("click", function(){ votElegir(+b.dataset.lado); });
+});
+$("vtbasta").addEventListener("click", votBasta);
+$("vtmandar").addEventListener("click", votMandarTexto);
+$("vtcerrar").addEventListener("click", votCerrar);
+
 // ---------- mensaje en vuelo (facundo, 2026-09-13: "ver que pasa mientras espero") ----------
 // al mandar, abajo del mensaje aparece `agente> hh:mm` con un spinner de texto, la fase que publica el daemon
 // en `chat/estado-<clave>.json` (clave = el tema del prefijo `tema x:` o `auto`, igual que
@@ -3288,7 +3555,7 @@ function claveEstado(cuerpo){
 function vueloIniciar(m, cuerpo){
   var t0 = fecha(m.iso) || Date.now();
   vuelo = {id: m.id, tema: m.tema, iso: m.iso, t: t0, ref: fecha(m.creado) || t0, clave: claveEstado(cuerpo),
-           palabra: "enviado", eta: null, fin: 0, giro: 0, listo: 0};
+           palabra: "enviado", eta: null, fin: 0, giro: 0, listo: 0, anim: animSpinner()};   // 1373: sin animaciones, la ruedita
   etagEstado = null;
   if(vueloGiro) clearInterval(vueloGiro);
   if(vueloPoll) clearInterval(vueloPoll);
@@ -3311,11 +3578,14 @@ function pintarVuelo(){
     n = document.createElement("div");
     n.id = "vuelo"; n.className = "msg agente vuelo";
     n.innerHTML = '<div><span class="quien">flaudio</span><span class="ts"></span></div>' +
-                  '<div class="cuerpo"><span class="giro"></span> <span class="fase"></span><span class="eta"></span></div>';
+                  '<div class="cuerpo"><span class="giro" title="votar animaciones"></span> <span class="fase"></span><span class="eta"></span></div>';
+    n.querySelector(".giro").addEventListener("click", function(){ votAbrir(); });   // tocar la animacion abre el votador
   }
   if(n.parentNode !== lista || lista.lastChild !== n) lista.appendChild(n);
   n.querySelector(".ts").textContent = " · " + desde(vuelo.iso);
-  n.querySelector(".giro").textContent = GIRO[vuelo.giro % GIRO.length];
+  var gi = n.querySelector(".giro");
+  if(vuelo.anim){ if(gi.dataset.anim !== vuelo.anim.id || !animEls.some(function(x){ return x.el === gi; })) animPoner(gi, vuelo.anim); }   // reloj local: `vuelo.t` puede venir corrido
+  else gi.textContent = GIRO[vuelo.giro % GIRO.length];
   n.querySelector(".fase").textContent = faseTexto();
   n.querySelector(".eta").textContent = etaTexto();
 }
@@ -3374,7 +3644,7 @@ function vueloGirar(){
   if(!vuelo) return;
   vuelo.giro++;
   var g = document.querySelector("#vuelo .giro");
-  if(g) g.textContent = GIRO[vuelo.giro % GIRO.length];
+  if(g && !vuelo.anim) g.textContent = GIRO[vuelo.giro % GIRO.length];   // con animacion la mueve animTick
   var e = document.querySelector("#vuelo .eta"), t = etaTexto();
   if(e && e.textContent !== t) e.textContent = t;
   var f = document.querySelector("#vuelo .fase"), ft = faseTexto();
@@ -6801,7 +7071,7 @@ function arrancar(t){
   etagWid = null; widUlt = 0;
   etagTabs = null; shaTabs = null; tabsUlt = 0; tabsListo = false; tabsSync = true;
   sincronizar(true)
-    .then(function(){ reprogramar(); })
+    .then(function(){ reprogramar(); votArrancar(); })   // 1373: animaciones y votacion abierta
     .catch(function(e){
       if(ruidoso(e)) sistema("error: " + e.message, "error");
       if(e && e.message !== "401") reprogramar();
@@ -6894,6 +7164,16 @@ prepararDictado();     // 1209: preguntar una vez si el celu puede transcribir o
 
 window.__agente = {
   fmtTiempo: fmtTiempo,
+  // 1373: votador por pares y animaciones del spinner (`prueba_web_animaciones`)
+  votArrancar: votArrancar, votCargar: votCargar, votSubir: votSubir, votRecibir: votRecibir, votAbrir: votAbrir,
+  votElegir: votElegir, votBasta: votBasta, votMandarTexto: votMandarTexto, votCerrar: votCerrar,
+  animRanking: animRanking, animSpinner: animSpinner, animSinVer: animSinVer, animValida: animValida,
+  votEstado: function(){ return {abierto: votAbierto, par: votPar ? [votPar[0].id, votPar[1].id] : null, pend: votLeer("pend", []),
+                                 basta: votLeer("basta", false), items: anims.items.length, votos: votTodos().length,
+                                 abierta: anims.abierta, fuente: anims.fuente, animados: animEls.length, timer: !!animTimer,
+                                 giro: animEls.some(function(x){ return x.el === document.querySelector("#vuelo .giro"); })}; },
+  votReset: function(){ anims = {items: [], votos: [], abierta: null, fuente: null}; votPar = null; votUlt = 0;
+                        ["pend", "basta", "cache"].forEach(function(s){ try{ localStorage.removeItem("agente_votos_" + VOT_COL + "_" + s); }catch(x){} }); },
   qvOcultos: qvOcultos, qvUmbral: QV_UMBRAL,   // 1229: swipe de `que ver`
   // cajas a/b/c: `prueba_web_tabs` las pinta, elige, manda y chequea que un drag no elija
   opcionesDe: opcionesDe,
