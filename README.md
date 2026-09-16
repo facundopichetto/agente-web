@@ -247,6 +247,33 @@ devolvia tactil con `innerWidth <= 899`, asi que en la compu con la ventana ango
 lo chequea `recetas/prueba_web_tabs` (emula touch y metricas por cdp, cero tokens) en las cuatro ramas:
 desktop ancho, desktop angosto (600px, enter manda igual), tactil ancho (1200px, enter no manda) y celu.
 
+**pero lo que decide es el TECLADO, no la pantalla** (facundo, 2026-09-16, orden 1789: "quiero que el enter
+del teclado del ipad envie, shift enter si nueva linea"). el ipad con teclado fisico reporta touch igual que
+el celu, asi que `esTactil()` no alcanzaba y en la pwa del ipad enter metia un salto de linea. ahora el
+handler mira `tecladoFisico()`:
+
+- en la compu (`!esTactil()`) siempre es `true`: enter manda, como siempre.
+- en pantalla tactil arranca en `false` (**el comportamiento de hoy, nada puede empeorar en el celu**) y se
+  prende con dos señales que un teclado en pantalla no puede dar: **1)** un `keydown` de `Tab`, `Escape`, una
+  flecha, `Inicio`/`Fin`/`AvPag`/`RePag` o un combo `meta`/`ctrl`/`alt` + letra, escuchado en todo el
+  documento en fase de captura (`tecladoMirarTecla`); **2)** enfocar un campo sin que el viewport se
+  achique: con teclado en pantalla `visualViewport.height` pierde media pantalla, con teclado fisico solo la
+  barra de sugerencias, asi que `tecladoMirarFoco(el, ms)` compara a los 700 ms contra `TECLADO_BAJA` (100
+  px) y solo mide si al enfocar no habia ya un teclado abierto.
+- el flag vive en `localStorage` (`agente_teclado_fisico`), **por dispositivo**, y no se apaga solo; se
+  resetea con `window.__agente.tecladoFisico(false)`.
+- con el flag prendido `enterkeyhint` pasa a `send` (`tecladoHint()`, solo en tactil: en la compu el
+  atributo queda como viene del html); se recalcula en `resize` y cuando cambia `(pointer: coarse)`.
+- `shift+enter` **nunca** manda, y `e.isComposing` / `keyCode 229` tampoco: mientras se compone un acento o
+  kana, enter cierra la composicion.
+
+el mismo criterio lo usan los otros dos textarea de una linea: la respuesta del modal de notificacion
+(`nmtxt`, que antes miraba `esVistaMobile()`, o sea el ancho de la ventana, justo lo que la 1789 dice que no
+decide nada) y la nota del modal del spinner (`amtxt`, donde enter mandaba siempre). lo chequea
+`recetas/prueba_web_teclado` (chrome headless, cero tokens, 33 chequeos: celu sin flag, cada tecla que lo
+prende, una letra que no, `localStorage`, hint, `isComposing`, el viewport que se achica y el que no, y la
+compu).
+
 ## widget usage: barras contra la linea (facundo, 2026-09-11)
 
 "quiero ver cada uno de los parametros 5h week fable de cada cuenta como esta en relacion a la linea".

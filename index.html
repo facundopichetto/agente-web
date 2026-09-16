@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.320">
-<link rel="manifest" href="manifest.json?v=4.320">
+<meta name="agente-web-version" content="4.321">
+<link rel="manifest" href="manifest.json?v=4.321">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -329,6 +329,7 @@
   /* 1665: la foto se toca (publica: perfil en otra pestaña; privada: la agranda en el visor) y abajo van `desde`
      y el historial de votos, en gris chico para que no le compitan a los datos */
   #seltarjeta .tjppal{cursor:pointer}
+  #seltarjeta a.tjppal{text-decoration:none;color:inherit}   /* 1791: la foto de una publica es un `<a>`, no un `div` */
   #seltarjeta .tjdesde{color:var(--gris);font-size:11px}
   #seltarjeta .tjhist{display:flex;flex-direction:column;gap:1px;color:var(--gris);font-size:10.5px;opacity:.85}
   #seltarjeta .tjlink{align-self:flex-start;min-height:34px;display:flex;align-items:center;padding:0 10px;color:var(--verde);
@@ -1903,6 +1904,72 @@ function esTactil(){
   // respaldo para navegadores sin `pointer`: el hardware tactil
   return (navigator.maxTouchPoints || 0) > 0;
 }
+
+// ---------- teclado fisico: quien decide de verdad si enter manda (facundo, 2026-09-16, orden 1789) ----------
+// el ipad reporta touch igual que el celu, asi que `esTactil()` no alcanza: facundo escribe desde el ipad
+// en la pwa con teclado fisico y ahi enter tiene que mandar. lo que se detecta es el TECLADO, no la
+// pantalla, con dos señales que un teclado en pantalla nunca da:
+//   1) una tecla que ios/android no emiten: `Tab`, las flechas, `Escape`, inicio/fin, o un combo
+//      meta/ctrl/alt con una letra (lo escucha todo el documento, no solo el textarea);
+//   2) enfocar un campo sin que el viewport se achique: con teclado en pantalla `visualViewport` pierde
+//      media pantalla, con teclado fisico solo la barra de sugerencias (~55 px).
+// el flag queda en `localStorage` por dispositivo y no se apaga solo; se limpia con
+// `window.__agente.tecladoFisico(false)`. mientras NO este prendido el comportamiento es el de hoy
+// (enter = salto de linea, se manda con el boton), asi que en el celu sin teclado nada puede empeorar.
+var TECLADO_LS = "agente_teclado_fisico";
+var TECLADO_BAJA = 100;          // px que puede achicarse el viewport y seguir siendo teclado fisico
+var tecladoFlag = null;
+function tecladoFisico(v){
+  if(v !== undefined){
+    tecladoFlag = !!v;
+    try{ if(tecladoFlag) localStorage.setItem(TECLADO_LS, "1"); else localStorage.removeItem(TECLADO_LS); }catch(x){}
+    tecladoHint();
+    return tecladoFlag;
+  }
+  if(!esTactil()) return true;   // mouse y teclado: enter manda desde siempre
+  if(tecladoFlag === null){
+    try{ tecladoFlag = localStorage.getItem(TECLADO_LS) === "1"; }catch(x){ tecladoFlag = false; }
+  }
+  return tecladoFlag;
+}
+// el teclado de ios muestra `intro` o `enviar` segun lo que enter vaya a hacer de verdad. solo en pantalla
+// tactil: en la compu no hay teclado en pantalla y el atributo queda como viene del html (`enter`).
+function tecladoHint(){
+  try{
+    var t = document.getElementById("txt");
+    if(t && esTactil()) t.setAttribute("enterkeyhint", tecladoFisico() ? "send" : "enter");
+  }catch(x){}
+}
+var TECLAS_FISICAS = {Tab: 1, Escape: 1, ArrowUp: 1, ArrowDown: 1, ArrowLeft: 1, ArrowRight: 1,
+                      PageUp: 1, PageDown: 1, Home: 1, End: 1};
+function tecladoMirarTecla(e){
+  if(!e || tecladoFisico()) return false;
+  var k = String(e.key || "");
+  if(TECLAS_FISICAS[k] !== 1 && !((e.metaKey || e.ctrlKey || e.altKey) && k.length === 1)) return false;
+  tecladoFisico(true);
+  return true;
+}
+// enfocar un campo es el otro momento en que se puede medir: si el viewport no se achica, no hay
+// teclado en pantalla. solo se mide cuando arranca sin teclado abierto (si ya habia uno, no dice nada).
+var tecladoFoco = 0;
+function tecladoMirarFoco(el, ms){
+  if(tecladoFisico() || !window.visualViewport) return false;
+  var vv = window.visualViewport, alto0 = vv.height;
+  if(alto0 < window.innerHeight - TECLADO_BAJA) return false;   // ya estaba abierto el teclado en pantalla
+  var t = ++tecladoFoco;
+  setTimeout(function(){
+    if(t !== tecladoFoco || tecladoFisico()) return;
+    if(el && document.activeElement !== el) return;             // se fue el foco antes de medir
+    if(vv.height >= alto0 - TECLADO_BAJA) tecladoFisico(true);
+  }, ms === undefined ? 700 : ms);
+  return true;
+}
+// una tecla que el teclado en pantalla no tiene, en cualquier parte de la pagina, marca el dispositivo
+document.addEventListener("keydown", tecladoMirarTecla, true);
+// el hint se recalcula cuando puede haber cambiado el hardware (enchufar un mouse, otra ventana): es
+// un atributo, no un estado, y tiene que decir siempre lo que enter va a hacer de verdad
+window.addEventListener("resize", tecladoHint);
+try{ window.matchMedia("(pointer: coarse)").addEventListener("change", tecladoHint); }catch(x){}
 // pwa: agregada a la pantalla de inicio, ios corre la pagina SIN la barra de safari (y sin su
 // barra de accesorios). `navigator.standalone` es lo que dice ios; `display-mode: standalone` es
 // lo que dicen android y desktop. queda como clase en el body para el css y para las pruebas.
@@ -1915,6 +1982,7 @@ function esStandalone(){
 }
 function marcarStandalone(){ document.body.classList.toggle("standalone", esStandalone()); }
 marcarStandalone();
+tecladoHint();          // 1789: `enviar` en el teclado del ipad si ya sabemos que tiene teclado fisico
 try{
   if(window.matchMedia){
     var mqPwa = window.matchMedia("(display-mode: standalone)");
@@ -4260,7 +4328,7 @@ function votEscribir(s, v){ try{ localStorage.setItem("agente_votos_" + VOT_COL 
 function votMs(ts){ ts = Number(ts) || 0; return ts > 1e11 ? ts : ts * 1000; }
 // 1441 (facundo, 2026-09-15: el ipad abria el modal viejo): el server confirmo que la votacion esta cerrada, asi que
 // lo guardado en este equipo se tira (`basta` y los votos que nunca subieron) y el modal, si estaba abierto, se cierra.
-// nada de esto la puede reabrir despues: `votAutoAbrir` pide `abierta === true` y eso solo lo dice el server.
+// nada de esto la puede reabrir despues: `votAbrirPendiente` pide `abierta === true` (solo lo dice el server) y un toque de facundo.
 function votCerrada(){
   votEscribir("pend", []);
   votEscribir("basta", false);
@@ -4404,12 +4472,14 @@ function votAbrir(){
   $("vtestado").textContent = "";
   capaMostrar("votar");
   votPintar();
+  selBoton();   // 1788: abierto el votador, el boton ya no lo cuenta
   return true;
 }
 function votCerrar(){
   votAbierto = false;
   capaOcultar("votar");
   animSacar($("votar"));
+  selBoton();   // 1788: cerrado sin votar, el boton vuelve a decir que esta esperando
 }
 function votElegir(k){
   if(!votAbierto || !votPar || Date.now() - votUlt < VOT_REPE_MS) return false;
@@ -4478,17 +4548,20 @@ function votCargar(){
       .then(function(j){ votRecibir({items: j.animaciones}, "pages"); return false; }, function(){ return false; });
   });
 }
-// al entrar: si el server confirma que sigue abierta (y no toco `basta` aca), se abre sola una vez por carga.
+// 1788 (facundo, 2026-09-16): el votador tampoco se abre solo. `votPendiente()` dice si el server confirma una
+// votacion de animaciones esperando (y no tocaste `basta` aca): con eso el boton `votar` la cuenta y la abre
+// `votAbrirPendiente()`, que solo corre desde un toque de facundo (el boton o el push `votar`).
 // 1442: sin lan `abierta` quedaba en null y `!== false` abria un modal que el server ya habia cerrado (ipad)
 var votAuto = false;
-function votAutoAbrir(){
-  if(votAuto || votAbierto || anims.abierta !== true || votLeer("basta", false)) return false;
+function votPendiente(){ return anims.abierta === true && !votAbierto && !votLeer("basta", false); }
+function votAbrirPendiente(){
+  if(!votPendiente()) return false;
   votAuto = true;
   return votAbrir();
 }
 function votArrancar(){
   return votCargar().then(function(){
-    votAutoAbrir();
+    selBoton();   // 1788: el votador confirmado prende el boton `votar`, no el modal
     animGustosSubir();
     if(!votCadaTimer) votCadaTimer = setInterval(function(){
       if(votAbierto || votLeer("pend", []).length || votLeer("basta", false)) votSubir();
@@ -4569,8 +4642,11 @@ Array.prototype.forEach.call(document.querySelectorAll("#animmenu .ambtn[data-ti
   });
 });
 $("amguardar").addEventListener("click", function(){ animGusto("nota", $("amtxt").value); });
+$("amtxt").addEventListener("focus", function(){ tecladoMirarFoco($("amtxt")); });
 $("amtxt").addEventListener("keydown", function(ev){
-  if(ev.key === "Enter" && !ev.shiftKey){ ev.preventDefault(); animGusto("nota", $("amtxt").value); }
+  if(ev.key !== "Enter" || ev.shiftKey || ev.isComposing || ev.keyCode === 229) return;
+  if(!tecladoFisico()) return;           // mismo criterio que el chat: sin teclado se guarda con el boton
+  ev.preventDefault(); animGusto("nota", $("amtxt").value);
 });
 $("amcerrar").addEventListener("click", animMenuCerrar);
 // correccion de facundo (12:25): `esc` cierra sin guardar nada, tambien con el foco en el campo de `...` (lo hace escTope)
@@ -4582,7 +4658,8 @@ $("vtcerrar").addEventListener("click", votCerrar);
 // ---------- seleccion con checkboxes (facundo, 2026-09-15, orden 1388) ----------
 // modal generico para elegir de una coleccion (`recetas/seleccion.py`): un checkbox por candidata (premarcadas segun
 // `premarcada`), texto libre, `aceptar` y `enviar texto`. la web mira `GET /seleccion` al entrar, cada 30 s y al
-// volver a la app; si hay una abierta que no acepto en este dispositivo, abre el modal. cada registro (con id) sale
+// volver a la app; si hay una abierta que no acepto en este dispositivo, prende el boton `votar` (1788: nunca abre
+// el modal sola: lo abre facundo tocando `votar` o el push). cada registro (con id) sale
 // por `POST /seleccion/<coleccion>` y, sin red, queda en localStorage hasta que vuelve: el server no lo cuenta dos
 // veces. 1674: un voto nunca llega al chat a nombre de facundo (solo un `texto` tipeado); al cerrar la tanda el server deja
 // un resumen de flaudio. `cerrar` solo la esconde
@@ -4800,7 +4877,12 @@ function tjPintar(){
   t.setAttribute("data-candidata", c.id);   // 1495: la tarjeta a la vista, la que firma el voto
   // 1495: la foto de perfil arriba y grande. si no baja, la tarjeta no se muestra: se salta sin votar
   var fs = document.createElement("div"); fs.className = "tjfotos";
-  var pp = document.createElement("div"); pp.className = "tjppal";
+  // 1791 (facundo, 2026-09-16): en la pwa del ipad `window.open` abria safari aparte y facundo tenia que cerrarlo a mano
+  // para volver al board; un `<a target="_blank">` de verdad (el mismo envoltorio que el `@cuenta`) abre el in-app
+  // browser y al volver cae directo en el board. la privada sigue siendo un `div`: su foto va al visor, no al perfil
+  var ppUrl = c.privada ? "" : (c.link && /^https:\/\//.test(c.link) ? c.link : (c.cuenta ? "https://instagram.com/" + c.cuenta : ""));
+  var pp = document.createElement(ppUrl ? "a" : "div"); pp.className = "tjppal";
+  if(ppUrl){ pp.href = ppUrl; pp.target = "_blank"; pp.rel = "noopener"; }
   // 1772: el alto sale del css (cuadrado); si la candidata trae `ratio` (ancho/alto) el placeholder ya nace con ese
   if(typeof c.ratio === "number" && c.ratio > 0.2 && c.ratio < 5) pp.style.paddingBottom = (100 / c.ratio).toFixed(2) + "%";
   fs.appendChild(pp); t.appendChild(fs);
@@ -4812,8 +4894,7 @@ function tjPintar(){
   (function(c){
     pp.addEventListener("click", function(ev){
       ev.stopPropagation();   // tocar la foto nunca vota ni avanza la tarjeta
-      var link = c.link && /^https:\/\//.test(c.link) ? c.link : (c.cuenta ? "https://instagram.com/" + c.cuenta : "");
-      if(!c.privada && link) return void window.open(link, "_blank", "noopener");
+      if(ppUrl) return;       // 1791: el `<a>` navega solo (in-app browser), nada de `window.open`
       if(pp.__url) verImagen(pp.__url, c.titulo || c.cuenta || "");
     });
   })(c);
@@ -5098,16 +5179,29 @@ function selPendientes(){
 }
 function selBoton(){
   // 1567: `votar` desde 1 pendiente y oculto con 0; una fila suma sus tarjetas, una tanda cuenta como una
+  // 1788: como nada se abre solo, el boton es lo unico que avisa que hay algo esperando: tambien cuenta el votador
+  // de animaciones (una votacion mas) para que facundo pueda abrirlo el mismo desde el board.
   var n = selPendientes().reduce(function(s, a){ return s + (a.continua ? filaFaltan(a) : 1); }, 0), b = $("ver-votar");
+  if(votPendiente()) n += 1;
   b.textContent = "votar" + (n > 1 ? " " + n : "");
   b.classList.toggle("oculta", !n || !!sel.actual);
 }
-// el boton abre la primera que no cerraste; si cerraste todas, vuelve a la primera
+// 1788: SIEMPRE lo toca facundo (el boton `votar` o el push). abre la primera que no cerraste; si cerraste todas,
+// vuelve a la primera; si no queda ninguna seleccion, abre el votador de animaciones que el server confirmo
 function selVotar(){
   if(sel.actual) return false;
   var p = selPendientes(), e = p.filter(function(a){ return sel.ignorada[a.coleccion] !== a.abrir_ts; })[0] || p[0];
-  if(!e) return false;
+  if(!e) return votAbrirPendiente();
   delete sel.ignorada[e.coleccion];
+  var ok = selAbrir(e);
+  selBoton();
+  return ok;
+}
+// 1788: el push `votar-<col>` abre ESA votacion (es un toque de facundo), nunca otra
+function selAbrirCol(col){
+  var e = sel.abiertas.filter(function(a){ return a.coleccion === col; })[0];
+  if(!e) return selVotar();
+  try{ delete sel.ignorada[col]; }catch(x){}
   var ok = selAbrir(e);
   selBoton();
   return ok;
@@ -5126,9 +5220,9 @@ function selLimpiar(){
   if(q.length !== pend.length) selEscribir("pend", q);
   return pend.length - q.length;
 }
-// abre sola la primera que no se acepto ni se cerro aca (misma apertura: `abrir_ts`).
+// guarda las abiertas que confirmo el server y repinta el boton `votar`; nunca abre un modal (1788).
 // 1441: `auto = false` (widgets.json viejo) solo cierra y repinta el boton: con datos que no se confirmaron contra
-// el server no se abre ningun modal.
+// el server no se toca nada.
 function selPoner(abiertas, fuente, auto){
   sel.abiertas = abiertas || [];
   sel.fuente = fuente;
@@ -5138,10 +5232,9 @@ function selPoner(abiertas, fuente, auto){
     // 1567: la fila que se esta votando suma al final lo nuevo (solo con dato confirmado) y saca lo que ya no va
     if(sel.actual.continua) filaSumar(fresca || {coleccion: sel.actual.coleccion, candidatas: [], pendientes: 0}, auto === false || !fresca);
     else if(!fresca) selCerrar();   // la cerraron en otro lado
-  } else if(auto !== false){
-    var e = selPendientes().filter(function(a){ return sel.ignorada[a.coleccion] !== a.abrir_ts; })[0];
-    if(e) selAbrir(e);
   }
+  // 1788 (facundo, 2026-09-16: "no abras mas automaticamente el modal, tengo que yo tocar en votar"): ninguna
+  // votacion se abre sola. lo que llega del server solo prende el boton `votar`; el modal lo abre facundo.
   selBoton();
   return true;
 }
@@ -5162,7 +5255,7 @@ function selDesdeWidgets(j){
   // 1442: sin lan, el estado del votador de animaciones sale de aca (lo arma el server): cierra el que quedo abierto
   if(typeof vt.anim_abierta === "boolean" && !lan.base){
     if(!vt.anim_abierta){ anims.abierta = false; votCerrada(); }
-    else if(fresco){ anims.abierta = true; votAutoAbrir(); }
+    else if(fresco){ anims.abierta = true; selBoton(); }   // 1788: prende `votar`, no abre el modal
   }
   if(vt.anim_gustos && !lan.base) anims.gustos = animGusServer(vt.anim_gustos);   // 1453/1682
   sel.wid = vt.abiertas; sel.widFresco = fresco;
@@ -6127,7 +6220,9 @@ function abrirNotiPush(p){
   if(p.id && /^votar-/.test(String(p.id))){
     var vc = String(p.id).slice(6);
     try{ delete sel.ignorada[vc]; }catch(x){}
-    if(vc === "animaciones") votArrancar(); else selMirar();
+    // 1788: tocar el push es un toque de facundo, asi que abre esa votacion (nada se abre sin que la toque)
+    if(vc === "animaciones") votCargar().then(votAbrirPendiente);
+    else selMirar().then(function(){ selAbrirCol(vc); });
     try{ pushVisto(true); }catch(x){}
     return true;
   }
@@ -6190,8 +6285,12 @@ $("nmmandar").addEventListener("click", function(){
   var t = $("nmtxt");
   if(responderNotiPush(t.value)) t.value = ""; else t.focus();
 });
+$("nmtxt").addEventListener("focus", function(){ tecladoMirarFoco($("nmtxt")); });
 $("nmtxt").addEventListener("keydown", function(e){
-  if(e.key === "Enter" && !e.shiftKey && !esVistaMobile()){ e.preventDefault(); $("nmmandar").click(); }
+  // 1789: lo decide el teclado, no el ancho de la ventana (`esVistaMobile` miraba la vista)
+  if(e.key !== "Enter" || e.shiftKey || e.isComposing || e.keyCode === 229) return;
+  if(!tecladoFisico()) return;
+  e.preventDefault(); $("nmmandar").click();
 });
 window.addEventListener("resize", posNotiModal);
 if(window.visualViewport) visualViewport.addEventListener("resize", posNotiModal);
@@ -6835,10 +6934,11 @@ document.addEventListener("paste", function(e){
 
 alfinal.addEventListener("click", abajo);
 $("mandar").addEventListener("click", function(){ enviarMensaje(txt.value); txt.focus(); });
-txt.addEventListener("focus", function(){ setTimeout(abajo, 250); });
+txt.addEventListener("focus", function(){ setTimeout(abajo, 250); tecladoMirarFoco(txt); });
 txt.addEventListener("keydown", function(e){
   if(e.key !== "Enter" || e.shiftKey) return;
-  if(esTactil()) return;                 // celu: salto de linea, se manda con el boton
+  if(e.isComposing || e.keyCode === 229) return;   // mientras se compone (acento, kana) enter cierra la composicion
+  if(!tecladoFisico()) return;           // celu sin teclado: salto de linea, se manda con el boton
   e.preventDefault(); enviarMensaje(txt.value);
 });
 txt.addEventListener("input", function(){
@@ -9270,7 +9370,7 @@ window.__agente = {
   spEstado: function(){ return {carga: spCarga, cmd: spUltimoCmd}; },
   spReset: function(){ spCarga = null; spUltimoCmd = ""; },
   // 1373: votador por pares y animaciones del spinner (`prueba_web_animaciones`)
-  votArrancar: votArrancar, votCargar: votCargar, votSubir: votSubir, votRecibir: votRecibir, votAbrir: votAbrir,
+  votArrancar: votArrancar, votCargar: votCargar, votPendiente: votPendiente, votAbrirPendiente: votAbrirPendiente, votSubir: votSubir, votRecibir: votRecibir, votAbrir: votAbrir,
   votElegir: votElegir, votBasta: votBasta, votMandarTexto: votMandarTexto, votCerrar: votCerrar,
   // 1388: seleccion con checkboxes (`prueba_seleccion`)
   selArrancar: selArrancar, selMirar: selMirar, selSubir: selSubir, selAbrir: selAbrir, selAceptar: selAceptar,
@@ -9284,7 +9384,7 @@ window.__agente = {
   tjEstado: function(){ return {votos: sel.tjVotos || 0, fallidas: sel.tjFallidas || [], n: sel.actual ? sel.actual.candidatas.length : null}; },
   selEnviarTexto: selEnviarTexto, selCerrar: selCerrar,
   // 1407: boton `votar` y respaldo por el buzon (`prueba_web_votar`)
-  selPoner: selPoner, selVotar: selVotar, selBoton: selBoton, selPendientes: selPendientes,
+  selPoner: selPoner, selVotar: selVotar, selAbrirCol: selAbrirCol, selBoton: selBoton, selPendientes: selPendientes,
   selDesdeWidgets: selDesdeWidgets,
   // 1441: modal viejo en el ipad (`prueba_web_votar`, `prueba_seleccion`)
   selLimpiar: selLimpiar, votCerrada: votCerrada, widFrescoMs: WID_FRESCO_MS,
@@ -9398,6 +9498,8 @@ window.__agente = {
   esClave: esClave, ponerCopiar: ponerCopiar,   // 1214: botones copiar (prueba_web_copiar)
   // enter en el celu hace salto de linea, no manda (prueba_web_tabs lo chequea)
   esTactil: esTactil, ajustarCaja: ajustarCaja, topeLineas: TOPE_LINEAS,
+  // 1789: con teclado fisico (ipad con magic keyboard) enter manda; el flag es por dispositivo
+  tecladoFisico: tecladoFisico, tecladoMirarTecla: tecladoMirarTecla, tecladoMirarFoco: tecladoMirarFoco,
   // pwa en la pantalla de inicio: sin barra de safari arriba del teclado (prueba_web_tabs lo chequea)
   esStandalone: esStandalone, marcarStandalone: marcarStandalone,
   // de donde se escribe: viaja como `[desde: celu abc123 ios/safari]` al final del mensaje
