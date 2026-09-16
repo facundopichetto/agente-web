@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.300">
-<link rel="manifest" href="manifest.json?v=4.300">
+<meta name="agente-web-version" content="4.301">
+<link rel="manifest" href="manifest.json?v=4.301">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -3817,6 +3817,10 @@ function tick(){
   if(Date.now() - widUlt > cada){
     cargarWidgets().catch(function(e){ if(ruidoso(e)) pintarWidgets(null, e.message); });
   }
+  // 1666: la confirmacion de las votaciones va aparte y mas seguido (es un archivo de 10 KB con etag)
+  if(!lan.base && Date.now() - votJsonUlt > (document.hidden ? 120000 : 20000)){
+    cargarVotaciones().catch(function(e){ if(ruidoso(e)) sistema("votaciones: " + e.message, "error"); });
+  }
   // las pestañas van al mismo ritmo: si las cambiaste en el celu, el desktop las ve en <= 30 s
   if(tabsSync && Date.now() - tabsUlt > cada){
     cargarTabs().catch(function(e){ if(ruidoso(e)) sistema("pestañas: " + e.message, "error"); });
@@ -3858,7 +3862,7 @@ function sincronizar(primera){
   if(syncEnVuelo) return syncEnVuelo;
   syncUlt = Date.now();
   if(primera || Date.now() - lan.ult > LAN_CADA) probarLan();   // no frena la sync: si contesta, lo que sigue va por ahi
-  widUlt = 0; tabsUlt = 0; chatUlt = Date.now();   // que el tick no las saltee (ni repita el chat)
+  widUlt = 0; tabsUlt = 0; votJsonUlt = 0; chatUlt = Date.now();   // que el tick no las saltee (ni repita el chat)
   var cartel = setTimeout(function(){ pintarSync("sync"); }, primera ? 0 : 250);
   syncEnVuelo = Promise.all([
     cargarEstado(),
@@ -3866,6 +3870,7 @@ function sincronizar(primera){
     cargarChat(),
     cargarComentarios(!!primera),
     cargarWidgets().catch(function(e){ if(ruidoso(e)) pintarWidgets(null, e.message); }),
+    cargarVotaciones().catch(function(){}),   // 1666: al abrir, la confirmacion fresca antes que nada
     cargarTabs()
   ]).then(function(){
     mezclar(); render();               // una sola pasada de pintado, ya con todo abajo
@@ -4624,7 +4629,7 @@ function tjVoto(e, c, q, txt){
   (sel.tjHistorial = sel.tjHistorial || []).push({col: e.coleccion, c: c, q: q});   // 1640: lo que el back deshace
   sel.tj += 1;
   tjPintar();
-  selSubir();
+  selSubirPronto();   // 1666: los votos de la tanda se juntan y suben en un archivo
   return true;
 }
 // 1640 (facundo, 2026-09-15: "agregá un back por si quiero cambiar mi voto"), 1657: la flecha `←` de la cabecera
@@ -4655,7 +4660,7 @@ function tjAtras(){
   sel.tjVotos = Math.max(0, (sel.tjVotos || 0) - 1);
   $("selestado").textContent = "back @" + (c.cuenta || c.id);
   tjPintar();
-  selSubir();
+  selSubirPronto();
   return true;
 }
 var TJ_REINTENTOS = [1000, 3000];   // 1524: ms antes de cada reintento de una foto que no bajo
@@ -4733,22 +4738,40 @@ function selEnviarTexto(){
 // 1407: sin lan (desde pages el celu solo llega por el https de tailscale) cada registro va al buzon como
 // `seleccion-web/<col>--<id>.json` y el daemon lo levanta (`script_votos_buzon`, dedup por id). 422 = ya estaba.
 var SEL_BUZON_DIR = "seleccion-web", selPutStub = null;
+// 1666 (facundo desde el iphone, 2026-09-15: "toco votar y no pasa nada"): la tanda entera va en UN archivo
+// (`{registros: [...]}`), no uno por voto. con 52 tarjetas eran 52 PUT de aca + 52 DELETE del daemon, y entre los
+// dos llenaban las 400 escrituras por hora del buzon: despues de eso el server no podia publicar la confirmacion
+// y el modal no abria mas. un solo registro sigue subiendo suelto (formato viejo, el daemon acepta los dos).
 function selBuzon(col, regs){
-  return regs.reduce(function(pr, x){
-    return pr.then(function(){
-      var ruta = "/repos/" + REPO + "/contents/" + SEL_BUZON_DIR + "/" + encodeURIComponent(col + "--" + x.id + ".json");
-      var o = {method: "PUT", cache: "no-store", keepalive: true,
-               headers: {"authorization": "Bearer " + token, "accept": "application/vnd.github+json", "content-type": "application/json"},
-               body: JSON.stringify({message: "seleccion " + col, content: textoAb64(JSON.stringify(x))})};
-      // fetch propio y no `api()`: un 403 de escritura no desloguea
-      return (selPutStub ? Promise.resolve(selPutStub(ruta, o)) : fetch(API + ruta, o)).then(function(r){
-        if(!r || (!r.ok && r.status !== 422)) throw new Error("buzón " + (r && r.status));
-      });
-    });
-  }, Promise.resolve());
+  if(!regs.length) return Promise.resolve();
+  var id = regs[regs.length - 1].id;
+  var ruta = "/repos/" + REPO + "/contents/" + SEL_BUZON_DIR + "/" + encodeURIComponent(col + "--" + id + ".json");
+  var cuerpo = regs.length === 1 ? regs[0] : {registros: regs};
+  var o = {method: "PUT", cache: "no-store", keepalive: true,
+           headers: {"authorization": "Bearer " + token, "accept": "application/vnd.github+json", "content-type": "application/json"},
+           body: JSON.stringify({message: "seleccion " + col, content: textoAb64(JSON.stringify(cuerpo))})};
+  // fetch propio y no `api()`: un 403 de escritura no desloguea
+  return (selPutStub ? Promise.resolve(selPutStub(ruta, o)) : fetch(API + ruta, o)).then(function(r){
+    if(!r || (!r.ok && r.status !== 422)) throw new Error("buzón " + (r && r.status));
+  });
 }
+// 1666: los votos de tarjetas se juntan SEL_JUNTAR_MS antes de subir (facundo vota una tarjeta por segundo: sin
+// esto es una escritura del buzon por voto). lo que cierra una tanda (`aceptar`, `fin`) sigue subiendo al toque.
+var SEL_JUNTAR_MS = 3000, selJuntar = null;
+function selSubirPronto(){
+  if(selJuntar) clearTimeout(selJuntar);
+  selJuntar = setTimeout(function(){ selJuntar = null; selSubir(); }, SEL_JUNTAR_MS);
+}
+function selSubirYa(){   // cerrar la pagina o irse a background no espera a los 3 s
+  if(!selJuntar) return;
+  clearTimeout(selJuntar); selJuntar = null;
+  selSubir();
+}
+window.addEventListener("pagehide", selSubirYa);
+document.addEventListener("visibilitychange", function(){ if(document.hidden) selSubirYa(); });
 // sube lo pendiente, una coleccion por POST a la lan (o al buzon si no hay); lo que el server rechaza (400/404) se descarta
 function selSubir(){
+  if(selJuntar){ clearTimeout(selJuntar); selJuntar = null; }   // 1666: lo que junto sale en esta misma subida
   if(sel.subiendo){ sel.otra = true; return sel.subiendo; }
   var pend = selLeer("pend", []);
   if(!pend.length) return Promise.resolve(true);
@@ -4838,10 +4861,16 @@ function selPoner(abiertas, fuente, auto){
 // daemon cada 60 s. si el daemon dejo de publicar, ese json sigue diciendo `abierta: true` de algo que el server ya
 // cerro. asi que un widgets.json de mas de WID_FRESCO_MS **solo puede cerrar**, nunca abrir un modal.
 var WID_FRESCO_MS = 900000;
+// 1666: la misma lectura sirve para `widgets.json` y para `votaciones.json` (el archivo chico que el daemon
+// publica aparte, con carril propio en el buzon). el mas viejo de los dos NO pisa al mas nuevo: si no,
+// un `widgets.json` de hace 10 min borraba la confirmacion fresca que acababa de llegar.
+var selTs = 0;
 function selDesdeWidgets(j){
   var vt = j && j.votaciones;
   if(!vt || !vt.abiertas) return false;
   var t0 = fecha(j && j.ts), fresco = !!t0 && Date.now() - t0 < WID_FRESCO_MS;
+  if(t0 && t0 < selTs) return false;
+  if(t0) selTs = t0;
   // 1442: sin lan, el estado del votador de animaciones sale de aca (lo arma el server): cierra el que quedo abierto
   if(typeof vt.anim_abierta === "boolean" && !lan.base){
     if(!vt.anim_abierta){ anims.abierta = false; votCerrada(); }
@@ -7656,6 +7685,20 @@ function refrescarWidgets(clave){
   });
 }
 
+// 1666: `votaciones.json`, el archivo chico con las votaciones abiertas. va aparte de `widgets.json` porque el
+// daemon lo publica por un carril con prioridad (`buzon.RESERVA_VOTAR`): aunque el buzon este al tope de la hora y
+// los widgets queden viejos, esto llega fresco y el modal puede abrir. mismas reglas: si viene viejo, solo cierra.
+var etagVot = null, votJsonUlt = 0;
+function cargarVotaciones(){
+  votJsonUlt = Date.now();
+  return api("GET", "/repos/" + REPO + "/contents/votaciones.json", null, etagVot,
+             "application/vnd.github.raw+json").then(function(r){
+    if(r.status === 304) return;
+    etagVot = r.etag;
+    selDesdeWidgets(r.json);
+  }).catch(function(e){ if(e && /404/.test(e.message || "")) return; throw e; });   // todavia no lo publico ningun daemon
+}
+
 function cargarWidgets(){
   widUlt = Date.now();
   return api("GET", "/repos/" + REPO + "/contents/widgets.json", null, etagWid,
@@ -8889,12 +8932,13 @@ window.__agente = {
   selDesdeWidgets: selDesdeWidgets,
   // 1441: modal viejo en el ipad (`prueba_web_votar`, `prueba_seleccion`)
   selLimpiar: selLimpiar, votCerrada: votCerrada, widFrescoMs: WID_FRESCO_MS,
+  cargarVotaciones: cargarVotaciones, selSubirPronto: selSubirPronto, selJuntarMs: SEL_JUNTAR_MS,   // 1666
   selSembrarPend: function(ps){ selEscribir("pend", ps || []); },
   votSembrar: function(o){ Object.keys(o || {}).forEach(function(k){ votEscribir(k, o[k]); }); },
   selPutStub: function(f){ selPutStub = f; },
   selEstado: function(){ return {abierto: !!sel.actual, col: sel.actual && sel.actual.coleccion, pend: selLeer("pend", []), fuente: sel.fuente,
                                  marcadas: selMarcadas(), abiertas: sel.abiertas.map(function(a){ return a.coleccion; })}; },
-  selReset: function(){ sel.actual = null; sel.abiertas = []; sel.ignorada = {}; sel.tjHistorial = [];
+  selReset: function(){ sel.actual = null; sel.abiertas = []; sel.ignorada = {}; sel.tjHistorial = []; selTs = 0;
                         ["pend", "hechas", "fila"].forEach(function(s){ try{ localStorage.removeItem("agente_sel_" + s); }catch(x){} }); },
   selFila: function(){ return selLeer("fila", {}); },   // correccion 18:12
   animRanking: animRanking, animSpinner: animSpinner, animSinVer: animSinVer, animValida: animValida,
