@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.308">
-<link rel="manifest" href="manifest.json?v=4.308">
+<meta name="agente-web-version" content="4.309">
+<link rel="manifest" href="manifest.json?v=4.309">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -285,10 +285,13 @@
   #seltarjeta .tjchip{padding:2px 7px;border:1px solid var(--linea);border-radius:999px;font-size:10.5px;color:var(--gris)}
   #seltarjeta .tjchip.priv{color:var(--amarillo,#d8b25a);border-color:currentColor}
   #seltarjeta .tjchip.pub{color:var(--verde);border-color:currentColor}
+  #seltarjeta a.tjchip{text-decoration:none;cursor:pointer}   /* 1677: el chip `pública` es link al perfil */
+  #seltarjeta a.tjchip:hover{background:rgba(57,255,20,.12)}
   #seltarjeta .tjchip.tag{color:var(--magenta);border-color:currentColor}
   /* 1495 (facundo, 2026-09-15): la foto de perfil arriba y grande, siempre; abajo nombre, marca, estado y en comun */
   #seltarjeta .tjfotos{display:flex;justify-content:center}
-  /* 1642: el cdn da la foto de 150 px (antes se bajaba de 96): el circulo mide lo que mide la foto (96 a 220), nunca la estira */
+  /* 1642: el cdn da la foto de 150 px (antes se bajaba de 96): el circulo mide lo que mide la foto, nunca la estira.
+     1677: la foto baja en hd (hasta 640 px) y el tope pasa de 220 a `TJ_FOTO_MAX` (420), siempre dentro del 60vw */
   /* 1655: safari del iphone ignoraba `aspect-ratio` con `width:min()` en un item flex y la dibujaba ovalada: ancho y
      alto explicitos con el mismo valor, sin estirar ni encoger */
   #seltarjeta .tjppal{flex:0 0 auto;flex-shrink:0;width:min(150px,60vw);height:min(150px,60vw);min-height:0;align-self:center;
@@ -4669,7 +4672,9 @@ function tjPintar(){
         if(!tjActual() || tjActual().id !== id) return;
         var im = document.createElement("img"); im.alt = "";
         // 1642: el circulo mide lo que la foto. 1655: ancho y alto juntos, si no safari lo deja ovalado
-        im.onload = function(){ if(im.naturalWidth){ var d = "min(" + Math.max(96, Math.min(220, im.naturalWidth)) + "px,60vw)"; pp.style.width = d; pp.style.height = d; } };
+        // 1677: la foto ya baja en hd (hasta 640 px): el circulo mide lo que la foto, sin el tope de 220; el `60vw`
+        // (y el `TJ_FOTO_MAX` como techo) lo mantienen dentro de la tarjeta en el celu y en el desktop
+        im.onload = function(){ if(im.naturalWidth){ var d = "min(" + Math.max(96, Math.min(TJ_FOTO_MAX, im.naturalWidth)) + "px,60vw)"; pp.style.width = d; pp.style.height = d; } };
         im.src = url; pp.appendChild(im);
         pp.__url = url;   // 1665: la privada se agranda con esta misma foto (no hay otra bajada)
       }).catch(function(){
@@ -4691,8 +4696,15 @@ function tjPintar(){
   }
   t.appendChild(nom);
   var est = document.createElement("div"); est.className = "tjestado";
-  function chip(txt, cls){ var x = document.createElement("span"); x.className = "tjchip " + (cls || ""); x.textContent = txt; est.appendChild(x); }
-  chip(c.privada ? "privada" : "pública", c.privada ? "priv" : "pub");
+  // 1677: el chip `pública` se comporta como el `@cuenta`: link al perfil (solo https), abre aparte y no vota ni
+  // avanza la tarjeta; `privada` (y las etiquetas) siguen siendo texto
+  function chip(txt, cls, href){
+    var lk = href && /^https:\/\//.test(href), x = document.createElement(lk ? "a" : "span");
+    x.className = "tjchip " + (cls || ""); x.textContent = txt;
+    if(lk){ x.href = href; x.target = "_blank"; x.rel = "noopener"; x.addEventListener("click", function(ev){ ev.stopPropagation(); }); }
+    est.appendChild(x); return x;
+  }
+  chip(c.privada ? "privada" : "pública", c.privada ? "priv" : "pub", c.privada ? "" : c.link);
   (c.etiquetas || []).forEach(function(x){ chip(x, "tag"); });
   if(c.estado) est.appendChild(document.createTextNode(c.estado));
   t.appendChild(est);
@@ -4769,6 +4781,7 @@ function tjAtras(){
   return true;
 }
 var TJ_REINTENTOS = [1000, 3000];   // 1524: ms antes de cada reintento de una foto que no bajo
+var TJ_FOTO_MAX = 420;   // 1677: techo del circulo de la foto hd (la caja del modal mide 520 con padding); en el celu manda el 60vw
 function tjSacar(id){
   // 1524: la foto no bajo ni reintentando: la tarjeta sale de ESTA apertura sin votar y sin correr el indice
   var e = sel.actual;
