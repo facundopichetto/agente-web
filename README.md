@@ -147,6 +147,13 @@ viaja en el mismo `tabs.json`, al lado de los borradores:
 - **que pestaña esta abierta** viaja en el mismo `tabs.json` como `activo` (antes eran `paneles` y
   `foco`, del split que ya no existe).
 - las vistas de mas de 7 dias se podan solas.
+- **1770 (2026-09-16): ademas del ancla, la posicion exacta de este dispositivo** en `localStorage`
+  (`agente_scroll`: `{tema, ancla, abajo, desvio, ts}`, 10 min): se guarda al recargar por version nueva
+  (`mirarVersion`, antes del cartel y del `location.replace`) y al esconder la pagina; al arrancar entra como
+  vista (gana por `ts` contra un buzon mas viejo) y `aplicarVista` suma el `desvio` si la ancla coincide. y
+  `irDonde` ya no confia en un solo `requestAnimationFrame` (no corre con la pagina oculta): `asentarVista`
+  aplica el ancla o va al fondo en el acto, en dos rAF, con `ResizeObserver` de `#lista` por 1.5 s y al volver
+  al foco; un gesto (rueda, dedo) lo corta. el chat nunca queda en `scrollTop 0` salvo que entre entero.
 
 probarlo: `python3 -m recetas.prueba_web_tabs` (bloques "sincronizando" y "la vista de cada pestaña").
 
