@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.309">
-<link rel="manifest" href="manifest.json?v=4.309">
+<meta name="agente-web-version" content="4.311">
+<link rel="manifest" href="manifest.json?v=4.311">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -704,7 +704,9 @@
   .ubat.baja{border-color:var(--rojo)}
   .ubat.baja::after{background:var(--rojo)}
   .usage .usem{margin:8px 0 0 0}
-  .usage .usem-g{position:relative;display:flex;align-items:flex-end;gap:3px;height:22px;border-bottom:1px solid #333}
+  /* 1736: alto al doble (22 -> 44 px). las barras van en % del contenedor, asi que escalan solas y el ancho,
+     el gap, las etiquetas y el tooltip quedan igual. */
+  .usage .usem-g{position:relative;display:flex;align-items:flex-end;gap:3px;height:44px;border-bottom:1px solid #333}
   .usage .usem-g .usd{flex:1 1 0;background:var(--verde);opacity:.75;border-radius:1px 1px 0 0}
   .usage .usem-g .usd.sobre{background:var(--amarillo)}
   .usage .usem-g .usd.sin{opacity:0}
