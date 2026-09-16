@@ -1169,6 +1169,44 @@ sigue por el buzón; el script `chat_lan` (cada 10 min) engancha `tailscale serv
 probar: `python3 -m recetas.prueba_chat_lan` (el endpoint real con github falso) y el bloque `lan` de
 `recetas/prueba_web_tabs` (endpoint vivo, caído y de vuelta). estado: `python3 -m recetas.chat_lan --estado`.
 
+## por internet, claudio-nube antes que el buzón (facundo, 2026-09-15 20:5x, orden 1668)
+
+el buzón de github (contents api, tope 400/h) se llenó dos veces el 15/09 (17:26 y 20:26) y el board por internet
+quedó mudo 17 min. facundo eligió **A**: el board habla directo con claudio-nube, y github queda de respaldo.
+
+**la vm** (`claudio-nube`, hetzner, tailscale `100.87.19.20`): caddy en `/etc/caddy/Caddyfile` sirve
+`https://138-201-172-113.sslip.io` (cert de let's encrypt; no hay dominio propio y el hostname de tailscale no
+resuelve desde internet) y proxea por tailscale a `100.77.97.14:8781`, el **mismo** endpoint `chat_lan` del daemon
+del server (que desde la 1668 escucha también en su ip de tailscale). nada abierto: sin `Authorization` caddy
+contesta `401` antes de llegar al server (el preflight `OPTIONS` pasa, no trae header); adentro vale la auth de
+siempre (bearer del board verificado contra github, o el token local). `ufw` en la vm abre `80`/`443`. backup
+de antes en `/root/backup-<fecha>/` de la vm.
+
+**la web**: `LAN_DEFAULT` suma `{via: "nube", url: NUBE_URL, ms: 3000}` (y `widgets.json` lo anuncia en
+`lan.endpoints`). el probe va lan/tailscale primero (1 s) y la nube última con **3 s** de tope; si no contesta,
+el buzón como siempre. por el endpoint cada fetch tiene `LAN_FETCH_MS` (20 s) de tope: una llamada colgada por
+la nube cae al buzón en el acto (`lanCaido`) y el probe siguiente (60 s) la retoma. el **cartel chico `#via`**
+del header (texto pelado, sin borde ni fondo) dice `lan` / `tailscale` (verde), `nube` (cian) o `buzón` (gris).
+un endpoint nuevo arranca sin la marca `sin github`.
+
+**el server** (`recetas/chat_lan.py`): la vía se llama `nube` cuando el peer es de tailscale y trae
+`x-forwarded-for` (la ip pública del celu). cada pedido autenticado anota su vía en `clientes`; el hilo de salida
+sondea `<nube>/ping` cada 60 s con el token local (cero tokens) y deja sonda + clientes en `tmp/lan/nube.json`.
+`chat_lan.respaldo_github()` = la nube contesta (sonda fresca de menos de 3 min) **y** algún board pidió algo por
+el endpoint hace menos de 2 min. con eso en `True`:
+- `recetas/buzon.py`: `chat/*.json`, `widgets.json`, `votaciones.json` salen como mucho cada `CADA_RUTA_RESPALDO`
+  (5 min) y `tabs.json` por la lan igual; el latido (`PATCH` del issue) cada `LATIDO_RESPALDO` (5 min).
+  los comentarios (respuestas del chat) no esperan: github sigue siendo el respaldo para un board que cayó al buzón.
+- `mostrar_imagen.publicar` y `audio_respuesta._subir` dejan siempre una copia en `tmp/lan/img|audio/` (el
+  endpoint la sirve del disco) y **no suben a github** mientras haya respaldo: cero escrituras por avisos internos
+  (instagram, cámaras, scripts). un board en el buzón los ve sin foto ni audio hasta que vuelva la nube.
+sin nube o sin boards por el endpoint, todo vuelve a ser como antes (y se loguea el cambio). `/ping` trae `nube`
+y `respaldo`; `python3 -m recetas.chat_lan --estado` también.
+
+probar: `python3 -m recetas.prueba_chat_lan` (vía nube, sonda, respaldo, escritor con tope bajo, copia local) y el
+bloque `nube` de `recetas/prueba_web_tabs` (tailscale colgado + nube viva en menos de 3 s, cartel, mensaje por
+`/msg` de la nube sin github, nube caída al buzón y de vuelta). A2 (la nube guarda copia propia) es otra orden.
+
 ## nombres, input y cajas a/b/c (facundo, 2026-09-13)
 
 - **nombres que se ven**: el agente es `claudio` y facundo es `f` (en verde), en la cabecera de cada mensaje, el

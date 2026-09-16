@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.306">
-<link rel="manifest" href="manifest.json?v=4.306">
+<meta name="agente-web-version" content="4.307">
+<link rel="manifest" href="manifest.json?v=4.307">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -743,6 +743,10 @@
   #nodos .luz.gris{background:var(--gris)}
   /* campana y persona (facundo, 2026-09-13, orden 1166): iconos svg sin look de boton, como la barra de nodos.
      el cartel `lan / tailscale / buzón` se saco del header: vive en el menu del nodo server ("habla por"). */
+  /* cartel chico de la via (1668): texto pelado, sin borde ni fondo; verde por lan/tailscale, celeste por la nube,
+     gris por el buzon de github */
+  #via{flex:0 0 auto;font-size:10px;line-height:1;opacity:.85;letter-spacing:.02em;cursor:default;user-select:none}
+  #via.lan{color:var(--verde)} #via.nube{color:var(--cian)} #via.buzon{color:var(--gris)}
   .ib{flex:0 0 auto;position:relative;background:none;border:0;padding:0;margin:0;color:var(--blanco);font-size:var(--texto-max);
     width:26px;height:24px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;
     -webkit-tap-highlight-color:transparent}
@@ -1048,6 +1052,7 @@
 
 <div id="cabecera">
   <div id="nodos"></div>
+  <span id="via" class="via buzon" title="el board habla por: buzón">buzón</span>
   <button id="ver-votar" class="bb oculta" type="button" title="hay una votación abierta">votar</button>
   <div id="vistas">
     <button id="ver-chat" class="bb on" type="button">chat</button>
@@ -3425,8 +3430,12 @@ function frenar(seg, motivo, callado){   // callado: el que llama avisa (el envi
 // ese mismo origen. si contesta, TODO va por ahi: el poll (comentarios, estado, widgets, chat), el envio, la
 // subida de fotos y audios y la bajada de imagenes. si una llamada falla, cae al buzon de github en el acto.
 // el http de la lan no se prueba desde github pages: es mixed content y el navegador lo bloquea igual.
-var LAN_PUERTO = 8781, LAN_PROBE_MS = 1000, LAN_CADA = 60000;
-var LAN_DEFAULT = [{via: "tailscale", url: "https://claudio.taile8a6a7.ts.net"}];
+var LAN_PUERTO = 8781, LAN_PROBE_MS = 1000, LAN_CADA = 60000, LAN_FETCH_MS = 20000;
+// nube (orden 1668, facundo 2026-09-15): por internet el board habla con claudio-nube (caddy -> tailscale -> el
+// mismo endpoint del server) antes que con el buzon de github. se prueba despues de la lan/tailscale, con 3 s de
+// tope (`ms`); si no contesta, el buzon como siempre. el cartel `#via` del header dice por donde va.
+var NUBE_URL = "https://138-201-172-113.sslip.io", NUBE_PROBE_MS = 3000;
+var LAN_DEFAULT = [{via: "tailscale", url: "https://claudio.taile8a6a7.ts.net"}, {via: "nube", url: NUBE_URL, ms: NUBE_PROBE_MS}];
 var RE_LAN_MARCA = /\n?<!--lan:([\w-]{6,40})(?: atendido:[\w-]+)?-->/;
 var lan = {base: null, via: "buzón", ult: 0, probando: null};
 var lanMsgs = {};          // lid -> true: salio por la lan, su copia del buzon no se pinta dos veces
@@ -3443,8 +3452,10 @@ function lanCandidatos(){
     if(/^http:/.test(e.url) && location.protocol !== "http:") return;   // desde https o file:// no llega
     var url = String(e.url).replace(/\/+$/, "");
     for(var i = 0; i < c.length; i++) if(c[i].url === url) return;
-    c.push({via: e.via || "tailscale", url: url});
+    c.push({via: e.via || "tailscale", url: url, ms: e.ms || (e.via === "nube" ? NUBE_PROBE_MS : 0)});
   });
+  // la nube es el ultimo recurso antes del buzon: la lan y tailscale van primero, anunciadas o no
+  c.sort(function(a, b){ return (a.via === "nube" ? 1 : 0) - (b.via === "nube" ? 1 : 0); });
   return c;
 }
 // `widgets.json` trae `lan.endpoints` (lo arma el daemon con tailscale serve y la ip de casa)
@@ -3456,7 +3467,14 @@ function lanAnuncio(d){
 // por donde habla el board (lan primero). desde la 1166 no hay cartel en el header: lo dice el menu del nodo
 // server ("habla por: ..."), y si ese menu esta abierto se repinta con el camino nuevo.
 function viaTexto(){ return lan.base ? lan.via + (lan.sinGithub ? " (sin github)" : "") : "buzón"; }
+// cartel chico en el header (1668: facundo pidio ver por donde habla el board): `lan` / `tailscale` / `nube` / `buzón`
 function pintarVia(){
+  var v = $("via");
+  if(v){
+    v.textContent = viaTexto();
+    v.className = "via " + (lan.base ? (lan.via === "nube" ? "nube" : "lan") : "buzon");
+    v.title = "el board habla por: " + viaTexto();
+  }
   if(modalAbierto && modalAbierto.nodoId === "server" && modalAbierto.reabrir) modalAbierto.reabrir();
 }
 function lanPoner(x){
@@ -3464,7 +3482,7 @@ function lanPoner(x){
   lan.base = x ? x.url : null;
   lan.via = x ? (x.via || "lan") : "buzón";
   // los etag del endpoint y los de github no se mezclan
-  if(antes !== lan.base){ etagCom = null; etagWid = null; etagIssue = null; etagChat = {}; etagEstado = null; }
+  if(antes !== lan.base){ etagCom = null; etagWid = null; etagIssue = null; etagChat = {}; etagEstado = null; lan.sinGithub = false; }
   pintarVia();
 }
 function probarLan(){
@@ -3477,7 +3495,7 @@ function probarLan(){
     var c = cands[i++];
     var ctl = typeof AbortController !== "undefined" ? new AbortController() : null;
     return new Promise(function(ok, mal){
-      var t = setTimeout(function(){ if(ctl) ctl.abort(); mal(new Error("timeout")); }, LAN_PROBE_MS);
+      var t = setTimeout(function(){ if(ctl) ctl.abort(); mal(new Error("timeout")); }, c.ms || LAN_PROBE_MS);
       lanFetch(c.url + "/ping", {headers: {"authorization": "Bearer " + token}, cache: "no-store",
                                  signal: ctl ? ctl.signal : undefined})
         .then(function(r){ clearTimeout(t); ok(r); }, function(e){ clearTimeout(t); mal(e); });
@@ -3532,7 +3550,10 @@ function apiLan(metodo, ruta, cuerpo, etag, accept){
     opts.body = JSON.stringify({body: cuerpo.body, lid: lid});
   }
   if(etag) h["if-none-match"] = etag;
+  var ctl = typeof AbortController !== "undefined" ? new AbortController() : null, tmo = null;
+  if(ctl){ opts.signal = ctl.signal; tmo = setTimeout(function(){ ctl.abort(); }, LAN_FETCH_MS); }
   return lanFetch(url, opts).then(function(r){
+    if(tmo) clearTimeout(tmo);
     if(r.status === 304) return {status: 304};
     // modo minimo (orden 1096): el server vive pero github no contesta. no es la lan caida: "nada nuevo" y se
     // sigue por el endpoint (widgets, charla y envio no dependen de github)
@@ -3546,7 +3567,7 @@ function apiLan(metodo, ruta, cuerpo, etag, accept){
       if(lid && j && j.lid) lanMsgs[j.lid] = true;
       return {status: r.status, json: j, etag: r.headers && r.headers.get ? r.headers.get("etag") : null};
     });
-  }, function(e){ throw caido((e && e.message) || "sin respuesta"); });
+  }, function(e){ if(tmo) clearTimeout(tmo); throw caido((e && e.message) || "sin respuesta"); });
 }
 // bytes de `img/...` o `audio/...`: del endpoint si esta, si no (o si no lo tiene) del buzon
 function bajarBlob(repo){
@@ -4396,7 +4417,8 @@ $("vtcerrar").addEventListener("click", votCerrar);
 // `premarcada`), texto libre, `aceptar` y `enviar texto`. la web mira `GET /seleccion` al entrar, cada 30 s y al
 // volver a la app; si hay una abierta que no acepto en este dispositivo, abre el modal. cada registro (con id) sale
 // por `POST /seleccion/<coleccion>` y, sin red, queda en localStorage hasta que vuelve: el server no lo cuenta dos
-// veces y es el que lo manda al chat de la pestaña del tema (`seleccion <coleccion>: ...`). `cerrar` solo la esconde
+// veces. 1674: un voto nunca llega al chat a nombre de facundo (solo un `texto` tipeado); al cerrar la tanda el server deja
+// un resumen de flaudio. `cerrar` solo la esconde
 // hasta recargar; `aceptar` la cierra para todos.
 var SEL_CADA = 30000;
 var sel = {abiertas: [], actual: null, tj: 0, subiendo: null, otra: false, timer: null, ignorada: {}, wid: null, widFresco: null, fuente: null};
