@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.301">
-<link rel="manifest" href="manifest.json?v=4.301">
+<meta name="agente-web-version" content="4.302">
+<link rel="manifest" href="manifest.json?v=4.302">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -124,6 +124,8 @@
   /* el ancho lo da un cuadro invisible de alto 0 (`data-medida`): `Nch` se quedaba corto con fuentes cuyo `0` no mide
      lo mismo que el resto y cortaba las de 9+ caracteres */
   .anim::after{content:attr(data-medida);display:block;height:0;visibility:hidden}
+  /* 1670: color por caracter (`colores` con una lista por cuadro): un <i> por caracter, sin italica ni espacio extra */
+  .anim i{font-style:normal;display:inline}
   /* ---------- molde de componentes (facundo, 2026-09-15, orden 1558) ----------
      un solo lugar por estilo: todo modal, votacion o boton nuevo reusa estas clases (docs/componentes-web.md) y nace con
      los gustos de facundo: texto hasta --texto-max, esc cierra (pila `capaRegistrar`), decisiones con glifos sin borde
@@ -3984,10 +3986,47 @@ function animValida(a){
   var n = animLargo(a.frames[0]);
   return n > 0 && a.frames.every(function(f){ return typeof f === "string" && animLargo(f) === n; });
 }
-function animIdx(a, ms){ return Math.floor(Math.max(0, ms) / (a.intervalo || 120)) % a.frames.length; }
+// 1670: `ritmo` opcional, un ms por cuadro (acelera, frena, pausa). sin `ritmo` el pulso es `intervalo` parejo.
+// los cortes acumulados se calculan una vez por animacion y se cachean por id + cantidad de cuadros.
+var animDurs = {};
+function animDur(a){
+  var k = a.id + ":" + a.frames.length, d = animDurs[k];
+  if(d) return d;
+  var r = (a.ritmo && a.ritmo.length === a.frames.length) ? a.ritmo : null, iv = a.intervalo || 120, t = 0, ac = [];
+  for(var i = 0; i < a.frames.length; i++){ t += Math.max(1, r ? r[i] : iv); ac.push(t); }
+  d = animDurs[k] = {ac: ac, tot: t};
+  return d;
+}
+function animIdx(a, ms){
+  var d = animDur(a), t = Math.max(0, ms) % d.tot;
+  for(var i = 0; i < d.ac.length; i++) if(t < d.ac[i]) return i;
+  return d.ac.length - 1;
+}
 function animCuadro(a, ms){ return a.frames[animIdx(a, ms)]; }
 // 1397: color por cuadro (`colores`, uno por cuadro, #rrggbb); sin colores hereda el del texto
+// 1670: un cuadro puede traer una lista de colores, uno por caracter (las de 3 y 4 multicolor de verdad)
 function animColor(a, ms){ return a.colores && a.colores.length === a.frames.length ? a.colores[animIdx(a, ms)] : ""; }
+function animCoClave(co){ return Array.isArray(co) ? co.join("|") : String(co || ""); }
+// pinta el cuadro: color plano en el `span`, o un `<i>` por caracter cuando el cuadro trae color por caracter
+function animPintar(el, cuadro, co){
+  var chs = Array.isArray(co) ? Array.from(cuadro) : null;
+  if(!chs){
+    if(el.firstElementChild) el.textContent = "";
+    if(el.textContent !== cuadro) el.textContent = cuadro;
+    el.style.color = co || "";
+    return;
+  }
+  if(el.childElementCount !== chs.length){
+    el.textContent = "";
+    for(var j = 0; j < chs.length; j++) el.appendChild(document.createElement("i"));
+  }
+  el.style.color = "";
+  for(var i = 0; i < chs.length; i++){
+    var n = el.children[i], c = co[i] || "";
+    if(n.textContent !== chs[i]) n.textContent = chs[i];
+    if(n.style.color !== c) n.style.color = c;
+  }
+}
 function animPoner(el, a, t0){
   if(!el || !a) return;
   el.classList.add("anim");
@@ -3996,8 +4035,9 @@ function animPoner(el, a, t0){
   animEls = animEls.filter(function(x){ return x.el !== el; });
   var x = {el: el, a: a, t0: t0 || Date.now()};
   animEls.push(x);
-  el.textContent = animCuadro(a, Date.now() - x.t0);
-  x.co = animColor(a, Date.now() - x.t0); el.style.color = x.co;
+  var co = animColor(a, Date.now() - x.t0);
+  x.co = animCoClave(co);
+  animPintar(el, animCuadro(a, Date.now() - x.t0), co);
   if(!animTimer) animTimer = setInterval(animTick, ANIM_TICK);
 }
 function animSacar(dentro){ animEls = animEls.filter(function(x){ return !dentro.contains(x.el); }); }
@@ -4005,9 +4045,10 @@ function animTick(){
   var ahora = Date.now();
   animEls = animEls.filter(function(x){ return x.el.isConnected; });
   animEls.forEach(function(x){
-    var c = animCuadro(x.a, ahora - x.t0), co = animColor(x.a, ahora - x.t0);
-    if(x.el.textContent !== c) x.el.textContent = c;
-    if(x.co !== co){ x.co = co; x.el.style.color = co; }
+    var c = animCuadro(x.a, ahora - x.t0), co = animColor(x.a, ahora - x.t0), ck = animCoClave(co);
+    if(x.cuadro === c && x.co === ck) return;   // con `ritmo` y las pausas, muchos ticks no cambian nada
+    x.cuadro = c; x.co = ck;
+    animPintar(x.el, c, co);
   });
   if(!animEls.length){ clearInterval(animTimer); animTimer = null; }
 }
