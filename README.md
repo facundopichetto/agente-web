@@ -1123,8 +1123,23 @@ header que nodo y que modelo contesto". el criterio del daemon esta en `recetas/
   mucho) y respetando el freno y el tope del buzon. `eta_respuesta_s` = promedio del `duracion_s` de los ultimos 20
   intercambios del mismo canal, nodo y modelo en `logs/chat-*.jsonl` (`chat_estado.eta_respuesta`; sin muestras cae
   a canal + nodo y a canal), reestimado cuando la fase `modelo` dice el modelo real. el bloque se va cuando llega la respuesta, o 15 s despues de `listo`.
-- probar: `python3 -m recetas.chat_estado --probar`, `python3 -m recetas.chat_nodo --probar` y los bloques
-  `estado en vivo` de `recetas/prueba_web_tabs`.
+- **la respuesta es un hilo que crece (1776, facundo 2026-09-16)**: "primero la bolita y el estado de lo que
+  esta haciendo, luego que diga que entendio y que va a hacer, y de ahi el ida y vuelta; que no se borren cosas y de
+  repente aparezca un choclo". el estado en vivo trae ademas `tramos`: lo que el modelo ya termino, en orden
+  (`recetas/chat_stream.Lector` -> `chat_estado.Intercambio.tramo`): `{i, tipo: texto|salida, texto, cmd?}`. un
+  `texto` es cada bloque de texto del `assistant` (el `result` de claude trae solo el ultimo: sin esto la linea
+  `entendi: ... voy a ...` del principio, que pide `reglas_chat.REGLAS_FORMATO`, se perdia); una `salida` son las
+  primeras 4 lineas del `tool_result` de un Bash con su comando (Read/Grep no son tramos, solo mueven la linea de
+  estado). la web (`vueloTramos`) los ANEXA en `#vuelo .hilo`, arriba de la linea `.cuerpo` (bolita + fase, lo unico
+  que cambia): pinta solo los `i` que no tiene y **nunca toca uno ya pintado** aunque el server lo mande distinto
+  o mande menos. pegado abajo sigue pegado, scrolleado no se mueve. al llegar la respuesta, `pintarMsg` le adopta
+  el hilo (`tramosSinFinal`: sin el ultimo texto, que es el mismo final) y el bloque en vuelo se va; el daemon
+  guarda los mismos tramos en la fila del jsonl (`tramos`, `CAMPOS_CHAT_WEB`) y `nodoMsg` los pinta en `.hilo`
+  arriba del cuerpo: un reload muestra el hilo entero en el mismo orden. los deltas parciales no son tramos a
+  proposito (re-renderizar markdown a medias cambiaria texto ya pintado).
+- probar: `python3 -m recetas.chat_estado --probar`, `python3 -m recetas.chat_nodo --probar`, los bloques
+  `estado en vivo` de `recetas/prueba_web_tabs` y **`python3 -m recetas.prueba_web_progresivo`** (el hilo: anexa,
+  nunca edita, adopta, reload, scroll).
 
 ## pwa de escritorio sin barra de titulo (facundo, 2026-09-13)
 

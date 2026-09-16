@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.318">
-<link rel="manifest" href="manifest.json?v=4.318">
+<meta name="agente-web-version" content="4.319">
+<link rel="manifest" href="manifest.json?v=4.319">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -118,6 +118,15 @@
   /* mensaje en vuelo: spinner de texto, fase y eta mientras contesta el agente */
   .msg.vuelo .cuerpo{color:var(--gris)}
   .msg.vuelo .giro{color:var(--verde);display:inline-block;min-width:1ch;cursor:pointer}
+  /* 1776 (facundo, 2026-09-16): la respuesta es un hilo que crece. `.hilo` son los tramos que el modelo ya termino
+     (texto, o la salida corta de un comando), en orden y nunca editados; abajo, en vuelo, la unica linea que cambia
+     es `.cuerpo` (bolita + lo que esta haciendo). en la respuesta guardada el hilo queda arriba del cuerpo final */
+  .msg .hilo{color:var(--blanco)}
+  .msg .hilo:empty{display:none}
+  .msg .hilo .tramo{margin:0 0 8px 0}
+  .msg .hilo .tramo.salida{color:var(--gris);font-size:11px}
+  .msg .hilo .tramo.salida .cmd{color:var(--cian)}
+  .msg.vuelo .hilo + .cuerpo{margin-top:2px}
   /* animaciones de caracteres (1373): una linea, todos los cuadros del mismo ancho (`Nch` lo pone animPoner), el
      alto fijo de una linea: ni saltan de costado ni empujan el renglon.
      1681 (facundo, 2026-09-15, desde el ipad): el `inline-flex` + `vertical-align:top` colgaba el spinner del techo
@@ -2884,6 +2893,13 @@ function nodoMsg(m){
   // el [▶] de daniela: solo en las respuestas que el daemon ya renderizo (campo `audio` de la fila).
   // el texto sale primero y el audio aparece en el poll siguiente, asi que el boton llega despues.
   if(m.audio) cab.appendChild(reproductor(m.audio, "escuchar la respuesta"));
+  // 1776: el hilo que facundo ya vio mientras contestaba (entendi, salidas de comandos, textos intermedios),
+  // del jsonl (`tramos`) o adoptado del bloque en vuelo; arriba del cuerpo, mismo orden, nunca editado
+  var hilo = null;
+  if(m.clase === "agente" && m.tramos && m.tramos.length){
+    hilo = document.createElement("div"); hilo.className = "hilo";
+    m.tramos.forEach(function(t, i){ if(t && String(t.texto || "").trim()) hilo.appendChild(nodoTramo({i: t.i !== undefined ? t.i : i, tipo: t.tipo, texto: t.texto, cmd: t.cmd})); });
+  }
   var b = document.createElement("div");
   b.className = "cuerpo";
   // las `ACCION <id>:` salen del cuerpo antes que nada: abajo van como caja verde `dale`, no como texto
@@ -2892,7 +2908,7 @@ function nodoMsg(m){
   var ops = m.clase === "agente" ? cajasDe({texto: textoSinAcc, opciones: m.opciones}) : null;
   var dr = draftsDe(ops && ops.cuerpo !== null ? ops.cuerpo : textoSinAcc);
   b.innerHTML = resaltar(m.clase === "agente" && dr.bloques.length ? dr.cuerpo : (ops && ops.cuerpo !== null ? ops.cuerpo : (m.clase === "yo" ? sinDictado(m.texto) : textoSinAcc)));
-  div.appendChild(cab); div.appendChild(b);
+  div.appendChild(cab); if(hilo) div.appendChild(hilo); div.appendChild(b);
   if(acc && acc.lista.length) div.appendChild(nodoAcciones(m, acc.lista));
   if(ops && ops.lista.length) div.appendChild(nodoCajas(m, ops.lista));
   if(m.clase === "agente" && dr.bloques.length) div.appendChild(nodoDrafts(dr.bloques));
@@ -3466,6 +3482,9 @@ function arrepentirse(m, caja, lista_, letra){
   mandar(citaCaja(m) + "me arrepentí: " + letra + ": " + op.texto, m.tema || temaActivo(), false);
 }
 function pintarMsg(m, arriba){
+  // 1776: la respuesta que cierra el bloque en vuelo se lleva su hilo (lo pintado no desaparece ni se repite)
+  if(!arriba && m.clase === "agente" && !m.tramos && vuelo && vuelo.tramos.length && (m.tag || vuelo.listo) &&
+     fecha(m.iso) >= vuelo.ref - 2000 && deEstaTab(m.tema, vuelo.tema)) m.tramos = tramosSinFinal(vuelo.tramos, m.texto);
   // 1212: respuesta nueva con cajas -> se limpia el estado viejo antes de pintarla (no se hereda una marca)
   if(m.clase === "agente" && tieneCajas(m) && purgarOpc() && !renderando) refrescarCajas();
   if(deEstaTab(m.tema, temaActivo()) && lista){
@@ -3928,7 +3947,7 @@ function recibirChat(tema, d){
                 tema: t, explicito: true, tag: t, audio: f.audio || null, nodo: nodo, tarea: f.tarea || null,
                 modelo: f.nodo && f.modelo ? modeloCorto(f.modelo) : null,
                 duracion_s: f.duracion_s !== undefined ? f.duracion_s : null, cuello: f.cuello || null,
-                opciones: f.opciones || null});
+                opciones: f.opciones || null, tramos: Array.isArray(f.tramos) && f.tramos.length ? f.tramos : null});
     }
   });
   msgsHist[t] = out;
@@ -5207,7 +5226,8 @@ function claveEstado(cuerpo){
 function vueloIniciar(m, cuerpo){
   var t0 = fecha(m.iso) || Date.now();
   vuelo = {id: m.id, tema: m.tema, iso: m.iso, t: t0, ref: fecha(m.creado) || t0, clave: claveEstado(cuerpo),
-           palabra: "enviado", eta: null, fin: 0, giro: 0, listo: 0, anim: animSpinner()};   // 1373: sin animaciones, la ruedita
+           palabra: "enviado", eta: null, fin: 0, giro: 0, listo: 0, anim: animSpinner(),   // 1373: sin animaciones, la ruedita
+           tramos: []};   // 1776: lo ya pintado del hilo, en orden; solo crece
   etagEstado = null;
   if(vueloGiro) clearInterval(vueloGiro);
   if(vueloPoll) clearInterval(vueloPoll);
@@ -5229,8 +5249,9 @@ function pintarVuelo(){
   if(!n){
     n = document.createElement("div");
     n.id = "vuelo"; n.className = "msg agente vuelo";
-    n.innerHTML = '<div><span class="quien">flaudio</span><span class="ts"></span></div>' +
+    n.innerHTML = '<div><span class="quien">flaudio</span><span class="ts"></span></div><div class="hilo"></div>' +
                   '<div class="cuerpo"><span class="giro" title="más de esto, menos de esto o una nota"></span> <span class="fase"></span><span class="eta"></span></div>';
+    vuelo.tramos.forEach(function(t){ n.querySelector(".hilo").appendChild(nodoTramo(t)); });   // el nodo se rehizo (cambio de pestaña): mismo hilo
     n.querySelector(".giro").addEventListener("click", function(){ animMenuAbrir(); });   // 1453: menu chico, nunca el votador
   }
   if(n.parentNode !== lista || lista.lastChild !== n) lista.appendChild(n);
@@ -5240,6 +5261,47 @@ function pintarVuelo(){
   else gi.textContent = GIRO[vuelo.giro % GIRO.length];
   n.querySelector(".fase").textContent = faseTexto();
   n.querySelector(".eta").textContent = etaTexto();
+}
+// 1776 (facundo, 2026-09-16: "comunicacion mas progresiva, que no se borren cosas y de repente aparezca un choclo"):
+// el estado trae `tramos` = lo que el modelo ya termino (`recetas/chat_stream.py` -> `chat_estado.Intercambio.tramo`):
+// `{i, tipo: texto|salida, texto, cmd?}`. se pintan SOLO los `i` que todavia no estan, abajo de los que ya estan y
+// arriba de la linea de estado; uno ya pintado no se toca aunque el server lo mande distinto. si facundo estaba
+// al final sigue al final; si scrolleo, no se mueve (misma regla que el resto del chat).
+function normTramo(t){
+  return String(t || "").replace(/^\s*\[[\w\/-]+\]\s*/, "").replace(/\s+/g, " ").trim();
+}
+function nodoTramo(t){
+  var d = document.createElement("div");
+  d.className = "tramo " + (t.tipo === "salida" ? "salida" : "texto") + (t.i === 0 && t.tipo !== "salida" ? " entendi" : "");
+  if(t.tipo === "salida"){
+    var c = document.createElement("span"); c.className = "cmd"; c.textContent = "▸ " + (t.cmd || "comando");
+    d.appendChild(c);
+    d.appendChild(document.createTextNode((t.texto ? "\n" : "") + String(t.texto || "")));
+  } else d.innerHTML = resaltar(String(t.texto || ""));
+  return d;
+}
+function vueloTramos(lista){
+  if(!vuelo || !Array.isArray(lista)) return 0;
+  var n = document.getElementById("vuelo"), hilo = n && n.querySelector(".hilo"), nuevos = 0;
+  var pego = pegadoAbajo();
+  for(var i = vuelo.tramos.length; i < lista.length; i++){
+    var t = lista[i];
+    if(!t || !String(t.texto || "").trim()) { vuelo.tramos.push({i: i, tipo: "vacio", texto: ""}); continue; }
+    var copia = {i: i, tipo: t.tipo === "salida" ? "salida" : "texto", texto: String(t.texto), cmd: t.cmd || null};
+    vuelo.tramos.push(copia);
+    if(hilo) hilo.appendChild(nodoTramo(copia));
+    nuevos++;
+  }
+  if(nuevos && pego) alFinal();
+  return nuevos;
+}
+// la respuesta final repite el ultimo bloque de texto (el `result` de claude): ese no se pinta dos veces
+function tramosSinFinal(tramos, final){
+  var l = (tramos || []).filter(function(t){ return t && t.tipo !== "vacio" && String(t.texto || "").trim(); });
+  if(!l.length) return null;
+  var u = l[l.length - 1], a = normTramo(u.texto), b = normTramo(final);
+  if(u.tipo !== "salida" && a && b && (a === b || b.indexOf(a.slice(0, 120)) === 0)) l = l.slice(0, -1);
+  return l.length ? l : null;
 }
 // 1292: en la fase `modelo` el daemon publica lo que hace el modelo (`opus: leyendo daemon.py`, `recetas/chat_stream.py`).
 // si pasan VUELO_PENSANDO_MS desde que arranco el modelo sin ninguna accion, `opus: pensando...`
@@ -5307,6 +5369,7 @@ function recibirEstado(e, ahora){
   if(!vuelo || !e) return false;
   if(e.ts_inicio && e.ts_inicio * 1000 < vuelo.ref - 15000) return false;
   ahora = ahora === undefined ? Date.now() : ahora;
+  if(e.tramos && typeof vueloTramos === "function") vueloTramos(e.tramos);   // 1776: el hilo crece, nunca se reescribe
   vuelo.palabra = e.palabra || e.fase || vuelo.palabra;
   if(e.fase === "modelo"){
     vuelo.modelo = e.modelo || vuelo.modelo || e.palabra;   // un daemon viejo no manda `modelo`: la palabra es el modelo
@@ -9650,7 +9713,11 @@ window.__agente = {
   // estado en vivo y una sola respuesta por mensaje (2026-09-13, prueba_web_tabs lo chequea)
   leerMeta: leerMeta, modeloCorto: modeloCorto, sinDobles: sinDobles, claveEstado: claveEstado,
   vueloIniciar: vueloIniciar, vueloTerminar: vueloTerminar, recibirEstado: recibirEstado,
-  vuelo: function(){ return vuelo ? {clave: vuelo.clave, palabra: vuelo.palabra, eta: vuelo.eta, giro: vuelo.giro} : null; }
+  vuelo: function(){ return vuelo ? {clave: vuelo.clave, palabra: vuelo.palabra, eta: vuelo.eta, giro: vuelo.giro} : null; },
+  // 1776: el hilo progresivo. `tramos()` = los textos pintados en el chat, en orden (vuelo y respuestas)
+  tramos: function(){ return lista ? [].map.call(lista.querySelectorAll(".msg .hilo .tramo"), function(d){
+    return {clase: d.className, texto: d.textContent, msg: (d.closest(".msg") || {}).id || ((d.closest(".msg") || {}).dataset || {}).id || ""}; }) : []; },
+  tramosSinFinal: tramosSinFinal, normTramo: normTramo
 };
 
 })();
