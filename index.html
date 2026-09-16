@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.312">
-<link rel="manifest" href="manifest.json?v=4.312">
+<meta name="agente-web-version" content="4.313">
+<link rel="manifest" href="manifest.json?v=4.313">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -166,6 +166,12 @@
   .bverde.b52{min-height:52px;padding:12px}
   .bverde.rojo{color:var(--rojo);border-color:var(--rojo)}
   .bverde.llena:active{background:var(--verde);color:#000}
+  .acciones{display:flex;flex-direction:column;gap:6px;margin:6px 0 2px}
+  .accion{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .accion .acctxt{flex:1;min-width:140px;color:var(--gris);font-size:12px}
+  .accion .acccuenta{color:var(--verde);font-size:11px;opacity:.8}
+  .accion .accdale{min-width:74px}
+  .accion .accdale.hecho{opacity:.45;border-color:var(--gris);color:var(--gris)}
   .bverde.llena.rojo:active{background:var(--rojo)}
   /* decision no va / queda (1556, 1561): solo el glifo, sin borde ni caja, 38 px tocables, el nombre en aria-label */
   .bglifo{min-height:38px;padding:5px 9px;background:none;border:0;font:inherit;font-size:var(--texto-max);font-weight:bold;
@@ -289,14 +295,17 @@
   #seltarjeta a.tjchip:hover{background:rgba(57,255,20,.12)}
   #seltarjeta .tjchip.tag{color:var(--magenta);border-color:currentColor}
   /* 1495 (facundo, 2026-09-15): la foto de perfil arriba y grande, siempre; abajo nombre, marca, estado y en comun */
-  #seltarjeta .tjfotos{display:flex;justify-content:center}
-  /* 1642: el cdn da la foto de 150 px (antes se bajaba de 96): el circulo mide lo que mide la foto, nunca la estira.
-     1677: la foto baja en hd (hasta 640 px) y el tope pasa de 220 a `TJ_FOTO_MAX` (420), siempre dentro del 60vw */
-  /* 1655: safari del iphone ignoraba `aspect-ratio` con `width:min()` en un item flex y la dibujaba ovalada: ancho y
-     alto explicitos con el mismo valor, sin estirar ni encoger */
-  #seltarjeta .tjppal{flex:0 0 auto;flex-shrink:0;width:min(150px,60vw);height:min(150px,60vw);min-height:0;align-self:center;
-    box-sizing:border-box;border-radius:50%;overflow:hidden;display:block;background:#111;border:1px solid var(--linea)}
-  #seltarjeta .tjppal img{width:100%;height:100%;object-fit:cover;display:block}
+  #seltarjeta .tjfotos{display:block;flex:0 0 auto;width:100%}
+  /* 1772 (facundo, 2026-09-16): "placeholder del mismo tamaño que la foto, sin mask tipo esfera, foto normal 100% width".
+     el contenedor nace ya del tamaño final: 100% del ancho de la tarjeta y el alto por `padding-bottom` (cuadrado:
+     `foto_hd` y la del cdn son recortes cuadrados; si la candidata trae `ratio` ancho/alto, manda ese), asi el
+     placeholder mide lo mismo que la foto y el `onload` no toca nada (antes saltaba de 150 al techo de 420).
+     `padding-bottom` y no `aspect-ratio`: safari del iphone lo ovalaba en un item flex (1655); el `- 2px` son los dos
+     bordes, asi el cuadro es cuadrado de verdad (probado a 348x348 en viewport de iphone). la img va absoluta
+     con `cover` y el radio es el chico del board (4 px, como `.tjf` y `.tjlink`), nunca 50%. */
+  #seltarjeta .tjppal{position:relative;width:100%;height:0;padding-bottom:calc(100% - 2px);box-sizing:border-box;border-radius:4px;
+    overflow:hidden;display:block;background:#111;border:1px solid var(--linea)}
+  #seltarjeta .tjppal img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block}
   #seltarjeta .tjmas{flex:1 1 auto;display:flex;gap:6px;flex-wrap:wrap;min-width:0}
   #seltarjeta .tjmas .tjf{width:56px;height:56px;border-radius:4px;overflow:hidden;border:1px solid var(--linea);background:#111}
   #seltarjeta .tjfotos img{width:100%;height:100%;object-fit:cover;display:block}
@@ -1984,6 +1993,30 @@ function guardarVista(ya){
   publicarTabs(ya, VISTA_DEBOUNCE);
 }
 var aplicandoVista = false;
+// 1770 (facundo, 2026-09-16: "la ventana actualiza y se va para arriba"): la posicion EXACTA de este
+// dispositivo, aparte de la vista por ancla que viaja al buzon. se guarda al recargar por version nueva
+// y al irse (`pagehide`), con el desvio en px respecto del ancla; al volver, si el ancla es la misma,
+// el chat queda en el pixel donde estaba y no "cerca". vive en `localStorage` (`agente_scroll`), vale
+// `POS_VIDA` y solo para este dispositivo (los altos de la mac y el celu no coinciden).
+var POS_VIDA = 600000, posLocal = null;
+function guardarPosicion(){
+  var tema = temaActivo();
+  if(!tema || !hist || !lista) return null;
+  var abajo = alFondo(), ancla = abajo ? null : anclaDe(), desvio = 0;
+  if(ancla){
+    var n = lista.querySelector('.msg[data-id="' + String(ancla).replace(/"/g, "") + '"]');
+    desvio = n ? hist.scrollTop - n.offsetTop : 0;
+  }
+  posLocal = {tema: tema, ancla: ancla, abajo: abajo, desvio: desvio, ts: Date.now()};
+  try{ localStorage.setItem("agente_scroll", JSON.stringify(posLocal)); }catch(x){}
+  return posLocal;
+}
+function leerPosicion(){
+  var p = null;
+  try{ p = JSON.parse(localStorage.getItem("agente_scroll") || "null"); }catch(x){ p = null; }
+  if(!p || !p.tema || Date.now() - (+p.ts || 0) > POS_VIDA) return null;
+  return p;
+}
 // deja el chat donde lo dejaste (en este o en el otro dispositivo). si el ancla ya no esta cargada
 // -la otra punta tenia mas historial- se queda al final, que es lo de siempre.
 function aplicarVista(){
@@ -1993,8 +2026,10 @@ function aplicarVista(){
   if(!v || v.abajo || !v.ancla) return false;
   var n = lista.querySelector('.msg[data-id="' + String(v.ancla).replace(/"/g, "") + '"]');
   if(!n) return false;
+  // misma pestaña y misma ancla que la posicion exacta de este dispositivo: al pixel
+  var desvio = (posLocal && posLocal.tema === tema && String(posLocal.ancla) === String(v.ancla)) ? (+posLocal.desvio || 0) : 0;
   aplicandoVista = true;
-  try{ hist.scrollTop = n.offsetTop; }finally{ aplicandoVista = false; }
+  try{ hist.scrollTop = Math.max(0, n.offsetTop + desvio); }finally{ aplicandoVista = false; }
   return true;
 }
 // llegaron las vistas del buzon (o del cache): gana el `ts` mas nuevo de cada tema
@@ -2025,6 +2060,9 @@ function borrarBorrador(tema){
     if(s){ tabs = s.tabs; activo = s.activo; layoutTs = L.ts || 0; }
     if(L && L.borradores) recibirBorradores(L.borradores);
     if(L && L.vistas) recibirVistas(L.vistas);
+    // 1770: la posicion exacta guardada al recargar manda sobre una vista mas vieja del buzon
+    posLocal = leerPosicion();
+    if(posLocal){ var pv = {}; pv[posLocal.tema] = {ancla: posLocal.ancla, abajo: !!posLocal.abajo, ts: +posLocal.ts || 0}; recibirVistas(pv); }
     if(L && L.split) recibirSplit(L.split);
     if(L && L.wsets) recibirWsets(L.wsets);
     if(L && L.orden_widgets) recibirOrden(L.orden_widgets);
@@ -2334,6 +2372,9 @@ hist.addEventListener("scroll", function(){
   if(pegadoAbajo()) alfinal.style.display = "none";
   anotarVista();
 });
+// 1770: scrollear a mano (dedo o rueda) apaga el asentado de la vista: no se le pelea al gesto
+hist.addEventListener("wheel", function(){ asentarHasta = 0; asentarPendiente = false; }, {passive:true});
+hist.addEventListener("touchmove", function(){ asentarHasta = 0; asentarPendiente = false; }, {passive:true});
 
 // celu: si facundo scrollea hacia arriba para leer, el teclado se cierra solo (blur del input).
 // solo por gesto propio (dedo o rueda) y solo hacia arriba: los scrolls programados (abajo(),
@@ -2845,10 +2886,14 @@ function nodoMsg(m){
   if(m.audio) cab.appendChild(reproductor(m.audio, "escuchar la respuesta"));
   var b = document.createElement("div");
   b.className = "cuerpo";
-  var ops = m.clase === "agente" ? cajasDe(m) : null;
-  var dr = draftsDe(ops && ops.cuerpo !== null ? ops.cuerpo : m.texto);
-  b.innerHTML = resaltar(m.clase === "agente" && dr.bloques.length ? dr.cuerpo : (ops && ops.cuerpo !== null ? ops.cuerpo : (m.clase === "yo" ? sinDictado(m.texto) : m.texto)));
+  // las `ACCION <id>:` salen del cuerpo antes que nada: abajo van como caja verde `dale`, no como texto
+  var acc = m.clase === "agente" ? accionesDe(m.texto) : null;
+  var textoSinAcc = acc && acc.cuerpo !== null ? acc.cuerpo : m.texto;
+  var ops = m.clase === "agente" ? cajasDe({texto: textoSinAcc, opciones: m.opciones}) : null;
+  var dr = draftsDe(ops && ops.cuerpo !== null ? ops.cuerpo : textoSinAcc);
+  b.innerHTML = resaltar(m.clase === "agente" && dr.bloques.length ? dr.cuerpo : (ops && ops.cuerpo !== null ? ops.cuerpo : (m.clase === "yo" ? sinDictado(m.texto) : textoSinAcc)));
   div.appendChild(cab); div.appendChild(b);
+  if(acc && acc.lista.length) div.appendChild(nodoAcciones(m, acc.lista));
   if(ops && ops.lista.length) div.appendChild(nodoCajas(m, ops.lista));
   if(m.clase === "agente" && dr.bloques.length) div.appendChild(nodoDrafts(dr.bloques));
   div.__msg = m;          // el menu contextual (delegado) lee el mensaje del nodo
@@ -2958,6 +3003,67 @@ function nodoDrafts(bloques){
     bt.className = "copiar"; bt.textContent = "copiar";
     armarCopiar(bt, t);
     d.appendChild(pre); d.appendChild(bt); w.appendChild(d);
+  });
+  return w;
+}
+// ---------- caja `dale` de una accion (facundo, 2026-09-16 6:39 pm) ----------
+// el daemon deja en la respuesta una linea `ACCION <id>: <nombre> --k v [sale en 60 s]` (o `[pide dale]`)
+// por cada accion del catalogo que el chat propuso. no se pinta como texto: abajo de la propuesta va UNA
+// caja verde `dale` (6:40 pm: sin caja `no`; no tocarla es no confirmar, y `no`/`para` tipeados frenan).
+// tocarla manda `dale <id>` crudo, que el daemon resuelve sin modelo: por el id, una caja de una respuesta
+// vieja confirma ESA accion y nunca la ultima.
+var RE_ACCION = /^ACCION ([a-z0-9]{4,8}): (.+?)(?:\s*\[(?:sale en (\d+) s|pide dale)\])?\s*$/i;
+function accionesDe(texto){
+  var lista = [], fuera = [], dentro = false;
+  String(texto || "").split("\n").forEach(function(l){
+    if(RE_CERCO.test(l)){ dentro = !dentro; fuera.push(l); return; }
+    var mm = dentro ? null : RE_ACCION.exec(l);
+    if(mm) lista.push({id: mm[1], texto: mm[2].trim(), segundos: mm[3] ? +mm[3] : 0});
+    else fuera.push(l);
+  });
+  return {lista: lista, cuerpo: lista.length ? fuera.join("\n").replace(/\s+$/, "") : null};
+}
+// las que ya se confirmaron o frenaron en ESTE dispositivo: la caja queda apagada y no manda de nuevo
+var accHecho = {};
+try{ accHecho = JSON.parse(localStorage.getItem("agente_acciones") || "{}") || {}; }catch(x){ accHecho = {}; }
+function accMarcar(id){
+  accHecho[id] = Date.now();
+  Object.keys(accHecho).forEach(function(k){ if(Date.now() - (+accHecho[k] || 0) > 24 * 3600 * 1000) delete accHecho[k]; });
+  try{ localStorage.setItem("agente_acciones", JSON.stringify(accHecho)); }catch(x){}
+}
+function nodoAcciones(m, lista_){
+  var w = document.createElement("div");
+  w.className = "acciones";
+  var base = Date.parse(m.iso || "") || Date.now();
+  lista_.forEach(function(a){
+    var d = document.createElement("div");
+    d.className = "accion";
+    var t = document.createElement("div");
+    t.className = "acctxt"; t.textContent = a.texto;
+    var b = moldeBoton({tipo: "dale", txt: "dale", principal: true, clase: "accdale",
+                        aria: "correr ahora " + a.texto});
+    b.dataset.accion = a.id;
+    b.setAttribute("aria-label", "correr ahora " + a.texto);
+    b.title = a.texto;
+    if(accHecho[a.id]){ b.disabled = true; b.classList.add("hecho"); }
+    b.addEventListener("click", function(){
+      if(b.disabled) return;
+      b.disabled = true; b.classList.add("hecho"); accMarcar(a.id);
+      mandar("dale " + a.id, m.tema || temaActivo(), true);
+    });
+    d.appendChild(t); d.appendChild(b);
+    if(a.segundos){                       // contador: la caja dice cuanto falta y tocarla lo adelanta
+      var c = document.createElement("span");
+      c.className = "acccuenta";
+      d.appendChild(c);
+      var pintar = function(){
+        var q = Math.max(0, a.segundos - Math.round((Date.now() - base) / 1000));
+        c.textContent = q ? "sale en " + fmtTiempo(q) : "salio sola";
+        if(!q){ clearInterval(iv); b.disabled = true; b.classList.add("hecho"); }
+      };
+      var iv = setInterval(pintar, 1000); pintar();
+    }
+    w.appendChild(d);
   });
   return w;
 }
@@ -3384,10 +3490,31 @@ function alFinal(){ abajo(); }
 // abrir la web, volver al foco o cambiar de pestaña te deja **donde estabas**, no al final (facundo,
 // 2026-09-11). el fondo sigue siendo el default: `aplicarVista` solo mueve si habia algo guardado.
 function restaurarVistas(){ aplicarVista(); }
-function irDonde(){
-  alFinal();
-  requestAnimationFrame(restaurarVistas);   // despues del layout: el alto recien existe aca
+// 1770 (facundo, 2026-09-16): el chat nunca queda arriba. antes `irDonde` iba al fondo y restauraba la
+// vista en un `requestAnimationFrame`, que no corre si la pagina recargo sin estar a la vista (el
+// chequeo de version es cada 60 s, tambien con el celu bloqueado) y `abajo()` con el alto sin medir
+// dejaba `scrollTop` en 0. ahora: `asentarVista` aplica el ancla (o va al fondo) en el acto, se
+// repite en dos rAF, cada vez que `#lista` cambia de alto durante `ASENTAR_MS` (fotos y layout que
+// llegan tarde) y al volver al foco si quedo pendiente; un gesto de facundo (dedo o rueda) lo corta.
+var ASENTAR_MS = 1500, asentarHasta = 0, asentarPendiente = false;
+function asentarVista(){
+  if(!hist || !lista) return false;
+  var conLayout = hist.clientHeight > 0 && (hist.scrollHeight > hist.clientHeight || !lista.querySelector(".msg"));
+  if(!aplicarVista()) abajo();
+  if(conLayout) asentarPendiente = false;
+  return conLayout;
 }
+function irDonde(){
+  asentarPendiente = true;
+  asentarHasta = Date.now() + ASENTAR_MS;
+  asentarVista();                           // ya, con el layout que hay
+  requestAnimationFrame(function(){ requestAnimationFrame(asentarVista); });   // y con el alto de verdad
+}
+(function(){
+  if(typeof ResizeObserver === "undefined" || !lista) return;
+  new ResizeObserver(function(){ if(asentarPendiente || Date.now() < asentarHasta) asentarVista(); }).observe(lista);
+})();
+document.addEventListener("visibilitychange", function(){ if(!document.hidden && asentarPendiente) asentarVista(); });
 function ruidoso(e){  // 401 ya abrio el login y "freno" ya aviso: no repetir en rojo
   var m = e && e.message;
   return !!m && m !== "401" && m !== "freno";
@@ -3969,6 +4096,7 @@ document.addEventListener("visibilitychange", function(){
 function soltarBorrador(){
   guardarBorrador(temaCaja || temaActivo(), txt.value, true);
   guardarVista(true);
+  guardarPosicion();   // 1770: el pixel exacto para este dispositivo
   if(tabsPendiente){ clearTimeout(tabsPendiente); tabsPendiente = null; ponerTabs(false); }
 }
 window.addEventListener("pagehide", soltarBorrador);
@@ -3996,10 +4124,12 @@ function mirarVersion(){
       // estas escribiendo algo que todavia no quedo guardado: espera. si ya es el borrador de la pestaña (va en
       // el cache y vuelve al recargar) se recarga igual (1372: un borrador viejo dejaba la mac en la version vieja)
       if(txt.value.trim() && txt.value !== borradorDe(temaActivo())){ return; }
-      sistema("version " + j.version + " publicada, recargando...");
       var q = new URLSearchParams(location.search);
       q.set("v", j.version);
-      setTimeout(function(){ location.replace(location.pathname + "?" + q.toString()); }, 500);
+      // 1770: donde estabas, guardado ANTES del cartel (que puede mover el scroll) y de la recarga
+      guardarVista(true); guardarPosicion();
+      sistema("version " + j.version + " publicada, recargando...");
+      setTimeout(function(){ guardarVista(true); guardarPosicion(); location.replace(location.pathname + "?" + q.toString()); }, 500);
     })
     .catch(function(){});
 }
@@ -4652,7 +4782,10 @@ function tjPintar(){
   // 1495: la foto de perfil arriba y grande. si no baja, la tarjeta no se muestra: se salta sin votar
   var fs = document.createElement("div"); fs.className = "tjfotos";
   var pp = document.createElement("div"); pp.className = "tjppal";
+  // 1772: el alto sale del css (cuadrado); si la candidata trae `ratio` (ancho/alto) el placeholder ya nace con ese
+  if(typeof c.ratio === "number" && c.ratio > 0.2 && c.ratio < 5) pp.style.paddingBottom = (100 / c.ratio).toFixed(2) + "%";
   fs.appendChild(pp); t.appendChild(fs);
+  tjPrecargar(e, sel.tj);   // 1772: las dos tarjetas siguientes bajan mientras vota esta
   // 1665 (facundo): tocar la foto. cuenta publica -> el perfil de instagram en otra pestaña; privada (donde el perfil
   // no muestra nada) -> la foto a pantalla completa en el visor, que ya cierra con esc, la ✕ y el fondo
   pp.setAttribute("role", "button");
@@ -4673,10 +4806,8 @@ function tjPintar(){
       bajarImagen(foto).then(function(url){
         if(!tjActual() || tjActual().id !== id) return;
         var im = document.createElement("img"); im.alt = "";
-        // 1642: el circulo mide lo que la foto. 1655: ancho y alto juntos, si no safari lo deja ovalado
-        // 1677: la foto ya baja en hd (hasta 640 px): el circulo mide lo que la foto, sin el tope de 220; el `60vw`
-        // (y el `TJ_FOTO_MAX` como techo) lo mantienen dentro de la tarjeta en el celu y en el desktop
-        im.onload = function(){ if(im.naturalWidth){ var d = "min(" + Math.max(96, Math.min(TJ_FOTO_MAX, im.naturalWidth)) + "px,60vw)"; pp.style.width = d; pp.style.height = d; } };
+        // 1772: la foto entra en el contenedor que ya mide lo final (css): nada de cambiar el tamaño en `onload`,
+        // que era lo que hacia saltar la tarjeta de chica a grande (1642/1677 quedan atras)
         im.src = url; pp.appendChild(im);
         pp.__url = url;   // 1665: la privada se agranda con esta misma foto (no hay otra bajada)
       }).catch(function(){
@@ -4783,7 +4914,25 @@ function tjAtras(){
   return true;
 }
 var TJ_REINTENTOS = [1000, 3000];   // 1524: ms antes de cada reintento de una foto que no bajo
-var TJ_FOTO_MAX = 420;   // 1677: techo del circulo de la foto hd (la caja del modal mide 520 con padding); en el celu manda el 60vw
+var tjPre = {};   // 1772: fotos ya pedidas para las tarjetas siguientes (src -> true), asi no se piden dos veces
+function tjPrecargar(e, i){
+  // 1772 (facundo, 2026-09-16): "que la foto de la tarjeta siguiente y la otra ya esten precargadas mientras voto".
+  // pide la foto principal de las dos candidatas que siguen a la `i` por `bajarImagen` (que deja el object url en
+  // `imgUrls`, la misma cache que usa la tarjeta) y la pasa por un `Image` para que el navegador la decodifique.
+  // solo la principal: las chicas (`fotos[1..]`) hoy no se pintan en la tarjeta. devuelve lo pedido (pruebas).
+  var pedidas = [];
+  if(!e || !e.candidatas) return pedidas;
+  for(var k = i + 1; k <= i + 2 && k < e.candidatas.length; k++){
+    var f = e.candidatas[k] && e.candidatas[k].fotos && e.candidatas[k].fotos[0];
+    if(!f || tjPre[f]) continue;
+    tjPre[f] = true; pedidas.push(f);
+    (function(f){
+      bajarImagen(f).then(function(url){ var im = new Image(); im.src = url; })
+        .catch(function(){ delete tjPre[f]; });   // no bajo: la tarjeta la reintenta cuando le toque
+    })(f);
+  }
+  return pedidas;
+}
 function tjSacar(id){
   // 1524: la foto no bajo ni reintentando: la tarjeta sale de ESTA apertura sin votar y sin correr el indice
   var e = sel.actual;
@@ -9048,6 +9197,7 @@ window.__agente = {
   tjAtras: tjAtras, tjHistorial: function(){ return (sel.tjHistorial || []).map(function(h){ return h.col + ":" + h.c.id + ":" + h.q; }); },   // 1640: el back
   filaFaltan: filaFaltan, filaSumar: filaSumar, tjToqueMs: function(ms){ TJ_TOQUE_MS = ms; },   // 1567: fila continua
   tjAbrir: tjAbrir, tjReintentos: function(a){ TJ_REINTENTOS = a; },   // 1524: fotos que no bajan
+  tjPrecargar: tjPrecargar, tjPrecargadas: function(){ return Object.keys(tjPre); },   // 1772: precarga de las siguientes
   tjEstado: function(){ return {votos: sel.tjVotos || 0, fallidas: sel.tjFallidas || [], n: sel.actual ? sel.actual.candidatas.length : null}; },
   selEnviarTexto: selEnviarTexto, selCerrar: selCerrar,
   // 1407: boton `votar` y respaldo por el buzon (`prueba_web_votar`)
@@ -9268,6 +9418,8 @@ window.__agente = {
   verPanel: verPanel,
   limitarPct: limitarPct, splitMin: SPLIT_MIN,
   guardarVista: guardarVista, recibirVistas: recibirVistas, aplicarVista: aplicarVista,
+  // 1770: posicion exacta local y asentado de la vista (`prueba_autoupdate`, `prueba_web_tabs`)
+  guardarPosicion: guardarPosicion, leerPosicion: leerPosicion, asentarVista: asentarVista, irDonde: irDonde,
   restaurarVistas: restaurarVistas, anclaDe: anclaDe,
   sync: function(){ return {sincronizando: sincronizando, texto: $("sync").textContent,
                             visible: !$("sync").classList.contains("oculta"),
