@@ -479,6 +479,18 @@
      "offline": "local"
     }
    ]
+  },
+  {
+   "grupo": "nuevos",
+   "comandos": [
+    {
+     "cmd": "router_local_cmd",
+     "que": "detector nuevo en daemon.py, sin descripción todavía",
+     "escribe": null,
+     "offline": "cola",
+     "detector": true
+    }
+   ]
   }
  ]
 }
