@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.307">
-<link rel="manifest" href="manifest.json?v=4.307">
+<meta name="agente-web-version" content="4.308">
+<link rel="manifest" href="manifest.json?v=4.308">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -197,7 +197,7 @@
   .mmolde .mcuerpo2{color:var(--blanco);line-height:1.5;white-space:pre-wrap;word-break:break-word}
   .mmolde .mbotones{flex-wrap:wrap}
   .mmolde .mbotones > *{flex:1 1 0}
-  /* 1453: tocar el spinner abre un menu chico (mas de esto / esta no / ...), nunca el votador */
+  /* 1453: tocar el spinner abre un menu chico (mas de esto / menos de esto / ...), nunca el votador */
   #animmenu{z-index:40;padding:10px;background:rgba(0,0,0,.75)}
   #animmenu .oculta{display:none!important}
   #animmenu .amcaja{width:100%;max-width:260px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;padding:12px;font-size:12px}
@@ -1148,7 +1148,7 @@
   <div class="amcaja mcaja">
     <div class="amtit"><span class="anim" id="amanim"></span><span id="amnom"></span><button id="amcerrar" class="mcerrar" type="button" aria-label="cerrar">×</button></div>
     <button class="ambtn" data-tipo="mas" type="button">a) más de esto</button>
-    <button class="ambtn" data-tipo="no" type="button">b) esta no</button>
+    <button class="ambtn" data-tipo="menos" type="button">b) menos de esto</button>
     <button class="ambtn" data-tipo="nota" type="button">c) ...</button>
     <div id="amnota" class="oculta"><textarea id="amtxt" placeholder="qué te gusta o no de esta" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea><button id="amguardar" class="ambtn" type="button">guardar</button></div>
     <div id="amestado" class="mestado" aria-live="polite"></div>
@@ -4028,7 +4028,7 @@ function cuerpoMsg(texto, tema, crudo, tsEnvio){
 // arriba. `basta` cierra y abre una caja: lo que escribe va al chat de tools como mensaje normal. las nuevas las hace
 // opus en el server cuando quedan 2 sin ver (`recetas/animaciones.py`) y llegan con el proximo GET.
 var VOT_COL = "animaciones", VOT_TOP = 3, ELO_BASE = 1000, ELO_K = 32, ANIM_TICK = 40, VOT_CADA = 30000, VOT_REPE_MS = 200;
-var anims = {items: [], votos: [], abierta: null, fuente: null, gustos: {mas: {}, no: []}};
+var anims = {items: [], votos: [], abierta: null, fuente: null, gustos: {puntaje: {}, ids: []}};
 var votPar = null, votAbierto = false, votSubiendo = null, votOtra = false, votCadaTimer = null, votUlt = 0;
 var animEls = [], animTimer = null;
 function animLargo(s){ return Array.from(String(s)).length; }
@@ -4120,7 +4120,7 @@ function votRecibir(e, fuente){
   if(!its.length) return false;
   anims.items = its;
   if(e.votos) anims.votos = e.votos;
-  if(e.gustos) anims.gustos = {mas: e.gustos.mas || {}, no: e.gustos.no || []};
+  if(e.gustos) anims.gustos = animGusServer(e.gustos);
   // 1442: `abierta` solo la cree si viene del server; la cache y el `animaciones.json` de pages no la confirman
   fuente = fuente || "server";
   // 1442: `abierta` solo del server. 1441: y un `false` del server borra lo que quedo guardado aca (el `basta` y los
@@ -4145,15 +4145,32 @@ function animRotable(a){
   var m = /^largo-([1-9])$/.exec(a && a.origen || ""), n = animLargo(a.frames[0]);
   return !!m && +m[1] === n && n <= ANIM_TOPE;
 }
-// gustos del toque: los del server (`votos/animaciones-gustos.json`) + los de este equipo que todavia no volvieron
-function animGus(){
-  var mas = {}, no = {};
-  [anims.gustos || {}, votLeer("gustos_loc", {})].forEach(function(g){
-    (g.no || []).forEach(function(id){ no[id] = true; });
-    Object.keys(g.mas || {}).forEach(function(id){ mas[id] = Math.max(mas[id] || 0, +g.mas[id] || 0); });
-  });
-  return {mas: mas, no: no};
+// gustos del toque (1682): un `puntaje` por animacion (mas de esto +1, menos de esto -1). el server manda
+// `puntaje` e `ids` (los toques que ya recibio); los de este equipo (`gustos_loc`) se suman mientras el server
+// no los tenga y se sueltan solos cuando aparecen en `ids`. un `mas`/`no` viejo (widgets.json de antes) se traduce.
+function animGusServer(g){
+  g = g || {};
+  var p = {};
+  Object.keys(g.puntaje || {}).forEach(function(id){ p[id] = +g.puntaje[id] || 0; });
+  Object.keys(g.mas || {}).forEach(function(id){ p[id] = (p[id] || 0) + (+g.mas[id] || 0); });
+  (g.no || []).forEach(function(id){ p[id] = (p[id] || 0) - 1; });
+  return {puntaje: p, ids: g.ids || []};
 }
+function animGus(){
+  var p = {}, srv = anims.gustos || {}, ids = {};
+  Object.keys(srv.puntaje || {}).forEach(function(id){ p[id] = +srv.puntaje[id] || 0; });
+  (srv.ids || []).forEach(function(id){ ids[id] = true; });
+  var loc = votLeer("gustos_loc", []), viva = [];
+  if(!Array.isArray(loc)) loc = [];   // el formato viejo ({mas, no}) no se puede sumar sin repetir: se descarta
+  loc.forEach(function(r){
+    if(!r || !r.id || !r.anim || ids[r.id]) return;
+    viva.push(r);
+    p[r.anim] = (p[r.anim] || 0) + (+r.d || 0);
+  });
+  if(viva.length !== loc.length) votEscribir("gustos_loc", viva);
+  return {puntaje: p};
+}
+function animPeso(id, g){ return Math.max(1, 1 + ((g || animGus()).puntaje[id] || 0)); }
 // los del server + los que todavia no subieron, sin repetir id, por fecha
 function votTodos(){
   var ids = {}, out = [];
@@ -4181,13 +4198,14 @@ function animSinVer(){
   votTodos().forEach(function(v){ vistos[v.g] = true; vistos[v.p] = true; });
   return anims.items.filter(function(a){ return !vistos[a.id]; });
 }
-// el spinner (1453): al azar entre las de la rotacion, sin las `esta no`, cada una con peso 1 + sus `mas de esto`
+// el spinner (1453/1682): al azar entre todas las de la rotacion, cada una con peso max(1, 1 + puntaje):
+// nada se saca, la que bajo sale menos
 function animSpinner(azar){
-  var g = animGus(), pool = anims.items.filter(function(a){ return !g.no[a.id]; }), tot = 0;
+  var g = animGus(), pool = anims.items, tot = 0;
   if(!pool.length) return null;
-  pool.forEach(function(a){ tot += 1 + (g.mas[a.id] || 0); });
+  pool.forEach(function(a){ tot += animPeso(a.id, g); });
   var x = (azar === undefined ? Math.random() : azar) * tot;
-  for(var i = 0; i < pool.length; i++){ x -= 1 + (g.mas[pool[i].id] || 0); if(x < 0) return pool[i]; }
+  for(var i = 0; i < pool.length; i++){ x -= animPeso(pool[i].id, g); if(x < 0) return pool[i]; }
   return pool[pool.length - 1];
 }
 // el par siguiente, igual que `votador.par`: dos sin ver; uno sin ver contra el mejor; si no, dos de elo cercano
@@ -4328,7 +4346,7 @@ Array.prototype.forEach.call(document.querySelectorAll("#votar .vtesta"), functi
   b.addEventListener("click", function(){ votElegir(+b.dataset.lado); });
 });
 // ---------- 1453: tocar el spinner abre un menu chico, no el votador ni ninguna votacion ----------
-// `mas de esto` le suma peso, `esta no` la saca de la rotacion, `...` guarda una nota. todo queda en el server
+// `mas de esto` suma 1 al puntaje, `menos de esto` resta 1 (sigue rotando, sale menos), `...` guarda una nota. todo queda en el server
 // (`POST /votos/animaciones {gustos}`) o, sin lan, en el buzon (`seleccion-web/animaciones-gustos--<id>.json`)
 var amAnim = null, amTimer = null, amSubiendo = null;
 function animMenuAbrir(a){
@@ -4350,24 +4368,19 @@ function animMenuCerrar(){
 }
 function animGusto(tipo, texto){
   var a = amAnim;
-  if(!a || ["mas", "no", "nota"].indexOf(tipo) < 0) return false;
+  if(!a || ["mas", "menos", "nota"].indexOf(tipo) < 0) return false;
   texto = String(texto || "").trim();
   if(tipo === "nota" && !texto){ $("amestado").textContent = "escribí algo primero"; return false; }
   var pend = votLeer("gustos_pend", []);
   pend.push({id: lidNuevo(), tipo: tipo, anim: a.id, texto: texto, ts: Date.now()});
   votEscribir("gustos_pend", pend);
-  var loc = votLeer("gustos_loc", {}), g = animGus();
-  loc.mas = loc.mas || {}; loc.no = loc.no || [];
-  if(tipo === "mas") loc.mas[a.id] = (g.mas[a.id] || 0) + 1;
-  if(tipo === "no" && loc.no.indexOf(a.id) < 0) loc.no.push(a.id);
-  votEscribir("gustos_loc", loc);
-  if(tipo === "no" && vuelo && vuelo.anim && vuelo.anim.id === a.id){
-    var gi = document.querySelector("#vuelo .giro");
-    if(gi){ animSacar(gi); delete gi.dataset.anim; }
-    vuelo.anim = animSpinner();
-    pintarVuelo();
+  if(tipo !== "nota"){
+    var loc = votLeer("gustos_loc", []);
+    if(!Array.isArray(loc)) loc = [];
+    loc.push({id: pend[pend.length - 1].id, anim: a.id, d: tipo === "mas" ? 1 : -1});
+    votEscribir("gustos_loc", loc.slice(-200));
   }
-  $("amestado").textContent = tipo === "mas" ? "anotado: sale más seguido" : tipo === "no" ? "anotado: fuera de la rotación" : "nota guardada";
+  $("amestado").textContent = tipo === "mas" ? "anotado: sale más seguido" : tipo === "menos" ? "anotado: sale menos seguido" : "nota guardada";
   animGustosSubir();
   amTimer = setTimeout(animMenuCerrar, 1200);
   return true;
@@ -4968,7 +4981,7 @@ function selDesdeWidgets(j){
     if(!vt.anim_abierta){ anims.abierta = false; votCerrada(); }
     else if(fresco){ anims.abierta = true; votAutoAbrir(); }
   }
-  if(vt.anim_gustos && !lan.base) anims.gustos = {mas: vt.anim_gustos.mas || {}, no: vt.anim_gustos.no || []};   // 1453
+  if(vt.anim_gustos && !lan.base) anims.gustos = animGusServer(vt.anim_gustos);   // 1453/1682
   sel.wid = vt.abiertas; sel.widFresco = fresco;
   return lan.base ? false : selPoner(sel.wid, "buzón", fresco);
 }
@@ -5053,7 +5066,7 @@ function pintarVuelo(){
     n = document.createElement("div");
     n.id = "vuelo"; n.className = "msg agente vuelo";
     n.innerHTML = '<div><span class="quien">flaudio</span><span class="ts"></span></div>' +
-                  '<div class="cuerpo"><span class="giro" title="más de esto, esta no o una nota"></span> <span class="fase"></span><span class="eta"></span></div>';
+                  '<div class="cuerpo"><span class="giro" title="más de esto, menos de esto o una nota"></span> <span class="fase"></span><span class="eta"></span></div>';
     n.querySelector(".giro").addEventListener("click", function(){ animMenuAbrir(); });   // 1453: menu chico, nunca el votador
   }
   if(n.parentNode !== lista || lista.lastChild !== n) lista.appendChild(n);
@@ -9042,7 +9055,7 @@ window.__agente = {
   animPoner: animPoner, animIdx: animIdx, animColor: animColor,   // 1670: color por caracter y `ritmo`
   escTope: escTope, capaTope: function(){ var c = capaTope(); return c && c.nombre; }, modalMolde: modalMolde, moldeBoton: moldeBoton, moldeSwitch: moldeSwitch, swModelo: swModelo, swEstado: swEstado, verImagen: verImagen,   // 1455: esc cierra el de mas arriba (`prueba_web_votar`)
   glifos: function(){ var o = {}; Object.keys(GLIFOS).forEach(function(k){ o[k] = GLIFOS[k][0]; }); return o; },   // 1657: `prueba_web_votar` chequea que `-_-` sea maybe y `←` el back
-  animGusto: animGusto, animGustosSubir: animGustosSubir,
+  animGusto: animGusto, animGustosSubir: animGustosSubir, animPeso: animPeso,
   animPintar: animPintar,   // 1681: las pruebas pintan un cuadro y miden la linea base
   amEstado: function(){ return {abierto: !$("animmenu").classList.contains("oculta"), anim: amAnim && amAnim.id,
                                  pend: votLeer("gustos_pend", []), loc: votLeer("gustos_loc", null), gustos: anims.gustos,
@@ -9052,7 +9065,7 @@ window.__agente = {
                                  basta: votLeer("basta", false), items: anims.items.length, votos: votTodos().length,
                                  abierta: anims.abierta, fuente: anims.fuente, animados: animEls.length, timer: !!animTimer,
                                  giro: animEls.some(function(x){ return x.el === document.querySelector("#vuelo .giro"); })}; },
-  votReset: function(){ anims = {items: [], votos: [], abierta: null, fuente: null, gustos: {mas: {}, no: []}}; votPar = null; votUlt = 0; votAuto = false;
+  votReset: function(){ anims = {items: [], votos: [], abierta: null, fuente: null, gustos: {puntaje: {}, ids: []}}; votPar = null; votUlt = 0; votAuto = false;
                         ["pend", "basta", "cache"].forEach(function(s){ try{ localStorage.removeItem("agente_votos_" + VOT_COL + "_" + s); }catch(x){} }); },
   qvOcultos: qvOcultos, qvUmbral: QV_UMBRAL,   // 1229: swipe de `que ver`
   // cajas a/b/c: `prueba_web_tabs` las pinta, elige, manda y chequea que un drag no elija
