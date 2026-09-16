@@ -696,7 +696,7 @@ cada caja de la derecha tiene una fila de header:
   `server` vivo/apagado + cpu, `usage` la barra mas cerca de la linea **por cuenta**, `agent` la
   cuenta activa + que esta corriendo, `verification agent` / `my tickets` / `propuestas` / `avisos`
   la cantidad, `opportunities` las pendientes, `decided` las decididas, `podcast` el episodio de
-  arriba, `dj` si suena algo y cuantos bloques van, `backup models` el ultimo veredicto.
+  arriba, `dj` si suena algo y cuantos bloques van, `models` el ultimo veredicto.
 - **derecha**: `hace Xs` (la edad del `widgets.json` que se esta viendo), **`[↻]`** y **`[⚙]`**.
   en el celu los dos botones tienen area tactil de 40 px.
 
