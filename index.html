@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.303">
-<link rel="manifest" href="manifest.json?v=4.303">
+<meta name="agente-web-version" content="4.304">
+<link rel="manifest" href="manifest.json?v=4.304">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -119,11 +119,16 @@
   .msg.vuelo .cuerpo{color:var(--gris)}
   .msg.vuelo .giro{color:var(--verde);display:inline-block;min-width:1ch;cursor:pointer}
   /* animaciones de caracteres (1373): una linea, todos los cuadros del mismo ancho (`Nch` lo pone animPoner), el
-     alto fijo de una linea: ni saltan de costado ni empujan el renglon */
-  .anim{display:inline-flex;flex-direction:column;white-space:pre;overflow:hidden;vertical-align:top;height:1.25em;line-height:1.25em}
+     alto fijo de una linea: ni saltan de costado ni empujan el renglon.
+     1681 (facundo, 2026-09-15, desde el ipad): el `inline-flex` + `vertical-align:top` colgaba el spinner del techo
+     del renglon y quedaba mas arriba que la fase y el eta de al lado. ahora es un `inline-block` alineado por linea
+     base (la del cuadro que se ve), con el alto fijo igual que antes: no empuja el renglon ni salta al cambiar de
+     cuadro. el `inline-flex` ademas apilaba los <i> de color por caracter (1670) uno abajo del otro */
+  .anim{display:inline-block;white-space:pre;vertical-align:baseline;height:1.25em;line-height:1.25em}
   /* el ancho lo da un cuadro invisible de alto 0 (`data-medida`): `Nch` se quedaba corto con fuentes cuyo `0` no mide
-     lo mismo que el resto y cortaba las de 9+ caracteres */
-  .anim::after{content:attr(data-medida);display:block;height:0;visibility:hidden}
+     lo mismo que el resto y cortaba las de 9+ caracteres. va como `::before` y con `overflow:hidden`: asi no deja una
+     linea despues del cuadro y la linea base del bloque sigue siendo la del texto que se ve (1681) */
+  .anim::before{content:attr(data-medida);display:block;height:0;overflow:hidden;visibility:hidden}
   /* 1670: color por caracter (`colores` con una lista por cuadro): un <i> por caracter, sin italica ni espacio extra */
   .anim i{font-style:normal;display:inline}
   /* ---------- molde de componentes (facundo, 2026-09-15, orden 1558) ----------
@@ -3036,15 +3041,38 @@ function recibirLlegadas(rem){
 }
 // 1203: `hh:mm` de buenos aires (no la del dispositivo: facundo mira el mismo board desde el celu y la compu).
 // si el navegador no tiene esa zona, cae a la hora local antes que no mostrar nada.
+// 1660: y todo lo que ve facundo sale en 12 h con am/pm (`7:41 pm`) por `hora12`, el unico lugar que arma
+// una hora en el board. el equivalente del server es `recetas/hora.py`.
 var TZ_BA = "America/Argentina/Buenos_Aires", fmtBA = null;
+// `h:mm am|pm` en minusculas y sin cero adelante. medianoche `12:00 am`, mediodia `12:00 pm`, 13:05 `1:05 pm`.
+// devuelve "" si no es una hora: esto corre adentro de un render y nunca tiene que explotar.
+function hora12(h, m){
+  if(m === undefined){
+    var mm = /^\s*(\d{1,2}):([0-5]\d)(?::[0-5]\d)?\s*$/.exec(String(h == null ? "" : h));
+    if(!mm) return "";
+    h = +mm[1]; m = +mm[2];
+  }
+  h = +h; m = +m;
+  if(!(h >= 0 && h <= 23 && m >= 0 && m <= 59)) return "";
+  return ((h % 12) || 12) + ":" + pad2(m) + " " + (h < 12 ? "am" : "pm");
+}
+// una hora escrita de cualquier forma (`19:41`, `7:41 pm`, `7:41pm`) -> `7:41 pm`, para poder compararlas
+function norm12(t){
+  t = String(t || "").trim().toLowerCase();
+  var mm = /^(\d{1,2}):([0-5]\d)\s*([ap]m)?$/.exec(t);
+  if(!mm) return t;
+  var h = +mm[1];
+  if(mm[3]){ h = h % 12 + (mm[3] === "pm" ? 12 : 0); }
+  return hora12(h, +mm[2]) || t;
+}
 function hhmmBA(ms){
   ms = +ms || 0;
   var d = new Date(ms);
   if(!ms || isNaN(d)) return "";
   try{
     if(!fmtBA) fmtBA = new Intl.DateTimeFormat("es-AR", {timeZone: TZ_BA, hour: "2-digit", minute: "2-digit", hourCycle: "h23"});
-    return fmtBA.format(d).replace(/\D+/, ":").replace(/^(\d):/, "0$1:");
-  }catch(x){ return pad2(d.getHours()) + ":" + pad2(d.getMinutes()); }
+    return hora12(fmtBA.format(d).replace(/\D+/, ":").replace(/^(\d):/, "0$1:"));
+  }catch(x){ return hora12(d.getHours(), d.getMinutes()); }
 }
 // las horas de un estado `{l, h}`: `{A: "21:44", C: "21:51"}`, solo de las letras marcadas
 function horasDe(e){
@@ -3076,8 +3104,10 @@ function partirCita(texto){
   return mm ? {cita: mm[1], cuerpo: t.slice(mm[0].length).trim()} : {cita: "", cuerpo: t.trim()};
 }
 function citaEsDe(cita, m){
-  var mm = /^\s*>\s*[fc]laudio\s+(\d\d:\d\d)\s*:\s*(.*)$/m.exec(cita || "");
-  if(!mm || mm[1] !== hhmmDe(m)) return false;
+  // 1660: la hora de la cita sale en 12 h, pero una caja vieja (o un dispositivo sin actualizar) la dejo en
+  // 24 h: las dos se normalizan antes de comparar, asi una cita de ayer sigue enganchando con su mensaje.
+  var mm = /^\s*>\s*[fc]laudio\s+(\d{1,2}:\d\d(?:\s*[ap]m)?)\s*:\s*(.*)$/m.exec(cita || "");
+  if(!mm || norm12(mm[1]) !== norm12(hhmmDe(m))) return false;
   var q = normCita(mm[2].replace(/^\[[\w\/-]+\]\s*/, "")).replace(/…$/, "").slice(0, 24), ls = lineasCita(m);
   return !q || normCita(ls[0] || "").indexOf(q) === 0;
 }
@@ -6793,7 +6823,7 @@ function cajaServer(s){
   });
   (o.hechas || []).forEach(function(t){
     filas.push(it({tipo: "tarea", estado: "hecha", tema: "server", d: t},
-      '<span class="g">' + esc((t.fecha || "").slice(11, 16) || "--:--") + "</span> " +
+      '<span class="g">' + esc(hora12((t.fecha || "").slice(11, 16)) || "--:--") + "</span> " +
       (t.ok ? '<span class="v">ok</span>' : '<span class="r">!!</span>') + " " +
       esc(String(t.texto || "").slice(0, 80))));
   });
@@ -6966,7 +6996,7 @@ function cajaAgente(a){
   var filas = [], corr = a.corriendo || [];
   (a.hechas || []).slice(0, 2).reverse().forEach(function(t){
     filas.push(it({tipo: "tarea", estado: "hecha", tema: t.tema, d: t},
-               '<span class="qpaso">' + qNom(t) + " " + qHora((t.fecha || "").slice(11, 16)) + " " +
+               '<span class="qpaso">' + qNom(t) + " " + qHora(hora12((t.fecha || "").slice(11, 16))) + " " +
                (t.ok ? "ok" : '<span class="r b">!!</span>') + "</span>"));
   });
   corr.forEach(function(t){
@@ -7166,7 +7196,7 @@ function cajaPodcast(p){
     filas.push(it({tipo: "episodio", tema: "tools", d: e},
                '<span class="g">' + esc((e.fecha || "").slice(5)) +
                // la hora de la ultima actualizacion (el podcast vivo se republica con el mismo id)
-               (/T\d\d:\d\d/.test(e.actualizado || "") ? " · act " + esc(e.actualizado.slice(11, 16)) : "") +
+               (/T\d\d:\d\d/.test(e.actualizado || "") ? " · act " + esc(hora12(e.actualizado.slice(11, 16))) : "") +
                "</span> " + esc(e.titulo)));
     filas.push("  " + (e.voces || []).map(function(v){
       return link(v.url, v.voz + (v.min ? " " + v.min + "m" : ""));
@@ -7478,7 +7508,8 @@ function horaNoti(n){
   var f = String(n.fecha || "");
   if(!/^\d{4}-\d\d-\d\d \d\d:\d\d/.test(f)) return "";
   var hoy = new Date(), d = hoy.getFullYear() + "-" + pad2(hoy.getMonth() + 1) + "-" + pad2(hoy.getDate());
-  return f.slice(0, 10) === d ? f.slice(11, 16) : f.slice(8, 10) + "/" + f.slice(5, 7) + " " + f.slice(11, 16);
+  var h = hora12(f.slice(11, 16));
+  return f.slice(0, 10) === d ? h : f.slice(8, 10) + "/" + f.slice(5, 7) + " " + h;
 }
 function temaNoti(n){ return n && n.tema && esTema(n.tema) ? normTema(n.tema) : "tools"; }
 // 1328 (19:47): el mismo titulo de una linea ("tipo: asunto") y cuerpo corto que el push (`push_filtro.formato`);
@@ -7504,7 +7535,8 @@ function pintarNotis(){
 }
 // la cita que lleva la respuesta: `> aviso hh:mm: <texto>` + linea vacia (el daemon la separa con `marcas_chat`)
 function citaNoti(n){
-  return "> aviso " + (n.fecha || "").slice(0, 16) + ": " + unaLinea(n.texto, ESC_CHARS) + "\n\n";
+  return "> aviso " + (hora12((n.fecha || "").slice(11, 16)) || (n.fecha || "").slice(0, 16)) +
+         ": " + unaLinea(n.texto, ESC_CHARS) + "\n\n";
 }
 function responderNoti(n, texto){
   texto = String(texto || "").trim();
@@ -8179,7 +8211,8 @@ function modalDe(o){
     // los ratos sin claude de hoy (facundo, 2026-09-12): hora, causa y duracion de cada uno
     m.titulo = "caidas de hoy: " + (d.n || 0) + " (" + (d.minutos || 0) + " min)";
     m.cuerpo = (d.episodios || []).map(function(e){
-      return pad(e.desde + "-" + e.hasta, 13) + pad(e.minutos + " min", 8, true) + "  " + esc(e.causa) +
+      // 1660: `desde`/`hasta` vienen en 24 h (con eso python cuenta los minutos) y se pintan en 12 h
+      return pad(hora12(e.desde) + " a " + hora12(e.hasta), 20) + pad(e.minutos + " min", 8, true) + "  " + esc(e.causa) +
              (e.abierta ? ' <span class="r">sigue</span>' : "") +
              (e.veces > 1 ? ' <span class="g">x' + e.veces + "</span>" : "");
     }).join("\n") || '<span class="v">sin caidas hoy</span>';
@@ -8988,6 +9021,7 @@ window.__agente = {
   escTope: escTope, capaTope: function(){ var c = capaTope(); return c && c.nombre; }, modalMolde: modalMolde, moldeBoton: moldeBoton, moldeSwitch: moldeSwitch, swModelo: swModelo, swEstado: swEstado, verImagen: verImagen,   // 1455: esc cierra el de mas arriba (`prueba_web_votar`)
   glifos: function(){ var o = {}; Object.keys(GLIFOS).forEach(function(k){ o[k] = GLIFOS[k][0]; }); return o; },   // 1657: `prueba_web_votar` chequea que `-_-` sea maybe y `←` el back
   animGusto: animGusto, animGustosSubir: animGustosSubir,
+  animPintar: animPintar,   // 1681: las pruebas pintan un cuadro y miden la linea base
   amEstado: function(){ return {abierto: !$("animmenu").classList.contains("oculta"), anim: amAnim && amAnim.id,
                                  pend: votLeer("gustos_pend", []), loc: votLeer("gustos_loc", null), gustos: anims.gustos,
                                  estado: $("amestado").textContent}; },
@@ -9001,7 +9035,8 @@ window.__agente = {
   qvOcultos: qvOcultos, qvUmbral: QV_UMBRAL,   // 1229: swipe de `que ver`
   // cajas a/b/c: `prueba_web_tabs` las pinta, elige, manda y chequea que un drag no elija
   opcionesDe: opcionesDe,
-  hhmmDe: hhmmDe, citaCaja: citaCaja, hhmmBA: hhmmBA,   // 1203: hora de envio de cada caja marcada
+  hhmmDe: hhmmDe, citaCaja: citaCaja, hhmmBA: hhmmBA,
+  hora12: hora12, norm12: norm12, horaNoti: horaNoti,   // 1660: 12 h con am/pm en todo lo que ve facundo   // 1203: hora de envio de cada caja marcada
   // 1212: purga de `agente_opciones` (24 h y claves invalidas)
   purgarOpc: purgarOpc, opcHecho: function(){ return JSON.parse(JSON.stringify(opcHecho)); },
   refrescarCajas: refrescarCajas,   // 1203: repintar con el estado que llego de otro dispositivo
