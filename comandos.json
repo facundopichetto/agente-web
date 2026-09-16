@@ -160,6 +160,18 @@
      "offline": "cola"
     },
     {
+     "cmd": "modelos",
+     "que": "el modo de modelo y qué sale hoy en cada cuenta",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "modelos modo",
+     "que": "fija el modelo: reparto, opus o fable",
+     "escribe": "modelos ",
+     "offline": "cola"
+    },
+    {
      "cmd": "modelo chat",
      "que": "qué modelo contesta en cada pestaña",
      "escribe": null,
