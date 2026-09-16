@@ -125,42 +125,6 @@
      "offline": "cola"
     },
     {
-     "cmd": "borrar N",
-     "que": "la orden pendiente N se va del todo, no vuelve nunca",
-     "escribe": "borrar ",
-     "offline": "cola"
-    },
-    {
-     "cmd": "limpiar texto",
-     "que": "borra del todo las pendientes que matcheen (lo que corre no se toca)",
-     "escribe": "limpiar ",
-     "offline": "cola"
-    },
-    {
-     "cmd": "primero N",
-     "que": "la pendiente N pasa al frente de las de su tema",
-     "escribe": "primero ",
-     "offline": "cola"
-    },
-    {
-     "cmd": "ultimo N",
-     "que": "la pendiente N pasa al final de las de su tema",
-     "escribe": "ultimo ",
-     "offline": "cola"
-    },
-    {
-     "cmd": "pausa tema",
-     "que": "frena solo ese tema, el resto de la cola sigue",
-     "escribe": "pausa ",
-     "offline": "cola"
-    },
-    {
-     "cmd": "segui tema",
-     "que": "saca de pausa ese tema",
-     "escribe": "segui ",
-     "offline": "cola"
-    },
-    {
      "cmd": "sueltos",
      "que": "lo que espera margen de tokens",
      "escribe": null,
