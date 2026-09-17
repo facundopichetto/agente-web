@@ -752,6 +752,13 @@
   .qtab .qth{color:var(--gris);font-size:9px;letter-spacing:.3px;opacity:.75}
   .qtab .qnom{min-width:0;overflow:hidden;text-overflow:ellipsis}
   .qtab .qcel{text-align:right;font-variant-numeric:tabular-nums}
+  /* 1832: la escalera de modelos del widget `models`: grid de 7 columnas, entra en el celu sin scroll horizontal */
+  .esctab{display:grid;grid-template-columns:minmax(0,max-content) repeat(6,max-content);column-gap:6px;row-gap:1px;
+          font-variant-numeric:tabular-nums;max-width:100%;overflow:hidden;white-space:nowrap}
+  .esctab .eth{color:var(--gris);font-size:9px;letter-spacing:.3px;opacity:.75}
+  .esctab .enom{min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .esctab .ecel{text-align:right}
+  @media (max-width:480px){ .esctab{column-gap:4px} }
   .qtab .qhn{display:none}
   .qtab .qpaso.qh,.qtab .qcola.qh{opacity:.6} .qtab .qcorre.qh{color:#8fcf7f}
   @media (max-width:560px){ .qtab{font-size:9.5px;column-gap:5px} .qtab .qhw{display:none} .qtab .qhn{display:inline} }

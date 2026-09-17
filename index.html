@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.331">
-<link rel="manifest" href="manifest.json?v=4.331">
+<meta name="agente-web-version" content="4.332">
+<link rel="manifest" href="manifest.json?v=4.332">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.331">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.332">
 </head>
 <body>
 
@@ -6652,141 +6652,8 @@ function cajaDecididas(o){
               "</span>", limFilas("decided", filas).join("\n"), false, "decided");
 }
 
-function cajaSombra(sb){
-  // el widget se llama `models` (facundo, 2026-09-16): la clave del setting y el id siguen siendo `sombra`
-  if(sb.error)
-    return caja("models", "", '<span class="r">' + esc(sb.error) + "</span>", false, "sombra");
-  // escala (facundo, 2026-09-14): el numero es la calidad normalizada, 100 = el mejor de esa categoria (uno solo)
-  var cols = sb.cols || [], cortos = {opus:"opus", fable:"fabl", gemini:"gem", groq:"groq", openrouter:"orou",
-                                      mistral:"mist", local:"locl", principal:"prin"};
-  var hist = sb.historicos || [], esHist = function(c){ return hist.indexOf(c) >= 0; };
-  var filas = ['<span class="g">' + pad("categoria", 11) + cols.map(function(c){ return pad(cortos[c] || c, 4, true); }).join(" ") +
-               " " + pad("veredicto", 9) + "</span>"];
-  (sb.cats || []).forEach(function(cat){
-    var f = (sb.tabla || {})[cat];
-    if(!f) return;
-    var celdas = cols.map(function(c){
-      var x = f[c];
-      if(!x) return '<span class="g">' + pad("-", 4, true) + "</span>";
-      if(x.acierto === null || x.acierto === undefined){
-        // `wait` = en la cola del juez · `nojz` = el juez la dio por perdida (motivo explicito)
-        var t = esHist(c) ? "off" : x.sin_clave ? "-" : x.pendientes ? "wait" : x.sin_juez ? "nojz" : "err";
-        return '<span class="g">' + pad(t, 4, true) + "</span>";
-      }
-      var cl = x.acierto >= 80 ? "v" : x.acierto >= 50 ? "a" : "r";
-      return '<span class="' + cl + ' b">' + pad(String(x.acierto), 4, true) + "</span>";
-    });
-    var v = (sb.veredictos || {})[cat] || {};
-    var ver = v.veredicto === "apto" ? '<span class="v b">' + pad("ok " + (cortos[v.proveedor] || v.proveedor || ""), 9) + "</span>"
-            : v.veredicto === "no apto" ? '<span class="r b">' + pad("no", 9) + "</span>"
-            : '<span class="g">' + pad("pocos", 9) + "</span>";
-    filas.push(it({tipo: "catbackup", tema: "tools", d: {cat: cat, fila: f, cols: cols, veredicto: v}},
-               pad(cat, 11) + celdas.join(" ") + " " + ver));
-  });
-  if(filas.length === 1) filas.push(vacio("sin corridas todavia"));
-  var hoy = sb.hoy || {}, est = hoy.estados || {};
-  if(Object.keys(est).length){
-    var clEst = {ok:"v", cuota:"a", pago:"r", roto:"r", "sin clave":"g"};
-    var chips = Object.keys(est).map(function(p){
-      var e = est[p], c = clEst[e.estado] || "g";
-      var lat = e.estado === "ok" && e.latencia !== null ? " " + e.latencia + "s" : "";
-      return it({tipo: "modelo", tema: "tools",
-                 d: {prov: p, hoy: e, info: (sb.modelos || {})[p] || {}, tabla: sb.tabla || {},
-                     cats: sb.cats || [], veredictos: sb.veredictos || {}}},
-                '<span class="' + c + ' b">' + esc(cortos[p] || p) + "</span>" +
-                '<span class="' + c + '">' + esc(" " + e.estado + lat) + "</span>");
-    });
-    filas.push('<span class="g">' + pad("hoy", 11) + "</span>" + chips.join('<span class="g"> \u00b7 </span>'));
-  }
-  // pie: el modelo real del ollama del server (o `sin local` si no contesta) y lo que el juez no pudo puntuar
-  var loc = (sb.local || {}).modelo || ((sb.modelos || {}).local || {}).modelo;
-  filas.push('<span class="g">' + (sb.n || 0) + " corridas · 100 = mejor de la categoria · apto = 85+ crudo 80+ &lt;5s 20+" +
-             ((sb.faltan || []).length ? " · sin clave: " + sb.faltan.length : "") + "</span>");
-  filas.push('<span class="g">locl = </span>' + (loc ? '<span class="c">' + esc(loc) + "</span>" +
-               '<span class="g"> · local (ollama del server, sin internet)</span>'
-             : '<span class="g">sin local</span>') +
-             '<span class="g"> · sin juzgar: ' + (sb.sin_juzgar || 0) +
-             (sb.en_cola ? " · en cola del juez: " + sb.en_cola : "") + "</span>");
-  // dato esencial: el ultimo veredicto (el primer proveedor apto, o que no hay)
-  var apto = null;
-  (sb.cats || []).forEach(function(c){
-    var v = (sb.veredictos || {})[c] || {};
-    if(!apto && v.veredicto === "apto") apto = (cortos[v.proveedor] || v.proveedor || "") + " en " + c;
-  });
-  var ese = apto ? '<span class="v b">apto</span> <span class="g">' + esc(apto) + "</span>"
-                 : '<span class="g">sin apto todavia</span>';
-  return caja("models", ese, limFilas("sombra", filas).join("\n"), true, "sombra");
-}
-
-function cajaPropuestas(pr){
-  pr = pr || [];
-  var tf = wset("propuestas", "tema");
-  if(tf && tf !== "todos") pr = pr.filter(function(p){ return p.tema === tf; });
-  var ese = '<span class="a b">' + pr.length + "</span> " +
-            '<span class="g">esperando un dale' + (tf && tf !== "todos" ? " · " + esc(tf) : "") + "</span>";
-  if(!pr.length) return caja("propuestas", ese, vacio("nada esperando un dale"), false, "propuestas");
-  return caja("propuestas", ese, limFilas("propuestas", pr.map(function(p){
-    return it({tipo: "propuesta", tema: p.tema, d: p},
-      '<span class="a b">' + p.n + '</span> <span class="g">' + esc(p.tema) + "</span> " +
-      esc(String(p.orden).slice(0, 220))) + "\n  " + boton("dale", "dale " + p.n, "dale");
-  })).join("\n"), false, "propuestas");
-}
-
-function link(url, texto){
-  return '<a href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(texto) + "</a>";
-}
-
-function cajaPodcast(p){
-  var eps = p.episodios || [], ab = abiertoPod();
-  var btn = '<button class="btn" type="button" data-pod="1">' + (ab ? "cerrar" : "podcast") + "</button>";
-  // dato esencial: el episodio de arriba (el mas nuevo) y cuantos hay
-  var ult = eps[0];
-  var extra = ult ? '<span class="b">' + esc(corto(ult.titulo, 42)) + "</span>" +
-                    '<span class="g"> · ' + eps.length + " ep</span>"
-                  : '<span class="g">sin episodios</span>';
-  // automatico apagado en daemon.json (podcast_auto.activo: false)
-  if(p.pausa) extra = '<span class="a">' + esc(p.pausa) + "</span> " + extra;
-  if(!ab) return caja("podcast", extra, btn + '<span class="g">' + (eps.length ? "tocá para ver los links" : "sin episodios") + "</span>",
-                      false, "podcast");
-  var filas = [btn + link(p.web || "#", "la web del podcast")];
-  if(!eps.length) filas.push(vacio("sin episodios"));
-  eps.forEach(function(e){
-    filas.push(it({tipo: "episodio", tema: "tools", d: e},
-               '<span class="g">' + esc((e.fecha || "").slice(5)) +
-               // la hora de la ultima actualizacion (el podcast vivo se republica con el mismo id)
-               (/T\d\d:\d\d/.test(e.actualizado || "") ? " · act " + esc(hora12(e.actualizado.slice(11, 16))) : "") +
-               "</span> " + esc(e.titulo)));
-    filas.push("  " + (e.voces || []).map(function(v){
-      return link(v.url, v.voz + (v.min ? " " + v.min + "m" : ""));
-    }).join(" · "));
-  });
-  return caja("podcast", extra, limFilas("podcast", filas).join("\n"), false, "podcast");
-}
-
-function cajaDj(p){
-  // motor `fuzzer/dj`: la cola nocturna de spotify. orden fijo, huecos aleatorios.
-  if(!p.plan) return caja("dj", '<span class="g">fuzzer · sin plan</span>',
-    '<span class="g">' + esc(p.texto || "sin plan") + "</span>", false, "dj");
-  // dato esencial: que esta pasando ahora y cuantos bloques van
-  var extra = (p.sonando ? '<span class="v b">suena</span> <span class="g">' + esc(corto(p.sonando, 30)) + "</span>"
-             : p.listo ? '<span class="g">en espera</span>' : '<span class="r">falta el oauth</span>') +
-              ' <span class="a b">' + p.hechos + "/" + p.bloques + "</span>";
-  var filas = ['<span class="g">noche ' + esc(p.noche) + " · " + p.reproducciones + " reproducciones</span>"];
-  if(p.sonando) filas.push('<span class="v b">suena</span> ' + esc(p.sonando));
-  else if(p.proximo) filas.push('<span class="g">proximo bloque</span> ' + esc(p.proximo));
-  if(!p.listo) filas.push('<span class="r">falta el oauth de spotify (premium)</span>');
-  if(wset("dj", "cola")) (p.top || []).forEach(function(t){
-    filas.push('  <span class="g">' + esc(t.tema) + "</span> " + t.n + "×");
-  });
-  return caja("dj", extra, limFilas("dj", filas).join("\n"), false, "dj");
-}
-
-// carga de salud desde el widget (1432): sale `salud cargar: ...` a la pestaña personal sin tocar la caja del chat
-// (`mandarAparte`) y lo resuelve el daemon sin modelo (`recetas/salud_chat.cmd`). `spCarga` pinta `guardando`
-// hasta que llega la respuesta, y despues su linea de confirmacion unos minutos.
-var spCarga = null, SP_CARGA_MS = 5 * 60 * 1000, spUltimoCmd = "";
-var RE_SP_CONF = /(?:guardé en salud|saqué de salud|corregí en salud|no cargué nada|no había nada para deshacer|no pude:)[^\n]*/;
-function spMandar(cmdTxt, visto){
+// 1832: `cajaSombra` (el widget `models`) vive en `web/widgets/sombra.js` (la clave del setting y el id siguen `sombra`)
+andar(cmdTxt, visto){
   spCarga = {texto: visto, ts: Date.now(), conf: ""};
   spUltimoCmd = cmdTxt;
   cerrarModal();
@@ -7246,7 +7113,7 @@ document.addEventListener("keydown", function(e){
 // de un widget ya migrado, se vuelve a cargar ese archivo y se repinta ESA caja (`repintarMod`), sin tocar el
 // chat, su scroll ni lo que este tipeado. si cambio el shell (o algo que no se sabe repintar), el reload de
 // siempre. un modulo no ve el adentro del shell: solo esto.
-var MODULOS = ["usage", "agent"];             // widgets migrados, en `web/widgets/<clave>.js`
+var MODULOS = ["usage", "agent", "sombra"];   // widgets migrados, en `web/widgets/<clave>.js` (1832: `models` = clave `sombra`)
 var MOD_DATOS = {usage: "usage", agent: "agente"};   // de que campo de `widgets.json` come cada uno
 var mods = {}, modsVer = {}, modsTimers = {}, modsError = {}, modCargando = null, modsCargas = 0;
 
@@ -7254,7 +7121,7 @@ var BOARD = {
   contrato: 1,
   registrar: function(clave, api){ mods[clave] = api; delete modsError[clave]; modsCargas++; },
   // lo que un modulo puede usar del shell, y nada mas
-  esc: esc, it: it, caja: caja, vacio: vacio, wset: wset, limFilas: limFilas, corto: corto,
+  esc: esc, it: it, caja: caja, vacio: vacio, wset: wset, limFilas: limFilas, corto: corto, pad: pad,
   barraUso: barraUso, moldeSwitch: moldeSwitch, moldeSwitchReg: moldeSwitchReg,
   moldeSwitchSacar: function(nombre){ delete MOLDE_SW[nombre]; },
   modalMolde: modalMolde,   // 1806: el modal de una cuenta del widget `usage` usa el molde (esc cierra, sin borde)
@@ -7386,7 +7253,7 @@ function pintarWidgets(d, err){
     ["tickets", cajaTickets(d.tickets || {})],
     ["oportunidades", cajaOportunidades(d.oportunidades || {})],
     ["decided", cajaDecididas(d.oportunidades || {})],
-    ["sombra", cajaSombra(d.sombra || {})],
+    ["sombra", modHtml("sombra")],
     ["propuestas", cajaPropuestas(d.propuestas || [])],
     ["podcast", cajaPodcast(d.podcast || {})],
     ["dj", cajaDj(d.dj || {})],
