@@ -69,8 +69,8 @@
       height:env(titlebar-area-height, auto);
     }
   }
-  /* `.bb` = boton de la barra de arriba. los seis (SERVER | MAC | CLOUD, chat | widgets y [⚙])
-     usan esta misma clase: mismo alto, padding, fuente y borde (facundo, 2026-09-12). */
+  /* `.bb` = boton con texto de la barra de arriba: mismo alto, padding, fuente y borde (facundo, 2026-09-12).
+     desde la 1929 `chat | widgets` ya no la usan (son iconos `.ib`): queda el molde, por si vuelve un boton con texto. */
   .bb{
     flex:0 0 auto;box-sizing:border-box;background:#000;color:var(--gris);
     border:1px solid var(--linea);border-radius:4px;padding:4px 8px;margin:0;
@@ -105,6 +105,18 @@
   .msg .hilo .tramo.hecho{color:var(--gris);font-size:11px;opacity:.7;margin:0 0 2px 0}
   .msg .hilo .tramo.hecho + .tramo.texto{margin-top:8px}
   .msg .hilo .tramo.hecho:last-child{margin-bottom:8px}
+  /* 1931 (facundo, 2026-09-17: "cuando cambie, la anterior queda arriba en la linea de arriba como ya paso, en
+     gris [...] quiero poder votar, quiero tocar y decirte mas de esto, menos de esto, o escribir"): el rastro de la
+     bolita. cada linea de estado que se fue queda con el mismo estilo apagado que un `hecho`, y las dos son
+     tocables: abren el menu de voto (`rastroMenu`). lo tocable parece tocable (1808) */
+  .msg .hilo .tramo.paso{color:var(--gris);font-size:11px;opacity:.7;margin:0 0 2px 0}
+  .msg .hilo .tramo.paso + .tramo.texto{margin-top:8px}
+  .msg .hilo .tramo.paso:last-child{margin-bottom:8px}
+  .msg .hilo .tramo.paso, .msg .hilo .tramo.hecho{cursor:pointer}
+  .msg .hilo .tramo.paso:hover, .msg .hilo .tramo.hecho:hover{opacity:1}
+  #rastromenu .rmfrase{color:var(--gris);font-size:11px;margin:0 0 8px 0}
+  #rastromenu textarea{width:100%;box-sizing:border-box;min-height:56px;background:transparent;color:var(--blanco);
+    border:1px solid var(--borde);border-radius:6px;padding:6px;font:inherit;font-size:12px}
   .msg.vuelo .hilo + .cuerpo{margin-top:2px}
   /* animaciones de caracteres (1373): una linea, todos los cuadros del mismo ancho (`Nch` lo pone animPoner), el
      alto fijo de una linea: ni saltan de costado ni empujan el renglon.
