@@ -1,4 +1,4 @@
-// widget `usage` del board: las barras de CLAUDE por cuenta, el switch de modelo y el grafico de la semana.
+// widget `usage` del board: las barras de CLAUDE por cuenta (tocables: modal con el detalle) y el grafico de la semana.
 // modulo de widget (orden 1793, 2026-09-16, "el board como las secciones de shopify"): el shell lo carga
 // con `import()` y, cuando la pagina es `file://` (las pruebas), con un `<script>`, que es lo unico que ese
 // protocolo deja. por eso el archivo NO tiene `export`: el contrato es registrarse en el shell, asi el mismo
@@ -7,38 +7,66 @@
   var B = (typeof window !== "undefined" ? window : self).__board;
   var esc = B.esc, it = B.it, caja = B.caja, vacio = B.vacio, wset = B.wset;
 
-  var swEspera = null, swUltimo = null, SW_ESPERA_MS = 30 * 1000;
-  B.moldeSwitchReg("modelomodo", function(v){
-    swEspera = {modo: v, ts: Date.now()};
-    swUltimo = {cmd: "modelos " + v, tema: "tools", aparte: true};   // lo lee `prueba_web_modelos` (como `spEstado`)
-    B.mandarAparte(swUltimo.cmd, "tools");
-    B.repintarWidgets();
-  });
-  function swEstado(){ return {ultimo: swUltimo, esperando: swEspera && swEspera.modo}; }
-  function swModelo(rep){
-    var modo = (rep || {}).modelo_modo, d = (rep || {}).modelo || {};
-    if(!modo) return "";
-    // mientras el server no confirma, la posicion tocada queda puesta (y se dice): nunca un switch que no se mueve
-    var esperando = swEspera && Date.now() - swEspera.ts < SW_ESPERA_MS && swEspera.modo !== modo;
-    if(swEspera && swEspera.modo === modo) swEspera = null;
-    var puesto = esperando ? swEspera.modo : modo;
-    var filas = (d.cuentas || []).map(function(c){
-      return esc(c.nombre) + " <b>" + esc(c.decision || "?") + "</b>";
-    }).join(" · ");
-    var carriles = ["cola", "chat", "resumen"].map(function(k){
-      return (d[k] || {}).modelo ? k + " " + d[k].modelo + " en " + ((d[k] || {}).cuenta || "?") : "";
-    }).filter(Boolean).join(", ");
-    return '<div class="usw">' +
-      B.moldeSwitch({nombre: "modelomodo", valor: puesto, aria: "modo de modelo",
-                   opciones: [{valor: "reparto", title: "lo decide el script, por cuenta"},
-                              // 1798: un modelo fijo por carril (cola fable, chat y resumen opus)
-                              {valor: "tareas", title: "cola fable, chat y resumen opus"},
-                              {valor: "opus", title: "todo con opus hasta que lo saques"},
-                              {valor: "fable", title: "todo con fable hasta que lo saques"}]}) +
-      (esperando ? '<div class="uswl g">mandando…</div>'
-                 : (filas ? '<div class="uswl">' + filas + "</div>" : "")) +
-      (carriles && !esperando ? '<div class="uswl g">' + esc(carriles) + "</div>" : "") + "</div>";
+  // orden 1806 (facundo, 2026-09-16): se fue el switch del modo de modelo y la linea del reparto: abajo del
+  // titulo van directo las dos cuentas. el modo se cambia por el chat (`modelos reparto|tareas|opus|fable`).
+  // tocar `facu` u `orugote` abre un modal con el molde (`modalMolde`, esc cierra) con el detalle de esa cuenta
+  // y, solo si no es la activa, un boton verde que manda `cuenta <nombre>` (el daemon lo atiende sin modelo).
+  var cuModal = null, cuUltimo = null, cuAbierta = null;
+  function cuEstado(){ return {ultimo: cuUltimo, abierta: cuAbierta}; }
+  function activa(cu){ return cu.elegida !== undefined && cu.elegida !== null ? !!cu.elegida : !!cu.activa; }
+  function renuevaHtml(cu, clase){
+    var rs = (cu.renueva || []).filter(function(r){ return r && r.texto; });
+    if(!rs.length) return "";
+    return '<div class="' + clase + '">' + rs.map(function(r){
+      return "<span>" + esc(r.nombre) + " " + esc(r.texto) + "</span>";
+    }).join("") + "</div>";
   }
+  function barraHtml(b){
+    var h = B.barraUso(b);
+    return b.oculta ? h.replace('class="ub ', 'class="ub ub-oculta ') : h;
+  }
+  function cuentaAbrir(cu){
+    if(!cu || !B.modalMolde) return false;
+    if(!cuModal) cuModal = B.modalMolde({id: "cuentamodal", z: 43, sinServer: true,
+                                         alCerrar: function(){ cuAbierta = null; }});
+    var esActiva = activa(cu), bs = cu.barras || [];
+    var estado = cu.agotada ? '<span class="r">agotada: sin creditos hasta que renueve</span>'
+               : esActiva ? '<span class="v">es la cuenta que usa el agente ahora</span>'
+               : '<span class="g">no es la cuenta activa</span>';
+    var html = '<div class="cmod">' + estado +
+      (cu.excluida ? '\n<span class="r">excluida</span> <span class="g">' + esc(cu.motivo || "") + "</span>"
+                   : (cu.motivo && !esActiva ? '\n<span class="g">' + esc(cu.motivo) + "</span>" : "")) +
+      (cu.modelo ? '\n<span class="g">hoy sale con</span> <span class="c">' + esc(cu.modelo) + "</span>" +
+                   (cu.modelo_modo ? ' <span class="g">(modo ' + esc(cu.modelo_modo) + ")</span>" : "") : "") +
+      '<div class="cmod-b">' + USAGE_BARRAS.map(function(k){
+        var b = bs.filter(function(x){ return x.clave === k[0] || x.nombre === k[1]; })[0];
+        return barraHtml(b || {nombre: k[1], pct: null, linea: null, nivel: "sin"});
+      }).join("") + "</div>" +
+      (bs.some(function(b){ return b.falta_txt && !b.oculta; }) ?
+        '<div class="cmod-r">' + bs.filter(function(b){ return b.falta_txt && !b.oculta; }).map(function(b){
+          return '<span><span class="g">' + esc(b.nombre) + " renueva en</span> " + esc(b.falta_txt) + "</span>";
+        }).join("") + "</div>" : "") + "</div>";
+    var botones = [];
+    if(!esActiva && !cu.sin_login){
+      botones.push({tipo: "verde", txt: "pasar a " + cu.nombre, accion: function(m){
+        cuUltimo = {cmd: "cuenta " + cu.nombre, tema: "tools", aparte: true};   // lo lee `prueba_web_modelos`
+        B.mandarAparte(cuUltimo.cmd, "tools");
+        m.estado("mandé cuenta " + cu.nombre);
+        setTimeout(function(){ m.cerrar(false); }, 700);
+      }});
+    }
+    cuAbierta = cu.nombre;
+    return cuModal.abrir({titulo: "cuenta " + cu.nombre, cuenta: cu.email || "", html: html, botones: botones});
+  }
+  var cuentasVistas = {};
+  function alTocar(ev){
+    var n = ev.target.closest && ev.target.closest(".usage .cta[data-cta]");
+    if(!n) return;
+    ev.preventDefault(); ev.stopPropagation();
+    var cu = cuentasVistas[n.getAttribute("data-cta")];
+    if(cu) cuentaAbrir(cu);
+  }
+  document.addEventListener("click", alTocar, true);
   var USAGE_ORDEN = ["facu", "orugote"];
   var USAGE_BARRAS = [["five_hour", "5h"], ["seven_day", "week"], ["fable", "fable"]];
   // orden 1808 (facundo, 2026-09-16): una cuenta sin limite que cuente (ninguna barra `week` ni `fable`
@@ -54,7 +82,7 @@
     return true;
   }
   function cajaUsage(u){
-    var cuentas = (u.cuentas || []).slice(), rep = u.reparto || {}, pr = u.proyeccion || {}, html = "";
+    var cuentas = (u.cuentas || []).slice(), html = "";
     if(!cuentas.length && (u.barras || []).length)
       cuentas = [{nombre: "cuenta", activa: true, barras: u.barras}];
     var soloCta = wset("usage", "cuentas");
@@ -65,19 +93,18 @@
       return (ix < 0 ? 9 : ix) - (iy < 0 ? 9 : iy);
     });
     // orden 1376/1377 (facundo, 2026-09-14): el titulo dice `CLAUDE` y al lado va solo la bateria. afuera la
-    // proyeccion general, las lineas por modelo, excluidas y brecha. arriba de las cuentas UNA linea del reparto.
-    if(rep.linea)
-      // orden 1396 (facundo, 2026-09-15): tipo propio. como `cuenta` salia "cuenta undefined" (el reparto no tiene nombre)
-      html += it({tipo: "reparto", tema: "tools", d: rep,
-                  completo: rep.linea + (rep.porque && rep.porque !== rep.linea ? " (" + rep.porque + ")" : "")},
-                 '<div class="urep">' + esc(rep.linea) + "</div>");
-    html += swModelo(rep);
-    // las dos columnas: el nombre pintado por `estado` (ok verde clarito, warn amarillo, mal rojo)
+    // proyeccion general, las lineas por modelo, excluidas y brecha. orden 1806 (2026-09-16): tambien afuera la
+    // linea del reparto y el switch del modo: abajo del titulo van directo las dos cuentas.
+    // las dos columnas: el nombre pintado por `estado` (ok verde clarito, warn amarillo, mal rojo), sin negrita
+    cuentasVistas = {};
     var cols = cuentas.map(function(cu){
       // orden 1808 (facundo, 2026-09-16): la que no tiene limite que cuente va gris y no se toca
       var sinlim = sinLimite(cu);
-      var est = sinlim ? "" : (cu.estado || "");
-      var cab = '<span class="cta"><span class="nom' + (est ? " e-" + esc(est) : "") + '">' + esc(cu.nombre) + "</span></span>";
+      var est = sinlim ? "" : (cu.agotada ? "agotada" : (cu.estado || ""));
+      if(!sinlim) cuentasVistas[cu.nombre] = cu;
+      var cab = '<span class="cta"' + (sinlim ? "" : ' data-cta="' + esc(cu.nombre) + '" role="button" tabindex="0" title="detalle de ' + esc(cu.nombre) + '"') +
+        '><span class="nom' + (est ? " e-" + esc(est) : "") + '">' + esc(cu.nombre) + "</span></span>" +
+        (sinlim ? "" : renuevaHtml(cu, "ren"));
       var cuerpo;
       if(cu.sin_login){
         // sin login propio: no se repiten los numeros de la otra, pero el hueco guarda la altura de las barras
@@ -86,12 +113,11 @@
         var bs = cu.barras || [];
         cuerpo = USAGE_BARRAS.map(function(k){
           var b = bs.filter(function(x){ return x.clave === k[0] || x.nombre === k[1]; })[0];
-          return B.barraUso(b || {nombre: k[1], pct: null, linea: null, nivel: "sin"});
+          return barraHtml(b || {nombre: k[1], pct: null, linea: null, nivel: "sin"});
         }).join("");
       }
-      return '<div class="ucol' + (cu.elegida ? " elegida" : "") + (sinlim ? " sinlim" : "") + '">' +
-        (sinlim ? cab : it({tipo: "cuenta", tema: "tools", d: cu, completo: cu.motivo || ""}, cab)) +
-        cuerpo + "</div>";
+      return '<div class="ucol' + (cu.elegida ? " elegida" : "") + (sinlim ? " sinlim" : "") + (cu.agotada ? " agotada" : "") + '">' +
+        cab + cuerpo + "</div>";
     });
     if(cols.length) html += '<div class="ucols">' + cols.join("") + "</div>";
     html += graficoSemana(u.semana);
@@ -130,8 +156,12 @@
   B.registrar("usage", {
     html: function(d){ return cajaUsage(d || {}); },
     pintar: function(d, nodo){ return B.reemplazar(nodo, cajaUsage(d || {})); },
-    // lo unico que este modulo deja puesto afuera es el handler del switch: al soltarlo se saca
-    destruir: function(){ B.moldeSwitchSacar("modelomodo"); swEspera = null; swUltimo = null; },
-    swModelo: swModelo, swEstado: swEstado
+    // lo que este modulo deja puesto afuera: el listener del titulo de cada cuenta y su modal. al soltarlo se sacan
+    destruir: function(){
+      document.removeEventListener("click", alTocar, true);
+      if(cuModal){ try{ cuModal.cerrar(true); }catch(e){} var el = document.getElementById("cuentamodal"); if(el) el.remove(); }
+      cuModal = null; cuUltimo = null; cuAbierta = null; cuentasVistas = {};
+    },
+    cuentaAbrir: cuentaAbrir, cuEstado: cuEstado
   });
 })();

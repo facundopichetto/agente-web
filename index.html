@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.327">
-<link rel="manifest" href="manifest.json?v=4.327">
+<meta name="agente-web-version" content="4.328">
+<link rel="manifest" href="manifest.json?v=4.328">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -7059,8 +7059,9 @@ $("nlista").addEventListener("click", function(e){
 });
 
 // ---------- persona: menu de cuenta (facundo, 2026-09-13, orden 1166) ----------
-// reemplaza al `[⚙]` de arriba a la derecha: cuenta de claude en uso y cambiarla (`cuenta facu|orugote|auto`, sin
-// modelo), settings del board, `reinicia` con confirmacion y abajo de todo `salir`.
+// reemplaza al `[⚙]` de arriba a la derecha: settings del board, `reinicia` con confirmacion y abajo de todo
+// `salir`. 1806 (facundo, 2026-09-16): las opciones de cuenta se fueron de aca: la cuenta se cambia desde el
+// widget `usage` (tocar `facu` u `orugote` abre su modal con el boton verde). el titulo sigue diciendo cual usa.
 function cuentaEnUso(){
   var rep = ((widDatos || {}).usage || {}).reparto || {};
   return {elegida: rep.elegida || ((widDatos || {}).agente || {}).cuenta || "", modo: rep.modo || ""};
@@ -7068,13 +7069,7 @@ function cuentaEnUso(){
 function abrirPersona(){
   cerrarCampana();
   var r = $("persona").getBoundingClientRect(), cu = cuentaEnUso(), auto = cu.modo === "auto";
-  var cuentas = cuentasConocidas();
-  if(!cuentas.length) cuentas = ["facu", "orugote"];
-  var ops = cuentas.map(function(c){
-    return [(!auto && c === cu.elegida ? "● " : "○ ") + "cuenta " + c,
-            function(){ actuar("tools", "cuenta " + c, true); }];
-  });
-  ops.push([(auto ? "● " : "○ ") + "cuenta auto", function(){ actuar("tools", "cuenta auto", true); }]);
+  var ops = [];
   ops.push(["settings del board", function(){ pintarModal(modalBoard()); }]);
   ops.push(["reinicia", function(){ pintarModal(modalReinicia()); }]);
   ops.push(["salir", function(){ pintarModal(modalSalir()); }]);
@@ -7110,6 +7105,7 @@ var BOARD = {
   esc: esc, it: it, caja: caja, vacio: vacio, wset: wset, limFilas: limFilas, corto: corto,
   barraUso: barraUso, moldeSwitch: moldeSwitch, moldeSwitchReg: moldeSwitchReg,
   moldeSwitchSacar: function(nombre){ delete MOLDE_SW[nombre]; },
+  modalMolde: modalMolde,   // 1806: el modal de una cuenta del widget `usage` usa el molde (esc cierra, sin borde)
   repintarWidgets: repintarWidgets,
   // el chat es del shell: un widget que manda un comando lo manda por aca (sin burbuja, como el switch)
   mandarAparte: function(cmd, tema){
@@ -7598,9 +7594,11 @@ function escribirWidget(clave){
   var c = document.querySelector('#widgets .caja[data-w="' + clave + '"]');
   var tit = c && c.querySelector(".wtit"), ese = c && c.querySelector(".wesc");
   var nombre = tit ? tit.textContent : clave;
-  // `CLAUDE` no tiene texto al lado del titulo (solo la bateria): la cita lleva la linea del reparto
-  var txEse = ese ? ese.textContent.trim() : "", rep = c && c.querySelector(".usage .urep");
-  var dato = unaLinea(txEse || (rep ? rep.textContent : ""), ESC_CHARS);
+  // `CLAUDE` no tiene texto al lado del titulo (solo la bateria): la cita lleva la linea del reparto, que desde
+  // la 1806 ya no se pinta en el widget pero sigue viniendo en el json (`usage.reparto.linea`)
+  var txEse = ese ? ese.textContent.trim() : "";
+  var repL = clave === "usage" ? ((((widDatos || {}).usage || {}).reparto || {}).linea || "") : "";
+  var dato = unaLinea(txEse || repL, ESC_CHARS);
   escribirEn(temaWidget(clave), "> widget " + nombre + ":" + (dato ? " " + dato : ""));
 }
 // la clave del widget donde esta pintada una fila (el item no la sabe: se busca en el dom)
@@ -8584,8 +8582,9 @@ window.__agente = {
   animPoner: animPoner, animIdx: animIdx, animColor: animColor,   // 1670: color por caracter y `ritmo`
   escTope: escTope, capaTope: function(){ var c = capaTope(); return c && c.nombre; }, modalMolde: modalMolde, moldeBoton: moldeBoton, moldeSwitch: moldeSwitch,
   // 1793: `usage` vive en `web/widgets/usage.js`: lo que era global se pide al modulo cargado
-  swModelo: function(r){ return mods.usage ? mods.usage.swModelo(r) : ""; },
-  swEstado: function(){ return mods.usage ? mods.usage.swEstado() : {ultimo: null, esperando: null}; },
+  // 1806: sin switch de modelo; lo tocable es cada cuenta (`cuentaAbrir`), `cuEstado` dice que mando
+  cuentaAbrir: function(cu){ return mods.usage ? mods.usage.cuentaAbrir(cu) : false; },
+  cuEstado: function(){ return mods.usage ? mods.usage.cuEstado() : null; },
   verImagen: verImagen,   // 1455: esc cierra el de mas arriba (`prueba_web_votar`)
   glifos: function(){ var o = {}; Object.keys(GLIFOS).forEach(function(k){ o[k] = GLIFOS[k][0]; }); return o; },   // 1657: `prueba_web_votar` chequea que `-_-` sea maybe y `←` el back
   animGusto: animGusto, animGustosSubir: animGustosSubir, animPeso: animPeso,

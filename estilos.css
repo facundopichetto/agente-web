@@ -3,7 +3,7 @@
    del `<link id="cssppal">` en caliente. el `?v=` lo sube `bump_web()` de daemon.py. */
   :root{
     --verde:#39ff14; --blanco:#e8e8e8; --gris:#666; --cian:#22d3ee;
-    --magenta:#ff4fd8; --rojo:#ff4d4d; --amarillo:#ffd60a; --linea:#1c1c1c;
+    --magenta:#ff4fd8; --rojo:#ff4d4d; --rojo-apagado:#b84a4a; --amarillo:#ffd60a; --linea:#1c1c1c;
     --verde-tenue:#1f7a12; --linea-clara:#3a3a3a; --yo:#9be88a;
     --naranja:#ff9f1a;
     /* 1541 (facundo, 2026-09-15): ningun texto del board mas grande que el del chat (`.msg`); lo que resalta usa peso o color */
@@ -642,7 +642,8 @@
   .usage{white-space:normal}
   .usage .cta{display:flex;align-items:center;gap:6px;margin:0 0 4px 0}
   .usage .cta + .ub{margin-top:0}
-  .usage .cta .nom{color:var(--cian);font-weight:600;letter-spacing:.04em}
+  /* 1806 (facundo, 2026-09-16): el nombre de la cuenta SIN negrita ("es horrible") */
+  .usage .cta .nom{color:var(--cian);font-weight:400;letter-spacing:.04em}
   .usage .rep{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 6px 0;padding-bottom:5px;border-bottom:1px solid var(--linea)}
   .usage .rep .nom{color:var(--cian);font-weight:600;letter-spacing:.04em}
   .usage .rep .por{flex:1 1 100%;opacity:.8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -685,17 +686,27 @@
   .usage .ucols .ub-n{flex:0 0 28px}
   .usage .ucols .ub-p{flex:0 0 30px}
   .usage .ucols .ub-hueco{height:13px;margin:0 0 5px 0}
-  /* widget `CLAUDE` (ordenes 1376/1377/1379, facundo 2026-09-14): linea de reparto, color por cuenta, bateria, semana */
-  /* orden 1396: la linea entera en varios renglones (en el celu se cortaba con `...`) */
-  .usage .urep{margin:0 0 6px 0;white-space:normal;overflow-wrap:anywhere;color:var(--blanco)}
-  /* 1659: el interruptor del modo de modelo y, abajo, que sale hoy en cada cuenta */
-  .usage .usw{margin:0 0 7px 0}
-  .usage .uswl{margin-top:3px;font-size:10px;line-height:1.35;color:var(--blanco);overflow-wrap:anywhere}
-  .usage .uswl.g{color:var(--gris)}
-  .usage .uswl b{color:var(--verde);font-weight:600}
+  /* widget `CLAUDE` (ordenes 1376/1377/1379, facundo 2026-09-14): color por cuenta, bateria, semana.
+     1806 (2026-09-16): sin linea de reparto ni switch de modelo: abajo del titulo van directo las dos cuentas. */
   .usage .ucol .cta .nom.e-ok{color:#a6f5a0}
   .usage .ucol .cta .nom.e-warn{color:var(--amarillo)}
   .usage .ucol .cta .nom.e-mal{color:var(--rojo)}
+  /* 1806: el titulo de la cuenta es lo tocable (abre el modal de esa cuenta), abajo cuanto falta para renovar */
+  .usage .ucol .cta[data-cta]{cursor:pointer;border-radius:3px}
+  .usage .ucol .cta[data-cta]:hover{background:#0d1410}
+  .usage .ucol .ren{font-size:10px;line-height:1.3;color:var(--gris);margin:0 0 5px 0;white-space:nowrap;overflow:hidden}
+  .usage .ucol .ren span{display:block;overflow:hidden;text-overflow:ellipsis}
+  /* 1806: cuenta agotada (excluida por el tope): 100% en week y fable, la 5h invisible y el rojo apagado */
+  .usage .ucol .cta .nom.e-agotada{color:var(--rojo-apagado)}
+  .ub.n-agotada .ub-lleno{background:var(--rojo-apagado)}
+  .ub.n-agotada .ub-p{color:var(--rojo-apagado)}
+  .ub.ub-oculta{visibility:hidden}
+  /* el modal de una cuenta (`#cuentamodal`, molde): barras como en el widget y las renovaciones abajo */
+  .cmod{white-space:pre-wrap}
+  .cmod .cmod-b{margin:8px 0 0 0;white-space:normal}
+  .cmod .cmod-b .ub-n{flex:0 0 40px}
+  .cmod .cmod-r{margin:4px 0 0 0;white-space:normal}
+  .cmod .cmod-r > span{display:block;font-size:11px;line-height:1.4}
   /* 1808: cuenta sin limite que cuente: gris apagado, sin hover y sin cursor de tocable */
   .usage .ucol.sinlim .cta .nom{color:var(--gris);opacity:.7}
   .usage .ucol.sinlim .cta{cursor:default}
@@ -845,8 +856,6 @@
      el mismo media query vive en el js como `MQ_MOBILE`: si cambia uno, cambia el otro. */
   @media (max-width:899px), (max-aspect-ratio: 1/1){
     #vistas{display:flex}
-    /* orden 1396: la linea del reparto guarda dos renglones, asi el widget no salta de alto en cada refresco */
-    .usage .urep{min-height:3.1em}
     /* dedo: los seis botones de la barra se tocan con el pulgar, todos del mismo alto */
     .bb{height:32px;padding:4px 6px;gap:4px}
     #nodos .nodo{min-height:32px}   /* dedo: el label se toca aunque no parezca boton */
