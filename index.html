@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.342">
-<link rel="manifest" href="manifest.json?v=4.342">
+<meta name="agente-web-version" content="4.343">
+<link rel="manifest" href="manifest.json?v=4.343">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.342">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.343">
 </head>
 <body>
 
@@ -4063,12 +4063,17 @@ var TJ_PROCS = {
     {q: "bajar", tipo: "bajar", aria: "dejar de seguir"},
     {q: "igual", tipo: "igual", aria: "queda igual"}]},
   // 1872 {maybe}: el cuarto proceso, la lista `maybe` (lo que junta el `-_-` de candidatas y el `↓` de empezar a seguir)
+  // 1873 {arrepenti}: el quinto proceso deshace el ultimo voto. no hay boton izquierdo: `=` confirma como esta y
+  // `↑` verde devuelve a la persona a la lista donde estaba antes de ese voto
+  "ig-arrepentir": {nombre: "me arrepentí", botones: [
+    {q: "igual", tipo: "igual", aria: "queda como está"},
+    {q: "subir", tipo: "subir", aria: "deshacer ese voto"}]},
   "ig-maybe": {nombre: "maybe", botones: [
     {q: "bajar", tipo: "bajar", aria: "a ignoradas"},
     {q: "igual", tipo: "igual", aria: "queda en maybe"},
     {q: "subir", tipo: "subir", aria: "a interesan"}]}
 };
-var TJ_PROC_ORDEN = ["ig-embudo", "ig-seguir", "ig-dejar", "ig-maybe"];
+var TJ_PROC_ORDEN = ["ig-embudo", "ig-seguir", "ig-dejar", "ig-maybe", "ig-arrepentir"];
 function tjProc(col){ return TJ_PROCS[col] || TJ_PROCS["ig-embudo"]; }
 // la fila de abajo, armada con `moldeBoton` (nunca html fijo: son dos o tres botones segun el proceso)
 function tjBotones(e){
