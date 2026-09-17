@@ -41,6 +41,18 @@
   }
   var USAGE_ORDEN = ["facu", "orugote"];
   var USAGE_BARRAS = [["five_hour", "5h"], ["seven_day", "week"], ["fable", "fable"]];
+  // orden 1808 (facundo, 2026-09-16): una cuenta sin limite que cuente (ninguna barra `week` ni `fable`
+  // con numero: sin plan, sin login, sin datos de uso) se pinta en gris apagado y NO es tocable: no abre
+  // el modal de detalle ni ofrece pasar el agente a ella. las otras siguen igual.
+  function sinLimite(cu){
+    if(cu.sin_login) return true;
+    var bs = cu.barras || [];
+    for(var i = 0; i < bs.length; i++){
+      var b = bs[i] || {}, k = b.clave || b.nombre;
+      if((k === "seven_day" || k === "week" || k === "fable") && b.pct !== null && b.pct !== undefined) return false;
+    }
+    return true;
+  }
   function cajaUsage(u){
     var cuentas = (u.cuentas || []).slice(), rep = u.reparto || {}, pr = u.proyeccion || {}, html = "";
     if(!cuentas.length && (u.barras || []).length)
@@ -62,7 +74,9 @@
     html += swModelo(rep);
     // las dos columnas: el nombre pintado por `estado` (ok verde clarito, warn amarillo, mal rojo)
     var cols = cuentas.map(function(cu){
-      var est = cu.estado || (cu.sin_login ? "mal" : "");
+      // orden 1808 (facundo, 2026-09-16): la que no tiene limite que cuente va gris y no se toca
+      var sinlim = sinLimite(cu);
+      var est = sinlim ? "" : (cu.estado || "");
       var cab = '<span class="cta"><span class="nom' + (est ? " e-" + esc(est) : "") + '">' + esc(cu.nombre) + "</span></span>";
       var cuerpo;
       if(cu.sin_login){
@@ -75,8 +89,9 @@
           return B.barraUso(b || {nombre: k[1], pct: null, linea: null, nivel: "sin"});
         }).join("");
       }
-      return '<div class="ucol' + (cu.elegida ? " elegida" : "") + '">' +
-        it({tipo: "cuenta", tema: "tools", d: cu, completo: cu.motivo || ""}, cab) + cuerpo + "</div>";
+      return '<div class="ucol' + (cu.elegida ? " elegida" : "") + (sinlim ? " sinlim" : "") + '">' +
+        (sinlim ? cab : it({tipo: "cuenta", tema: "tools", d: cu, completo: cu.motivo || ""}, cab)) +
+        cuerpo + "</div>";
     });
     if(cols.length) html += '<div class="ucols">' + cols.join("") + "</div>";
     html += graficoSemana(u.semana);

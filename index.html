@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.325">
-<link rel="manifest" href="manifest.json?v=4.325">
+<meta name="agente-web-version" content="4.326">
+<link rel="manifest" href="manifest.json?v=4.326">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.321">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.322">
 </head>
 <body>
 
@@ -134,13 +134,21 @@
     <div id="amestado" class="mestado" aria-live="polite"></div>
   </div>
 </div>
+<!-- 1801 (facundo, 2026-09-16): el fueguito `votar` ya no abre el modal: abre este dropdown con los tres procesos
+     (`candidatas`, `empezar a seguir`, `dejar de seguir`), cada uno con su badge de pendientes. recien al elegir uno
+     se abre el modal, y el titulo de arriba del modal dice cual de los tres se esta votando. molde: menu pegado a lo
+     tocado (como `#nlista`), `esc` lo cierra por la pila de capas. -->
+<div id="votfondo" class="oculta"></div>
+<div id="votmenu" class="oculta" role="menu" aria-label="qué votar"></div>
 <div id="selmodal" class="capa oculta" role="dialog" aria-modal="true" aria-labelledby="seltitulo">
   <div class="selcaja mcaja">
     <div class="seltit mhead"><button id="selback" class="bglifo b-atras apagado oculta" type="button" data-q="atras" aria-label="back" title="back">←</button><span id="seltitulo"></span><span id="selcuenta" class="mcuenta"></span></div>
     <div id="selcont" class="oculta" aria-live="polite"></div>
     <div id="sellista"></div>
     <div id="seltarjeta" class="oculta"></div>
-    <div id="selacciones" class="oculta"><button class="tjbtn ignorar bglifo b-no" type="button" data-q="ignorar" aria-label="no va" title="no va">✕</button><button class="tjbtn maybe bglifo b-maybe" type="button" data-q="maybe" aria-label="maybe" title="maybe">-_-</button><button class="tjbtn queda bglifo b-queda" type="button" data-q="queda" aria-label="queda" title="queda">🔥</button></div>
+    <!-- 1801: los botones los arma `tjBotones` segun el proceso (`TJ_PROCS`). candidatas: `↓` baja (hoy a ignoradas)
+         · `-_-` maybe · `↑` sube (hoy a interesan). el back `←` sigue arriba, fuera de esta fila (1657) -->
+    <div id="selacciones" class="oculta"></div>
     <textarea id="seltxt" placeholder="algo para sumar (opcional)" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
     <div class="selbtns mfila"><button id="selaceptar" class="selbtn bverde llena" type="button">aceptar</button><button id="selmandar" class="selbtn bverde llena" type="button">enviar texto</button></div>
     <div class="selpie mpie"><span id="selestado" class="mestado" aria-live="polite"></span><button id="selcerrar" class="mcerrar" type="button">cerrar</button></div>
@@ -228,7 +236,11 @@ function capaOptico(capa){
 }
 function capaOcultar(id, fondo){ $(id).classList.add("oculta"); if(fondo) $(fondo).classList.add("oculta"); }
 // 1657 (facundo, 2026-09-15): `-_-` es maybe y va en la fila de votos; `←` es el back y va en otro contexto
-var GLIFOS = {no: ["✕", "no va"], maybe: ["-_-", "maybe"], queda: ["🔥", "queda"], atras: ["←", "back"]};
+// 1801 (facundo, 2026-09-16): los tres procesos del votador votan con la misma gramatica: flecha roja hacia abajo a
+// la izquierda (baja de lista), el medio sin movimiento (`-_-` maybe en candidatas, `=` en los otros dos) y flecha
+// verde hacia arriba a la derecha (sube de lista). que lista es cada una la decide el server (`ig_embudo.PROCESOS`)
+var GLIFOS = {no: ["✕", "no va"], maybe: ["-_-", "maybe"], queda: ["🔥", "queda"], atras: ["←", "back"],
+  bajar: ["↓", "baja de lista"], igual: ["=", "queda igual"], subir: ["↑", "sube de lista"]};
 function moldeBoton(o){
   var b = document.createElement("button");
   b.type = "button";
@@ -3864,6 +3876,40 @@ function selTrasSubir(col, j){
   filaAplicar(col, j);
   [2000, 6000].forEach(function(ms){ setTimeout(function(){ if(sel.actual && sel.actual.coleccion === col) selPedir(col); }, ms); }); 
 }
+// ---------- 1801: los tres procesos del votador (facundo, 2026-09-16) ----------
+// cada coleccion tiene su fila continua, su titulo (lo manda el server) y su fila de botones. `q` es la decision que
+// viaja al server (la receta la traduce a una lista y, si corresponde, a un follow/unfollow programado en `ig_cola`);
+// `tipo` es el glifo del molde. candidatas conserva sus decisiones de siempre (`ignorar`/`maybe`/`queda`) con los
+// glifos nuevos: el server no cambio de vocabulario, cambio la cara de los botones.
+var TJ_PROCS = {
+  "ig-embudo": {nombre: "candidatas", botones: [
+    {q: "ignorar", tipo: "bajar", aria: "no va (a ignoradas)"},
+    {q: "maybe", tipo: "maybe", aria: "maybe"},
+    {q: "queda", tipo: "subir", aria: "queda (a interesan)"}]},
+  "ig-seguir": {nombre: "empezar a seguir", botones: [
+    {q: "bajar", tipo: "bajar", aria: "baja a maybe"},
+    {q: "igual", tipo: "igual", aria: "queda en interesan"},
+    {q: "subir", tipo: "subir", aria: "empezar a seguir"}]},
+  "ig-dejar": {nombre: "dejar de seguir", botones: [
+    {q: "bajar", tipo: "bajar", aria: "dejar de seguir"},
+    {q: "igual", tipo: "igual", aria: "queda igual"}]}
+};
+var TJ_PROC_ORDEN = ["ig-embudo", "ig-seguir", "ig-dejar"];
+function tjProc(col){ return TJ_PROCS[col] || TJ_PROCS["ig-embudo"]; }
+// la fila de abajo, armada con `moldeBoton` (nunca html fijo: son dos o tres botones segun el proceso)
+function tjBotones(e){
+  var caja = $("selacciones"), p = tjProc(e && e.coleccion);
+  if(caja.getAttribute("data-col") === (e && e.coleccion || "")) return caja;
+  caja.setAttribute("data-col", e && e.coleccion || "");
+  caja.textContent = "";
+  p.botones.forEach(function(b){
+    var el = moldeBoton({tipo: b.tipo, aria: b.aria, clase: "tjbtn " + b.q});
+    el.setAttribute("data-q", b.q);
+    caja.appendChild(el);
+  });
+  return caja;
+}
+function tjProcQs(e){ return tjProc(e && e.coleccion).botones.map(function(b){ return b.q; }); }
 function tjContar(){
   var e = sel.actual, c = tjActual();
   if(!e) return;
@@ -3899,6 +3945,7 @@ function tjPintar(){
   // 1657: la fila de abajo son SOLO los tres votos (`✕` `-_-` `🔥`) y se ve con tarjeta a la vista. el back (`←`)
   // vive arriba a la izquierda: siempre visible en tarjetas, apagado en gris cuando no hay nada que deshacer.
   var atras = tjHist(e).length > 0, bk = $("selback");
+  tjBotones(e);   // 1801: los botones son los del proceso de esta coleccion
   $("selacciones").classList.toggle("oculta", !c);
   [].forEach.call(document.querySelectorAll("#selacciones .tjbtn"), function(b){
     b.style.visibility = c ? "" : "hidden";
@@ -4009,7 +4056,8 @@ function tjPintar(){
 // 1495: cada voto firma la tarjeta a la vista (`candidata_id` y `cuenta`). el server rechaza el que no los trae.
 function tjDecidir(q){
   var e = sel.actual, c = tjActual();
-  if(!e || !c || ["ignorar", "maybe", "queda"].indexOf(q) < 0) return false;   // 1657: no va / maybe / queda, nada mas
+  // 1657, 1801: solo las decisiones del proceso que se esta votando (el server rechaza las de otro proceso igual)
+  if(!e || !c || tjProcQs(e).indexOf(q) < 0) return false;
   return tjVoto(e, c, q, "");
 }
 function tjVoto(e, c, q, txt){
@@ -4018,7 +4066,9 @@ function tjVoto(e, c, q, txt){
   if(e.continua) filaMarcar(e.coleccion, c.id);
   var r ={id: lidNuevo(), tipo: "tarjeta", ts: Date.now(), candidata_id: c.id, cuenta: c.cuenta || "", decision: q, texto: txt};
   var pend = selLeer("pend", []); pend.push({col: e.coleccion, r: r}); selEscribir("pend", pend);
-  $("selestado").textContent = (q === "ignorar" ? "no va" : q) + " @" + (c.cuenta || c.id);   // 1657: `maybe` sale tal cual
+  // 1657, 1801: el nombre de la decision sale del aria del boton del proceso (`no va`, `dejar de seguir`, `maybe`...)
+  var bq = tjProc(e.coleccion).botones.filter(function(x){ return x.q === q; })[0];
+  $("selestado").textContent = ((bq && bq.aria) || q) + " @" + (c.cuenta || c.id);
   sel.tjVotos = (sel.tjVotos || 0) + 1;   // 1524: sin al menos una, `tjFin` no manda `fin`
   (sel.tjHistorial = sel.tjHistorial || []).push({col: e.coleccion, c: c, q: q});   // 1640: lo que el back deshace
   sel.tj += 1;
@@ -4234,9 +4284,76 @@ function selBoton(){
   bd.classList.toggle("oculta", !n);
   b.title = n ? "votar: " + n + " esperando" : "votar";
   b.classList.toggle("oculta", !n || !!sel.actual);
+  // 1801: con el dropdown abierto, los badges se repintan solos cuando el server manda otra cosa
+  if(votMenuAbierto){ if(!n || sel.actual) votMenuCerrar(); else votMenuPintar(); }
+}
+// ---------- 1801: el dropdown del fueguito (facundo, 2026-09-16) ----------
+// "el fueguito `votar` de la cabecera deja de abrir el modal directo: abre un dropdown con tres items, cada uno con su
+// badge de pendientes, y recien al elegir uno se abre el modal". los tres items estan siempre (en gris los que no
+// tienen nada); si el votador de animaciones esta confirmado, se suma abajo como un cuarto.
+function votItems(){
+  var por = {}, out = [];
+  sel.abiertas.forEach(function(a){ por[a.coleccion] = a; });
+  TJ_PROC_ORDEN.forEach(function(col){
+    var a = por[col], n = a ? (a.continua ? filaFaltan(a) : 1) : 0;
+    out.push({col: col, nombre: tjProc(col).nombre, n: n, hay: !!a && n > 0});
+  });
+  // cualquier otra seleccion abierta (checkboxes, animaciones de una tanda) tambien se abre de aca, en el orden de
+  // siempre: la mas vieja primero (`selPendientes`), y solo si le falta algo por votar en este dispositivo
+  var otras = selPendientes().filter(function(a){ return TJ_PROC_ORDEN.indexOf(a.coleccion) < 0; });
+  // la que cerraste en esta carga (`sel.ignorada`) baja al final: arriba queda la que todavia no miraste
+  otras = otras.filter(function(a){ return sel.ignorada[a.coleccion] !== a.abrir_ts; })
+    .concat(otras.filter(function(a){ return sel.ignorada[a.coleccion] === a.abrir_ts; }));
+  otras.forEach(function(a){
+    var n = a.continua ? filaFaltan(a) : 1;
+    out.push({col: a.coleccion, nombre: a.titulo || a.coleccion, n: n, hay: n > 0});
+  });
+  if(votPendiente()) out.push({col: "animaciones", nombre: "animaciones del spinner", n: 1, hay: true});
+  return out;
+}
+var votMenuAbierto = false;
+function votMenuPintar(){
+  var m = $("votmenu");
+  m.textContent = "";
+  var t = document.createElement("div"); t.className = "ntit"; t.textContent = "qué votar"; m.appendChild(t);
+  votItems().forEach(function(x){
+    var f = document.createElement("button");
+    f.type = "button"; f.className = "vmfila" + (x.hay ? "" : " apagado");
+    f.setAttribute("role", "menuitem"); f.setAttribute("data-col", x.col);
+    f.disabled = !x.hay;
+    var n = document.createElement("span"); n.className = "vmnom"; n.textContent = x.nombre;
+    var b = document.createElement("span"); b.className = "vmbadge"; b.textContent = x.n ? String(x.n) : "";
+    if(!x.n) b.classList.add("oculta");
+    f.appendChild(n); f.appendChild(b);
+    f.addEventListener("click", function(){ votMenuElegir(x.col); });
+    m.appendChild(f);
+  });
+  return m;
+}
+function votMenuAbrir(){
+  if(votMenuAbierto) return votMenuCerrar();
+  if(sel.actual) return false;
+  votMenuPintar();
+  votMenuAbierto = true;
+  $("votmenu").classList.remove("oculta");
+  $("votfondo").classList.remove("oculta");
+  return true;
+}
+function votMenuCerrar(){
+  votMenuAbierto = false;
+  $("votmenu").classList.add("oculta");
+  $("votfondo").classList.add("oculta");
+  return false;
+}
+// recien aca se abre el modal: el titulo de arriba lo manda el server (`candidatas` / `empezar a seguir` / `dejar de seguir`)
+function votMenuElegir(col){
+  votMenuCerrar();
+  if(col === "animaciones") return votAbrirPendiente();
+  return selAbrirCol(col);
 }
 // 1788: SIEMPRE lo toca facundo (el boton `votar` o el push). abre la primera que no cerraste; si cerraste todas,
-// vuelve a la primera; si no queda ninguna seleccion, abre el votador de animaciones que el server confirmo
+// vuelve a la primera; si no queda ninguna seleccion, abre el votador de animaciones que el server confirmo.
+// 1801: ya no lo llama el fueguito (eso abre `votMenu`), pero sigue siendo el camino del push sin coleccion
 function selVotar(){
   if(sel.actual) return false;
   var p = selPendientes(), e = p.filter(function(a){ return sel.ignorada[a.coleccion] !== a.abrir_ts; })[0] || p[0];
@@ -4331,7 +4448,8 @@ function selArrancar(){
   }
   return tick();
 }
-$("ver-votar").addEventListener("click", selVotar);
+$("ver-votar").addEventListener("click", votMenuAbrir);   // 1801: el fueguito abre el dropdown, no el modal
+$("votfondo").addEventListener("click", votMenuCerrar);
 $("selaceptar").addEventListener("click", selAceptar);
 $("selmandar").addEventListener("click", selEnviarTexto);
 $("selcerrar").addEventListener("click", selCerrar);
@@ -4349,8 +4467,10 @@ $("seltxt").addEventListener("focus", function(){
   ver(); setTimeout(ver, 150); setTimeout(ver, 400);
 });
 // 1561, 1657: los tres glifos de voto de la tarjeta (`✕` no va, `-_-` maybe, `🔥` queda), uno por decision
-[].forEach.call(document.querySelectorAll("#selacciones .tjbtn"), function(b){
-  b.addEventListener("click", function(){ tjDecidir(b.getAttribute("data-q")); });   // 1657: en esta fila solo hay votos
+// 1801: la fila se rearma por proceso, asi que el listener es delegado (uno solo, para siempre)
+$("selacciones").addEventListener("click", function(ev){
+  var b = ev.target.closest && ev.target.closest(".tjbtn[data-q]");
+  if(b) tjDecidir(b.getAttribute("data-q"));   // 1657: en esta fila solo hay votos
 });
 // 1657: el back (`←`) esta aparte, en la cabecera del modal, y deshace el ultimo voto
 $("selback").addEventListener("click", function(){ tjAtras(); });
@@ -8243,6 +8363,9 @@ $("ddfondo").addEventListener("click", cerrarDd);
 capaRegistrar({nombre: "visor", el: "visor", z: 60, abierta: function(){ return !!document.getElementById("visor"); },
                cerrar: function(){ document.getElementById("visor").__cerrar(); }});   // 1652: cierra con zoom tambien
 capaRegistrar({nombre: "seleccion", el: "selmodal", cerrar: function(){ selCerrar(); }});
+// 1801: el dropdown de los tres procesos, arriba de todo lo pegado (z 43) y cerrado por `esc` como cualquier capa
+capaRegistrar({nombre: "votmenu", el: "votmenu", z: 43, abierta: function(){ return !!votMenuAbierto; },
+  cerrar: function(){ votMenuCerrar(); }});
 capaRegistrar({nombre: "animmenu", el: "animmenu", cerrar: function(){
   $("amtxt").value = "";
   try{ $("amtxt").blur(); }catch(x){}
@@ -8436,6 +8559,13 @@ window.__agente = {
   selEnviarTexto: selEnviarTexto, selCerrar: selCerrar,
   // 1407: boton `votar` y respaldo por el buzon (`prueba_web_votar`)
   selPoner: selPoner, selVotar: selVotar, selAbrirCol: selAbrirCol, selBoton: selBoton, selPendientes: selPendientes,
+  // 1801: el dropdown de los tres procesos y la fila de botones de cada uno
+  votItems: votItems, votMenuAbrir: votMenuAbrir, votMenuCerrar: votMenuCerrar, votMenuElegir: votMenuElegir,
+  votMenuAbierto: function(){ return !!votMenuAbierto; }, tjProcQs: tjProcQs, TJ_PROCS: TJ_PROCS,
+  tjBotones: function(col){ return tjBotones({coleccion: col}); },
+  tjBotonera: function(){ return [].map.call(document.querySelectorAll("#selacciones .tjbtn"), function(b){
+    return {q: b.getAttribute("data-q"), clase: b.className, txt: b.textContent, aria: b.getAttribute("aria-label")}; }); },
+  selTitulo: function(){ return $("seltitulo").textContent; },
   selDesdeWidgets: selDesdeWidgets,
   // 1441: modal viejo en el ipad (`prueba_web_votar`, `prueba_seleccion`)
   selLimpiar: selLimpiar, votCerrada: votCerrada, widFrescoMs: WID_FRESCO_MS,

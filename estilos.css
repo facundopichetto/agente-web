@@ -167,6 +167,12 @@
   .bglifo.b-maybe{color:#e8e8e8;color:var(--blanco)}   /* 1657, 1667: `-_-` es maybe (a la lista `maybe`), en el medio de la fila de votos */
   /* 1657 (facundo, 2026-09-15, "como te dije mil veces"): el back es `←` y vive FUERA de la fila de votos, arriba a la
      izquierda del modal; apagado en gris cuando no hay nada que deshacer, blanco cuando si */
+  /* 1801 (facundo, 2026-09-16): los tres procesos votan con la misma gramatica visual: la flecha roja hacia abajo baja
+     de lista, el medio no mueve a nadie (`-_-` maybe o `=`) y la flecha verde hacia arriba sube. mismo peso y tamaño
+     que `✕` / `🔥`: el color es lo unico que cambia */
+  .bglifo.b-bajar{color:#ff4d4d;color:var(--rojo)}
+  .bglifo.b-subir{color:#4ad07d;color:var(--verde)}
+  .bglifo.b-igual{color:#e8e8e8;color:var(--blanco)}
   .bglifo.b-atras{color:#e8e8e8;color:var(--blanco)}
   .bglifo.b-atras.apagado{color:#666;color:var(--gris)}
   /* interruptor de N posiciones (1659, el modo de modelo del widget CLAUDE): una sola fila, la puesta en verde y
@@ -690,6 +696,10 @@
   .usage .ucol .cta .nom.e-ok{color:#a6f5a0}
   .usage .ucol .cta .nom.e-warn{color:var(--amarillo)}
   .usage .ucol .cta .nom.e-mal{color:var(--rojo)}
+  /* 1808: cuenta sin limite que cuente: gris apagado, sin hover y sin cursor de tocable */
+  .usage .ucol.sinlim .cta .nom{color:var(--gris);opacity:.7}
+  .usage .ucol.sinlim .cta{cursor:default}
+  .usage .ucol.sinlim .cta:hover{background:none}
   .ubat{display:inline-block;vertical-align:middle;position:relative;width:20px;height:9px;margin:0 5px 0 2px;
         border:1px solid #555;border-radius:2px;padding:1px;box-sizing:border-box}
   .ubat::after{content:"";position:absolute;right:-3px;top:2px;width:2px;height:3px;background:#555;border-radius:0 1px 1px 0}
@@ -775,6 +785,25 @@
   #notis .luz.amarillo,#nlista .luz.amarillo,#campana .badge.amarillo{background:var(--amarillo)}
   #notis .luz.verde,#nlista .luz.verde,#campana .badge.verde{background:var(--verde)}
   #notis .luz.gris,#nlista .luz.gris,#campana .badge.gris{background:var(--gris)}
+  /* 1801: el dropdown del fueguito `votar`, con los tres procesos del votador. molde del desplegable de la campana
+     (menu pegado a lo tocado, no un modal): fondo negro, sin borde de color, esc lo cierra por la pila de capas */
+  #votfondo{position:fixed;inset:0;z-index:42}
+  #votfondo.oculta,#votmenu.oculta{display:none}
+  #votmenu{position:fixed;z-index:43;top:44px;left:8px;width:min(300px,calc(100vw - 16px));
+    background:#000;border:1px solid transparent;border-radius:5px;padding:4px;
+    display:flex;flex-direction:column;gap:1px;box-shadow:var(--modal-sombra)}
+  #votmenu .ntit{color:var(--gris);font-size:9px;text-transform:uppercase;letter-spacing:.06em;padding:3px 6px 4px 6px;
+    border-bottom:1px solid var(--linea);margin-bottom:2px}
+  #votmenu .vmfila{display:flex;align-items:center;gap:8px;min-height:34px;padding:0 6px;border:0;border-radius:3px;
+    background:none;color:var(--blanco);font:inherit;font-size:var(--texto-max);text-align:left;cursor:pointer;
+    -webkit-appearance:none;appearance:none;-webkit-text-fill-color:currentColor;-webkit-tap-highlight-color:transparent}
+  #votmenu .vmfila:hover{background:#0d1410}
+  #votmenu .vmfila.apagado{color:#666;color:var(--gris);cursor:default}
+  #votmenu .vmnom{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #votmenu .vmbadge{flex:0 0 auto;min-width:16px;padding:0 5px;border-radius:8px;background:var(--cian);color:#000;
+    font-size:9.5px;line-height:16px;text-align:center}
+  #votmenu .vmbadge.oculta{display:none}
+
   /* el desplegable de la campana: solo las no leidas, la mas nueva arriba */
   #nfondo{position:fixed;inset:0;z-index:33}
   #nfondo.oculta,#nlista.oculta{display:none}
