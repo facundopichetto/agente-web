@@ -745,7 +745,7 @@
   .qpaso{color:var(--blanco)} .qcorre{color:var(--verde)} .qcola{color:#5f8a58} .qpaso .qh,.qcola .qh{opacity:.6}
   .qcorre .qh{color:#8fcf7f}
   /* 1792 (facundo, 2026-09-16): la cola es una tabla, dibujada con css. cinco columnas: nombre (lo unico
-     que se achica y se corta con `…`), pedida, iniciada, transcurrido/tardo y termino. las horas no se
+     que se achica y se corta con `…`), pedida, iniciada, delta (1845; antes transcurrido/tardo) y termino. las horas no se
      parten nunca (`max-content` + `nowrap`), asi que no hay scroll horizontal: lo que falta lo cede el nombre. */
   /* 1807: el nombre era `1fr` y en el ipad se comia todo el ancho sobrante: los nombres pegados a la izquierda
      y las cinco horas apretadas contra el borde derecho, con medio widget en negro en el medio. `max-content`
@@ -759,8 +759,8 @@
         column-gap:7px;row-gap:1px;white-space:nowrap;font-size:10.5px;line-height:1.6;max-width:100%}
   .qtab .it{display:contents}
   .qtab .qth{color:var(--gris);font-size:9px;letter-spacing:.3px;opacity:.75}
-  /* 1843: la cabecera `transcurrido / tardó` es mas ancha que sus celdas (`0:04:12`): se parte en dos lineas en vez
-     de ensanchar la columna y aplastar el nombre (con `nowrap` llegaba a 117 px y el nombre quedaba en 5 px) */
+  /* 1843: la cabecera de la duracion se partia en dos lineas para no aplastar el nombre; desde la 1845 dice `delta`
+     (5 letras, mas angosta que `0:04:12`) asi que ya no se parte, la regla queda por si vuelve a crecer */
   .qtab .qth.qtiempo{white-space:normal;line-height:1.15;align-self:end;padding-bottom:2px}
   .qtab .qnom{min-width:0;overflow:hidden;text-overflow:ellipsis}
   .qtab .qcel{text-align:right;font-variant-numeric:tabular-nums}
@@ -771,9 +771,8 @@
   .esctab .enom{min-width:0;overflow:hidden;text-overflow:ellipsis}
   .esctab .ecel{text-align:right}
   @media (max-width:480px){ .esctab{column-gap:3px;font-size:10px} }   /* 10px y 3px: asi las 7 columnas entran en 390px */
-  .qtab .qhn{display:none}
   .qtab .qpaso.qh,.qtab .qcola.qh{opacity:.6} .qtab .qcorre.qh{color:#8fcf7f}
-  @media (max-width:560px){ .qtab{font-size:9.5px;column-gap:5px} .qtab .qhw{display:none} .qtab .qhn{display:inline} }
+  @media (max-width:560px){ .qtab{font-size:9.5px;column-gap:5px} }   /* 1845: la cabecera `delta` es una sola, sin version corta para el celu */
   .b{font-weight:500}
   .btn{
     background:#000;color:var(--cian);border:1px solid var(--linea);border-radius:12px;

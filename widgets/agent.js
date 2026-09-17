@@ -33,7 +33,7 @@
   function qCabecera(){
     return '<span class="qth qnom">nombre</span><span class="qth qcel">pedida</span>' +
            '<span class="qth qcel">iniciada</span>' +
-           '<span class="qth qcel qtiempo"><span class="qhw">transcurrido / tardó</span><span class="qhn">tiempo</span></span>' +
+           '<span class="qth qcel qtiempo">delta</span>' +
            '<span class="qth qcel">terminó</span>';
   }
   function cajaAgente(a){
