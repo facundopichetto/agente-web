@@ -725,7 +725,11 @@
   /* 1792 (facundo, 2026-09-16): la cola es una tabla, dibujada con css. cinco columnas: nombre (lo unico
      que se achica y se corta con `…`), pedida, iniciada, transcurrido/tardo y termino. las horas no se
      parten nunca (`max-content` + `nowrap`), asi que no hay scroll horizontal: lo que falta lo cede el nombre. */
-  .qtab{display:grid;grid-template-columns:minmax(0,1fr) max-content max-content max-content max-content;
+  /* 1807: el nombre era `1fr` y en el ipad se comia todo el ancho sobrante: los nombres pegados a la izquierda
+     y las cinco horas apretadas contra el borde derecho, con medio widget en negro en el medio. `max-content`
+     con `minmax(0,...)` lo deja del ancho del nombre mas largo y sigue pudiendo achicarse hasta cortarse con
+     `…` en el celu, que es lo que evita el scroll horizontal. */
+  .qtab{display:grid;grid-template-columns:minmax(0,max-content) max-content max-content max-content max-content;
         column-gap:7px;row-gap:1px;white-space:nowrap;font-size:10.5px;line-height:1.6;max-width:100%}
   .qtab .it{display:contents}
   .qtab .qth{color:var(--gris);font-size:9px;letter-spacing:.3px;opacity:.75}
