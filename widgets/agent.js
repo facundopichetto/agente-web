@@ -71,7 +71,8 @@
   // (2) por la lan se pide `cola.json` cada 2 s (`recetas/cola_fresca.py`, cacheado por firma, cero tokens) con
   //     etag; si el `hash` de la cola cambio (orden nueva, arranco, cerro, borrada, reordenada) se repinta ESTA
   //     caja en el acto. sin lan no se pide nada: queda el `widgets.json` publicado de siempre.
-  var vivo = {base: null, offset: null, hash: null, etag: null, pidiendo: false, t: 0, recibidos: 0, repintados: 0};
+  var vivo = {base: null, offset: null, hash: null, etag: null, pidiendo: false, t: 0, recibidos: 0, repintados: 0,
+              espera: 0, hasta: 0};
   var POLL_MS = 2000, RELOJ_MS = 1000;
   // el mismo `h:mm:ss` de `hora.dur_col` (1843): ancho fijo, sin cero adelante en las horas
   function durCol(seg){
@@ -137,15 +138,22 @@
     if(cambio) repintar(); else contar();
     return cambio;
   }
+  // si el endpoint no lo tiene (un daemon de antes de la 1849 contesta 404 via github) o falla, se espera el doble
+  // cada vez, hasta 60 s: nunca un pedido cada 2 s contra algo que no contesta
+  var ESPERA_MAX = 60000;
   function pedir(){
-    if(vivo.pidiendo || !B.lan() || !B.visible() || !nodoCaja()) return;
+    if(vivo.pidiendo || !B.lan() || !B.visible() || !nodoCaja() || Date.now() < vivo.hasta) return;
     vivo.pidiendo = true;
     B.bajar("cola.json", vivo.etag).then(function(r){
-      vivo.pidiendo = false;
+      vivo.pidiendo = false; vivo.espera = 0; vivo.hasta = 0;
       if(!r || r.status === 304) return;
       if(r.etag) vivo.etag = r.etag;
       recibir(r.json);
-    }, function(){ vivo.pidiendo = false; });
+    }, function(){
+      vivo.pidiendo = false;
+      vivo.espera = Math.min((vivo.espera || POLL_MS) * 2, ESPERA_MAX);
+      vivo.hasta = Date.now() + vivo.espera;
+    });
   }
   B.cada(RELOJ_MS, contar);
   B.cada(POLL_MS, pedir);
@@ -156,6 +164,7 @@
     destruir: function(){ vivo.base = null; vivo.hash = null; },   // los dos timers los apaga el shell (`B.cada`)
     recibir: recibir, contar: contar, pedir: pedir, durCol: durCol,
     vivo: function(){ return {offset: vivo.offset, hash: vivo.hash, recibidos: vivo.recibidos, repintados: vivo.repintados,
+                              espera: vivo.espera,
                               ahora: vivo.base ? vivo.base.ahora : null, filas: vivo.base ? (vivo.base.tabla || []).length : 0}; },
     nomTarea: nomTarea, qFila: qFila
   });
