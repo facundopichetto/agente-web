@@ -92,13 +92,16 @@
   .msg.vuelo .cuerpo{color:var(--gris)}
   .msg.vuelo .giro{color:var(--verde);display:inline-block;min-width:1ch;cursor:pointer}
   /* 1776 (facundo, 2026-09-16): la respuesta es un hilo que crece. `.hilo` son los tramos que el modelo ya termino
-     (texto, o la salida corta de un comando), en orden y nunca editados; abajo, en vuelo, la unica linea que cambia
-     es `.cuerpo` (bolita + lo que esta haciendo). en la respuesta guardada el hilo queda arriba del cuerpo final */
+     (texto), en orden y nunca editados; abajo, en vuelo, la unica linea que cambia es `.cuerpo` (bolita + lo que esta
+     haciendo). en la respuesta guardada el hilo queda arriba del cuerpo final.
+     1850 (facundo, 2026-09-17): `.tramo.hecho` es la linea de un comando que ya volvio (`buscando hall en los .md`):
+     queda atras, apagada (gris, chica, sin animacion), nunca el comando ni su salida; solo existe en el vuelo y se va
+     con la bolita al publicar. varias seguidas van pegadas (2px) para que el rastro sea corto, no un choclo */
   .msg .hilo{color:var(--blanco)}
   .msg .hilo:empty{display:none}
   .msg .hilo .tramo{margin:0 0 8px 0}
-  .msg .hilo .tramo.salida{color:var(--gris);font-size:11px}
-  .msg .hilo .tramo.salida .cmd{color:var(--cian)}
+  .msg .hilo .tramo.hecho{color:var(--gris);font-size:11px;opacity:.7;margin:0 0 2px 0}
+  .msg .hilo .tramo.hecho + .tramo.texto{margin-top:8px}
   .msg.vuelo .hilo + .cuerpo{margin-top:2px}
   /* animaciones de caracteres (1373): una linea, todos los cuadros del mismo ancho (`Nch` lo pone animPoner), el
      alto fijo de una linea: ni saltan de costado ni empujan el renglon.

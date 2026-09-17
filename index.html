@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.338">
-<link rel="manifest" href="manifest.json?v=4.338">
+<meta name="agente-web-version" content="4.339">
+<link rel="manifest" href="manifest.json?v=4.339">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.338">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.339">
 </head>
 <body>
 
@@ -2080,12 +2080,16 @@ function nodoMsg(m){
   // el [▶] de daniela: solo en las respuestas que el daemon ya renderizo (campo `audio` de la fila).
   // el texto sale primero y el audio aparece en el poll siguiente, asi que el boton llega despues.
   if(m.audio) cab.appendChild(reproductor(m.audio, "escuchar la respuesta"));
-  // 1776: el hilo que facundo ya vio mientras contestaba (entendi, salidas de comandos, textos intermedios),
-  // del jsonl (`tramos`) o adoptado del bloque en vuelo; arriba del cuerpo, mismo orden, nunca editado
+  // 1776: el hilo que facundo ya vio mientras contestaba (entendi, textos intermedios), del jsonl (`tramos`) o
+  // adoptado del bloque en vuelo; arriba del cuerpo, mismo orden, nunca editado. 1850: en el historial va SOLO lo que
+  // el modelo escribio: ni el comando, ni su salida (`salida` de un daemon viejo), ni las lineas `hecho` del vuelo
   var hilo = null;
   if(m.clase === "agente" && m.tramos && m.tramos.length){
-    hilo = document.createElement("div"); hilo.className = "hilo";
-    m.tramos.forEach(function(t, i){ if(t && String(t.texto || "").trim()) hilo.appendChild(nodoTramo({i: t.i !== undefined ? t.i : i, tipo: t.tipo, texto: t.texto, cmd: t.cmd})); });
+    var tt = m.tramos.filter(function(t){ return t && (!t.tipo || t.tipo === "texto") && String(t.texto || "").trim(); });
+    if(tt.length){
+      hilo = document.createElement("div"); hilo.className = "hilo";
+      tt.forEach(function(t, i){ hilo.appendChild(nodoTramo({i: t.i !== undefined ? t.i : i, tipo: "texto", texto: t.texto})); });
+    }
   }
   var b = document.createElement("div");
   b.className = "cuerpo";
@@ -4703,20 +4707,27 @@ function pintarVuelo(){
 }
 // 1776 (facundo, 2026-09-16: "comunicacion mas progresiva, que no se borren cosas y de repente aparezca un choclo"):
 // el estado trae `tramos` = lo que el modelo ya termino (`recetas/chat_stream.py` -> `chat_estado.Intercambio.tramo`):
-// `{i, tipo: texto|salida, texto, cmd?}`. se pintan SOLO los `i` que todavia no estan, abajo de los que ya estan y
+// `{i, tipo: texto|hecho, texto}`. se pintan SOLO los `i` que todavia no estan, abajo de los que ya estan y
 // arriba de la linea de estado; uno ya pintado no se toca aunque el server lo mande distinto. si facundo estaba
 // al final sigue al final; si scrolleo, no se mueve (misma regla que el resto del chat).
+// 1850 (facundo, 2026-09-17: "una sola linea que diga lo que esta haciendo ese grep, y la animacion al lado; cuando
+// ya sucedio lo dejas atras"): un comando nunca se pinta crudo ni con su salida. mientras corre, la bolita (la linea
+// de estado) dice su frase con la animacion al lado; cuando volvio, el server manda un tramo `hecho` con esa frase y
+// queda ATRAS: apagada (gris, chica), sin animacion, arriba de la linea activa. los `hecho` viven solo en el vuelo:
+// la respuesta no los adopta (`tramosSinFinal`), la fila del jsonl no los trae y `nodoMsg` no los pinta: al publicar
+// se van con la bolita. un `salida` (con `cmd`) de un daemon viejo no se pinta nunca. la frase la escribe el server
+// (el modelo o `reglas_chat.haciendo`): la web no tiene vocabulario propio.
 function normTramo(t){
   return String(t || "").replace(/^\s*\[[\w\/-]+\]\s*/, "").replace(/\s+/g, " ").trim();
 }
+function tipoTramo(t){
+  return t && t.tipo === "hecho" ? "hecho" : (!t || !t.tipo || t.tipo === "texto") ? "texto" : null;   // null = no se pinta
+}
 function nodoTramo(t){
   var d = document.createElement("div");
-  d.className = "tramo " + (t.tipo === "salida" ? "salida" : "texto") + (t.i === 0 && t.tipo !== "salida" ? " entendi" : "");
-  if(t.tipo === "salida"){
-    var c = document.createElement("span"); c.className = "cmd"; c.textContent = "▸ " + (t.cmd || "comando");
-    d.appendChild(c);
-    d.appendChild(document.createTextNode((t.texto ? "\n" : "") + String(t.texto || "")));
-  } else d.innerHTML = resaltar(String(t.texto || ""));
+  d.className = "tramo " + (t.tipo === "hecho" ? "hecho" : "texto") + (t.i === 0 && t.tipo !== "hecho" ? " entendi" : "");
+  if(t.tipo === "hecho") d.textContent = String(t.texto || "");
+  else d.innerHTML = resaltar(String(t.texto || ""));
   return d;
 }
 function vueloTramos(lista){
@@ -4724,9 +4735,9 @@ function vueloTramos(lista){
   var n = document.getElementById("vuelo"), hilo = n && n.querySelector(".hilo"), nuevos = 0;
   var pego = pegadoAbajo(), ancla = pego ? null : anclaMedir();   // 1805
   for(var i = vuelo.tramos.length; i < lista.length; i++){
-    var t = lista[i];
-    if(!t || !String(t.texto || "").trim()) { vuelo.tramos.push({i: i, tipo: "vacio", texto: ""}); continue; }
-    var copia = {i: i, tipo: t.tipo === "salida" ? "salida" : "texto", texto: String(t.texto), cmd: t.cmd || null};
+    var t = lista[i], tipo = tipoTramo(t);
+    if(!tipo || !String(t.texto || "").trim()) { vuelo.tramos.push({i: i, tipo: "vacio", texto: ""}); continue; }
+    var copia = {i: i, tipo: tipo, texto: String(t.texto)};
     vuelo.tramos.push(copia);
     if(hilo) hilo.appendChild(nodoTramo(copia));
     nuevos++;
@@ -4735,12 +4746,13 @@ function vueloTramos(lista){
   else if(nuevos && ancla) anclaPoner(ancla);
   return nuevos;
 }
-// la respuesta final repite el ultimo bloque de texto (el `result` de claude): ese no se pinta dos veces
+// la respuesta final repite el ultimo bloque de texto (el `result` de claude): ese no se pinta dos veces.
+// 1850: los `hecho` (las lineas de los comandos) no pasan a la respuesta: se van con la bolita
 function tramosSinFinal(tramos, final){
-  var l = (tramos || []).filter(function(t){ return t && t.tipo !== "vacio" && String(t.texto || "").trim(); });
+  var l = (tramos || []).filter(function(t){ return t && t.tipo === "texto" && String(t.texto || "").trim(); });
   if(!l.length) return null;
   var u = l[l.length - 1], a = normTramo(u.texto), b = normTramo(final);
-  if(u.tipo !== "salida" && a && b && (a === b || b.indexOf(a.slice(0, 120)) === 0)) l = l.slice(0, -1);
+  if(a && b && (a === b || b.indexOf(a.slice(0, 120)) === 0)) l = l.slice(0, -1);
   return l.length ? l : null;
 }
 // 1292: en la fase `modelo` el daemon publica lo que hace el modelo (`recetas/chat_stream.py`).
