@@ -758,7 +758,7 @@
   .esctab .eth{color:var(--gris);font-size:9px;letter-spacing:.3px;opacity:.75}
   .esctab .enom{min-width:0;overflow:hidden;text-overflow:ellipsis}
   .esctab .ecel{text-align:right}
-  @media (max-width:480px){ .esctab{column-gap:4px} }
+  @media (max-width:480px){ .esctab{column-gap:3px;font-size:10px} }   /* 10px y 3px: asi las 7 columnas entran en 390px */
   .qtab .qhn{display:none}
   .qtab .qpaso.qh,.qtab .qcola.qh{opacity:.6} .qtab .qcorre.qh{color:#8fcf7f}
   @media (max-width:560px){ .qtab{font-size:9.5px;column-gap:5px} .qtab .qhw{display:none} .qtab .qhn{display:inline} }

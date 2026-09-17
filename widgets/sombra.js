@@ -13,7 +13,7 @@
   function cortoCol(k){
     if(!k) return "-";
     var p = String(k).split(":")[0], m = String(k).split(":").slice(1).join(":");
-    return (CORTO[p] || p) + (m ? " " + m.replace(/-latest$/, "").slice(0, 9) : "");
+    return (CORTO[p] || p) + (m ? " " + m.replace(/-latest$/, "").replace(/^gpt-/, "").slice(0, 12) : "");
   }
   function num(v, cl){
     if(v === null || v === undefined) return '<span class="ecel g">-</span>';
@@ -28,10 +28,11 @@
       var gcl = g.apto ? "v" : (g.puntaje !== null && g.puntaje !== undefined && g.puntaje >= 80 ? "a" : "g");
       h += '<span class="enom c">' + esc(f.tarea) + "</span>" +
            num(f.pct_script === null || f.pct_script === undefined ? null : Math.round(f.pct_script), "g") +
-           '<span class="ecel ' + gcl + '">' + (g.columna ? esc(cortoCol(g.columna)) + " " + esc(String(g.puntaje)) + (g.apto ? " ok" : "") : "-") + "</span>" +
+           '<span class="ecel ' + gcl + '">' + (g.columna ? esc(cortoCol(g.columna)) + " " + esc(String(g.puntaje)) + (g.apto ? "\u2713" : "") : "-") + "</span>" +
            num(f.opus) + num(f.fable) +
            '<span class="ecel c">' + esc(f.hoy || "-") + "</span>" +
-           '<span class="ecel ' + (f.plan_b ? (f.plan_b_vivo === false ? "r" : "v") : "g") + '">' + (f.plan_b ? esc(cortoCol(f.plan_b)) : "-") + "</span>";
+           '<span class="ecel ' + (f.plan_b ? (f.plan_b_vivo === false ? "r" : "v") : "g") + '">' +
+           (f.plan_b ? (f.plan_b === g.columna ? "idem" : esc(cortoCol(f.plan_b))) : "-") + "</span>";
     });
     h += "</div>";
     var r = e.reparto || {}, orden = ["script", "local", "gratis", "opus", "fable"];

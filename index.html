@@ -4676,7 +4676,8 @@ function pintarVuelo(){
   var gi = n.querySelector(".giro");
   if(vuelo.anim){ if(gi.dataset.anim !== vuelo.anim.id || !animEls.some(function(x){ return x.el === gi; })) animPoner(gi, vuelo.anim); }   // reloj local: `vuelo.t` puede venir corrido
   else gi.textContent = GIRO[vuelo.giro % GIRO.length];
-  n.querySelector(".fase").textContent = faseTexto();
+  var fs = n.querySelector(".fase"), ft = faseTexto();
+  if(fs.textContent !== ft) faseCambiar(fs, ft);
   n.querySelector(".eta").textContent = etaTexto();
 }
 // 1776 (facundo, 2026-09-16: "comunicacion mas progresiva, que no se borren cosas y de repente aparezca un choclo"):
@@ -4723,10 +4724,14 @@ function tramosSinFinal(tramos, final){
 }
 // 1292: en la fase `modelo` el daemon publica lo que hace el modelo (`opus: leyendo daemon.py`, `recetas/chat_stream.py`).
 // si pasan VUELO_PENSANDO_MS desde que arranco el modelo sin ninguna accion, `opus: pensando...`
+// 1835 (facundo, 2026-09-17: "no quiero ver todo lo que hay antes de la respuesta"): el daemon manda ademas `paso`,
+// el ruteo del mensaje (`recibido por ollama`, `no hay comando directo, consulto con opus`,
+// `chat_estado.Intercambio.paso`). es la MISMA linea de estado: se pisa, nunca se anexa al hilo ni queda en el
+// historial: se va con el bloque en vuelo cuando llega la respuesta y ninguna fila del jsonl la trae.
 var VUELO_PENSANDO_MS = 3000;
 function faseTexto(ahora){
   if(!vuelo) return "";
-  if(vuelo.fase !== "modelo" || !vuelo.modelo || vuelo.accion) return vuelo.palabra;
+  if(vuelo.fase !== "modelo" || !vuelo.modelo || vuelo.accion) return vuelo.paso || vuelo.palabra;
   ahora = ahora === undefined ? Date.now() : ahora;
   return ahora - (vuelo.modeloDesde || ahora) >= VUELO_PENSANDO_MS ? vuelo.modelo + ": pensando..." : vuelo.palabra;
 }
@@ -4780,7 +4785,17 @@ function vueloGirar(){
   var e = document.querySelector("#vuelo .eta"), t = etaTexto();
   if(e && e.textContent !== t) e.textContent = t;
   var f = document.querySelector("#vuelo .fase"), ft = faseTexto();
-  if(f && f.textContent !== ft) f.textContent = ft;
+  if(f && f.textContent !== ft) faseCambiar(f, ft);
+}
+// 1835 + 1813: la linea de estado cambia de largo (un paso del ruteo, `opus: pensando...`) y puede pasar a dos
+// renglones: pegado abajo sigue pegado, scrolleado arriba el ancla no se mueve (el bloque en vuelo esta abajo de
+// todo, asi que lo que esta arriba no se corre; si algo se moviera, `anclaPoner` lo devuelve).
+function faseCambiar(f, ft){
+  var pego = pegadoAbajo(), ancla = pego ? null : anclaMedir(), h0 = f.offsetHeight;
+  f.textContent = ft;
+  if(f.offsetHeight === h0) return;
+  if(pego) alFinal();
+  else if(ancla) anclaPoner(ancla);
 }
 // lo que publica el daemon. un estado de un intercambio anterior (ts_inicio viejo) no se pinta
 function recibirEstado(e, ahora){
@@ -4789,6 +4804,7 @@ function recibirEstado(e, ahora){
   ahora = ahora === undefined ? Date.now() : ahora;
   if(e.tramos && typeof vueloTramos === "function") vueloTramos(e.tramos);   // 1776: el hilo crece, nunca se reescribe
   vuelo.palabra = e.palabra || e.fase || vuelo.palabra;
+  vuelo.paso = e.paso ? String(e.paso) : null;   // 1835: el ruteo, efimero: se pisa, no se anexa
   if(e.fase === "modelo"){
     vuelo.modelo = e.modelo || vuelo.modelo || e.palabra;   // un daemon viejo no manda `modelo`: la palabra es el modelo
     if(!vuelo.modeloDesde) vuelo.modeloDesde = ahora;
@@ -6653,7 +6669,76 @@ function cajaDecididas(o){
 }
 
 // 1832: `cajaSombra` (el widget `models`) vive en `web/widgets/sombra.js` (la clave del setting y el id siguen `sombra`)
-andar(cmdTxt, visto){
+
+function cajaPropuestas(pr){
+  pr = pr || [];
+  var tf = wset("propuestas", "tema");
+  if(tf && tf !== "todos") pr = pr.filter(function(p){ return p.tema === tf; });
+  var ese = '<span class="a b">' + pr.length + "</span> " +
+            '<span class="g">esperando un dale' + (tf && tf !== "todos" ? " · " + esc(tf) : "") + "</span>";
+  if(!pr.length) return caja("propuestas", ese, vacio("nada esperando un dale"), false, "propuestas");
+  return caja("propuestas", ese, limFilas("propuestas", pr.map(function(p){
+    return it({tipo: "propuesta", tema: p.tema, d: p},
+      '<span class="a b">' + p.n + '</span> <span class="g">' + esc(p.tema) + "</span> " +
+      esc(String(p.orden).slice(0, 220))) + "\n  " + boton("dale", "dale " + p.n, "dale");
+  })).join("\n"), false, "propuestas");
+}
+
+function link(url, texto){
+  return '<a href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(texto) + "</a>";
+}
+
+function cajaPodcast(p){
+  var eps = p.episodios || [], ab = abiertoPod();
+  var btn = '<button class="btn" type="button" data-pod="1">' + (ab ? "cerrar" : "podcast") + "</button>";
+  // dato esencial: el episodio de arriba (el mas nuevo) y cuantos hay
+  var ult = eps[0];
+  var extra = ult ? '<span class="b">' + esc(corto(ult.titulo, 42)) + "</span>" +
+                    '<span class="g"> · ' + eps.length + " ep</span>"
+                  : '<span class="g">sin episodios</span>';
+  // automatico apagado en daemon.json (podcast_auto.activo: false)
+  if(p.pausa) extra = '<span class="a">' + esc(p.pausa) + "</span> " + extra;
+  if(!ab) return caja("podcast", extra, btn + '<span class="g">' + (eps.length ? "tocá para ver los links" : "sin episodios") + "</span>",
+                      false, "podcast");
+  var filas = [btn + link(p.web || "#", "la web del podcast")];
+  if(!eps.length) filas.push(vacio("sin episodios"));
+  eps.forEach(function(e){
+    filas.push(it({tipo: "episodio", tema: "tools", d: e},
+               '<span class="g">' + esc((e.fecha || "").slice(5)) +
+               // la hora de la ultima actualizacion (el podcast vivo se republica con el mismo id)
+               (/T\d\d:\d\d/.test(e.actualizado || "") ? " · act " + esc(hora12(e.actualizado.slice(11, 16))) : "") +
+               "</span> " + esc(e.titulo)));
+    filas.push("  " + (e.voces || []).map(function(v){
+      return link(v.url, v.voz + (v.min ? " " + v.min + "m" : ""));
+    }).join(" · "));
+  });
+  return caja("podcast", extra, limFilas("podcast", filas).join("\n"), false, "podcast");
+}
+
+function cajaDj(p){
+  // motor `fuzzer/dj`: la cola nocturna de spotify. orden fijo, huecos aleatorios.
+  if(!p.plan) return caja("dj", '<span class="g">fuzzer · sin plan</span>',
+    '<span class="g">' + esc(p.texto || "sin plan") + "</span>", false, "dj");
+  // dato esencial: que esta pasando ahora y cuantos bloques van
+  var extra = (p.sonando ? '<span class="v b">suena</span> <span class="g">' + esc(corto(p.sonando, 30)) + "</span>"
+             : p.listo ? '<span class="g">en espera</span>' : '<span class="r">falta el oauth</span>') +
+              ' <span class="a b">' + p.hechos + "/" + p.bloques + "</span>";
+  var filas = ['<span class="g">noche ' + esc(p.noche) + " · " + p.reproducciones + " reproducciones</span>"];
+  if(p.sonando) filas.push('<span class="v b">suena</span> ' + esc(p.sonando));
+  else if(p.proximo) filas.push('<span class="g">proximo bloque</span> ' + esc(p.proximo));
+  if(!p.listo) filas.push('<span class="r">falta el oauth de spotify (premium)</span>');
+  if(wset("dj", "cola")) (p.top || []).forEach(function(t){
+    filas.push('  <span class="g">' + esc(t.tema) + "</span> " + t.n + "×");
+  });
+  return caja("dj", extra, limFilas("dj", filas).join("\n"), false, "dj");
+}
+
+// carga de salud desde el widget (1432): sale `salud cargar: ...` a la pestaña personal sin tocar la caja del chat
+// (`mandarAparte`) y lo resuelve el daemon sin modelo (`recetas/salud_chat.cmd`). `spCarga` pinta `guardando`
+// hasta que llega la respuesta, y despues su linea de confirmacion unos minutos.
+var spCarga = null, SP_CARGA_MS = 5 * 60 * 1000, spUltimoCmd = "";
+var RE_SP_CONF = /(?:guardé en salud|saqué de salud|corregí en salud|no cargué nada|no había nada para deshacer|no pude:)[^\n]*/;
+function spMandar(cmdTxt, visto){
   spCarga = {texto: visto, ts: Date.now(), conf: ""};
   spUltimoCmd = cmdTxt;
   cerrarModal();
@@ -9038,7 +9123,7 @@ window.__agente = {
   // estado en vivo y una sola respuesta por mensaje (2026-09-13, prueba_web_tabs lo chequea)
   leerMeta: leerMeta, modeloCorto: modeloCorto, sinDobles: sinDobles, claveEstado: claveEstado,
   vueloIniciar: vueloIniciar, vueloTerminar: vueloTerminar, recibirEstado: recibirEstado,
-  vuelo: function(){ return vuelo ? {clave: vuelo.clave, palabra: vuelo.palabra, eta: vuelo.eta, giro: vuelo.giro} : null; },
+  vuelo: function(){ return vuelo ? {clave: vuelo.clave, palabra: vuelo.palabra, paso: vuelo.paso || null, eta: vuelo.eta, giro: vuelo.giro} : null; },
   // 1776: el hilo progresivo. `tramos()` = los textos pintados en el chat, en orden (vuelo y respuestas)
   tramos: function(){ return lista ? [].map.call(lista.querySelectorAll(".msg .hilo .tramo"), function(d){
     return {clase: d.className, texto: d.textContent, msg: (d.closest(".msg") || {}).id || ((d.closest(".msg") || {}).dataset || {}).id || ""}; }) : []; },
