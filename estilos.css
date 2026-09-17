@@ -810,7 +810,8 @@
      (menu pegado a lo tocado, no un modal): fondo negro, sin borde de color, esc lo cierra por la pila de capas */
   #votfondo{position:fixed;inset:0;z-index:42}
   #votfondo.oculta,#votmenu.oculta{display:none}
-  #votmenu{position:fixed;z-index:43;top:44px;left:8px;width:min(300px,calc(100vw - 16px));
+  /* 1829: el fueguito vive ahora al lado de la campana, asi que el menu cae desde la derecha como `#nlista` */
+  #votmenu{position:fixed;z-index:43;top:44px;right:8px;width:min(300px,calc(100vw - 16px));
     background:#000;border:1px solid transparent;border-radius:5px;padding:4px;
     display:flex;flex-direction:column;gap:1px;box-shadow:var(--modal-sombra)}
   #votmenu .ntit{color:var(--gris);font-size:9px;text-transform:uppercase;letter-spacing:.06em;padding:3px 6px 4px 6px;
@@ -849,7 +850,10 @@
   #nlista .ntodas{background:none;border:0;border-top:1px solid var(--linea);margin-top:2px;color:var(--cian);font:inherit;
     font-size:10px;padding:6px;text-align:left;cursor:pointer}
   #nlista .nvacio{color:var(--gris);padding:8px 6px;font-size:10.5px}
-  #vistas{display:none;gap:6px;flex:0 0 auto}
+  /* 1829 (facundo, 2026-09-17): chat | widgets a la izquierda, pegado a los nodos, y el grupo de iconos
+     (fueguito, campana, tipito, en ese orden) a la derecha: `margin-right:auto` empuja todo lo que sigue.
+     en desktop `#vistas` no se pinta y `#nodos` (flex 1) sigue empujando los iconos a la derecha. */
+  #vistas{display:none;gap:6px;flex:0 0 auto;margin-right:auto}
   /* chat | widgets sin borde; el que no esta activo en blanco (facundo, 2026-09-14, 1288) */
   #vistas button{border-color:transparent;color:var(--blanco)}
   #vistas button.on{color:var(--verde)}
@@ -867,7 +871,10 @@
     #nodos .nodo{min-height:32px}   /* dedo: el label se toca aunque no parezca boton */
     #notis .noti{min-height:40px;font-size:12px}   /* dedo: el aviso y su `x` se tocan con el pulgar */
     #mcuerpo textarea.nresp{font-size:var(--texto-max)}   /* ios no zoomea al enfocar */
-    #nodos{gap:10px}
+    /* 1829: en celu los nodos ocupan solo lo suyo (no empujan) para que chat | widgets quede contra el borde
+       izquierdo; sin nodos pintados, la caja no deja ni el gap */
+    #nodos{gap:10px;flex:0 1 auto}
+    #nodos:empty{display:none}
     #vistas{gap:5px}
     #cabecera{gap:6px}
     /* dedo: campana, persona, filas de la campana y el menu de persona con 40px (1166) */
