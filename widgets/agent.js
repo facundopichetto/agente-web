@@ -1,4 +1,4 @@
-// widget `agent` del board: la tabla de la cola (queue): lo que paso, lo que corre y lo que espera.
+// widget `agent` del board: la tabla de la cola (queue): lo mas nuevo arriba, sin importar el estado (1862).
 // modulo de widget (orden 1793, 2026-09-16, "el board como las secciones de shopify"): el shell lo carga
 // con `import()` y, cuando la pagina es `file://` (las pruebas), con un `<script>`, que es lo unico que ese
 // protocolo deja. por eso el archivo NO tiene `export`: el contrato es registrarse en el shell, asi el mismo
@@ -28,15 +28,18 @@
   function qFila(f){
     var cl = QCLASE[f.estado] || "qcola";
     var corre = f.estado === "corriendo";
-    return it({tipo: "tarea", estado: f.estado, tema: f.tema, d: f},
+    // 1862 {cola}: `cola: true` marca que esta fila es una orden de la cola local, la unica que puede ofrecer
+    // forzar inicio, frenar y reordenar en su modal (el widget `server` tambien pinta items `tarea`, ajenos)
+    return it({tipo: "tarea", cola: true, estado: f.estado, tema: f.tema, d: f},
       '<span class="' + cl + ' qnom">' + esc(f.nombre || ("" + f.n)) +
       (f.estado === "fallo" ? ' <span class="r b">!!</span>' : "") + "</span>" +
-      qCelda(cl, f.pedida) + qCelda(cl, f.iniciada) +
+      qCelda(cl, f.pedida) + qCelda(cl, f.delay) + qCelda(cl, f.iniciada) +
       qCelda(cl, corre ? durVivo(f) : f.dur, corre ? " b qdelta" : "", corre ? ' data-n="' + esc(String(f.n)) + '"' : "") +
       qCelda(cl, f.termino));
   }
   function qCabecera(){
     return '<span class="qth qnom">nombre</span><span class="qth qcel">pedida</span>' +
+           '<span class="qth qcel">delay</span>' +          // 1862: lo que espero de `pedida` a `iniciada`
            '<span class="qth qcel">iniciada</span>' +
            '<span class="qth qcel qtiempo">delta</span>' +
            '<span class="qth qcel">terminó</span>';
@@ -49,6 +52,7 @@
     // 1843: columnas `fr` proporcionales a lo que hay en cada una, para ocupar el 100% del ancho de la caja
     var vis = tabla.filter(function(f){ return verCola || f.estado !== "cola"; });
     var cols = [vis.map(function(f){ return f.nombre || ("" + f.n); }), vis.map(function(f){ return f.pedida; }),
+                vis.map(function(f){ return f.delay; }),
                 vis.map(function(f){ return f.iniciada; }), vis.map(function(f){ return f.dur; }),
                 vis.map(function(f){ return f.termino; })];
     var cuerpo = filas.length ? '<div class="qtab" style="grid-template-columns:' + esc(B.gridFr(cols)) + '">' +

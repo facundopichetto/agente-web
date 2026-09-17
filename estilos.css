@@ -711,12 +711,18 @@
   /* 1806: el titulo de la cuenta es lo tocable (abre el modal de esa cuenta), abajo cuanto falta para renovar */
   .usage .ucol .cta[data-cta]{cursor:pointer;border-radius:3px}
   .usage .ucol .cta[data-cta]:hover{background:#0d1410}
-  .usage .ucol .ren{font-size:10px;line-height:1.3;color:var(--gris);margin:0 0 5px 0;white-space:nowrap;overflow:hidden}
-  .usage .ucol .ren span{display:block;overflow:hidden;text-overflow:ellipsis}
-  /* 1806: cuenta agotada (excluida por el tope): 100% en week y fable, la 5h invisible y el rojo apagado */
-  .usage .ucol .cta .nom.e-agotada{color:var(--rojo-apagado)}
-  .ub.n-agotada .ub-lleno{background:var(--rojo-apagado)}
-  .ub.n-agotada .ub-p{color:var(--rojo-apagado)}
+  /* 1861 {claude}: el tiempo hasta el reset va A LA DERECHA del nombre, en UNA linea y con el texto entero que
+     manda el server (`renueva_txt`: `6d 19h 10m to renew`); las dos lineas `week`/`fable` de abajo se fueron */
+  .usage .ucol .cta .ren{flex:1 1 auto;min-width:0;font-size:10px;color:var(--gris);text-align:right;
+                         white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* 1806/1861: cuenta agotada (excluida por el tope): 100% en week y fable, la 5h invisible, el rojo COMPLETO
+     (1861: se fue el `--rojo-apagado`) y la tarjeta entera a opacidad .8 MENOS el tiempo de renew, que tiene que
+     verse igual en las dos cuentas (por eso la opacidad no va en `.ucol`, que se la pasaria tambien al hijo) */
+  .usage .ucol .cta .nom.e-agotada{color:var(--rojo)}
+  .ub.n-agotada .ub-lleno{background:var(--rojo)}
+  .ub.n-agotada .ub-p{color:var(--rojo)}
+  .usage .ucol.agotada > *:not(.cta){opacity:.8}
+  .usage .ucol.agotada .cta .nom{opacity:.8}
   .ub.ub-oculta{visibility:hidden}
   /* el modal de una cuenta (`#cuentamodal`, molde): barras como en el widget y las renovaciones abajo */
   .cmod{white-space:pre-wrap}
@@ -761,8 +767,9 @@
      ancho de la caja (`fr`, nunca `max-content` que deja hueco a la derecha). el valor exacto lo pone el widget
      con `B.gridFr` segun lo que hay en cada columna; esto es el default con el ancho fijo de `08:49:12 pm` (11)
      y `0:04:12` (7). el nombre sigue siendo el unico que se achica (`minmax(0,...)`): sin scroll horizontal. */
-  .qtab{display:grid;grid-template-columns:minmax(0,14fr) 11fr 11fr 7fr 11fr;width:100%;
-        column-gap:7px;row-gap:1px;white-space:nowrap;font-size:10.5px;line-height:1.6;max-width:100%}
+  /* 1862 {cola}: seis columnas, `delay` (7, `0:04:12`) entre `pedida` e `iniciada` */
+  .qtab{display:grid;grid-template-columns:minmax(0,14fr) 11fr 7fr 11fr 7fr 11fr;width:100%;
+        column-gap:4px;row-gap:1px;white-space:nowrap;font-size:9.5px;line-height:1.6;max-width:100%}
   .qtab .it{display:contents}
   .qtab .qth{color:var(--gris);font-size:9px;letter-spacing:.3px;opacity:.75}
   /* 1843: la cabecera de la duracion se partia en dos lineas para no aplastar el nombre; desde la 1845 dice `delta`
@@ -778,7 +785,10 @@
   .esctab .ecel{text-align:right}
   @media (max-width:480px){ .esctab{column-gap:3px;font-size:10px} }   /* 10px y 3px: asi las 7 columnas entran en 390px */
   .qtab .qpaso.qh,.qtab .qcola.qh{opacity:.6} .qtab .qcorre.qh{color:#8fcf7f}
-  @media (max-width:560px){ .qtab{font-size:9.5px;column-gap:5px} }   /* 1845: la cabecera `delta` es una sola, sin version corta para el celu */
+  /* 1862: con la sexta columna (`delay`) las cinco horas ocupan mas: la tabla baja a 9.5px y 4px de gap tambien
+     en la compu (antes 10.5/7, solo el celu bajaba), asi el nombre sigue teniendo lugar y no se corta con `…`;
+     en 390 px baja un poco mas */
+  @media (max-width:430px){ .qtab{font-size:9px;column-gap:3px} }
   .b{font-weight:500}
   .btn{
     background:#000;color:var(--cian);border:1px solid var(--linea);border-radius:12px;
