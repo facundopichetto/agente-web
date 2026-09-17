@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.333">
-<link rel="manifest" href="manifest.json?v=4.333">
+<meta name="agente-web-version" content="4.334">
+<link rel="manifest" href="manifest.json?v=4.334">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.333">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.334">
 </head>
 <body>
 
@@ -4226,7 +4226,8 @@ function tjVoto(e, c, q, txt){
   (sel.tjHistorial = sel.tjHistorial || []).push({col: e.coleccion, c: c, q: q});   // 1640: lo que el back deshace
   sel.tj += 1;
   tjPintar();
-  selSubirPronto();   // 1666: los votos de la tanda se juntan y suben en un archivo
+  selSubirPronto();   // 1666: los votos de la tanda se juntan y suben en un archivo (1836: throttle, no debounce)
+  selFlushSiFalta(e);   // 1836: quedan pocas adelante: la subida sale ya y la respuesta trae el lote
   return true;
 }
 // 1640 (facundo, 2026-09-15: "agregá un back por si quiero cambiar mi voto"), 1657: la flecha `←` de la cabecera
@@ -4374,9 +4375,20 @@ function selBuzon(col, regs){
 // 1666: los votos de tarjetas se juntan SEL_JUNTAR_MS antes de subir (facundo vota una tarjeta por segundo: sin
 // esto es una escritura del buzon por voto). lo que cierra una tanda (`aceptar`, `fin`) sigue subiendo al toque.
 var SEL_JUNTAR_MS = 3000, selJuntar = null;
+// 1836 (facundo, 2026-09-17): esto era un debounce (cada voto reiniciaba los 3 s), asi que votando mas rapido que uno
+// cada 3 s NO se subia nada hasta que parara, el server no se enteraba y la fila local se quedaba sin tarjetas ("con 20
+// te quedas corto"). ahora es un throttle: el primer voto arma los 3 s y los que siguen se suman a esa misma subida.
 function selSubirPronto(){
-  if(selJuntar) clearTimeout(selJuntar);
+  if(selJuntar) return;
   selJuntar = setTimeout(function(){ selJuntar = null; selSubir(); }, SEL_JUNTAR_MS);
+}
+// 1836: con lan, si la fila local baja de `SEL_FLUSH_MIN` sin votar, la subida sale ya: la respuesta trae el lote
+var SEL_FLUSH_MIN = 12;
+function selFlushSiFalta(e){
+  if(!e || !e.continua || !lan.base) return false;
+  if(e.candidatas.length - sel.tj > SEL_FLUSH_MIN) return false;
+  selSubirYa();
+  return true;
 }
 function selSubirYa(){   // cerrar la pagina o irse a background no espera a los 3 s
   if(!selJuntar) return;
@@ -8702,6 +8714,7 @@ window.__agente = {
   selPutStub: function(f){ selPutStub = f; },
   selEstado: function(){ return {abierto: !!sel.actual, col: sel.actual && sel.actual.coleccion, pend: selLeer("pend", []), fuente: sel.fuente,
                                  marcadas: selMarcadas(), abiertas: sel.abiertas.map(function(a){ return a.coleccion; })}; },
+  selFlushMin: function(){ return SEL_FLUSH_MIN; },   // 1836
   selReset: function(){ sel.actual = null; sel.abiertas = []; sel.ignorada = {}; sel.tjHistorial = []; selTs = 0; sel.agotadas = []; sel.totales = {};
                         ["pend", "hechas", "fila"].forEach(function(s){ try{ localStorage.removeItem("agente_sel_" + s); }catch(x){} }); },
   selFila: function(){ return selLeer("fila", {}); },   // correccion 18:12
