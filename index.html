@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.348">
-<link rel="manifest" href="manifest.json?v=4.348">
+<meta name="agente-web-version" content="4.349">
+<link rel="manifest" href="manifest.json?v=4.349">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.348">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.349">
 </head>
 <body>
 
@@ -135,15 +135,16 @@
     <div id="amestado" class="mestado" aria-live="polite"></div>
   </div>
 </div>
-<!-- 1801 (facundo, 2026-09-16): el fueguito `votar` ya no abre el modal: abre este dropdown con los tres procesos
-     (`candidatas`, `empezar a seguir`, `dejar de seguir`), cada uno con su numero. 1836 (facundo, 2026-09-17): el
-     fueguito va pelado, sin badge (gris solo con los tres procesos en cero), y el numero de cada proceso es el TOTAL
-     de la lista sin votar en el embudo (`totales` del server), nunca lo cargado ni "cuantas quedan". recien al elegir uno
-     se abre el modal, y el titulo de arriba del modal dice cual de los tres se esta votando. molde: menu pegado a lo
-     tocado (como `#nlista`), `esc` lo cierra por la pila de capas. -->
-<div id="votfondo" class="oculta"></div>
-<div id="vista-podcast"><div id="podvista"></div></div>
-<div id="votmenu" class="oculta" role="menu" aria-label="qué votar"></div>
+<!-- 1922 {vistatinder} (facundo, 2026-09-17): "te dije un millon de veces que tinder me lleva a la vista tinder,
+     no a un dropdown. el dropdown es lo que se ve a pantalla completa en la vista tinder. y a lo que vuelvo cuando
+     salgo de una votacion". el fueguito entra DIRECTO a la vista `tinder` y lo que era el dropdown flotante de la
+     1801 es ahora el CONTENIDO a pantalla completa de esa vista, su `home` (abajo, adentro de la `.selcaja`).
+     de la 1801 queda todo lo demas: los seis items con su total (`total_sin_votar` del server), el que esta en cero
+     en gris y no clickeable, y que recien al elegir uno se ve una tarjeta. la vista `podcast` es la misma idea. -->
+<div id="vista-podcast"><div class="selcaja mcaja">
+  <div class="seltit mhead"><button id="podback" class="bglifo b-atras oculta" type="button" data-q="atras" aria-label="back" title="back">←</button><span id="podtitulo"></span><span id="podcuenta" class="mcuenta"></span></div>
+  <div id="podvista"></div>
+</div></div>
 <div id="selmodal" class="capa oculta" role="dialog" aria-modal="true" aria-labelledby="seltitulo">
   <div class="selcaja mcaja">
     <div class="seltit mhead"><button id="selback" class="bglifo b-atras apagado oculta" type="button" data-q="atras" aria-label="back" title="back">←</button><span id="seltitulo"></span><span id="selcuenta" class="mcuenta"></span><button id="selsub" class="bglifo selsub oculta" type="button" aria-label="cambiar de sub-vista"></button></div>
@@ -153,6 +154,9 @@
          una lista grande dice por que estan ahi y cuantos son, una chica lista a su gente con fotito, lo que ya se
          sabe y UNA frase de accion. la web no calcula ni redacta nada -->
     <div id="sellistas" class="oculta"></div>
+    <!-- 1922 {vistatinder}: el `home` de la vista `tinder`, lo que hasta la 1801 era el dropdown flotante. mismo
+         molde (`.capa` + `.mcaja` + `.selcaja` de la 1874) y cajas tocables con el molde de `moldeBoton`. -->
+    <div id="votmenu" class="oculta" role="menu" aria-label="qué votar"></div>
     <div id="seltarjeta" class="oculta"></div>
     <!-- 1801: los botones los arma `tjBotones` segun el proceso (`TJ_PROCS`). candidatas: `↓` baja (hoy a ignoradas)
          · `-_-` maybe · `↑` sube (hoy a interesan). el back `←` sigue arriba, fuera de esta fila (1657) -->
@@ -264,6 +268,11 @@ function moldeBoton(o){
     b.textContent = o.txt || GLIFOS[o.tipo][0];
     b.setAttribute("aria-label", o.aria || GLIFOS[o.tipo][1]);
     b.title = o.aria || GLIFOS[o.tipo][1];
+  } else if(o.tipo === "caja"){
+    // 1922 {vistatinder}: caja tocable de una fila (el `home` del votador, el `home` del podcast): borde fino,
+    // texto a la izquierda y 44 px de alto. lo que no es tocable no parece tocable, y esta lo parece (1808)
+    b.className = "bcaja";
+    if(o.txt) b.textContent = o.txt;
   } else {
     b.className = "bverde llena" + (o.tipo === "rojo" ? " rojo" : "");
     b.textContent = o.txt || "";
@@ -3944,7 +3953,11 @@ function selModoLista(lista){
   // 1874 (facundo, 2026-09-17): el votador (modo tarjetas) es una vista entera; la lista de checkboxes sigue
   // siendo el modal de siempre. lo unico que cambia es la clase: el molde (`.capa`, `esc`, la pila) es el mismo
   $("selmodal").classList.toggle("pantalla", !lista);
+  $("selmodal").classList.remove("home");   // 1922 {vistatinder}
   $("sellistas").classList.add("oculta");          // 1879 {listas}: volver al votador apaga la sub-vista `listas`
+  $("votmenu").classList.add("oculta");            // 1922 {vistatinder}: y tambien el `home` de la vista
+  var pie = document.querySelector("#selmodal .selpie");
+  if(pie) pie.classList.remove("oculta");
   lis.sub = "votar";
   lisBotonPintar(!lista);
   $("sellista").classList.toggle("oculta", !lista);
@@ -4419,8 +4432,7 @@ function tjSinFotos(e){
   var pend = selLeer("pend", []); pend.push({col: e.coleccion, r: r}); selEscribir("pend", pend);
   sel.actual = null;
   selModoLista(true);
-  capaOcultar("selmodal");
-  vistaVolver();   // 1875: sale de la vista tinder
+  selSalir();   // 1922: vuelve al `home` de la vista tinder (antes salia de la vista)
   selBoton();
   selSubir();
 }
@@ -4437,19 +4449,21 @@ function tjFin(){
   var pend = selLeer("pend", []); pend.push({col: e.coleccion, r: r}); selEscribir("pend", pend);
   sel.actual = null;
   selModoLista(true);
-  capaOcultar("selmodal");
-  vistaVolver();   // 1875: sale de la vista tinder
+  selSalir();   // 1922: terminar la tanda vuelve al `home`, no cierra la vista
   selBoton();
   selSubir();
 }
 function selCerrar(){
   try{ (window.__cierres = window.__cierres || []).push("selCerrar " + new Error().stack.split("\n").slice(1,4).join(" | ")); }catch(x){}
-  var tj = vistaEs("tinder");
+  var tj = vistaEs("tinder"), sub = lis.sub;
   if(sel.actual) sel.ignorada[sel.actual.coleccion] = sel.actual.abrir_ts;
   sel.actual = null;
   selModoLista(true);   // 1440: la proxima puede ser una de checkboxes
+  // 1922 {vistatinder}: `esc` o el `enviar` de una votacion vuelven al `home` de la vista; la vista se cierra solo
+  // desde el `home` (ahi gana la capa `votmenu`) o tocando otro icono de la barra
+  if(tj && sub !== "home"){ tinderHome(); selBoton(); return; }
   capaOcultar("selmodal");
-  if(tj) vistaVolver();   // 1875: `esc` en el tinder sale de la vista y vuelve a la anterior
+  if(tj) vistaVolver();   // 1875: sale de la vista tinder y vuelve a la anterior
   selBoton();
 }
 function selEncolar(tipo){
@@ -4466,8 +4480,7 @@ function selAceptar(){
   if(!e || !selEncolar("aceptar")) return false;
   var h = selLeer("hechas", {}); h[e.coleccion] = e.abrir_ts; selEscribir("hechas", h);
   sel.actual = null;
-  capaOcultar("selmodal");
-  if(vistaEs("tinder")) vistaVolver();   // 1875
+  selSalir();   // 1922: en la vista tinder vuelve al `home`; en el modal de checkboxes lo cierra
   selBoton();
   selSubir();
   return true;
@@ -4571,7 +4584,8 @@ function selBoton(){
   // `selCerrar` (un reset, una coleccion que el server cerro), la vista se sale sola y el fueguito vuelve a la barra.
   // no se cicla: `vistaVolver` deja `vistaOn` en otra vista antes de repintar.
   // 1879 {listas}: la otra sub-vista de esta vista no necesita ninguna votacion abierta: ahi la vista se queda
-  if(vistaEs("tinder") && !sel.actual && lis.sub !== "listas"){ vistaVolver(); return; }
+  // 1922 {vistatinder}: `home` y `listas` viven sin ninguna votacion abierta; solo se sale si no hay ninguna de las dos
+  if(vistaEs("tinder") && !sel.actual && lis.sub !== "listas" && lis.sub !== "home"){ vistaVolver(); return; }
   // 1567/1788: como nada se abre solo, el boton es lo unico que avisa que hay algo esperando; tambien cuenta el
   // votador de animaciones (una votacion mas) para que facundo pueda abrirlo el mismo desde el board.
   // 1836 (facundo, 2026-09-17): el fueguito va PELADO, sin badge: el numero vive solo adentro del dropdown y es el
@@ -4582,8 +4596,8 @@ function selBoton(){
   b.classList.toggle("apagado", !n);
   // 1875: el icono de la vista activa no se pinta (el fueguito ES el icono de la vista `tinder`)
   b.classList.toggle("oculta", vistaEs("tinder") || !!sel.actual || !$("votar").classList.contains("oculta"));
-  // 1801: con el dropdown abierto, los numeros se repintan solos cuando el server manda otra cosa
-  if(votMenuAbierto){ if(sel.actual) votMenuCerrar(); else votMenuPintar(); }
+  // 1801/1922: con el `home` a la vista, los numeros se repintan solos cuando el server manda otra cosa
+  if(votMenuAbierto() && !sel.actual) votMenuPintar();
 }
 // ---------- 1879 {listas}: la vista `tinder` son DOS sub-vistas, `votar` y `listas` ----------
 // facundo (2026-09-17): "agrega un boton en la view votar que sea ver listas. como dos sub views dentro de votar y
@@ -4600,7 +4614,7 @@ var lis = {sub: "votar", datos: null, ts: 0, bajando: null, etag: null};
 function lisBotonPintar(pantalla){
   var b = $("selsub");
   if(!b) return;
-  b.classList.toggle("oculta", !pantalla);
+  b.classList.toggle("oculta", !pantalla || lis.sub === "home");   // 1922: en el `home` el selector ya esta a la vista
   b.textContent = lis.sub === "listas" ? "votar" : "listas";
   b.title = lis.sub === "listas" ? "volver a votar" : "ver las listas";
 }
@@ -4626,12 +4640,16 @@ function lisPoner(cual, fresco){
   if(lis.sub === "votar"){
     $("sellistas").classList.add("oculta");
     if(sel.actual){ selModoLista(false); tjPintar(); }
-    else { $("selmodal").classList.add("pantalla"); $("sellista").classList.add("oculta"); selCerrar(); return false; }
+    else return tinderHome();   // 1922 {vistatinder}: sin votacion abierta, `votar` es el `home` de la vista
     lisBotonPintar(true);
     return true;
   }
   // modo listas: la caja a pantalla completa, sin tarjeta, sin votos y sin campo de texto
   $("selmodal").classList.add("pantalla");
+  $("selmodal").classList.remove("home");
+  $("votmenu").classList.add("oculta");   // 1922 {vistatinder}
+  var pie0 = document.querySelector("#selmodal .selpie");
+  if(pie0) pie0.classList.remove("oculta");
   $("sellista").classList.add("oculta");
   $("seltarjeta").classList.add("oculta");
   $("selacciones").classList.add("oculta");
@@ -4791,46 +4809,103 @@ function votItems(){
   out.push({col: "listas", nombre: "ver listas", n: 0, hay: true});
   return out;
 }
-var votMenuAbierto = false;
+// ---------- 1922 {vistatinder}: el `home` de la vista `tinder` (facundo, 2026-09-17) ----------
+// "el dropdown es lo que se ve a pantalla completa en la vista tinder. y a lo que vuelvo cuando salgo de una
+// votacion". o sea: el fueguito NO abre un menu flotante, entra a la vista, y esto es lo primero que se ve.
+// la vista tiene TRES sub-vistas (`lis.sub`): `home` (este selector), `votar` (las tarjetas de la 1874/1883) y
+// `listas` (la 1879). salir de una votacion vuelve aca; tocar otro icono de la barra sale de la vista (1875).
 function votMenuPintar(){
   var m = $("votmenu");
   m.textContent = "";
-  var t = document.createElement("div"); t.className = "ntit"; t.textContent = "qué votar"; m.appendChild(t);
   votItems().forEach(function(x){
-    var f = document.createElement("button");
-    f.type = "button"; f.className = "vmfila" + (x.hay ? "" : " apagado");
+    // el molde de siempre (`moldeBoton`): una caja tocable por proceso, con su total a la derecha
+    var f = moldeBoton({tipo: "caja", clase: "vmfila" + (x.hay ? "" : " apagado"),
+                        accion: function(){ votMenuElegir(x.col); }});
     f.setAttribute("role", "menuitem"); f.setAttribute("data-col", x.col);
     f.disabled = !x.hay;
     var n = document.createElement("span"); n.className = "vmnom"; n.textContent = x.nombre;
     var b = document.createElement("span"); b.className = "vmbadge"; b.textContent = x.n ? String(x.n) : "";
     if(!x.n) b.classList.add("oculta");
     f.appendChild(n); f.appendChild(b);
-    f.addEventListener("click", function(){ votMenuElegir(x.col); });
     m.appendChild(f);
   });
   return m;
 }
-function votMenuAbrir(){
-  if(votMenuAbierto) return votMenuCerrar();
-  if(sel.actual) return false;
+// pone la sub-vista `home` (la caja de la vista sin tarjeta, sin votos, sin campo y sin pie)
+function tinderHome(){
+  lis.sub = "home";
+  $("selmodal").classList.add("pantalla", "home");
+  ["selcont", "sellista", "sellistas", "seltarjeta", "selacciones", "selback", "seltxt"].forEach(function(id){
+    $(id).classList.add("oculta");
+  });
+  [".selbtns", ".selpie"].forEach(function(q){
+    var e = document.querySelector("#selmodal " + q);
+    if(e) e.classList.add("oculta");
+  });
+  $("seltitulo").textContent = "qué votar";
+  $("selcuenta").textContent = "";
+  lisBotonPintar(true);
   votMenuPintar();
-  votMenuAbierto = true;
   $("votmenu").classList.remove("oculta");
-  $("votfondo").classList.remove("oculta");
+  capaMostrar("selmodal");
   return true;
 }
+// el fueguito: entra DIRECTO a la vista `tinder`, en su `home` (1922; antes, 1801, abria el dropdown flotante)
+function votMenuAbrir(){
+  if(sel.actual) return false;
+  lis.sub = "home";   // antes de entrar: `selBoton` saca de la vista si no hay ni votacion, ni listas, ni home
+  vistaPoner("tinder");
+  return tinderHome();
+}
+// salir del `home` es salir de la vista entera (`esc` por la pila); fuera de la vista no hace nada
 function votMenuCerrar(){
-  votMenuAbierto = false;
   $("votmenu").classList.add("oculta");
-  $("votfondo").classList.add("oculta");
+  if(!vistaEs("tinder") || lis.sub !== "home") return false;
+  lis.sub = "votar";
+  capaOcultar("selmodal");
+  vistaVolver();
   return false;
 }
-// recien aca se abre el modal: el titulo de arriba lo manda el server (`candidatas` / `empezar a seguir` / `dejar de seguir`)
+function votMenuAbierto(){
+  return vistaEs("tinder") && lis.sub === "home" && !$("votmenu").classList.contains("oculta");
+}
+// tocar un item: recien aca se ve una tarjeta. el titulo de arriba lo manda el server (`candidatas` / `dejar de
+// seguir` / ...). si esa fila no tiene nada listo, la vista se queda en el `home` en vez de cerrarse sola
 function votMenuElegir(col){
-  votMenuCerrar();
-  if(col === "animaciones") return votAbrirPendiente();
+  var ok;
+  $("votmenu").classList.add("oculta");
+  lis.sub = "votar";
   if(col === "listas") return lisAbrir();   // 1879: la sub-vista `listas`, sin votacion abierta
-  return selAbrirCol(col);
+  if(col === "animaciones"){
+    ok = votAbrirPendiente();
+    if(ok && vistaEs("tinder")) vistaVolver();   // el votador de animaciones es su propio modal, no esta vista
+  } else {
+    ok = selAbrirCol(col);
+    // una coleccion de checkboxes sigue siendo el modal de siempre (1874), no una sub-vista: sale del tinder
+    // con el modal abierto y al cerrarlo vuelve el fueguito, como antes de la 1922
+    if(ok && vistaEs("tinder") && !$("selmodal").classList.contains("pantalla")) vistaVolver();
+  }
+  if(!ok && vistaEs("tinder") && !sel.actual) tinderHome();
+  return ok;
+}
+// salir de una votacion (terminar la tanda, `enviar`, `esc`): vuelve al `home`, no cierra la vista (1922)
+function selSalir(){
+  if(vistaEs("tinder")) return tinderHome();
+  capaOcultar("selmodal");
+  return false;
+}
+// salir de la vista `tinder` por la barra de iconos: se cierra su caja y al volver arranca en `home`
+function tinderSalir(){
+  // una votacion de checkboxes no es de esta vista (1874): se queda abierta como el modal de siempre
+  if(sel.actual && !$("selmodal").classList.contains("pantalla")){
+    lis.sub = "home"; $("votmenu").classList.add("oculta"); return;
+  }
+  if(sel.actual) sel.ignorada[sel.actual.coleccion] = sel.actual.abrir_ts;
+  sel.actual = null;
+  selModoLista(true);
+  $("votmenu").classList.add("oculta");
+  lis.sub = "home";
+  capaOcultar("selmodal");
 }
 // 1788: SIEMPRE lo toca facundo (el boton `votar` o el push). abre la primera que no cerraste; si cerraste todas,
 // vuelve a la primera; si no queda ninguna seleccion, abre el votador de animaciones que el server confirmo.
@@ -4929,8 +5004,8 @@ function selArrancar(){
   }
   return tick();
 }
-$("ver-votar").addEventListener("click", votMenuAbrir);   // 1801: el fueguito abre el dropdown, no el modal
-$("votfondo").addEventListener("click", votMenuCerrar);
+// 1922 {vistatinder}: el fueguito entra DIRECTO a la vista `tinder`, a su `home` (el dropdown flotante se fue)
+$("ver-votar").addEventListener("click", votMenuAbrir);
 $("selaceptar").addEventListener("click", selAceptar);
 $("selmandar").addEventListener("click", selEnviarTexto);
 // 1883: `enviar` = manda lo que este escrito (si hay algo) y cierra; sin texto es el `cerrar` de siempre
@@ -7075,16 +7150,111 @@ function cajaPodcast(p){
   });
   return caja("podcast", extra, limFilas("podcast", filas).join("\n"), false, "podcast");
 }
-// 1875: la vista `podcast` a pantalla completa. por ahora es lo que ya arma el widget, siempre desplegado (facundo:
-// "sin inventar features nuevas, el contenido lo mejoramos despues"); el boton de plegar no se pinta (css).
+// ---------- 1922 {vistatinder}: la vista `podcast`, con la MISMA estructura que `tinder` ----------
+// facundo (2026-09-17): "MISMA IDEA, NO ME PONGAS EL WIDGET DE MIERDA, HACEME UNA VISTA PARA EL PODCAST, POR AHORA
+// IGUAL A LA OTRA PERO CON EL DISENIO DE ESTO". o sea: reemplaza lo que dejo la 1875 (el html del widget metido
+// adentro de la vista). dos sub-vistas como el tinder: `home` (los episodios como cajas tocables) y el detalle de un
+// episodio (su player), con el `←` volviendo al home. el widget `podcast` de la vista `widgets` no se toca.
+// nada se calcula ni se redacta aca: los episodios salen tal cual de `widgets_json.w_podcast` (`widDatos.podcast`).
+var pod = {ep: null};
+function podEps(){ return ((widDatos || {}).podcast || {}).episodios || []; }
+function podId(e){ return String(e.id || e.titulo || e.fecha || ""); }
+function podCuando(e){
+  var f = String(e.fecha || "").slice(5);
+  var a = /T(\d\d:\d\d)/.exec(e.actualizado || "");
+  return f + (a ? " · act " + hora12(a[1]) : "");
+}
+function podAbrirEp(id){
+  pod.ep = id || null;
+  return podVistaPintar();
+}
 function podVistaPintar(){
   var el = $("podvista");
   if(!el) return "";
-  var antes = podAbierto;
-  podAbierto = true;
-  try{ el.innerHTML = cajaPodcast((widDatos || {}).podcast || {}); }
-  finally{ podAbierto = antes; }
+  var p = (widDatos || {}).podcast || {}, eps = podEps();
+  var ep = pod.ep ? eps.filter(function(e){ return podId(e) === pod.ep; })[0] : null;
+  if(pod.ep && !ep) pod.ep = null;
+  el.textContent = "";
+  $("podback").classList.toggle("oculta", !ep);
+  $("podtitulo").textContent = ep ? (ep.titulo || "episodio") : "podcast";
+  $("podcuenta").textContent = ep ? podCuando(ep) : (eps.length ? eps.length + " episodios" : "");
+  if(ep) podDetalle(el, ep); else podHome(el, p, eps);
   return el.innerHTML;
+}
+// el `home`: una caja tocable por episodio, el mas nuevo arriba (el orden lo manda el server)
+function podHome(el, p, eps){
+  if(p.pausa){
+    var pa = document.createElement("div"); pa.className = "podpausa"; pa.textContent = p.pausa;
+    el.appendChild(pa);
+  }
+  if(!eps.length){
+    var v = document.createElement("div"); v.className = "podvacio"; v.textContent = "todavía no hay episodios";
+    el.appendChild(v);
+  }
+  eps.forEach(function(e){
+    var id = podId(e);
+    var c = moldeBoton({tipo: "caja", clase: "podcaja", accion: function(){ podAbrirEp(id); }});
+    c.setAttribute("data-ep", id);
+    var t = document.createElement("span"); t.className = "podnom"; t.textContent = e.titulo || id;
+    var d = document.createElement("span"); d.className = "poddet";
+    var nv = (e.voces || []).length;
+    d.textContent = podCuando(e) + " · " + nv + (nv === 1 ? " voz" : " voces");
+    c.appendChild(t); c.appendChild(d);
+    el.appendChild(c);
+  });
+  if(p.web){
+    var a = document.createElement("a");
+    a.className = "podweb"; a.href = p.web; a.target = "_blank"; a.rel = "noopener";
+    a.textContent = "la web del podcast";
+    el.appendChild(a);
+  }
+}
+// el detalle: una fila por voz con su player y su link. el mp3 lo sirve pages (no pasa por la lan ni por el buzon),
+// asi que no es `reproductor()`, pero el look es el mismo: el `[▶]` de texto de la 1650, nunca los controles
+// nativos grises (`docs/gustos-diseno.md`: "look terminal, nada de controles nativos")
+function podDetalle(el, e){
+  (e.voces || []).forEach(function(v){
+    var f = document.createElement("div"); f.className = "podvoz";
+    var n = document.createElement("span"); n.className = "podnom"; n.textContent = v.voz;
+    var b = podPlay(v);
+    var d = document.createElement("span"); d.className = "dur"; d.textContent = v.min ? v.min + " min" : "";
+    var a = document.createElement("a");
+    a.className = "podbajar"; a.href = v.url; a.target = "_blank"; a.rel = "noopener"; a.textContent = "abrir aparte";
+    [b, n, d, a].forEach(function(x){ f.appendChild(x); });
+    el.appendChild(f);
+  });
+  if(!(e.voces || []).length){
+    var x = document.createElement("div"); x.className = "podvacio"; x.textContent = "este episodio no tiene audio";
+    el.appendChild(x);
+  }
+}
+// el mismo boton de texto que los audios del chat (`reproductor`), pero con la url de pages directa
+function podPlay(v){
+  var b = document.createElement("button");
+  b.type = "button"; b.className = "play"; b.textContent = "[▶]";
+  b.title = "escuchar " + v.voz;
+  b.setAttribute("data-voz", v.voz);
+  var au = null;
+  function parar(){
+    if(au) au.pause();
+    b.textContent = "[▶]"; b.classList.remove("sonando");
+    if(sonando === b) sonando = null;
+  }
+  b.__parar = parar;
+  b.addEventListener("click", function(){
+    if(sonando && sonando !== b && sonando.__parar) sonando.__parar();
+    if(au && !au.paused){ parar(); return; }
+    if(!au){
+      au = new Audio(v.url);
+      au.addEventListener("ended", parar);
+      au.addEventListener("error", function(){ b.textContent = "[x]"; b.title = "no se pudo reproducir"; });
+    }
+    sonando = b;
+    b.classList.add("sonando"); b.textContent = "[■]";
+    var pr = au.play();
+    if(pr && pr.catch) pr.catch(function(){ b.textContent = "[x]"; });
+  });
+  return b;
 }
 
 function cajaDj(p){
@@ -7200,24 +7370,8 @@ function cajaReglas(p){
   return caja("reglas", extra, limFilas("reglas", filas).join("\n") + "\n" + pie, false, "reglas");
 }
 
-function cajaSeguidores(p){
-  // instagram de facundo (tema personal, orden 1393): una foto por dia, bajas y altas de 7 dias y cuantos no te
-  // siguen. lo arma `recetas/ig_seguidores.py` (`widget()`), cero tokens y sin push.
-  if(p.error) return caja("seguidores", "", vacio(p.error), false, "seguidores");
-  var extra = '<span class="b">' + (p.seguidores || 0) + '</span> <span class="g">te siguen ·</span> <span class="b">' +
-              (p.seguidos || 0) + '</span> <span class="g">seguís</span>';
-  var filas = [], quien = function(u){ return "@" + esc(u.usuario) + (u.nombre ? ' <span class="g">' + esc(u.nombre) + "</span>" : ""); };
-  (p.dejaron || []).forEach(function(u){ filas.push('<span class="r">-</span> ' + quien(u) + ' <span class="g">' + esc(u.fecha.slice(5)) + "</span>"); });
-  (p.nuevos || []).forEach(function(u){ filas.push('<span class="v">+</span> ' + quien(u) + ' <span class="g">' + esc(u.fecha.slice(5)) + "</span>"); });
-  if(!filas.length) filas.push(vacio("sin bajas ni altas en " + (p.dias || 7) + " días"));
-  var pie = "no te siguen <b>" + (p.no_me_siguen === null || p.no_me_siguen === undefined ? "?" : p.no_me_siguen) + "</b>";
-  if((p.dejaste || []).length || (p.seguiste || []).length)
-    pie += ' <span class="g">· vos: -' + (p.dejaste || []).length + " +" + (p.seguiste || []).length + "</span>";
-  if(p.fecha) pie += ' <span class="g">· foto ' + esc(p.fecha.slice(5)) + "</span>";
-  filas.push(pie);
-  if(p.problema) filas.push('<span class="a">' + esc(p.problema) + "</span>");
-  return caja("seguidores", extra, limFilas("seguidores", filas).join("\n"), false, "seguidores");
-}
+// widget `seguidores`: se fue a `web/widgets/seguidores.js` (1915 {widgets}), que ademas pide su
+// numero fresco por la lan (`seguidores.json`, `recetas/ig_contador.py`), como `agent` con `cola.json`.
 
 function cajaMail(p){
   // el chequeo del mail: adaptativo (facundo, 2026-09-12). 15 min de base, 2 min con conversacion
@@ -7540,7 +7694,9 @@ $("nlista").addEventListener("click", function(e){
 // widget `usage` (tocar `facu` u `orugote` abre su modal con el boton verde). el titulo sigue diciendo cual usa.
 function cuentaEnUso(){
   var rep = ((widDatos || {}).usage || {}).reparto || {};
-  return {elegida: rep.elegida || ((widDatos || {}).agente || {}).cuenta || "", modo: rep.modo || ""};
+  // 1915 {widgets}: `agente.cuenta` puede ser `sin cuenta hasta ...`; para el menu del tipito vale `cuenta_activa`
+  var ag = (widDatos || {}).agente || {};
+  return {elegida: rep.elegida || ag.cuenta_activa || ag.cuenta || "", modo: rep.modo || ""};
 }
 function abrirPersona(){
   cerrarCampana();
@@ -7570,7 +7726,7 @@ document.addEventListener("keydown", function(e){
 // de un widget ya migrado, se vuelve a cargar ese archivo y se repinta ESA caja (`repintarMod`), sin tocar el
 // chat, su scroll ni lo que este tipeado. si cambio el shell (o algo que no se sabe repintar), el reload de
 // siempre. un modulo no ve el adentro del shell: solo esto.
-var MODULOS = ["usage", "agent", "sombra"];   // widgets migrados, en `web/widgets/<clave>.js` (1832: `models` = clave `sombra`)
+var MODULOS = ["usage", "agent", "sombra", "seguidores"];   // widgets migrados, en `web/widgets/<clave>.js` (1832: `models` = clave `sombra`)
 var MOD_DATOS = {usage: "usage", agent: "agente"};   // de que campo de `widgets.json` come cada uno
 var mods = {}, modsVer = {}, modsTimers = {}, modsError = {}, modCargando = null, modsCargas = 0;
 var visibleForzada = false;   // 1849: las pruebas headless corren con `document.hidden` y fuerzan `B.visible()`
@@ -7743,7 +7899,7 @@ function pintarWidgets(d, err){
     ["mail", cajaMail(d.mail || {})],
     ["que_ver", cajaQueVer(d.que_ver || {})],
     ["salud_personal", d.salud_personal ? cajaSaludPersonal(d.salud_personal) : ""],
-    ["seguidores", d.seguidores ? cajaSeguidores(d.seguidores) : ""],
+    ["seguidores", d.seguidores ? modHtml("seguidores") : ""],
     ["reglas", d.reglas ? cajaReglas(d.reglas) : ""]
   ];
   var mapa = {}, hay = [];
@@ -8863,6 +9019,9 @@ function vistaPoner(n){
   vistaPrevia = vistaOn;
   vistaOn = n;
   vistaGuardar();
+  // 1922 {vistatinder}: dejar la vista `tinder` por la barra cierra su caja; al volver arranca en `home`
+  if(vistaPrevia === "tinder" && n !== "tinder") tinderSalir();
+  if(vistaPrevia === "podcast" && n !== "podcast") pod.ep = null;
   vistaPintar();
   if(vistaEs("widgets") && Date.now() - widUlt > 15000) cargarWidgets().catch(function(){});
   if(vistaEs("podcast")) podVistaPintar();
@@ -8974,11 +9133,8 @@ if(mqMobile){
   sep.addEventListener("pointerup", soltar);
   sep.addEventListener("pointercancel", soltar);
 })();
-// 1875: en la vista `podcast` una fila abre el mismo modal de item que en el widget
-$("vista-podcast").addEventListener("click", function(e){
-  var n = e.target.closest && e.target.closest("[data-it]");
-  if(n && itemsW[n.dataset.it]) abrirModal(itemsW[n.dataset.it]);
-});
+// 1922 {vistatinder}: el `←` de la vista `podcast` vuelve a su `home`, igual que el del tinder
+$("podback").addEventListener("click", function(){ podAbrirEp(null); });
 $("ddfondo").addEventListener("click", cerrarDd);
 // 1455 (facundo, 2026-09-15): `esc` cierra el modal u overlay de mas arriba, uno por toque, tambien escribiendo en un
 // campo. cerrar con esc = cerrar/basta sin mandar: no sube votos, no marca nada y no se reabre solo en esta carga
@@ -8989,8 +9145,9 @@ capaRegistrar({nombre: "visor", el: "visor", z: 60, abierta: function(){ return 
                cerrar: function(){ document.getElementById("visor").__cerrar(); }});   // 1652: cierra con zoom tambien
 capaRegistrar({nombre: "seleccion", el: "selmodal", cerrar: function(){ selCerrar(); }});
 $("selsub").addEventListener("click", function(){ lisToggle(); });   // 1879 {listas}: `votar` <-> `listas`
-// 1801: el dropdown de los tres procesos, arriba de todo lo pegado (z 43) y cerrado por `esc` como cualquier capa
-capaRegistrar({nombre: "votmenu", el: "votmenu", z: 43, abierta: function(){ return !!votMenuAbierto; },
+// 1922 {vistatinder}: el `home` de la vista `tinder`. gana sobre `selmodal` (41) en la pila, asi que `esc` en una
+// tarjeta vuelve al `home` (capa `seleccion`) y `esc` en el `home` sale de la vista entera
+capaRegistrar({nombre: "votmenu", el: "votmenu", z: 43, abierta: votMenuAbierto,
   cerrar: function(){ votMenuCerrar(); }});
 capaRegistrar({nombre: "animmenu", el: "animmenu", cerrar: function(){
   $("amtxt").value = "";
@@ -9006,8 +9163,9 @@ capaRegistrar({nombre: "modal", el: "modal", abierta: function(){ return !!modal
 capaRegistrar({nombre: "notimodal", el: "notimodal", abierta: function(){ return !!notiPush; }, cerrar: function(){ cerrarNotiPush(); }});
 capaRegistrar({nombre: "dd", el: "dd", cerrar: function(){ cerrarDd(); }});
 // 1875: las vistas enteras son la capa mas baja: cualquier modal abierto gana y `esc` las saca recien al final
+// 1922: `esc` adentro de un episodio vuelve al `home` del podcast; desde el `home` sale de la vista
 capaRegistrar({nombre: "vista-podcast", el: "vista-podcast", z: 1, abierta: function(){ return vistaEs("podcast"); },
-               cerrar: function(){ vistaVolver(); }});
+               cerrar: function(){ if(pod.ep) podAbrirEp(null); else vistaVolver(); }});
 function escTope(){
   var c = capaTope();
   if(!c) return null;
@@ -9197,7 +9355,16 @@ window.__agente = {
   lisDatos: function(d){ if(d){ lis.datos = d; lis.ts = Date.now(); } return lis.datos; },
   // 1801: el dropdown de los tres procesos y la fila de botones de cada uno
   votItems: votItems, votMenuAbrir: votMenuAbrir, votMenuCerrar: votMenuCerrar, votMenuElegir: votMenuElegir,
-  votMenuAbierto: function(){ return !!votMenuAbierto; }, tjProcQs: tjProcQs, TJ_PROCS: TJ_PROCS,
+  votMenuAbierto: votMenuAbierto, tinderHome: tinderHome, tjProcQs: tjProcQs, TJ_PROCS: TJ_PROCS,
+  // 1922 {vistatinder}: las tres sub-vistas de `tinder` y las dos de `podcast`
+  tinderSub: function(){ return vistaEs("tinder") ? lis.sub : null; },
+  podVista: function(){ return {ep: pod.ep, eps: podEps().length,
+    cajas: [].map.call(document.querySelectorAll("#podvista [data-ep]"), function(b){ return b.getAttribute("data-ep"); }),
+    titulo: $("podtitulo").textContent, cuenta: $("podcuenta").textContent,
+    back: !$("podback").classList.contains("oculta"),
+    players: [].map.call(document.querySelectorAll("#podvista .play"), function(b){ return b.getAttribute("data-voz"); }),
+    nativo: document.querySelectorAll("#podvista audio").length}; },
+  podAbrirEp: podAbrirEp, podHomePoner: function(){ pod.ep = null; return podVistaPintar(); },
   tjBotones: function(col){ return tjBotones({coleccion: col}); },
   // 1883: el glifo de `bajar` / `subir` ya no es texto sino un svg (en el iphone la fuente no lo dibujaba), asi que
   // `glifo` dice la FORMA del boton (`↓` / `↑` para el svg, el caracter tal cual para los ascii) y `frase` la linea

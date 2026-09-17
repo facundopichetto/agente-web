@@ -58,8 +58,11 @@
     var cuerpo = filas.length ? '<div class="qtab" style="grid-template-columns:' + esc(B.gridFr(cols)) + '">' +
                                 qCabecera() + filas.join("") + "</div>"
                : (a.pausa ? '<span class="r b">PAUSA</span>' : vacio("nada en la cola"));
-    // dato esencial, corto para que entre en el celu: la cuenta, cuantas corren (verde) y +las que esperan
-    var ese = '<span class="c b">' + esc(a.cuenta || "?") + "</span> " +
+    // dato esencial, corto para que entre en el celu: la cuenta, cuantas corren (verde) y +las que esperan.
+    // 1915 {widgets}: la cuenta la manda el server ya resuelta (`cuenta_cola`): la que de verdad puede tomar
+    // trabajo, o `sin cuenta hasta <hora>` si ninguna puede. la web no decide nada ni arma esa hora.
+    var sinCta = !!((a.cuenta_cola || {}).sin_cuenta);
+    var ese = '<span class="' + (sinCta ? "r" : "c") + ' b">' + esc(a.cuenta || "?") + "</span> " +
               (a.pausa ? '<span class="r b">PAUSA</span>'
                        : corr.length ? '<span class="v b">' + corr.length + "</span>" : '<span class="g">idle</span>') +
               (a.pendientes ? ' <span class="qcola">+' + a.pendientes + "</span>" : "");
@@ -78,12 +81,13 @@
   var vivo = {base: null, offset: null, hash: null, etag: null, pidiendo: false, t: 0, recibidos: 0, repintados: 0,
               espera: 0, hasta: 0};
   var POLL_MS = 2000, RELOJ_MS = 1000;
-  // el mismo `h:mm:ss` de `hora.dur_col` (1843): ancho fijo, sin cero adelante en las horas
+  // el mismo texto de `hora.dur_col` (1915 {widgets}): sin ceros a la izquierda (`4:12`, `1:05:22`, `0:07`);
+  // la columna se alinea por el `text-align:right` del css, no por el ancho del texto
   function durCol(seg){
     if(seg === null || seg === undefined || isNaN(seg) || seg < 0) return "";
     seg = Math.floor(seg);
-    var h = Math.floor(seg / 3600), m = Math.floor((seg % 3600) / 60), s = seg % 60;
-    return h + ":" + (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+    var h = Math.floor(seg / 3600), m = Math.floor((seg % 3600) / 60), s = seg % 60, ss = (s < 10 ? "0" : "") + s;
+    return h ? (h + ":" + (m < 10 ? "0" : "") + m + ":" + ss) : (m + ":" + ss);
   }
   function ofs(srv){
     if(!srv) return;

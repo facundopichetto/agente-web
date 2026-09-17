@@ -30,6 +30,7 @@
                                          alCerrar: function(){ cuAbierta = null; }});
     var esActiva = activa(cu), bs = cu.barras || [];
     var estado = cu.agotada ? '<span class="r">agotada: sin creditos hasta que renueve</span>'
+               : cu.dormida ? '<span class="r">dormida: sin 5h; la semana todavia tiene lugar</span>'
                : esActiva ? '<span class="v">es la cuenta que usa el agente ahora</span>'
                : '<span class="g">no es la cuenta activa</span>';
     var html = '<div class="cmod">' + estado +
@@ -115,7 +116,9 @@
           return barraHtml(b || {nombre: k[1], pct: null, linea: null, nivel: "sin"});
         }).join("");
       }
-      return '<div class="ucol' + (cu.elegida ? " elegida" : "") + (sinlim ? " sinlim" : "") + (cu.agotada ? " agotada" : "") + '">' +
+      // 1915 {widgets}: `dormida` = sin 5h pero con lugar en la semana: misma opacidad que la agotada, la 5h en rojo
+      return '<div class="ucol' + (cu.elegida ? " elegida" : "") + (sinlim ? " sinlim" : "") +
+        (cu.agotada ? " agotada" : "") + (cu.dormida ? " dormida" : "") + '">' +
         cab + cuerpo + "</div>";
     });
     if(cols.length) html += '<div class="ucols">' + cols.join("") + "</div>";

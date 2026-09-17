@@ -161,6 +161,15 @@
   .accion .accdale{min-width:74px}
   .accion .accdale.hecho{opacity:.45;border-color:var(--gris);color:var(--gris)}
   .bverde.llena.rojo:active{background:var(--rojo)}
+  /* 1922 {vistatinder}: caja tocable de una fila (el `home` del votador y el del podcast). borde fino, texto a la
+     izquierda, 44 px de alto: lo que es tocable tiene que parecerlo (1808) sin gritar como un boton verde lleno */
+  .bcaja{display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;min-height:44px;padding:8px 10px;
+    background:none;color:var(--blanco);border:1px solid var(--linea);border-radius:4px;
+    font:inherit;font-size:var(--texto-max);text-align:left;cursor:pointer;touch-action:manipulation;
+    -webkit-appearance:none;appearance:none;-webkit-text-fill-color:currentColor;-webkit-tap-highlight-color:transparent}
+  .bcaja:active{opacity:.6}
+  .bcaja[disabled],.bcaja.apagado{color:var(--gris);cursor:default;opacity:.75}
+  .bcaja[disabled]:active,.bcaja.apagado:active{opacity:.75}
   /* decision no va / queda (1556, 1561): solo el glifo, sin borde ni caja, 38 px tocables, el nombre en aria-label */
   .bglifo{min-height:38px;padding:5px 9px;background:none;border:0;font:inherit;font-size:var(--texto-max);font-weight:bold;
     line-height:1;cursor:pointer;touch-action:manipulation}
@@ -329,6 +338,8 @@
   #selback{flex:0 0 auto;margin-right:2px;padding:5px 7px;min-width:38px;min-height:38px}   /* 38 px tocables, como los votos */
   #selacciones{display:flex;flex-wrap:wrap;gap:6px}
   #selacciones.oculta,#selmodal #seltxt.oculta{display:none!important}
+  /* 1922 {vistatinder}: en el `home` de la vista no hay tarjeta que deshacer ni texto que enviar */
+  #selback.oculta,#selmodal .selpie.oculta,#podback.oculta{display:none!important}
   /* 1841 (facundo, 2026-09-17: "esos tres botones son muy chicos, agrandalos un poquito"): los votos de la tarjeta
      pasan de 38 a 46 px de alto y el glifo se ve un 25% mas grande con `transform:scale` sobre el span `.tjglf`: el
      `font-size` sigue en el tope de 12 px de la 1541 (es un icono, no texto, y el tope computado no se toca). siguen
@@ -803,6 +814,10 @@
   .ub.n-agotada .ub-p{color:var(--rojo)}
   .usage .ucol.agotada > *:not(.cta){opacity:.8}
   .usage .ucol.agotada .cta .nom{opacity:.8}
+  /* 1915 {widgets}: DORMIDA (sin 5h pero con lugar en la semana): misma opacidad que la agotada y la barra de
+     5h completa en rojo, nunca invisible; el `to renew` (que ahi cuenta la 5h) se ve igual que en la otra */
+  .usage .ucol.dormida > *:not(.cta){opacity:.8}
+  .usage .ucol.dormida .cta .nom{opacity:.8}
   .ub.ub-oculta{visibility:hidden}
   /* el modal de una cuenta (`#cuentamodal`, molde): barras como en el widget y las renovaciones abajo */
   .cmod{white-space:pre-wrap}
@@ -921,24 +936,22 @@
   #notis .luz.amarillo,#nlista .luz.amarillo,#campana .badge.amarillo{background:var(--amarillo)}
   #notis .luz.verde,#nlista .luz.verde,#campana .badge.verde{background:var(--verde)}
   #notis .luz.gris,#nlista .luz.gris,#campana .badge.gris{background:var(--gris)}
-  /* 1801: el dropdown del fueguito `votar`, con los tres procesos del votador. molde del desplegable de la campana
-     (menu pegado a lo tocado, no un modal): fondo negro, sin borde de color, esc lo cierra por la pila de capas */
-  #votfondo{position:fixed;inset:0;z-index:42}
-  #votfondo.oculta,#votmenu.oculta{display:none}
-  /* 1829: el fueguito vive ahora al lado de la campana, asi que el menu cae desde la derecha como `#nlista` */
-  #votmenu{position:fixed;z-index:43;top:44px;right:8px;width:min(300px,calc(100vw - 16px));
-    background:#000;border:1px solid transparent;border-radius:5px;padding:4px;
-    display:flex;flex-direction:column;gap:1px;box-shadow:var(--modal-sombra)}
-  #votmenu .ntit{color:var(--gris);font-size:9px;text-transform:uppercase;letter-spacing:.06em;padding:3px 6px 4px 6px;
-    border-bottom:1px solid var(--linea);margin-bottom:2px}
-  #votmenu .vmfila{display:flex;align-items:center;gap:8px;min-height:34px;padding:0 6px;border:0;border-radius:3px;
-    background:none;color:var(--blanco);font:inherit;font-size:var(--texto-max);text-align:left;cursor:pointer;
-    -webkit-appearance:none;appearance:none;-webkit-text-fill-color:currentColor;-webkit-tap-highlight-color:transparent}
-  #votmenu .vmfila:hover{background:#0d1410}
-  #votmenu .vmfila.apagado{color:#666;color:var(--gris);cursor:default}
+  /* 1922 {vistatinder} (facundo, 2026-09-17): "el dropdown es lo que se ve a pantalla completa en la vista tinder".
+     lo que hasta la 1801 era un menu flotante pegado al fueguito es ahora el `home` de la vista `tinder`: vive
+     adentro de la `.selcaja` a pantalla completa de la 1874, con su tipografia y sus espaciados, y cada proceso es
+     una caja tocable del molde (`moldeBoton` tipo `caja`). ni `position:fixed`, ni fondo aparte, ni sombra. */
+  #votmenu.oculta{display:none}
+  /* la cabecera se alinea con la columna de cajas, no con el borde de la pantalla */
+  #selmodal.pantalla.home .seltit,body.v-podcast #vista-podcast .seltit{width:100%;max-width:760px;margin:0 auto}
+  #votmenu{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    display:flex;flex-direction:column;gap:6px;width:100%;max-width:760px;margin:0 auto}
+  #votmenu .ntit{color:var(--gris);font-size:9px;text-transform:uppercase;letter-spacing:.06em;padding:0 0 2px 0}
+  #votmenu .vmfila{display:flex;align-items:center;gap:8px}
+  #votmenu .vmfila.apagado{color:var(--gris);border-color:var(--linea);cursor:default}
   #votmenu .vmnom{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   #votmenu .vmbadge{flex:0 0 auto;min-width:16px;padding:0 5px;border-radius:8px;background:var(--cian);color:#000;
     font-size:9.5px;line-height:16px;text-align:center}
+  #votmenu .vmfila.apagado .vmbadge{background:var(--gris)}
   #votmenu .vmbadge.oculta{display:none}
 
   /* el desplegable de la campana: solo las no leidas, la mas nueva arriba */
@@ -996,13 +1009,29 @@
      el molde no cambia (`.capa` + `.mcaja`, `esc` cierra por la pila) y los dos bloques son los de la 1874. */
   body.v-tinder #selmodal.pantalla{position:static;inset:auto;flex:1 1 auto;min-height:0;
     background:var(--fondo-chat);padding:0;z-index:auto}
-  /* el podcast: la cuarta vista, con lo que ya arma su widget a pantalla completa */
+  /* 1922 {vistatinder}: el podcast es una vista de verdad, con la MISMA estructura y el mismo diseño que el
+     tinder (facundo: "NO ME PONGAS EL WIDGET DE MIERDA, HACEME UNA VISTA PARA EL PODCAST, POR AHORA IGUAL A LA
+     OTRA PERO CON EL DISENIO DE ESTO"): la misma `.selcaja`, la misma cabecera con el `←`, el `home` con los
+     episodios como cajas tocables y el detalle de uno adentro de la misma vista. */
   #vista-podcast{display:none}
-  body.v-podcast #vista-podcast{display:block;flex:1 1 auto;min-height:0;overflow-y:auto;
-    -webkit-overflow-scrolling:touch;background:var(--fondo-panel);
-    padding:8px 10px calc(14px + env(safe-area-inset-bottom)) 10px}
-  body.v-podcast #vista-podcast .caja{margin:0}
-  body.v-podcast #vista-podcast button[data-pod]{display:none}   /* en la vista no se pliega: ya esta abierta */
+  body.v-podcast #vista-podcast{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;
+    background:var(--fondo-chat);padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom) 0}
+  body.v-podcast #vista-podcast .selcaja{max-width:none;width:100%;flex:1 1 auto;min-height:0;
+    box-sizing:border-box;display:flex;flex-direction:column;gap:6px;padding:8px 10px;
+    border-radius:0;box-shadow:none}
+  #podvista{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    display:flex;flex-direction:column;gap:6px;width:100%;max-width:760px;margin:0 auto}
+  #podvista .podnom{flex:1 1 auto;min-width:0;color:var(--blanco);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #podvista .poddet{flex:0 0 auto;color:var(--gris);font-size:11px}
+  #podvista .podpausa{color:var(--amarillo,#d8b25a);font-size:11.5px}
+  #podvista .podvacio{color:var(--gris);font-size:11.5px}
+  #podvista .podweb{align-self:flex-start;color:var(--verde);font-size:11.5px;text-decoration:none;margin-top:2px}
+  /* una fila por voz: el `[\25b6]` de texto de la 1650, el nombre, la duracion y el link. nada de controles nativos */
+  #podvista .podvoz{display:flex;align-items:center;gap:8px;min-height:38px;
+    border:1px solid var(--linea);border-radius:4px;padding:6px 8px}
+  #podvista .podvoz .podnom{flex:0 0 auto}
+  #podvista .podvoz .dur{flex:1 1 auto;min-width:0;color:var(--gris);font-size:11px}
+  #podvista .podbajar{flex:0 0 auto;color:var(--verde);font-size:11px;text-decoration:none}
   body.sinlogin #vista-podcast{display:none!important}
   /* vista mobile: una vista a la vez, la elige la barra de arriba. puro css, sin js de layout.
      entra cuando la ventana es angosta (celu) O cuando es mas alta que ancha (facundo, 2026-09-11:
