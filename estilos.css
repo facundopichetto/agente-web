@@ -872,6 +872,18 @@
   .qtab .qth.qtiempo{white-space:normal;line-height:1.15;align-self:end;padding-bottom:2px}
   .qtab .qnom{min-width:0;overflow:hidden;text-overflow:ellipsis}
   .qtab .qcel{text-align:right;font-variant-numeric:tabular-nums}
+  /* 1929 {colaig}: la tabla de la cola de instagram del widget `igcola`: cinco columnas (que, quien, pedido,
+     sale, estado) con las mismas reglas que `.qtab` (el ancho lo pone `B.gridFr`, `qué` y `quién` son las unicas
+     que se achican con `…`, las horas no se parten); en 390 px entra sin scroll horizontal */
+  .igtab{display:grid;width:100%;column-gap:4px;row-gap:1px;white-space:nowrap;font-size:9.5px;line-height:1.6;max-width:100%}
+  .igtab .qth{color:var(--gris);font-size:9px;letter-spacing:.3px;opacity:.75}
+  .igtab .qnom,.igtab .ignom{min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .igtab .qcel{text-align:right;font-variant-numeric:tabular-nums}
+  .igtab .igest{text-align:right}
+  /* lo que todavia no salio se lee entero; lo que ya paso queda atras, apagado (el gris de `.qpaso`) */
+  .igtab .qpaso{opacity:.55} .igtab .qcorre{color:#8fcf7f} .igtab .qfren{color:var(--rojo)}
+  .igpie{font-size:9.5px;margin-top:3px}
+  @media (max-width:430px){ .igtab{font-size:9px;column-gap:3px} }
   /* 1832: la escalera de modelos del widget `models`: grid de 7 columnas, entra en el celu sin scroll horizontal */
   .esctab{display:grid;grid-template-columns:minmax(0,8fr) 3fr 12fr 3fr 3fr 6fr 8fr;width:100%;column-gap:6px;row-gap:1px;
           font-variant-numeric:tabular-nums;max-width:100%;overflow:hidden;white-space:nowrap}   /* 1843: `fr`, ver .qtab */
@@ -978,13 +990,14 @@
   #nlista .ntodas{background:none;border:0;border-top:1px solid var(--linea);margin-top:2px;color:var(--cian);font:inherit;
     font-size:10px;padding:6px;text-align:left;cursor:pointer}
   #nlista .nvacio{color:var(--gris);padding:8px 6px;font-size:10.5px}
-  /* 1829 (facundo, 2026-09-17): chat | widgets a la izquierda, pegado a los nodos, y el grupo de iconos
-     (fueguito, campana, tipito, en ese orden) a la derecha: `margin-right:auto` empuja todo lo que sigue.
-     en desktop `#vistas` no se pinta y `#nodos` (flex 1) sigue empujando los iconos a la derecha. */
-  #vistas{gap:6px;flex:0 0 auto;margin-right:auto}   /* 1875: se pinta siempre; el boton de la vista activa se esconde solo */
-  /* chat | widgets sin borde; el que no esta activo en blanco (facundo, 2026-09-14, 1288) */
-  #vistas button{border-color:transparent;color:var(--blanco)}
-  #vistas button.on{color:var(--verde)}
+  /* 1829 (facundo, 2026-09-17): el grupo de iconos (fueguito, campana, tipito, en ese orden) contra el borde
+     derecho; lo empuja `#nodos` (flex 1), y sin nodos pintados la cabecera ya alinea al final. */
+  /* 1929 {barra} (facundo, 2026-09-17): `chat` y `widgets` dejaron de ser botones con texto (`.bb`): son dos iconos
+     svg del mismo molde `.ib` que el fueguito, el podcast, la campana y el tipito, y viven a la DERECHA de la barra,
+     a la izquierda del fueguito. `#vistas` deja de ser una caja (`display:contents`): no empuja mas (lo empuja
+     `#nodos`) y los dos iconos son items de la cabecera, con su mismo `gap` que los otros cuatro. */
+  #vistas{display:contents}   /* los dos iconos son items de la cabecera: mismo gap que los otros cuatro, y el que no
+                                 se pinta no deja hueco (en la compu no se pinta ninguno de los dos) */
   /* 1407/1567: `votar` a la izquierda de chat, solo con algo para votar en este dispositivo; 1794: paso a ser el
      fueguito `.ib` (reglas arriba, junto al badge) */
   body.sinlogin #cabecera,body.sinlogin #cuerpo{display:none}
@@ -1002,6 +1015,9 @@
      de las dos puesta se esconden los dos botones, y la cabecera queda igual que antes de la 1875 */
   body.v-chat #ver-chat,body.v-chat #ver-widgets,
   body.v-widgets #ver-chat,body.v-widgets #ver-widgets{display:none}
+  /* 1929: en la compu `chat` y `widgets` son UNA sola vista, asi que el unico icono es el de `chat` (y estando en
+     ella tampoco se ve): el de `widgets` no se pinta nunca aca. en mobile son dos sub-vistas y vuelve (abajo). */
+  #ver-widgets{display:none}
   body.v-podcast #ver-podcast{display:none}
   #vistas button.oculta,#cabecera .ib.oculta{display:none!important}
   /* el votador deja de ser un modal encima del chat: es un hermano de `#cuerpo` que ocupa lo que queda abajo de la
@@ -1045,9 +1061,9 @@
     #mcuerpo textarea.nresp{font-size:var(--texto-max)}   /* ios no zoomea al enfocar */
     /* 1829: en celu los nodos ocupan solo lo suyo (no empujan) para que chat | widgets quede contra el borde
        izquierdo; sin nodos pintados, la caja no deja ni el gap */
-    #nodos{gap:10px;flex:0 1 auto}
+    /* 1929: los nodos empujan (los iconos quedan contra el borde derecho); sin nodos pintados no dejan ni el gap */
+    #nodos{gap:10px;flex:1 1 auto}
     #nodos:empty{display:none}
-    #vistas{gap:5px}
     #cabecera{gap:6px}
     /* dedo: campana, persona, filas de la campana y el menu de persona con 40px (1166) */
     .ib{width:36px;height:40px;margin:-4px 0}
@@ -1067,6 +1083,9 @@
        (en desktop las dos conviven y los dos botones se esconden: las reglas de arriba) */
     body:not(.v-chat) #panel-chat{display:none}
     body:not(.v-widgets) #panel-widgets{display:none}
+    /* 1929: en mobile son dos sub-vistas del mismo lugar. el icono es siempre A DONDE VAS: en `chat` se ve el de
+       `widgets`, en `widgets` el de `chat`, y en `tinder` o `podcast` (ninguna de las dos activa) se ven los DOS. */
+    #ver-widgets{display:inline-flex}
     body.v-chat #ver-widgets,body.v-widgets #ver-chat{display:inline-flex}
     /* ios zoomea al enfocar un input de menos de 16px: lo frena maximum-scale=1 en el
        viewport, asi que el input del chat va chico como el resto del chat. los de login

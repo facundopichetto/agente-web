@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.349">
-<link rel="manifest" href="manifest.json?v=4.349">
+<meta name="agente-web-version" content="4.350">
+<link rel="manifest" href="manifest.json?v=4.350">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,15 +27,15 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.349">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.350">
 </head>
 <body>
 
 <div id="cabecera" title="el board habla por: buzón">
   <div id="nodos"></div>
   <div id="vistas">
-    <button id="ver-chat" class="bb on" type="button">chat</button>
-    <button id="ver-widgets" class="bb" type="button">widgets</button>
+    <button id="ver-chat" class="ib" type="button" title="chat" aria-label="chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5h16v10.5H8.5L4 20z"/><path d="M8 9.5h8"/><path d="M8 12.5h5"/></svg></button>
+    <button id="ver-widgets" class="ib" type="button" title="widgets" aria-label="widgets"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg></button>
   </div>
   <button id="ver-votar" class="ib bglifo oculta" type="button" title="votar" aria-label="votar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22c-4 0-7-2.8-7-6.5 0-2.6 1.4-4.6 2.8-6.3.3 1.3 1 2.3 2 2.9-.3-3 .9-6.2 4.2-8.1-.2 2.6.9 4.2 2.4 5.7 1.5 1.6 2.6 3.3 2.6 5.8 0 3.7-3 6.5-7 6.5z"/><path d="M12 22c-1.7 0-3-1.3-3-3 0-1.4.8-2.4 1.6-3.3.5.9 1.1 1.4 1.9 1.7.8-.5 1.2-1.3 1.3-2.2.8 1.1 1.2 2.2 1.2 3.8 0 1.7-1.3 3-3 3z"/></svg></button>
     <button id="ver-podcast" class="ib" type="button" title="podcast" aria-label="podcast"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v4"/></svg></button>
@@ -713,6 +713,7 @@ var WSETS = {
                 {k: "por_fuente", et: "cu\u00e1ntas por fuente", tipo: "opciones", def: 2, ops: [1, 2, 3]},
                 {k: "solo_nuevos", et: "solo lo nuevo", tipo: "bool", def: false},
                 {k: "falta_login", et: "avisar que fuente falta", tipo: "bool", def: true}],
+  igcola:      [{k: "hechas", et: "mostrar las que ya salieron", tipo: "bool", def: true}],
   verificaciones: [], decided: [], sombra: []
 };
 var WSETS_COMUNES = [{k: "plegado", et: "plegado por default", tipo: "bool", def: false},
@@ -7370,6 +7371,9 @@ function cajaReglas(p){
   return caja("reglas", extra, limFilas("reglas", filas).join("\n") + "\n" + pie, false, "reglas");
 }
 
+// widget `igcola` (1929 {colaig}): vive en `web/widgets/igcola.js` y pide `igcola.json` por la lan cada 2 s
+// (`recetas/ig_cola_fresca.py`), como `agent` con `cola.json`: los follows y unfollows programados, con la hora
+// a la que la franja los deja salir, el tope del dia y cuanto falta para el proximo.
 // widget `seguidores`: se fue a `web/widgets/seguidores.js` (1915 {widgets}), que ademas pide su
 // numero fresco por la lan (`seguidores.json`, `recetas/ig_contador.py`), como `agent` con `cola.json`.
 
@@ -7726,7 +7730,7 @@ document.addEventListener("keydown", function(e){
 // de un widget ya migrado, se vuelve a cargar ese archivo y se repinta ESA caja (`repintarMod`), sin tocar el
 // chat, su scroll ni lo que este tipeado. si cambio el shell (o algo que no se sabe repintar), el reload de
 // siempre. un modulo no ve el adentro del shell: solo esto.
-var MODULOS = ["usage", "agent", "sombra", "seguidores"];   // widgets migrados, en `web/widgets/<clave>.js` (1832: `models` = clave `sombra`)
+var MODULOS = ["usage", "agent", "sombra", "seguidores", "igcola"];   // widgets migrados, en `web/widgets/<clave>.js` (1832: `models` = clave `sombra`)
 var MOD_DATOS = {usage: "usage", agent: "agente"};   // de que campo de `widgets.json` come cada uno
 var mods = {}, modsVer = {}, modsTimers = {}, modsError = {}, modCargando = null, modsCargas = 0;
 var visibleForzada = false;   // 1849: las pruebas headless corren con `document.hidden` y fuerzan `B.visible()`
@@ -7900,6 +7904,7 @@ function pintarWidgets(d, err){
     ["que_ver", cajaQueVer(d.que_ver || {})],
     ["salud_personal", d.salud_personal ? cajaSaludPersonal(d.salud_personal) : ""],
     ["seguidores", d.seguidores ? modHtml("seguidores") : ""],
+    ["igcola", d.igcola ? modHtml("igcola") : ""],
     ["reglas", d.reglas ? cajaReglas(d.reglas) : ""]
   ];
   var mapa = {}, hay = [];
@@ -8992,7 +8997,12 @@ document.addEventListener("scroll", function(){ if(menuAbierto) cerrarMenu(); },
 var VISTAS_TODAS = ["chat", "widgets", "tinder", "podcast"];
 var VISTA_SOLAS = ["tinder", "podcast"];       // ocupan la pantalla entera, nunca conviven con otra
 var VISTA_LS = "agente_vista";
-var vistaOn = "chat", vistaPrevia = null, vistaAnclas = {};
+// 1929 {barra} (facundo, 2026-09-17): "lo que vos tenes que guardar es, en el caso de que yo me haya ido de la vista
+// de chat, lo que sea que este viendo de las dos opciones en el celular; y si es en el desktop queda por default chat".
+// `vistaDoble` es cual de las dos (`chat` | `widgets`) estabas viendo: se guarda por pestaña y es a la que se vuelve
+// al salir de `tinder` o de `podcast`, tambien despues de un reload.
+var VISTA_DOBLE_LS = "agente_vista_doble";
+var vistaOn = "chat", vistaPrevia = null, vistaAnclas = {}, vistaDoble = "chat";
 function vistaNorm(n){ return VISTAS_TODAS.indexOf(n) >= 0 ? n : "chat"; }
 // lo que se esta viendo de verdad: en desktop `chat` y `widgets` son la misma vista doble
 function vistaSet(){
@@ -9000,13 +9010,18 @@ function vistaSet(){
   return esVistaMobile() ? [vistaOn] : ["chat", "widgets"];
 }
 function vistaEs(n){ return vistaSet().indexOf(n) >= 0; }
-function vistaGuardar(){ try{ sessionStorage.setItem(VISTA_LS, vistaOn); }catch(x){} }
+function vistaEsDoble(n){ return n === "chat" || n === "widgets"; }
+function vistaGuardar(){
+  try{
+    sessionStorage.setItem(VISTA_LS, vistaOn);
+    sessionStorage.setItem(VISTA_DOBLE_LS, vistaDoble);
+  }catch(x){}
+}
 function vistaPintar(){
   VISTAS_TODAS.forEach(function(n){ document.body.classList.toggle("v-" + n, vistaOn === n); });
   // compat: la vuelta del modal de la campana venia mirando `ver-widgets`
   document.body.classList.toggle("ver-widgets", vistaOn === "widgets");
-  $("ver-chat").classList.toggle("on", vistaOn === "chat");
-  $("ver-widgets").classList.toggle("on", vistaOn === "widgets");
+  // 1929: el icono de la vista activa no se pinta, asi que ninguno de los dos lleva nunca el verde de `.on`
   // el fueguito es el icono de la vista `tinder` y lo esconde `selBoton` (que ademas cuenta lo que hay para votar);
   // los otros tres los esconde el css. esto nunca puede voltear el pintado de las vistas.
   try{ selBoton(); }catch(x){}
@@ -9018,6 +9033,7 @@ function vistaPoner(n){
   if(vistaEs("chat")) vistaAnclas.chat = anclaUlt || anclaMedir();
   vistaPrevia = vistaOn;
   vistaOn = n;
+  if(vistaEsDoble(n)) vistaDoble = n;   // 1929: a esta se vuelve al salir del tinder o del podcast
   vistaGuardar();
   // 1922 {vistatinder}: dejar la vista `tinder` por la barra cierra su caja; al volver arranca en `home`
   if(vistaPrevia === "tinder" && n !== "tinder") tinderSalir();
@@ -9036,14 +9052,16 @@ function vistaPoner(n){
 }
 // salir de una vista sola (`esc` en el tinder o en el podcast): vuelve a la que estaba antes
 function vistaVolver(){
-  var v = vistaPrevia && VISTA_SOLAS.indexOf(vistaPrevia) < 0 ? vistaPrevia : "chat";
-  return vistaPoner(v);
+  // 1929: vuelve a la que estabas viendo de las dos (guardada por pestaña), no siempre a `chat`
+  var v = vistaPrevia && VISTA_SOLAS.indexOf(vistaPrevia) < 0 ? vistaPrevia : vistaDoble;
+  return vistaPoner(vistaEsDoble(v) ? v : vistaDoble);
 }
 // al arrancar: lo guardado en la pestaña, menos `tinder` (necesita una votacion abierta, no se restaura sola)
 function vistaInicial(){
-  var v = null;
-  try{ v = sessionStorage.getItem(VISTA_LS); }catch(x){}
-  return v && v !== "tinder" ? vistaNorm(v) : "chat";
+  var v = null, d = null;
+  try{ v = sessionStorage.getItem(VISTA_LS); d = sessionStorage.getItem(VISTA_DOBLE_LS); }catch(x){}
+  vistaDoble = vistaEsDoble(d) ? d : "chat";   // 1929: cual de las dos estabas viendo en esta pestaña
+  return v && v !== "tinder" ? vistaNorm(v) : vistaDoble;
 }
 // compat con lo de antes (`verPanel` / `verWidgets` los siguen llamando las pruebas y el modal de la campana)
 function verPanel(cual){ return vistaPoner(cual === "widgets" ? "widgets" : "chat"); }
@@ -9515,7 +9533,7 @@ window.__agente = {
   vistaPoner: vistaPoner, vistaVolver: vistaVolver, vistaSet: vistaSet, podVistaPintar: podVistaPintar,
   vistaEstado: function(){
     var vis = function(id){ var e = document.getElementById(id); return !!e && e.getBoundingClientRect().width > 0; };
-    return {on: vistaSet(), elegida: vistaOn, previa: vistaPrevia, mobile: esVistaMobile(),
+    return {on: vistaSet(), elegida: vistaOn, previa: vistaPrevia, mobile: esVistaMobile(), doble: vistaDoble,
             clases: VISTAS_TODAS.filter(function(n){ return document.body.classList.contains("v-" + n); }),
             iconos: {chat: vis("ver-chat"), widgets: vis("ver-widgets"), tinder: vis("ver-votar"), podcast: vis("ver-podcast")},
             paneles: {chat: vis("panel-chat"), widgets: vis("panel-widgets"), tinder: vis("selmodal"), podcast: vis("vista-podcast")},
