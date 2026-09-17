@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.323">
-<link rel="manifest" href="manifest.json?v=4.323">
+<meta name="agente-web-version" content="4.324">
+<link rel="manifest" href="manifest.json?v=4.324">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -31,10 +31,9 @@
 </head>
 <body>
 
-<div id="cabecera">
+<div id="cabecera" title="el board habla por: buzón">
   <div id="nodos"></div>
-  <span id="via" class="via buzon" title="el board habla por: buzón">buzón</span>
-  <button id="ver-votar" class="bb oculta" type="button" title="hay una votación abierta">votar</button>
+  <button id="ver-votar" class="ib bglifo oculta" type="button" title="votar" aria-label="votar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22c-4 0-7-2.8-7-6.5 0-2.6 1.4-4.6 2.8-6.3.3 1.3 1 2.3 2 2.9-.3-3 .9-6.2 4.2-8.1-.2 2.6.9 4.2 2.4 5.7 1.5 1.6 2.6 3.3 2.6 5.8 0 3.7-3 6.5-7 6.5z"/><path d="M12 22c-1.7 0-3-1.3-3-3 0-1.4.8-2.4 1.6-3.3.5.9 1.1 1.4 1.9 1.7.8-.5 1.2-1.3 1.3-2.2.8 1.1 1.2 2.2 1.2 3.8 0 1.7-1.3 3-3 3z"/></svg><span id="vbadge" class="badge oculta"></span></button>
   <div id="vistas">
     <button id="ver-chat" class="bb on" type="button">chat</button>
     <button id="ver-widgets" class="bb" type="button">widgets</button>
@@ -2643,14 +2642,12 @@ function lanAnuncio(d){
 // por donde habla el board (lan primero). desde la 1166 no hay cartel en el header: lo dice el menu del nodo
 // server ("habla por: ..."), y si ese menu esta abierto se repinta con el camino nuevo.
 function viaTexto(){ return lan.base ? lan.via + (lan.sinGithub ? " (sin github)" : "") : "buzón"; }
-// cartel chico en el header (1668: facundo pidio ver por donde habla el board): `lan` / `tailscale` / `nube` / `buzón`
+// 1794 (facundo, 2026-09-16: "no lo quiero ver"): el cartel `#via` (1668: `lan` / `nube` / `buzón`) ya no se pinta en
+// la cabecera. la deteccion de la via sigue igual (la usan `chat_lan.respaldo_github` y el menu del nodo server):
+// queda en `window.__agente.lan().texto` y en el `title` de la cabecera, solo para debug.
 function pintarVia(){
-  var v = $("via");
-  if(v){
-    v.textContent = viaTexto();
-    v.className = "via " + (lan.base ? (lan.via === "nube" ? "nube" : "lan") : "buzon");
-    v.title = "el board habla por: " + viaTexto();
-  }
+  var cab = $("cabecera");
+  if(cab) cab.title = "el board habla por: " + viaTexto();
   if(modalAbierto && modalAbierto.nodoId === "server" && modalAbierto.reabrir) modalAbierto.reabrir();
 }
 function lanPoner(x){
@@ -3799,7 +3796,7 @@ function filaFaltan(e){
 function filaSumar(e, soloSacar){
   var a = sel.actual;
   if(!a || !a.continua) return false;
-  var v = filaVotadas(a.coleccion), vivas = {}, cur = tjActual(), fall = sel.tjFallidas || [];
+  var v = filaVotadas(a.coleccion), vivas = {}, cur = tjActual(), fall = sel.tjFallidas || [], antesAg = a.agotada;
   (e.candidatas || []).forEach(function(c){ vivas[c.id] = true; });
   var hechas = a.candidatas.slice(0, sel.tj);
   var resto = a.candidatas.slice(sel.tj).filter(function(c){ return vivas[c.id] && !v[c.id]; });
@@ -3811,11 +3808,61 @@ function filaSumar(e, soloSacar){
     });
     a.pendientes = e.pendientes;
     a.mas = typeof e.pendientes === "number" && e.pendientes > (e.candidatas || []).length;
+    if(typeof e.agotada === "boolean") a.agotada = e.agotada;   // 1794: lo dice el server, nunca se infiere
+    if(e.resumen) a.resumen = e.resumen;
   }
+  var agAntes = !!antesAg;
   a.candidatas = hechas.concat(resto);
+  if(a.candidatas.length > sel.tj) a.agotada = false;   // 1794: entro algo: la sesion sigue
   var nuevo = tjActual();
-  if(!cur || !nuevo || cur.id !== nuevo.id) tjPintar(); else tjContar();
+  if(!cur || !nuevo || cur.id !== nuevo.id || agAntes !== !!a.agotada) tjPintar(); else tjContar();
   return true;
+}
+// 1794: el resumen de la sesion de voto continuo (un solo `votaste N` por sesion, el mismo que deja flaudio en el
+// chat). con el texto del server se usa ese (sin el `[tema]`); si no, lo que se voto en esta pagina.
+function tjResumen(e){
+  if(e && e.resumen) return String(e.resumen).replace(/^\[[^\]]*\]\s*/, "");
+  var c = {ignorar: 0, maybe: 0, queda: 0}, hs = tjHist(e);
+  hs.forEach(function(h){ if(c.hasOwnProperty(h.q)) c[h.q]++; });
+  return "votaste " + hs.length + ": " + c.queda + " quedan (interesan), " + c.maybe + " maybe, " + c.ignorar + " no van";
+}
+// 1794: el estado de UNA fila por lan (`GET /seleccion/<col>`): trae `agotada` y el lote que `ejecutar` repuso
+// (`ig_ritmo.repone`: la web no inventa ningun numero, pide y pinta lo que el server ya armo)
+var SEL_PEDIR_MS = 2500, selPedirT = null;
+function selPedir(col){
+  return votLan().then(function(base){
+    if(!base) return false;
+    return lanFetch(selUrl(base, col), {method: "GET", cache: "no-store", headers: {"authorization": "Bearer " + token}})
+      .then(function(r){ if(!r || !r.ok) throw new Error("http " + (r && r.status)); return r.json(); })
+      .then(function(j){ return filaAplicar(col, j); });
+  }).catch(function(){ return false; });
+}
+function filaAplicar(col, j){
+  if(!j || j.coleccion !== col) return false;
+  var i = -1;
+  sel.abiertas.forEach(function(a, k){ if(a.coleccion === col) i = k; });
+  if(j.abierta){ if(i >= 0) sel.abiertas[i] = j; else sel.abiertas.push(j); }
+  else if(i >= 0) sel.abiertas.splice(i, 1);
+  var ok = sel.actual && sel.actual.coleccion === col && sel.actual.continua ? filaSumar(j, false) : false;
+  selBoton();
+  return ok;
+}
+// sin tarjeta a la vista y sin `agotada`: pide el lote cada SEL_PEDIR_MS hasta que entre o el server diga que no hay mas
+function selEsperar(col){
+  if(selPedirT) return;
+  selPedirT = setTimeout(function(){
+    selPedirT = null;
+    var e = sel.actual;
+    if(!e || e.coleccion !== col || tjActual() || e.agotada) return;
+    selPedir(col).then(function(hubo){ if(lan.base) selEsperar(col); });
+  }, SEL_PEDIR_MS);
+}
+// 1794: la respuesta del POST de los votos ya es el estado de la fila, y el lote que repone `ejecutar` (proceso aparte)
+// llega un par de segundos despues: se vuelve a pedir a los 2 y a los 6 s
+function selTrasSubir(col, j){
+  if(!j || !j.continua) return;
+  filaAplicar(col, j);
+  [2000, 6000].forEach(function(ms){ setTimeout(function(){ if(sel.actual && sel.actual.coleccion === col) selPedir(col); }, ms); }); 
 }
 function tjContar(){
   var e = sel.actual, c = tjActual();
@@ -3860,10 +3907,14 @@ function tjPintar(){
   bk.classList.toggle("apagado", !atras);
   bk.disabled = !atras;
   if(!c && e && e.continua){   // 1567: la fila no termina: espera a que entren mas
+    // 1794 (voto continuo): al votar la ultima de la vista el modal NO se cierra: si el server ya dijo `agotada` (no
+    // queda ninguna candidata) muestra el cierre con el resumen de la sesion; si no, espera el lote siguiente y lo
+    // pide por lan cada `SEL_PEDIR_MS` (sin lan lo trae `widgets.json`). el back `←` sigue vivo: vuelve a la anterior.
     t.removeAttribute("data-candidata");
-    var w = document.createElement("div"); w.className = "tjdet tjespera";
-    w.textContent = "no hay más por ahora: las nuevas entran solas al final";
+    var w = document.createElement("div"); w.className = "tjdet " + (e.agotada ? "tjcierre" : "tjespera");
+    w.textContent = e.agotada ? "no quedan candidatas · " + tjResumen(e) : "no hay más por ahora: las nuevas entran solas al final";
     t.appendChild(w);
+    if(!e.agotada) selEsperar(e.coleccion);
     return;
   }
   if(!c){ tjFin(); return; }
@@ -4148,6 +4199,7 @@ function selSubir(){
           body: JSON.stringify({registros: regs})
         }).then(function(r){
           if(!r || (!r.ok && r.status !== 400 && r.status !== 404)) throw new Error("http " + (r && r.status));
+          if(r.ok && typeof r.json === "function") return r.json().then(function(j){ selTrasSubir(col, j); }, function(){});
         });
         return viaLan.catch(function(){ return selBuzon(col, regs); }).then(function(){
           var ids = {};
@@ -4174,9 +4226,13 @@ function selBoton(){
   // 1567: `votar` desde 1 pendiente y oculto con 0; una fila suma sus tarjetas, una tanda cuenta como una
   // 1788: como nada se abre solo, el boton es lo unico que avisa que hay algo esperando: tambien cuenta el votador
   // de animaciones (una votacion mas) para que facundo pueda abrirlo el mismo desde el board.
-  var n = selPendientes().reduce(function(s, a){ return s + (a.continua ? filaFaltan(a) : 1); }, 0), b = $("ver-votar");
+  var n = selPendientes().reduce(function(s, a){ return s + (a.continua ? filaFaltan(a) : 1); }, 0), b = $("ver-votar"), bd = $("vbadge");
   if(votPendiente()) n += 1;
-  b.textContent = "votar" + (n > 1 ? " " + n : "");
+  // 1794 (facundo, 2026-09-16): el boton es un fueguito en outline (svg, molde `.ib` de la campana y el tipito) y el
+  // numero de pendientes va en el badge, como el de la campana
+  bd.textContent = n ? String(n) : "";
+  bd.classList.toggle("oculta", !n);
+  b.title = n ? "votar: " + n + " esperando" : "votar";
   b.classList.toggle("oculta", !n || !!sel.actual);
 }
 // 1788: SIEMPRE lo toca facundo (el boton `votar` o el push). abre la primera que no cerraste; si cerraste todas,
@@ -4223,7 +4279,10 @@ function selPoner(abiertas, fuente, auto){
   if(sel.actual){
     var fresca = sel.abiertas.filter(function(a){ return a.coleccion === sel.actual.coleccion; })[0];
     // 1567: la fila que se esta votando suma al final lo nuevo (solo con dato confirmado) y saca lo que ya no va
-    if(sel.actual.continua) filaSumar(fresca || {coleccion: sel.actual.coleccion, candidatas: [], pendientes: 0}, auto === false || !fresca);
+    if(sel.actual.continua){
+      var agot = auto !== false && !fresca && (sel.agotadas || []).indexOf(sel.actual.coleccion) >= 0;   // 1794
+      filaSumar(fresca || {coleccion: sel.actual.coleccion, candidatas: [], pendientes: 0, agotada: agot}, !agot && (auto === false || !fresca));
+    }
     else if(!fresca) selCerrar();   // la cerraron en otro lado
   }
   // 1788 (facundo, 2026-09-16: "no abras mas automaticamente el modal, tengo que yo tocar en votar"): ninguna
@@ -4252,6 +4311,7 @@ function selDesdeWidgets(j){
   }
   if(vt.anim_gustos && !lan.base) anims.gustos = animGusServer(vt.anim_gustos);   // 1453/1682
   sel.wid = vt.abiertas; sel.widFresco = fresco;
+  if(!lan.base && fresco) sel.agotadas = vt.agotadas || [];   // 1794
   return lan.base ? false : selPoner(sel.wid, "buzón", fresco);
 }
 // trae las abiertas de la lan; sin lan, las del ultimo `widgets.json` (`votaciones`, 1407)
@@ -4260,7 +4320,7 @@ function selMirar(){
     if(!base) throw new Error("sin lan");
     return lanFetch(selUrl(base), {method: "GET", cache: "no-store", headers: {"authorization": "Bearer " + token}})
       .then(function(r){ if(!r || !r.ok) throw new Error("http " + (r && r.status)); return r.json(); })
-      .then(function(j){ return selPoner((j && j.abiertas) || [], "lan"); });
+      .then(function(j){ sel.agotadas = (j && j.agotadas) || []; return selPoner((j && j.abiertas) || [], "lan"); });
   }).catch(function(){ return sel.wid ? selPoner(sel.wid, "buzón", sel.widFresco !== false) : false; });
 }
 function selArrancar(){
@@ -6326,7 +6386,7 @@ function cajaSombra(sb){
     return caja("models", "", '<span class="r">' + esc(sb.error) + "</span>", false, "sombra");
   // escala (facundo, 2026-09-14): el numero es la calidad normalizada, 100 = el mejor de esa categoria (uno solo)
   var cols = sb.cols || [], cortos = {opus:"opus", fable:"fabl", gemini:"gem", groq:"groq", openrouter:"orou",
-                                      mistral:"mist", cerebras:"cere", local:"locl", principal:"prin"};
+                                      mistral:"mist", local:"locl", principal:"prin"};
   var hist = sb.historicos || [], esHist = function(c){ return hist.indexOf(c) >= 0; };
   var filas = ['<span class="g">' + pad("categoria", 11) + cols.map(function(c){ return pad(cortos[c] || c, 4, true); }).join(" ") +
                " " + pad("veredicto", 9) + "</span>"];
@@ -8360,6 +8420,16 @@ window.__agente = {
   tjIndice: function(){ return sel.tj; },
   tjAtras: tjAtras, tjHistorial: function(){ return (sel.tjHistorial || []).map(function(h){ return h.col + ":" + h.c.id + ":" + h.q; }); },   // 1640: el back
   filaFaltan: filaFaltan, filaSumar: filaSumar, tjToqueMs: function(ms){ TJ_TOQUE_MS = ms; },   // 1567: fila continua
+  // 1794: voto continuo (`prueba_ig_embudo_tarjetas`, `prueba_web_votar`)
+  selPedir: selPedir, filaAplicar: filaAplicar, tjResumen: tjResumen, selTrasSubir: selTrasSubir,
+  selAgotadas: function(a){ sel.agotadas = a || []; },
+  tjVista: function(){ var t = $("seltarjeta"), m = $("selmodal"); return {abierto: !!sel.actual && !m.classList.contains("oculta"),
+    candidata: t.getAttribute("data-candidata"), espera: !!t.querySelector(".tjespera"), cierre: !!t.querySelector(".tjcierre"),
+    texto: t.textContent, agotada: !!(sel.actual && sel.actual.agotada)}; },
+  votarBoton: function(){ var b = $("ver-votar"), bd = $("vbadge"), cs = getComputedStyle(b), sv = b.querySelector("svg");
+    return {vis: !b.classList.contains("oculta") && b.getBoundingClientRect().width > 0, n: bd.textContent, badge: !bd.classList.contains("oculta"),
+            svg: !!sv, trazo: sv ? sv.getAttribute("stroke-width") : null, relleno: sv ? sv.getAttribute("fill") : null,
+            color: cs.color, txt: b.textContent.trim()}; },
   tjAbrir: tjAbrir, tjReintentos: function(a){ TJ_REINTENTOS = a; },   // 1524: fotos que no bajan
   tjPrecargar: tjPrecargar, tjPrecargadas: function(){ return Object.keys(tjPre); },   // 1772: precarga de las siguientes
   tjEstado: function(){ return {votos: sel.tjVotos || 0, fallidas: sel.tjFallidas || [], n: sel.actual ? sel.actual.candidatas.length : null}; },
@@ -8375,7 +8445,7 @@ window.__agente = {
   selPutStub: function(f){ selPutStub = f; },
   selEstado: function(){ return {abierto: !!sel.actual, col: sel.actual && sel.actual.coleccion, pend: selLeer("pend", []), fuente: sel.fuente,
                                  marcadas: selMarcadas(), abiertas: sel.abiertas.map(function(a){ return a.coleccion; })}; },
-  selReset: function(){ sel.actual = null; sel.abiertas = []; sel.ignorada = {}; sel.tjHistorial = []; selTs = 0;
+  selReset: function(){ sel.actual = null; sel.abiertas = []; sel.ignorada = {}; sel.tjHistorial = []; selTs = 0; sel.agotadas = [];
                         ["pend", "hechas", "fila"].forEach(function(s){ try{ localStorage.removeItem("agente_sel_" + s); }catch(x){} }); },
   selFila: function(){ return selLeer("fila", {}); },   // correccion 18:12
   animRanking: animRanking, animSpinner: animSpinner, animSinVer: animSinVer, animValida: animValida,

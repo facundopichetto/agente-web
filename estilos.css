@@ -295,6 +295,7 @@
   #seltarjeta .tjcta{color:var(--gris);font-size:var(--texto-max);margin-left:6px;word-break:break-all}
   #seltarjeta a.tjcta{color:var(--verde);text-decoration:none}   /* 1515: link al perfil, mismo verde que el `ver` de la lista */
   #seltarjeta .tjdet,#seltarjeta .tjmot{color:var(--gris);font-size:11.5px;word-break:break-word}
+  #seltarjeta .tjcierre{color:var(--amarillo)}   /* 1794: el cierre de la sesion de voto continuo (`votaste N: ...`) */
   #seltarjeta .tjmot{font-style:italic}
   /* 1642: seguidores, en comun y reacciones en una fila de texto (sin caja), la bio abajo en blanco apagado */
   #seltarjeta .tjdatos{display:flex;flex-wrap:wrap;gap:2px 10px;color:var(--cian);font-size:11.5px}
@@ -752,19 +753,22 @@
   #nodos .luz.gris{background:var(--gris)}
   /* campana y persona (facundo, 2026-09-13, orden 1166): iconos svg sin look de boton, como la barra de nodos.
      el cartel `lan / tailscale / buzón` se saco del header: vive en el menu del nodo server ("habla por"). */
-  /* cartel chico de la via (1668): texto pelado, sin borde ni fondo; verde por lan/tailscale, celeste por la nube,
-     gris por el buzon de github */
-  #via{flex:0 0 auto;font-size:10px;line-height:1;opacity:.85;letter-spacing:.02em;cursor:default;user-select:none}
-  #via.lan{color:var(--verde)} #via.nube{color:var(--cian)} #via.buzon{color:var(--gris)}
+  /* 1794 (facundo, 2026-09-16): el cartel `#via` (1668) ya no se pinta; la via queda en `window.__agente.lan()` */
   .ib{flex:0 0 auto;position:relative;background:none;border:0;padding:0;margin:0;color:var(--blanco);font-size:var(--texto-max);
     width:26px;height:24px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;
     -webkit-tap-highlight-color:transparent}
   .ib svg{width:14px;height:14px}   /* facundo 2026-09-14 (1342): un poco mas chicos */
   .ib:hover,.ib:active,.ib.on{color:var(--verde)}
-  #campana .badge{position:absolute;top:-2px;right:-2px;min-width:12px;height:12px;padding:0 3px;border-radius:6px;
+  .ib .badge{position:absolute;top:-2px;right:-2px;min-width:12px;height:12px;padding:0 3px;border-radius:6px;
     font-size:8px;line-height:12px;font-weight:600;text-align:center;color:#000;background:var(--gris);pointer-events:none}
-  #campana .badge.oculta{display:none}
-  #campana .badge.gris{color:var(--blanco)}
+  .ib .badge.oculta{display:none}
+  .ib .badge.gris{color:var(--blanco)}
+  /* 1794 (facundo, 2026-09-16): `votar` es un fueguito en outline con el molde de la campana y el tipito (`.ib`: mismo
+     trazo 1.8, mismo tamaño y blanco), y el numero de pendientes es un badge celeste como el de la campana */
+  #ver-votar{min-height:0;min-width:0;padding:0;font-weight:normal;color:var(--blanco);font-size:var(--texto-max)}
+  #ver-votar:active{opacity:.55}
+  #ver-votar.oculta{display:none!important}
+  #ver-votar .badge{background:var(--cian)}
   /* el nivel de cada notificacion: la misma paleta que `recetas/nodos.py` (`recetas/nivel_aviso.py`) */
   #notis .luz.rojo,#nlista .luz.rojo,#campana .badge.rojo{background:var(--rojo)}
   #notis .luz.naranja,#nlista .luz.naranja,#campana .badge.naranja{background:var(--naranja)}
@@ -799,14 +803,8 @@
   /* chat | widgets sin borde; el que no esta activo en blanco (facundo, 2026-09-14, 1288) */
   #vistas button{border-color:transparent;color:var(--blanco)}
   #vistas button.on{color:var(--verde)}
-  /* 1407: `votar` en celeste a la izquierda de chat, solo con una votacion abierta sin votar en este dispositivo.
-     se ve en la mac (sin chat | widgets) y en el celu; al tocarlo abre el modal de esa votacion */
-  /* 1567 (facundo, 2026-09-15): `votar` en celeste al lado de `chat`, sin fondo y sin borde; el 1px del borde vuelve al
-     padding (1557) y el alto lo fija `.bb`. al tocar baja la opacidad, no pinta una caja */
-  #ver-votar{color:var(--cian);background:transparent;border:0;padding-left:9px;padding-right:9px;font-weight:600;
-    touch-action:manipulation;-webkit-tap-highlight-color:transparent}
-  #ver-votar:active{background:transparent;color:var(--cian);opacity:.55}
-  #ver-votar.oculta{display:none!important}
+  /* 1407/1567: `votar` a la izquierda de chat, solo con algo para votar en este dispositivo; 1794: paso a ser el
+     fueguito `.ib` (reglas arriba, junto al badge) */
   body.sinlogin #cabecera,body.sinlogin #cuerpo{display:none}
   /* vista mobile: una vista a la vez, la elige la barra de arriba. puro css, sin js de layout.
      entra cuando la ventana es angosta (celu) O cuando es mas alta que ancha (facundo, 2026-09-11:
@@ -818,7 +816,6 @@
     .usage .urep{min-height:3.1em}
     /* dedo: los seis botones de la barra se tocan con el pulgar, todos del mismo alto */
     .bb{height:32px;padding:4px 6px;gap:4px}
-    #ver-votar{padding-left:7px;padding-right:7px}
     #nodos .nodo{min-height:32px}   /* dedo: el label se toca aunque no parezca boton */
     #notis .noti{min-height:40px;font-size:12px}   /* dedo: el aviso y su `x` se tocan con el pulgar */
     #mcuerpo textarea.nresp{font-size:var(--texto-max)}   /* ios no zoomea al enfocar */
@@ -828,7 +825,7 @@
     /* dedo: campana, persona, filas de la campana y el menu de persona con 40px (1166) */
     .ib{width:36px;height:40px;margin:-4px 0}
     .ib svg{width:16px;height:16px}
-    #campana .badge{top:4px;right:0}   /* afuera del icono de 16px, que no lo tape (1342) */
+    .ib .badge{top:4px;right:0}   /* afuera del icono de 16px, que no lo tape (1342) */
     #nlista .nfila{min-height:40px}
     #nlista .nabrir{font-size:12px}
     #nlista .nacc{height:40px;min-width:40px;font-size:11px}
