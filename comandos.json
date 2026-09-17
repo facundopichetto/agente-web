@@ -149,6 +149,12 @@
      "offline": "cola"
     },
     {
+     "cmd": "arrancar N",
+     "que": "la pendiente N al frente de su tema y sin su pausa: arranca ya",
+     "escribe": "arrancar ",
+     "offline": "cola"
+    },
+    {
      "cmd": "pausa tema",
      "que": "frena solo ese tema, el resto de la cola sigue",
      "escribe": "pausa ",
