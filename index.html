@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.336">
-<link rel="manifest" href="manifest.json?v=4.336">
+<meta name="agente-web-version" content="4.337">
+<link rel="manifest" href="manifest.json?v=4.337">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.336">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.337">
 </head>
 <body>
 
@@ -7220,6 +7220,7 @@ document.addEventListener("keydown", function(e){
 var MODULOS = ["usage", "agent", "sombra"];   // widgets migrados, en `web/widgets/<clave>.js` (1832: `models` = clave `sombra`)
 var MOD_DATOS = {usage: "usage", agent: "agente"};   // de que campo de `widgets.json` come cada uno
 var mods = {}, modsVer = {}, modsTimers = {}, modsError = {}, modCargando = null, modsCargas = 0;
+var visibleForzada = false;   // 1849: las pruebas headless corren con `document.hidden` y fuerzan `B.visible()`
 
 // 1843 (facundo, 2026-09-17): toda tabla de widget (`queue`, la escalera de `models`) ocupa el 100% del ancho de
 // la caja con columnas `fr` proporcionales al contenido, nunca anchos fijos que dejen hueco a la derecha. `cols` es
@@ -7243,6 +7244,18 @@ var BOARD = {
   moldeSwitchSacar: function(nombre){ delete MOLDE_SW[nombre]; },
   modalMolde: modalMolde,   // 1806: el modal de una cuenta del widget `usage` usa el molde (esc cierra, sin borde)
   repintarWidgets: repintarWidgets,
+  // 1849 {fluida}: un widget puede pedir su pedazo fresco por la lan (nunca por github: sin lan no pide nada),
+  // dejar ese dato en `widDatos` para que el repintado de 30 s no lo pise con uno mas viejo, y repintar su caja
+  // con el ancla del chat clavada (1813). `bajar` devuelve `{status, json, etag}` o `{status: 304}`.
+  lan: function(){ return !!lan.base; },
+  visible: function(){ return !document.hidden || visibleForzada; },   // en background un widget no pide nada
+  bajar: function(arch, etag){
+    if(!lan.base) return Promise.reject(new Error("sin lan"));
+    // directo al endpoint, sin el respaldo a github de `api()`: un pedazo de widget no existe en el buzon
+    return apiLan("GET", "/repos/" + REPO + "/contents/" + arch, null, etag || null, "application/vnd.github.raw+json");
+  },
+  datos: function(clave, v){ if(widDatos && v) widDatos[clave] = v; },
+  anclado: function(fn){ anclaClavar(); try{ return fn(); } finally{ anclaSoltar(); } },
   // el chat es del shell: un widget que manda un comando lo manda por aca (sin burbuja, como el switch)
   mandarAparte: function(cmd, tema){
     mandarAparte = true;
@@ -9187,6 +9200,8 @@ window.__agente = {
             scripts: document.querySelectorAll('script[src*="widgets/"]').length};
   },
   cargarModulos: cargarModulos, repintarMod: repintarMod, soltarMod: soltarMod, swapCss: swapCss,
+  mod: function(clave){ return mods[clave] || null; },   // 1849: la prueba le habla al modulo (`recibir`, `vivo`)
+  widDatos: function(){ return widDatos; }, visibleForzar: function(v){ visibleForzada = !!v; },
   modHtml: modHtml, partes: function(){ return {vistas: partesVistas, ult: partesUlt}; },
   ponerPartes: function(p){ partesVistas = p || null; },
   partesDistintas: partesDistintas, partePintable: partePintable, aplicarPartes: aplicarPartes

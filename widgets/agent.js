@@ -19,16 +19,21 @@
   function qNom(t){ return esc(t.nombre || B.corto(t.texto || "?", 24)); }
   function qHora(h){ return '<span class="qh">' + esc(h || "--:--") + "</span>"; }
   // 1792: una fila de la tabla de la cola. las horas y las duraciones ya vienen armadas del server
-  // (`recetas/cola_tiempos.py`): aca no se calcula ninguna, solo se pintan.
+  // (`recetas/cola_tiempos.py`): aca no se calcula ninguna, solo se pintan. la unica excepcion (1849 {fluida}) es
+  // el `delta` de la que corre, que el reloj de abajo hace avanzar segundo a segundo desde el `dur_s` del server.
   var QCLASE = {hecha: "qpaso", fallo: "qpaso", corriendo: "qcorre", cola: "qcola"};
-  function qCelda(cl, v, mas){ return '<span class="' + cl + " qcel qh" + (mas || "") + '">' + esc(v || "") + "</span>"; }
+  function qCelda(cl, v, mas, attrs){
+    return '<span class="' + cl + " qcel qh" + (mas || "") + '"' + (attrs || "") + '>' + esc(v || "") + "</span>";
+  }
   function qFila(f){
     var cl = QCLASE[f.estado] || "qcola";
+    var corre = f.estado === "corriendo";
     return it({tipo: "tarea", estado: f.estado, tema: f.tema, d: f},
       '<span class="' + cl + ' qnom">' + esc(f.nombre || ("" + f.n)) +
       (f.estado === "fallo" ? ' <span class="r b">!!</span>' : "") + "</span>" +
       qCelda(cl, f.pedida) + qCelda(cl, f.iniciada) +
-      qCelda(cl, f.dur, f.estado === "corriendo" ? " b" : "") + qCelda(cl, f.termino));
+      qCelda(cl, corre ? durVivo(f) : f.dur, corre ? " b qdelta" : "", corre ? ' data-n="' + esc(String(f.n)) + '"' : "") +
+      qCelda(cl, f.termino));
   }
   function qCabecera(){
     return '<span class="qth qnom">nombre</span><span class="qth qcel">pedida</span>' +
@@ -57,10 +62,101 @@
     return caja("queue", ese, cuerpo, false, "agent");
   }
 
+  // ---------- 1849 {fluida} (facundo, 2026-09-17: "la lista de queue tiene que ser fluida, actualizar el delta
+  // cada segundo y ni bien entra una orden nueva meterla") ----------
+  // (1) el `delta` de la que corre avanza cada segundo aca, sin pedirle nada al server: el server manda `dur_s`
+  //     (lo que llevaba) y `ahora` (su epoch en ese instante); el reloj del cliente se corrige con `offset`
+  //     (reloj cliente - reloj server, el minimo visto: la latencia solo lo agranda), asi no salta si el celu
+  //     tiene la hora corrida. se toca SOLO el textContent de esa celda: ni el grid ni el ancla del chat.
+  // (2) por la lan se pide `cola.json` cada 2 s (`recetas/cola_fresca.py`, cacheado por firma, cero tokens) con
+  //     etag; si el `hash` de la cola cambio (orden nueva, arranco, cerro, borrada, reordenada) se repinta ESTA
+  //     caja en el acto. sin lan no se pide nada: queda el `widgets.json` publicado de siempre.
+  var vivo = {base: null, offset: null, hash: null, etag: null, pidiendo: false, t: 0, recibidos: 0, repintados: 0};
+  var POLL_MS = 2000, RELOJ_MS = 1000;
+  // el mismo `h:mm:ss` de `hora.dur_col` (1843): ancho fijo, sin cero adelante en las horas
+  function durCol(seg){
+    if(seg === null || seg === undefined || isNaN(seg) || seg < 0) return "";
+    seg = Math.floor(seg);
+    var h = Math.floor(seg / 3600), m = Math.floor((seg % 3600) / 60), s = seg % 60;
+    return h + ":" + (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+  }
+  function ofs(srv){
+    if(!srv) return;
+    var cand = Date.now() / 1000 - srv;
+    if(vivo.offset === null || cand < vivo.offset) vivo.offset = cand;
+  }
+  // el `agente` que se pinta: el mas nuevo entre lo que trae el shell (widgets.json) y lo fresco de la lan
+  // (un json sin `ahora`, de un server viejo o de una prueba, vale como recien armado: se adopta siempre)
+  function adoptar(a, srv){
+    a = a || {};
+    ofs(srv || a.ahora);
+    if(!a.ahora){ if(vivo.offset === null) vivo.offset = 0; a.ahora = Date.now() / 1000 - vivo.offset; }
+    else if(vivo.base && vivo.base !== a && (vivo.base.ahora || 0) > a.ahora) return vivo.base;
+    vivo.base = a;
+    return a;
+  }
+  function segVivo(f){
+    if(!vivo.base || f.dur_s === null || f.dur_s === undefined) return null;
+    return f.dur_s + (Date.now() / 1000 - (vivo.offset || 0) - (vivo.base.ahora || 0));
+  }
+  function durVivo(f){
+    var s = segVivo(f);
+    return s === null ? (f.dur || "") : durCol(Math.max(s, f.dur_s || 0));
+  }
+  function nodoCaja(){ return document.querySelector('#widgets [data-w="agent"]'); }
+  // el reloj de 1 s: solo el textContent de la celda `delta` de cada fila que corre
+  function contar(){
+    var nodo = nodoCaja();
+    if(!nodo || !vivo.base) return;
+    (vivo.base.tabla || []).forEach(function(f){
+      if(f.estado !== "corriendo") return;
+      var c = nodo.querySelector('.qdelta[data-n="' + String(f.n).replace(/"/g, "") + '"]');
+      if(!c) return;
+      var t = durVivo(f);
+      if(t && c.textContent !== t) c.textContent = t;
+    });
+  }
+  function repintar(){
+    var nodo = nodoCaja();
+    if(!nodo) return false;
+    B.anclado(function(){ B.reemplazar(nodo, cajaAgente(vivo.base || {})); });
+    vivo.repintados++;
+    return true;
+  }
+  // llego `cola.json` (de la lan o de la prueba): repinta la caja solo si el hash cambio
+  function recibir(j){
+    if(!j || !j.agente) return false;
+    vivo.recibidos++; vivo.t = Date.now();
+    ofs(j.ahora_srv);
+    var cambio = j.hash !== vivo.hash;
+    vivo.hash = j.hash;
+    var antes = vivo.base;
+    adoptar(j.agente, j.ahora_srv);
+    if(vivo.base === antes) return false;   // lo del shell era mas nuevo: nada que pintar
+    B.datos("agente", vivo.base);
+    if(cambio) repintar(); else contar();
+    return cambio;
+  }
+  function pedir(){
+    if(vivo.pidiendo || !B.lan() || !B.visible() || !nodoCaja()) return;
+    vivo.pidiendo = true;
+    B.bajar("cola.json", vivo.etag).then(function(r){
+      vivo.pidiendo = false;
+      if(!r || r.status === 304) return;
+      if(r.etag) vivo.etag = r.etag;
+      recibir(r.json);
+    }, function(){ vivo.pidiendo = false; });
+  }
+  B.cada(RELOJ_MS, contar);
+  B.cada(POLL_MS, pedir);
+
   B.registrar("agent", {
-    html: function(d){ return cajaAgente(d || {}); },
-    pintar: function(d, nodo){ return B.reemplazar(nodo, cajaAgente(d || {})); },
-    destruir: function(){},   // sin timers ni listeners propios: la tabla es html y nada mas
+    html: function(d){ var a = adoptar(d || {}); setTimeout(contar, 0); return cajaAgente(a); },
+    pintar: function(d, nodo){ var a = adoptar(d || {}); setTimeout(contar, 0); return B.reemplazar(nodo, cajaAgente(a)); },
+    destruir: function(){ vivo.base = null; vivo.hash = null; },   // los dos timers los apaga el shell (`B.cada`)
+    recibir: recibir, contar: contar, pedir: pedir, durCol: durCol,
+    vivo: function(){ return {offset: vivo.offset, hash: vivo.hash, recibidos: vivo.recibidos, repintados: vivo.repintados,
+                              ahora: vivo.base ? vivo.base.ahora : null, filas: vivo.base ? (vivo.base.tabla || []).length : 0}; },
     nomTarea: nomTarea, qFila: qFila
   });
 })();
