@@ -396,6 +396,16 @@
   #selmodal.pantalla #seltarjeta .tjppal img{object-fit:contain}
   /* la fila de votos no se estira de borde a borde en una pantalla ancha: queda del ancho de una caja, centrada */
   #selmodal.pantalla #selacciones{width:100%;max-width:520px;margin:0 auto}
+  /* 1933 {instatinder} (facundo, 2026-09-17): en el celu los tres votos van en 3 columnas IGUALES que ocupan el
+     100% del ancho, cuadrados, y anclados ABAJO DE TODO de la vista (al pie, no pegados al bloque de datos): la
+     fila pasa a grilla y se manda al final del orden de la caja (`order`), asi el pulgar la encuentra siempre en
+     el mismo lugar. el piso de 46 px (1841), el texto `.tjtxt` (1883) y el svg del glifo no cambian. */
+  @media (max-width:699px){
+    #selmodal.pantalla #selacciones{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;
+      order:9;flex:0 0 auto;margin-top:auto;max-width:none}
+    #selmodal.pantalla #selacciones .tjbtn{aspect-ratio:1/1;min-height:46px;width:100%;box-sizing:border-box}
+    #selmodal.pantalla .selpie{order:8}
+  }
   @media (min-width:700px){
     #selmodal.pantalla #seltarjeta{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr);gap:12px}
     #selmodal.pantalla #seltarjeta .tjinfo{max-height:100%}
@@ -954,6 +964,11 @@
   #ver-votar.oculta{display:none!important}
   /* 1836: el fueguito va pelado (sin badge); gris solo con los tres procesos en cero */
   #ver-votar.apagado{color:var(--gris)}
+  /* 1933 {instatinder}: el icono de la vista `votar` (votaciones puntuales que no son instagram) va en FUCSIA,
+     porque es un voto a pedido; el molde es el mismo `.ib` en outline que el fueguito y la campana */
+  #ver-votacion{color:var(--magenta)}
+  #ver-votacion:active{opacity:.55}
+  #ver-votacion.oculta{display:none!important}
   /* el nivel de cada notificacion: la misma paleta que `recetas/nodos.py` (`recetas/nivel_aviso.py`) */
   #notis .luz.rojo,#nlista .luz.rojo,#campana .badge.rojo{background:var(--rojo)}
   #notis .luz.naranja,#nlista .luz.naranja,#campana .badge.naranja{background:var(--naranja)}
@@ -967,8 +982,15 @@
   #votmenu.oculta{display:none}
   /* la cabecera se alinea con la columna de cajas, no con el borde de la pantalla */
   #selmodal.pantalla.home .seltit,body.v-podcast #vista-podcast .seltit{width:100%;max-width:760px;margin:0 auto}
+  /* 1933 {instatinder} (facundo, 2026-09-17): el `home` va CENTRADO y los seis items ocupan todo el alto
+     disponible repartidos, con espaciado de verdad: nunca seis cajitas de 44 px apiladas arriba. cada item es un
+     item flexible de la columna (`flex:1 1 0`) con el piso del molde (44 px), asi en una pantalla alta crecen y en
+     una baja se apoyan en el piso y la columna scrollea. el molde (`.bcaja`) y el total en gris no cambian. */
   #votmenu{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
-    display:flex;flex-direction:column;gap:6px;width:100%;max-width:760px;margin:0 auto}
+    display:flex;flex-direction:column;justify-content:center;gap:10px;
+    width:100%;max-width:520px;margin:0 auto;padding:6px 0}
+  #votmenu .vmfila{flex:1 1 0}
+  #selmodal.pantalla.home .seltit{justify-content:center}
   #votmenu .ntit{color:var(--gris);font-size:9px;text-transform:uppercase;letter-spacing:.06em;padding:0 0 2px 0}
   #votmenu .vmfila{display:flex;align-items:center;gap:8px}
   #votmenu .vmfila.apagado{color:var(--gris);border-color:var(--linea);cursor:default}
@@ -1020,7 +1042,12 @@
      `widgets` se vean las DOS lo decide aca el mismo media query de siempre, asi girar el celu o cambiar el tamaño de
      la ventana no puede dejar un layout viejo aunque no llegue ningun evento al js. `tinder` y `podcast` van siempre
      solas, a pantalla completa. cambiar de vista no recarga nada (1793). */
-  body.v-tinder #cuerpo,body.v-podcast #cuerpo{display:none}
+  body.v-tinder #cuerpo,body.v-podcast #cuerpo,body.v-votar #cuerpo{display:none}
+  /* 1933 {instatinder}: la vista `votar` es la misma idea que el tinder: el modal de checkboxes (o el votador de
+     animaciones) deja de flotar sobre el chat y es el contenido de la vista, abajo de la barra de iconos */
+  body.v-votar #selmodal:not(.pantalla),body.v-votar #votar{position:static;inset:auto;flex:1 1 auto;min-height:0;
+    background:var(--fondo-chat);padding:8px 10px;z-index:auto}
+  body.v-votar #selmodal:not(.pantalla)::after,body.v-votar #votar::after{display:none}
   body.v-tinder #panel-chat,body.v-tinder #panel-widgets,body.v-tinder #sep,
   body.v-podcast #panel-chat,body.v-podcast #panel-widgets,body.v-podcast #sep{display:none}
   /* el icono de la vista activa no se pinta. en desktop `chat` y `widgets` son la misma vista doble: con cualquiera

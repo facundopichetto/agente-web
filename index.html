@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.352">
-<link rel="manifest" href="manifest.json?v=4.352">
+<meta name="agente-web-version" content="4.353">
+<link rel="manifest" href="manifest.json?v=4.353">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.352">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.353">
 </head>
 <body>
 
@@ -37,7 +37,11 @@
     <button id="ver-chat" class="ib" type="button" title="chat" aria-label="chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5h16v10.5H8.5L4 20z"/><path d="M8 9.5h8"/><path d="M8 12.5h5"/></svg></button>
     <button id="ver-widgets" class="ib" type="button" title="widgets" aria-label="widgets"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg></button>
   </div>
-  <button id="ver-votar" class="ib bglifo oculta" type="button" title="votar" aria-label="votar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22c-4 0-7-2.8-7-6.5 0-2.6 1.4-4.6 2.8-6.3.3 1.3 1 2.3 2 2.9-.3-3 .9-6.2 4.2-8.1-.2 2.6.9 4.2 2.4 5.7 1.5 1.6 2.6 3.3 2.6 5.8 0 3.7-3 6.5-7 6.5z"/><path d="M12 22c-1.7 0-3-1.3-3-3 0-1.4.8-2.4 1.6-3.3.5.9 1.1 1.4 1.9 1.7.8-.5 1.2-1.3 1.3-2.2.8 1.1 1.2 2.2 1.2 3.8 0 1.7-1.3 3-3 3z"/></svg></button>
+  <!-- 1933 {instatinder}: el fueguito es el icono de la vista `instatinder` (nada de lo que ve facundo dice
+       "tinder" a secas); al lado, en fucsia, el icono de la vista `votar`: las votaciones puntuales que NO son
+       instagram (checkboxes: animaciones, tandas), un voto a pedido. -->
+  <button id="ver-votacion" class="ib oculta" type="button" title="votar" aria-label="votar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="3"/><path d="M8 12.2l2.9 2.9L16.6 9"/></svg></button>
+  <button id="ver-votar" class="ib bglifo oculta" type="button" title="instatinder" aria-label="instatinder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22c-4 0-7-2.8-7-6.5 0-2.6 1.4-4.6 2.8-6.3.3 1.3 1 2.3 2 2.9-.3-3 .9-6.2 4.2-8.1-.2 2.6.9 4.2 2.4 5.7 1.5 1.6 2.6 3.3 2.6 5.8 0 3.7-3 6.5-7 6.5z"/><path d="M12 22c-1.7 0-3-1.3-3-3 0-1.4.8-2.4 1.6-3.3.5.9 1.1 1.4 1.9 1.7.8-.5 1.2-1.3 1.3-2.2.8 1.1 1.2 2.2 1.2 3.8 0 1.7-1.3 3-3 3z"/></svg></button>
     <button id="ver-podcast" class="ib" type="button" title="podcast" aria-label="podcast"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v4"/></svg></button>
   <button id="campana" class="ib" type="button" title="notificaciones" aria-label="notificaciones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 8 2.5 8h-17S6 15 6 9"/><path d="M10.3 20.5a2 2 0 0 0 3.4 0"/></svg><span id="badge" class="badge oculta"></span></button>
   <button id="persona" class="ib" type="button" title="cuenta" aria-label="cuenta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></button>
@@ -3656,6 +3660,7 @@ function votAbrir(){
   votAbierto = true;
   $("vtpar").classList.remove("oculta"); $("vtbasta").classList.remove("oculta"); $("vtfin").classList.add("oculta");
   $("vtestado").textContent = "";
+  vistaPoner("votar");   // 1933 {instatinder}: las animaciones tambien son la vista `votar`
   capaMostrar("votar");
   votPintar();
   selBoton();   // 1788: abierto el votador, el boton ya no lo cuenta
@@ -3665,6 +3670,7 @@ function votCerrar(){
   votAbierto = false;
   capaOcultar("votar");
   animSacar($("votar"));
+  if(vistaEs("votar") && !votacionHay()) vistaVolver();   // 1933 {instatinder}: el votador de animaciones es la vista `votar`
   selBoton();   // 1788: cerrado sin votar, el boton vuelve a decir que esta esperando
 }
 function votElegir(k){
@@ -3932,6 +3938,7 @@ function selAbrir(e){
   $("seltxt").value = ""; $("selestado").textContent = "";
   $("seltxt").placeholder = "algo para sumar (va al chat de " + (e.tema || "tools") + ")";
   selCuenta();
+  vistaPoner("votar");   // 1933 {instatinder}: la lista de checkboxes es la vista `votar`, no un modal sobre el chat
   capaMostrar("selmodal");
   ls.scrollTop = 0;
   return true;
@@ -4472,7 +4479,7 @@ function selCerrar(){
   // desde el `home` (ahi gana la capa `votmenu`) o tocando otro icono de la barra
   if(tj && sub !== "home"){ tinderHome(); selBoton(); return; }
   capaOcultar("selmodal");
-  if(tj) vistaVolver();   // 1875: sale de la vista tinder y vuelve a la anterior
+  if(tj || (vistaEs("votar") && !votacionHay())) vistaVolver();   // 1875: sale de la vista; 1933: tambien `votar`
   selBoton();
 }
 function selEncolar(tipo){
@@ -4595,18 +4602,53 @@ function selBoton(){
   // 1879 {listas}: la otra sub-vista de esta vista no necesita ninguna votacion abierta: ahi la vista se queda
   // 1922 {vistatinder}: `home` y `listas` viven sin ninguna votacion abierta; solo se sale si no hay ninguna de las dos
   if(vistaEs("tinder") && !sel.actual && lis.sub !== "listas" && lis.sub !== "home"){ vistaVolver(); return; }
+  // 1933 {instatinder}: la vista `votar` vive mientras haya una votacion puntual abierta o esperando
+  if(vistaEs("votar") && !votacionHay()){ vistaVolver(); return; }
   // 1567/1788: como nada se abre solo, el boton es lo unico que avisa que hay algo esperando; tambien cuenta el
   // votador de animaciones (una votacion mas) para que facundo pueda abrirlo el mismo desde el board.
   // 1836 (facundo, 2026-09-17): el fueguito va PELADO, sin badge: el numero vive solo adentro del dropdown y es el
   // total de la lista. el glifo queda gris (`apagado`) solo si los tres procesos estan en cero (y no hay otra
   // votacion); se esconde nada mas mientras el modal esta abierto.
   var n = votItems().reduce(function(s, x){ return s + (x.n || 0); }, 0), b = $("ver-votar");
-  b.title = n ? "votar: " + n + " en las listas" : "votar: nada por ahora";
+  b.title = n ? "instatinder: " + n + " en las listas" : "instatinder: nada por ahora";   // 1933
   b.classList.toggle("apagado", !n);
   // 1875: el icono de la vista activa no se pinta (el fueguito ES el icono de la vista `tinder`)
   b.classList.toggle("oculta", vistaEs("tinder") || !!sel.actual || !$("votar").classList.contains("oculta"));
   // 1801/1922: con el `home` a la vista, los numeros se repintan solos cuando el server manda otra cosa
   if(votMenuAbierto() && !sel.actual) votMenuPintar();
+  votacionBoton();   // 1933 {instatinder}: el icono fucsia de las votaciones puntuales
+}
+// ---------- 1933 {instatinder}: la vista `votar`, las votaciones puntuales que NO son instagram ----------
+// (checkboxes: animaciones del spinner, una tanda). el icono va aparte del fueguito y en fucsia porque es un voto a
+// pedido: se ve solo si hay algo esperando, y como cualquier icono de la barra no se pinta en su propia vista (1875).
+function votacionPend(){
+  return selPendientes().filter(function(a){ return !selEsTarjetas(a); });
+}
+function votacionHay(){ return votPendiente() || votAbierto || votacionPend().length > 0 || (!!sel.actual && !tjPantalla()); }
+function votacionBoton(){
+  var b = $("ver-votacion");
+  if(!b) return;
+  var hay = votacionHay();
+  b.title = hay ? "votar" : "votar: nada por ahora";
+  b.classList.toggle("oculta", !hay || vistaEs("votar"));
+}
+// tocar el icono: entra a la vista y abre lo que haya (la vista la ponen `selAbrir` / `votAbrir`)
+function votacionAbrir(){
+  var e = votacionPend()[0];
+  if(sel.actual && !tjPantalla()){ vistaPoner("votar"); capaMostrar("selmodal"); return true; }
+  if(votAbierto){ vistaPoner("votar"); capaMostrar("votar"); return true; }
+  if(e){ delete sel.ignorada[e.coleccion]; var ok = selAbrir(e); selBoton(); return ok; }
+  return votAbrirPendiente();
+}
+// salir de la vista `votar` por la barra de iconos: la votacion se cierra sin votar (nada se pierde: cada toque ya
+// subio su registro) y al volver el icono avisa que sigue esperando
+function votacionSalir(){
+  if(votAbierto){ votAbierto = false; capaOcultar("votar"); animSacar($("votar")); }
+  if(sel.actual && !tjPantalla()){
+    sel.ignorada[sel.actual.coleccion] = sel.actual.abrir_ts;
+    sel.actual = null;
+    capaOcultar("selmodal");
+  }
 }
 // ---------- 1879 {listas}: la vista `tinder` son DOS sub-vistas, `votar` y `listas` ----------
 // facundo (2026-09-17): "agrega un boton en la view votar que sea ver listas. como dos sub views dentro de votar y
@@ -4624,8 +4666,9 @@ function lisBotonPintar(pantalla){
   var b = $("selsub");
   if(!b) return;
   b.classList.toggle("oculta", !pantalla || lis.sub === "home");   // 1922: en el `home` el selector ya esta a la vista
-  b.textContent = lis.sub === "listas" ? "votar" : "listas";
-  b.title = lis.sub === "listas" ? "volver a votar" : "ver las listas";
+  // 1933 {instatinder}: el boton dice a donde lleva, y el votador de instagram se llama `instatinder`
+  b.textContent = lis.sub === "listas" ? "instatinder" : "listas";
+  b.title = lis.sub === "listas" ? "volver a instatinder" : "ver las listas";
 }
 function lisBajar(fresco){
   if(!fresco && lis.datos && Date.now() - lis.ts < LIS_TTL) return Promise.resolve(lis.datos);
@@ -4851,7 +4894,7 @@ function tinderHome(){
     var e = document.querySelector("#selmodal " + q);
     if(e) e.classList.add("oculta");
   });
-  $("seltitulo").textContent = "qué votar";
+  $("seltitulo").textContent = "instatinder";   // 1933 {instatinder}
   $("selcuenta").textContent = "";
   lisBotonPintar(true);
   votMenuPintar();
@@ -4885,14 +4928,12 @@ function votMenuElegir(col){
   $("votmenu").classList.add("oculta");
   lis.sub = "votar";
   if(col === "listas") return lisAbrir();   // 1879: la sub-vista `listas`, sin votacion abierta
+  // 1933 {instatinder}: lo que no es instagram (animaciones, una tanda de checkboxes) no vive en esta vista:
+  // se abre en la vista `votar`, la del icono fucsia, y la pone `votAbrir` / `selAbrir`
   if(col === "animaciones"){
     ok = votAbrirPendiente();
-    if(ok && vistaEs("tinder")) vistaVolver();   // el votador de animaciones es su propio modal, no esta vista
   } else {
     ok = selAbrirCol(col);
-    // una coleccion de checkboxes sigue siendo el modal de siempre (1874), no una sub-vista: sale del tinder
-    // con el modal abierto y al cerrarlo vuelve el fueguito, como antes de la 1922
-    if(ok && vistaEs("tinder") && !$("selmodal").classList.contains("pantalla")) vistaVolver();
   }
   if(!ok && vistaEs("tinder") && !sel.actual) tinderHome();
   return ok;
@@ -4901,6 +4942,9 @@ function votMenuElegir(col){
 function selSalir(){
   if(vistaEs("tinder")) return tinderHome();
   capaOcultar("selmodal");
+  // 1933 {instatinder}: la vista `votar` se deja solo si no queda nada abierto ni esperando (el votador de
+  // animaciones puede estar debajo de una seleccion: cerrar la de arriba no cierra la vista)
+  if(vistaEs("votar") && !votacionHay()) vistaVolver();
   return false;
 }
 // salir de la vista `tinder` por la barra de iconos: se cierra su caja y al volver arranca en `home`
@@ -9090,8 +9134,11 @@ document.addEventListener("scroll", function(){ if(menuAbierto) cerrarMenu(); },
 // ventana no puede dejar el board con un layout viejo aunque no llegue ningun evento.
 // el icono de la vista activa se esconde (en desktop, con chat o widgets puesta, se esconden los dos) y tocar otro
 // icono cambia de vista. cambiar de vista no recarga nada (1793) y el ancla del chat (1813) se guarda por vista.
-var VISTAS_TODAS = ["chat", "widgets", "tinder", "podcast"];
-var VISTA_SOLAS = ["tinder", "podcast"];       // ocupan la pantalla entera, nunca conviven con otra
+// 1933 {instatinder} (facundo, 2026-09-17): la vista del votador de instagram se llama `instatinder` en todo lo
+// que ve facundo (la clave interna sigue siendo `tinder`) y `votar` es una vista propia: las votaciones puntuales
+// que NO son instagram (checkboxes: animaciones, tandas), con su icono fucsia en la barra.
+var VISTAS_TODAS = ["chat", "widgets", "tinder", "votar", "podcast"];
+var VISTA_SOLAS = ["tinder", "votar", "podcast"];       // ocupan la pantalla entera, nunca conviven con otra
 var VISTA_LS = "agente_vista";
 // 1930 {barra} (facundo, 2026-09-17): "lo que vos tenes que guardar es, en el caso de que yo me haya ido de la vista
 // de chat, lo que sea que este viendo de las dos opciones en el celular; y si es en el desktop queda por default chat".
@@ -9133,6 +9180,7 @@ function vistaPoner(n){
   vistaGuardar();
   // 1922 {vistatinder}: dejar la vista `tinder` por la barra cierra su caja; al volver arranca en `home`
   if(vistaPrevia === "tinder" && n !== "tinder") tinderSalir();
+  if(vistaPrevia === "votar" && n !== "votar") votacionSalir();   // 1933 {instatinder}
   if(vistaPrevia === "podcast" && n !== "podcast") pod.ep = null;
   vistaPintar();
   if(vistaEs("widgets") && Date.now() - widUlt > 15000) cargarWidgets().catch(function(){});
@@ -9157,7 +9205,8 @@ function vistaInicial(){
   var v = null, d = null;
   try{ v = sessionStorage.getItem(VISTA_LS); d = sessionStorage.getItem(VISTA_DOBLE_LS); }catch(x){}
   vistaDoble = vistaEsDoble(d) ? d : "chat";   // 1930: cual de las dos estabas viendo en esta pestaña
-  return v && v !== "tinder" ? vistaNorm(v) : vistaDoble;
+  // 1933: ni `tinder` ni `votar` se restauran solas (las dos necesitan algo abierto para tener contenido)
+  return v && v !== "tinder" && v !== "votar" ? vistaNorm(v) : vistaDoble;
 }
 // compat con lo de antes (`verPanel` / `verWidgets` los siguen llamando las pruebas y el modal de la campana)
 function verPanel(cual){ return vistaPoner(cual === "widgets" ? "widgets" : "chat"); }
@@ -9165,6 +9214,7 @@ function verWidgets(si){ return verPanel(si ? "widgets" : "chat"); }
 $("ver-chat").addEventListener("click", function(){ vistaPoner("chat"); });
 $("ver-widgets").addEventListener("click", function(){ vistaPoner("widgets"); });
 $("ver-podcast").addEventListener("click", function(){ vistaPoner("podcast"); });
+$("ver-votacion").addEventListener("click", votacionAbrir);   // 1933 {instatinder}
 vistaOn = vistaInicial();
 vistaPintar();
 
@@ -9470,6 +9520,7 @@ window.__agente = {
   // 1801: el dropdown de los tres procesos y la fila de botones de cada uno
   votItems: votItems, votMenuAbrir: votMenuAbrir, votMenuCerrar: votMenuCerrar, votMenuElegir: votMenuElegir,
   votMenuAbierto: votMenuAbierto, tinderHome: tinderHome, tjProcQs: tjProcQs, TJ_PROCS: TJ_PROCS,
+  votacionAbrir: votacionAbrir, votacionHay: votacionHay, votacionPend: votacionPend,   // 1933 {instatinder}
   // 1922 {vistatinder}: las tres sub-vistas de `tinder` y las dos de `podcast`
   tinderSub: function(){ return vistaEs("tinder") ? lis.sub : null; },
   podVista: function(){ return {ep: pod.ep, eps: podEps().length,
@@ -9638,8 +9689,10 @@ window.__agente = {
     var vis = function(id){ var e = document.getElementById(id); return !!e && e.getBoundingClientRect().width > 0; };
     return {on: vistaSet(), elegida: vistaOn, previa: vistaPrevia, mobile: esVistaMobile(), doble: vistaDoble,
             clases: VISTAS_TODAS.filter(function(n){ return document.body.classList.contains("v-" + n); }),
-            iconos: {chat: vis("ver-chat"), widgets: vis("ver-widgets"), tinder: vis("ver-votar"), podcast: vis("ver-podcast")},
-            paneles: {chat: vis("panel-chat"), widgets: vis("panel-widgets"), tinder: vis("selmodal"), podcast: vis("vista-podcast")},
+            iconos: {chat: vis("ver-chat"), widgets: vis("ver-widgets"), tinder: vis("ver-votar"),
+                     votar: vis("ver-votacion"), podcast: vis("ver-podcast")},
+            paneles: {chat: vis("panel-chat"), widgets: vis("panel-widgets"), tinder: vis("selmodal"),
+                      votar: vis("selmodal") || vis("votar"), podcast: vis("vista-podcast")},
             guardada: (function(){ try{ return sessionStorage.getItem(VISTA_LS); }catch(x){ return null; } })()};
   },
   estado: function(){ return {tabs: tabs, activo: activo, ts: layoutTs,
