@@ -95,13 +95,16 @@
      (texto), en orden y nunca editados; abajo, en vuelo, la unica linea que cambia es `.cuerpo` (bolita + lo que esta
      haciendo). en la respuesta guardada el hilo queda arriba del cuerpo final.
      1850 (facundo, 2026-09-17): `.tramo.hecho` es la linea de un comando que ya volvio (`buscando hall en los .md`):
-     queda atras, apagada (gris, chica, sin animacion), nunca el comando ni su salida; solo existe en el vuelo y se va
-     con la bolita al publicar. varias seguidas van pegadas (2px) para que el rastro sea corto, no un choclo */
+     queda atras, apagada (gris, chica, sin animacion), nunca el comando ni su salida. varias seguidas van pegadas
+     (2px) para que el rastro sea corto, no un choclo.
+     1868 (facundo, 2026-09-17): esas lineas ya no se van con la bolita: quedan en la respuesta publicada y al
+     recargar, cada una en su linea, arriba del cuerpo; la ultima despega del cuerpo como cualquier tramo */
   .msg .hilo{color:var(--blanco)}
   .msg .hilo:empty{display:none}
   .msg .hilo .tramo{margin:0 0 8px 0}
   .msg .hilo .tramo.hecho{color:var(--gris);font-size:11px;opacity:.7;margin:0 0 2px 0}
   .msg .hilo .tramo.hecho + .tramo.texto{margin-top:8px}
+  .msg .hilo .tramo.hecho:last-child{margin-bottom:8px}
   .msg.vuelo .hilo + .cuerpo{margin-top:2px}
   /* animaciones de caracteres (1373): una linea, todos los cuadros del mismo ancho (`Nch` lo pone animPoner), el
      alto fijo de una linea: ni saltan de costado ni empujan el renglon.

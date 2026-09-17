@@ -14,12 +14,11 @@
   var cuModal = null, cuUltimo = null, cuAbierta = null;
   function cuEstado(){ return {ultimo: cuUltimo, abierta: cuAbierta}; }
   function activa(cu){ return cu.elegida !== undefined && cu.elegida !== null ? !!cu.elegida : !!cu.activa; }
-  function renuevaHtml(cu, clase){
-    var rs = (cu.renueva || []).filter(function(r){ return r && r.texto; });
-    if(!rs.length) return "";
-    return '<div class="' + clase + '">' + rs.map(function(r){
-      return "<span>" + esc(r.nombre) + " " + esc(r.texto) + "</span>";
-    }).join("") + "</div>";
+  // orden 1861 {claude} (facundo, 2026-09-17): "sacame week y fable abajo de facu y orugote. a la derecha del
+  // titulo, ahi pone `xd xh xm to renew`". una sola linea, al lado del nombre de la cuenta, con el texto ENTERO
+  // como vino del server (`renueva_txt`, de `widgets_json.w_usage`): la web no arma ni recorta ningun tiempo.
+  function renuevaHtml(cu){
+    return cu.renueva_txt ? '<span class="ren">' + esc(cu.renueva_txt) + "</span>" : "";
   }
   function barraHtml(b){
     var h = B.barraUso(b);
@@ -103,8 +102,8 @@
       var est = sinlim ? "" : (cu.agotada ? "agotada" : (cu.estado || ""));
       if(!sinlim) cuentasVistas[cu.nombre] = cu;
       var cab = '<span class="cta"' + (sinlim ? "" : ' data-cta="' + esc(cu.nombre) + '" role="button" tabindex="0" title="detalle de ' + esc(cu.nombre) + '"') +
-        '><span class="nom' + (est ? " e-" + esc(est) : "") + '">' + esc(cu.nombre) + "</span></span>" +
-        (sinlim ? "" : renuevaHtml(cu, "ren"));
+        '><span class="nom' + (est ? " e-" + esc(est) : "") + '">' + esc(cu.nombre) + "</span>" +
+        (sinlim ? "" : renuevaHtml(cu)) + "</span>";
       var cuerpo;
       if(cu.sin_login){
         // sin login propio: no se repiten los numeros de la otra, pero el hueco guarda la altura de las barras
