@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.346">
-<link rel="manifest" href="manifest.json?v=4.346">
+<meta name="agente-web-version" content="4.347">
+<link rel="manifest" href="manifest.json?v=4.347">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.346">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.347">
 </head>
 <body>
 
@@ -4129,23 +4129,41 @@ function tjBotones(e){
   return caja;
 }
 function tjProcQs(e){ return tjBotonesSpec(e).map(function(b){ return b.q; }); }
-// 1883 {teclado}: votar sin tocar la pantalla. las flechas votan POR POSICION, como se ven: izquierda el primer
-// boton, derecha el ultimo y el del medio con la barra espaciadora o la flecha abajo (la barra es la natural para
-// "paso, no la muevo"; `↓` sola chocaria con el glifo del boton de la izquierda, que es justo el que baja de lista).
-// un proceso de dos botones (`dejar de seguir`, `me arrepentí`) no tiene medio: la barra no hace nada.
+// 1883 {teclado} + 1893 {mapa}: votar sin tocar la pantalla. las flechas votan POR POSICION, como se ven:
+// `←` el boton de la izquierda (baja de lista), `→` el de la derecha (sube) y `↓` (o la barra) el del MEDIO, el
+// que no mueve a nadie: `-_-` maybe en candidatas y `=` en el resto. un proceso de dos botones no tiene hueco en el
+// medio: en `dejar de seguir` y en `me arrepentí` la que no mueve a nadie es la `=`, y esa vota `↓` (`tjQMedio`).
+// `backspace` es el `←` de la cabecera (`#selback`, deshacer el ultimo voto): con el back gris no hace nada, y
+// nunca borra texto ni vuelve atras en el browser (`preventDefault()` salvo que el foco sea del campo de escribir).
 // `esc` sigue cerrando por la pila y el `←` de la cabecera sigue siendo el deshacer, nunca un voto.
+function tjQMedio(e){
+  var bs = tjBotonesSpec(e), q = null;
+  bs.forEach(function(b){ if(q === null && (b.tipo === "maybe" || b.tipo === "igual" || b.q === "maybe" || b.q === "igual")) q = b.q; });
+  return q !== null ? q : (bs.length > 2 ? bs[1].q : null);
+}
+// el foco cuenta como "escribiendo" solo si el campo esta ADENTRO del votador: cualquier otro campo de la pagina
+// (el del chat, que la vista tapa) no frena el voto por teclado
+function tjEnCampo(a){
+  if(!a || !(a.tagName === "TEXTAREA" || a.tagName === "INPUT" || a.isContentEditable)) return false;
+  var m = $("selmodal");
+  return !!(m && m.contains(a));
+}
 function tjTecla(ev){
   if(ev.defaultPrevented || ev.metaKey || ev.ctrlKey || ev.altKey) return;
+  // primero el foco: si esta en el campo de escribir DEL VOTADOR (`#seltxt`), la tecla es del campo y no vota.
+  // el campo del chat (`#txt`) no cuenta: la vista `tinder` tapa el chat (1875) y ahi las flechas votan igual,
+  // aunque el foco se haya quedado en la caja de escribir de abajo (era esto lo que se comia todos los votos).
+  if(tjEnCampo(document.activeElement)) return;
+  if(ev.key === "Backspace") ev.preventDefault();   // fuera de un campo, backspace nunca navega hacia atras
   if(!sel.actual || !tjActual() || $("selacciones").classList.contains("oculta")) return;
   if(!vistaEs("tinder") || $("selmodal").classList.contains("oculta")) return;
-  var a = document.activeElement;
-  if(a && (a.tagName === "TEXTAREA" || a.tagName === "INPUT" || a.isContentEditable)) return;
   var tope = capaTope();
   if(!tope || tope.nombre !== "seleccion") return;   // hay un modal arriba (detalle de listas, visor): no se vota
+  if(ev.key === "Backspace"){ tjAtras(); return; }   // lo mismo que tocar `#selback`: con el back gris, nada
   var qs = tjProcQs(sel.actual), q = null;
   if(ev.key === "ArrowLeft") q = qs[0];
   else if(ev.key === "ArrowRight") q = qs[qs.length - 1];
-  else if(ev.key === "ArrowDown" || ev.key === " " || ev.key === "Spacebar") q = qs.length > 2 ? qs[1] : null;
+  else if(ev.key === "ArrowDown" || ev.key === " " || ev.key === "Spacebar") q = tjQMedio(sel.actual);
   else return;
   ev.preventDefault();
   if(q) tjDecidir(q);
@@ -9171,8 +9189,15 @@ window.__agente = {
   votItems: votItems, votMenuAbrir: votMenuAbrir, votMenuCerrar: votMenuCerrar, votMenuElegir: votMenuElegir,
   votMenuAbierto: function(){ return !!votMenuAbierto; }, tjProcQs: tjProcQs, TJ_PROCS: TJ_PROCS,
   tjBotones: function(col){ return tjBotones({coleccion: col}); },
+  // 1883: el glifo de `bajar` / `subir` ya no es texto sino un svg (en el iphone la fuente no lo dibujaba), asi que
+  // `glifo` dice la FORMA del boton (`↓` / `↑` para el svg, el caracter tal cual para los ascii) y `frase` la linea
+  // de abajo, la que dice que hace el boton
   tjBotonera: function(){ return [].map.call(document.querySelectorAll("#selacciones .tjbtn"), function(b){
-    return {q: b.getAttribute("data-q"), clase: b.className, txt: b.textContent, aria: b.getAttribute("aria-label")}; }); },
+    var g = b.querySelector(".tjglf"), f = b.querySelector(".tjtxt");
+    var svg = g && g.querySelector("svg"), tipo = (b.className.match(/\bb-(\w+)/) || [])[1];
+    return {q: b.getAttribute("data-q"), clase: b.className, txt: b.textContent, aria: b.getAttribute("aria-label"),
+            glifo: svg ? (GLIFOS[tipo] || [""])[0] : (g ? g.textContent : b.textContent),
+            frase: f ? f.textContent : "", svg: !!svg}; }); },
   selTitulo: function(){ return $("seltitulo").textContent; },
   selDesdeWidgets: selDesdeWidgets,
   // 1441: modal viejo en el ipad (`prueba_web_votar`, `prueba_seleccion`)

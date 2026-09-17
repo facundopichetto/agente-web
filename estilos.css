@@ -335,6 +335,21 @@
      sin borde ni caja (molde `.bglifo`) y con `flex:1` los tres reparten el ancho, asi en 390 px entran sin scroll */
   #selacciones .tjbtn{flex:1 1 0;min-height:46px;padding:6px 9px}
   #selacciones .tjbtn .tjglf{display:inline-block;transform:scale(1.25);transform-origin:center}
+  /* 1883 {teclado} (facundo, 2026-09-17: "en todos los dispositivos tiene que decir que hace el boton"): abajo del
+     glifo va la frase de ESE proceso, que escribe el server (`seleccion.BOTONES_COL`) y viaja en `botones` del json:
+     la web no redacta ninguna. el boton pasa a columna (glifo arriba, frase abajo, centrada) y los 46 px de la 1841
+     son el PISO, no el alto: con la frase crece lo que haga falta. la frase va a 9.5 px, bien abajo del tope de
+     12 px de la 1541, envuelve en varias lineas y corta una palabra larga antes que empujar el ancho, asi en 390 px
+     los tres siguen entrando sin scroll horizontal */
+  #selacciones .tjbtn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    height:auto;line-height:1.15}
+  #selacciones .tjbtn .tjtxt{font-size:9.5px;font-weight:normal;color:var(--blanco);opacity:.75;text-align:center;
+    white-space:normal;overflow-wrap:anywhere;max-width:100%}
+  /* 1883 {teclado} (facundo, 2026-09-17: "cerrar se reemplaza por enviar y tiene que ser mas grande. enter envia"):
+     el boton del pie es `enviar`, con el molde `.bverde` de `docs/componentes-web.md`. mas grande es mas caja, no
+     mas letra: el `font-size` sigue en el tope de 12 px de la 1541 y lo que crece es el alto (52 px, como `.b52`),
+     el ancho minimo y el padding. la tecla enter hace lo mismo que tocarlo */
+  #selmodal .selenviar{min-height:52px;min-width:124px;padding:12px 20px;font-weight:bold}
   /* 1874 (facundo, 2026-09-17: "el tinder deberia abrir pantalla completa. dos bloques, uno al lado del otro en
      wide, uno arriba del otro en mobile. todo full screen. primero foto lo mas grande que se pueda. luego la
      informacion que ya tenemos"): al elegir un proceso del `#votmenu` el votador deja de ser una caja chica y ocupa
