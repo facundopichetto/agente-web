@@ -1470,3 +1470,11 @@ en `pintarWidgets` la fila pasa a `["<clave>", modHtml("<clave>")]`. nada mas.
 **probarlo** (cero tokens, chrome headless, levanta un http local para probar tambien el `import()`):
 
     sh scripts/prueba_corta python3 -m recetas.prueba_web_modulos
+
+**si escribis una prueba que toca la pagina**: despues de esperar `window.__agente`, espera tambien a que los
+modulos terminen de entrar, porque al cargar repintan el panel de widgets y un repintado en el medio de un
+gesto (un pinch, un doble toque, una medida de scroll) la deja flakeada:
+
+    if ev("!(window.__agente.modInfo) || window.__agente.modInfo().cargados.length === window.__agente.modulos.length"): break
+
+lo hacen asi `prueba_web_zoom`, `prueba_web_progresivo` y `prueba_web_modulos`.
