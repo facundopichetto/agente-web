@@ -491,6 +491,13 @@
      "detector": true
     },
     {
+     "cmd": "ig_listas_cmd",
+     "que": "detector nuevo en daemon.py, sin descripción todavía",
+     "escribe": null,
+     "offline": "cola",
+     "detector": true
+    },
+    {
      "cmd": "router_local_cmd",
      "que": "detector nuevo en daemon.py, sin descripción todavía",
      "escribe": null,

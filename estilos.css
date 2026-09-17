@@ -362,6 +362,44 @@
     #selmodal.pantalla #seltarjeta{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr);gap:12px}
     #selmodal.pantalla #seltarjeta .tjinfo{max-height:100%}
   }
+  /* 1879 {listas} (facundo, 2026-09-17): la vista `tinder` son DOS sub-vistas, `votar` y `listas`. el boton para
+     pasar de una a la otra vive en la cabecera al lado del `←` y dice a donde lleva (molde `.bglifo`, con texto en
+     vez de glifo). la sub-vista `listas` es una columna de cajas, una por lista del embudo: titulo, cuantos son y
+     por que estan ahi; una lista grande termina ahi, una chica lista a su gente con fotito, lo que ya se sabe y UNA
+     frase de accion tocable. lo arma todo el server (`recetas/ig_listas.py`): aca solo se pinta. */
+  #selsub{flex:0 0 auto;margin-left:auto;padding:5px 9px;min-height:38px;font-size:11.5px;color:var(--verde)}
+  #selsub.oculta{display:none!important}
+  #sellistas{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    display:flex;flex-direction:column;gap:10px;width:100%;max-width:760px;margin:0 auto}
+  #sellistas.oculta{display:none!important}
+  #sellistas .lisvacio{color:var(--gris);font-size:11.5px}
+  #sellistas .liscaja{border:1px solid var(--linea);border-radius:4px;padding:8px;display:flex;flex-direction:column;gap:6px}
+  #sellistas .listit{display:flex;align-items:baseline;gap:8px}
+  #sellistas .lisnom{color:var(--blanco);font-size:var(--texto-max)}
+  #sellistas .lisn{color:var(--cian);font-size:var(--texto-max)}
+  #sellistas .lisporque{color:var(--gris);font-size:11.5px;word-break:break-word}
+  #sellistas .lisgrande{color:var(--gris);font-size:11px;opacity:.85}
+  #sellistas .lisfila{display:flex;gap:8px;align-items:flex-start;padding-top:6px;border-top:1px solid var(--linea)}
+  #sellistas .lisfoto{flex:0 0 auto;width:44px;height:44px;border-radius:4px;overflow:hidden;border:1px solid var(--linea);background:#111}
+  #sellistas .lisfoto img{width:100%;height:100%;object-fit:cover;display:block}
+  #sellistas .liscol{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px}
+  #sellistas .lisquien{color:var(--blanco);font-size:11.5px;word-break:break-word}
+  #sellistas .liscuenta{color:var(--gris);margin-left:6px;word-break:break-all}
+  #sellistas .lisdatos{color:var(--cian);font-size:11px;word-break:break-word}
+  #sellistas .lispq{color:var(--gris);font-size:11px;font-style:italic;word-break:break-word}
+  /* la frase de accion es lo unico tocable de la fila: se ve tocable (1808) y la que toca afuera va en amarillo */
+  #sellistas .lisacc{align-self:flex-start;max-width:100%;text-align:left;margin-top:3px;min-height:34px;
+    padding:4px 9px;border:1px solid var(--verde);border-radius:999px;background:none;color:var(--verde);
+    font:inherit;font-size:11px;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+    word-break:break-word;white-space:normal}
+  #sellistas .lisacc.toca{border-color:var(--amarillo,#d8b25a);color:var(--amarillo,#d8b25a)}
+  #sellistas .lisacc:active{opacity:.6}
+  #lismodal .lisdet{display:flex;flex-direction:column;gap:6px}
+  #lismodal .lisdetacc{color:var(--blanco);font-size:var(--texto-max);word-break:break-word}
+  #lismodal .lisdatos{color:var(--cian);font-size:11px;word-break:break-word}
+  #lismodal .liscmd{margin:0;padding:6px 8px;border:1px solid var(--linea);border-radius:4px;background:#111;
+    color:var(--cian);font-size:11px;white-space:pre-wrap;word-break:break-all}
+  #lismodal .lisperfil{align-self:flex-start;color:var(--verde);font-size:11.5px;text-decoration:none}
   /* 1556 (facundo, desde el iphone): "abajo los botones no tienen borde. izquierda en rojo una X, en el medio en blanco
      un guion, derecha un tick verde, tamaño 12px". sin borde ni caja, glifo de 12px y 38 px tocables; el nombre va en aria-label */
   /* el glifo, el color y el toque (opacidad) viven en el molde: `.bglifo.b-no` · `.b-queda` */

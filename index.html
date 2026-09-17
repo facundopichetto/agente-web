@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.344">
-<link rel="manifest" href="manifest.json?v=4.344">
+<meta name="agente-web-version" content="4.345">
+<link rel="manifest" href="manifest.json?v=4.345">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.344">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.345">
 </head>
 <body>
 
@@ -146,9 +146,13 @@
 <div id="votmenu" class="oculta" role="menu" aria-label="qué votar"></div>
 <div id="selmodal" class="capa oculta" role="dialog" aria-modal="true" aria-labelledby="seltitulo">
   <div class="selcaja mcaja">
-    <div class="seltit mhead"><button id="selback" class="bglifo b-atras apagado oculta" type="button" data-q="atras" aria-label="back" title="back">←</button><span id="seltitulo"></span><span id="selcuenta" class="mcuenta"></span></div>
+    <div class="seltit mhead"><button id="selback" class="bglifo b-atras apagado oculta" type="button" data-q="atras" aria-label="back" title="back">←</button><span id="seltitulo"></span><span id="selcuenta" class="mcuenta"></span><button id="selsub" class="bglifo selsub oculta" type="button" aria-label="cambiar de sub-vista"></button></div>
     <div id="selcont" class="oculta" aria-live="polite"></div>
     <div id="sellista"></div>
+    <!-- 1879 {listas}: la otra sub-vista de la vista `tinder`. lo arma entero el server (`recetas/ig_listas.py`):
+         una lista grande dice por que estan ahi y cuantos son, una chica lista a su gente con fotito, lo que ya se
+         sabe y UNA frase de accion. la web no calcula ni redacta nada -->
+    <div id="sellistas" class="oculta"></div>
     <div id="seltarjeta" class="oculta"></div>
     <!-- 1801: los botones los arma `tjBotones` segun el proceso (`TJ_PROCS`). candidatas: `↓` baja (hoy a ignoradas)
          · `-_-` maybe · `↑` sube (hoy a interesan). el back `←` sigue arriba, fuera de esta fila (1657) -->
@@ -3937,6 +3941,9 @@ function selModoLista(lista){
   // 1874 (facundo, 2026-09-17): el votador (modo tarjetas) es una vista entera; la lista de checkboxes sigue
   // siendo el modal de siempre. lo unico que cambia es la clase: el molde (`.capa`, `esc`, la pila) es el mismo
   $("selmodal").classList.toggle("pantalla", !lista);
+  $("sellistas").classList.add("oculta");          // 1879 {listas}: volver al votador apaga la sub-vista `listas`
+  lis.sub = "votar";
+  lisBotonPintar(!lista);
   $("sellista").classList.toggle("oculta", !lista);
   $("seltarjeta").classList.toggle("oculta", lista);
   $("selacciones").classList.toggle("oculta", lista);
@@ -4325,6 +4332,7 @@ function tjSacar(id){
   tjPintar();
 }
 function tjSinFotos(e){
+  try{ (window.__cierres = window.__cierres || []).push("tjSinFotos " + new Error().stack.split("\n").slice(1,4).join(" | ")); }catch(x){}
   // 1524: ninguna decision real en esta apertura (no bajo ninguna foto): se cierra sin `fin`, la tanda sigue abierta
   // en el server y no se reabre en esta carga. el registro `sin_fotos` no se guarda: el server lo deja en `log.md`.
   sel.ignorada[e.coleccion] = e.abrir_ts;
@@ -4338,6 +4346,7 @@ function tjSinFotos(e){
   selSubir();
 }
 function tjFin(){
+  try{ (window.__cierres = window.__cierres || []).push("tjFin col=" + (sel.actual && sel.actual.coleccion) + " cont=" + (sel.actual && sel.actual.continua) + " n=" + (sel.actual && sel.actual.candidatas.length) + " tj=" + sel.tj + " votos=" + sel.tjVotos); }catch(x){}
   // la tanda entera decidida: un `aceptar` la cierra y el server arma y abre la siguiente
   var e = sel.actual;
   if(!e) return;
@@ -4355,6 +4364,7 @@ function tjFin(){
   selSubir();
 }
 function selCerrar(){
+  try{ (window.__cierres = window.__cierres || []).push("selCerrar " + new Error().stack.split("\n").slice(1,4).join(" | ")); }catch(x){}
   var tj = vistaEs("tinder");
   if(sel.actual) sel.ignorada[sel.actual.coleccion] = sel.actual.abrir_ts;
   sel.actual = null;
@@ -4478,6 +4488,11 @@ function selPendientes(){
     .sort(function(a, b){ return (a.abrir_ts || 0) - (b.abrir_ts || 0); });
 }
 function selBoton(){
+  // 1875: la vista `tinder` vive mientras hay algo que votar. si el votador se fue por un camino que no pasa por
+  // `selCerrar` (un reset, una coleccion que el server cerro), la vista se sale sola y el fueguito vuelve a la barra.
+  // no se cicla: `vistaVolver` deja `vistaOn` en otra vista antes de repintar.
+  // 1879 {listas}: la otra sub-vista de esta vista no necesita ninguna votacion abierta: ahi la vista se queda
+  if(vistaEs("tinder") && !sel.actual && lis.sub !== "listas"){ vistaVolver(); return; }
   // 1567/1788: como nada se abre solo, el boton es lo unico que avisa que hay algo esperando; tambien cuenta el
   // votador de animaciones (una votacion mas) para que facundo pueda abrirlo el mismo desde el board.
   // 1836 (facundo, 2026-09-17): el fueguito va PELADO, sin badge: el numero vive solo adentro del dropdown y es el
@@ -4491,6 +4506,180 @@ function selBoton(){
   // 1801: con el dropdown abierto, los numeros se repintan solos cuando el server manda otra cosa
   if(votMenuAbierto){ if(sel.actual) votMenuCerrar(); else votMenuPintar(); }
 }
+// ---------- 1879 {listas}: la vista `tinder` son DOS sub-vistas, `votar` y `listas` ----------
+// facundo (2026-09-17): "agrega un boton en la view votar que sea ver listas. como dos sub views dentro de votar y
+// eso. las listas demasiado grandes, no pongas quienes son, sino por que estan ahi y cuantos son. el resto de las
+// listas, la info que se tenga, si se puede fotito chica mejor, por que estan ahi, y si hay alguna accion recomendada
+// [...] clickear en la accion deberia aparecer un modal con algo para ejecutar la accion o algo para hablar de eso".
+// la web NO calcula ni redacta nada: el json entero lo arma el server sin modelo (`recetas/ig_listas.py`, script del
+// daemon cada 10 min) cruzando embudo, fotos, cola de instagram, dm bajados, calendar y `personal/ESTADO.md`.
+// el molde no se toca: la caja es la misma `.selcaja` a pantalla completa de la 1874, el boton para pasar de una
+// sub-vista a la otra vive en la cabecera al lado del `←`, y el modal de la accion es `modalMolde` + `moldeBoton`.
+var LIS_ARCH = "listas.json", LIS_TTL = 120000;
+var lis = {sub: "votar", datos: null, ts: 0, bajando: null, etag: null};
+// el boton de la cabecera dice a DONDE lleva (la otra sub-vista), como cualquier interruptor de dos posiciones
+function lisBotonPintar(pantalla){
+  var b = $("selsub");
+  if(!b) return;
+  b.classList.toggle("oculta", !pantalla);
+  b.textContent = lis.sub === "listas" ? "votar" : "listas";
+  b.title = lis.sub === "listas" ? "volver a votar" : "ver las listas";
+}
+function lisBajar(fresco){
+  if(!fresco && lis.datos && Date.now() - lis.ts < LIS_TTL) return Promise.resolve(lis.datos);
+  if(lis.bajando) return lis.bajando;
+  lis.bajando = api("GET", "/repos/" + REPO + "/contents/" + LIS_ARCH, null, null,
+                    "application/vnd.github.raw+json").then(function(r){
+    if(r.json && r.json.listas){ lis.datos = r.json; lis.ts = Date.now(); }
+    return lis.datos;
+  }).catch(function(){ return lis.datos; }).then(function(d){ lis.bajando = null; return d; });
+  return lis.bajando;
+}
+// entrar a la sub-vista `listas`: la vista `tinder` entera, sin votacion abierta (no hace falta ninguna)
+function lisAbrir(fresco){
+  lis.sub = "listas";   // antes de entrar a la vista: `selBoton` saca del tinder si no hay ni votacion ni listas
+  vistaPoner("tinder");
+  capaMostrar("selmodal");
+  return lisPoner("listas", fresco);
+}
+function lisPoner(cual, fresco){
+  lis.sub = cual === "listas" ? "listas" : "votar";
+  if(lis.sub === "votar"){
+    $("sellistas").classList.add("oculta");
+    if(sel.actual){ selModoLista(false); tjPintar(); }
+    else { $("selmodal").classList.add("pantalla"); $("sellista").classList.add("oculta"); selCerrar(); return false; }
+    lisBotonPintar(true);
+    return true;
+  }
+  // modo listas: la caja a pantalla completa, sin tarjeta, sin votos y sin campo de texto
+  $("selmodal").classList.add("pantalla");
+  $("sellista").classList.add("oculta");
+  $("seltarjeta").classList.add("oculta");
+  $("selacciones").classList.add("oculta");
+  $("selback").classList.add("oculta");
+  $("seltxt").classList.add("oculta");
+  var b = document.querySelector("#selmodal .selbtns");
+  if(b) b.classList.add("oculta");
+  $("sellistas").classList.remove("oculta");
+  $("seltitulo").textContent = "listas";
+  $("selcuenta").textContent = "";
+  lisBotonPintar(true);
+  lisPintar();
+  lisBajar(fresco).then(function(){ if(lis.sub === "listas") lisPintar(); });
+  return true;
+}
+function lisToggle(){ return lisPoner(lis.sub === "listas" ? "votar" : "listas"); }
+function lisPintar(){
+  var c = $("sellistas"), d = lis.datos;
+  c.textContent = "";
+  if(!d || !d.listas || !d.listas.length){
+    var v = document.createElement("div"); v.className = "lisvacio";
+    v.textContent = "todavía no bajaron las listas";
+    c.appendChild(v);
+    return;
+  }
+  $("selcuenta").textContent = d.total ? d.total + " en total" : "";
+  d.listas.forEach(function(f){ c.appendChild(lisCaja(f)); });
+}
+function lisCaja(f){
+  var caja = document.createElement("div"); caja.className = "liscaja";
+  caja.setAttribute("data-lista", f.clave);
+  var h = document.createElement("div"); h.className = "listit";
+  var t = document.createElement("span"); t.className = "lisnom"; t.textContent = f.titulo || f.clave;
+  var n = document.createElement("span"); n.className = "lisn"; n.textContent = String(f.n || 0);
+  h.appendChild(t); h.appendChild(n); caja.appendChild(h);
+  var pq = document.createElement("div"); pq.className = "lisporque"; pq.textContent = f.porque || "";
+  caja.appendChild(pq);
+  // una lista grande NO nombra a nadie: por que estan ahi y cuantos son, y nada mas (facundo)
+  if(f.grande){
+    var g = document.createElement("div"); g.className = "lisgrande";
+    g.textContent = "son " + f.n + ": demasiados para nombrarlos acá";
+    caja.appendChild(g);
+    return caja;
+  }
+  (f.gente || []).forEach(function(p){ caja.appendChild(lisFila(p)); });
+  return caja;
+}
+function lisFila(p){
+  var fila = document.createElement("div"); fila.className = "lisfila";
+  fila.setAttribute("data-persona", p.id);
+  var fo = document.createElement("div"); fo.className = "lisfoto";
+  if(p.foto) bajarImagen(p.foto).then(function(url){
+    var im = document.createElement("img"); im.alt = ""; im.src = url; fo.appendChild(im);
+  }).catch(function(){});
+  fila.appendChild(fo);
+  var col = document.createElement("div"); col.className = "liscol";
+  var nom = document.createElement("div"); nom.className = "lisquien";
+  nom.textContent = p.nombre || p.cuenta;
+  var cu = document.createElement("span"); cu.className = "liscuenta"; cu.textContent = "@" + p.cuenta;
+  nom.appendChild(cu);
+  col.appendChild(nom);
+  var dt = document.createElement("div"); dt.className = "lisdatos";
+  dt.textContent = (p.datos || []).join(" · ");
+  col.appendChild(dt);
+  if(p.porque){
+    var pq = document.createElement("div"); pq.className = "lispq"; pq.textContent = p.porque;
+    col.appendChild(pq);
+  }
+  var a = p.accion || {};
+  if(a.texto){
+    var ac = document.createElement("button");
+    ac.type = "button";
+    ac.className = "lisacc" + (a.confirma === "dale" ? " toca" : "");
+    ac.textContent = a.texto;
+    ac.addEventListener("click", function(){ lisAccionModal(p); });
+    col.appendChild(ac);
+  }
+  fila.appendChild(col);
+  return fila;
+}
+// el modal de la accion: el molde de siempre (`modalMolde` + `moldeBoton`), nunca un diseño nuevo. lo de lectura
+// sale directo; lo que toca afuera (instagram) muestra el comando exacto y UNA caja verde `dale`, sin caja `no`
+var lisModal = null;
+function lisAccionModal(p){
+  var a = p.accion || {};
+  if(!lisModal) lisModal = modalMolde({id: "lismodal", z: 44, sinServer: true});
+  var cu = document.createElement("div"); cu.className = "lisdet";
+  var fr = document.createElement("div"); fr.className = "lisdetacc"; fr.textContent = a.texto || "";
+  cu.appendChild(fr);
+  var dt = document.createElement("div"); dt.className = "lisdatos";
+  dt.textContent = (p.datos || []).join(" · ");
+  cu.appendChild(dt);
+  if(a.comando){
+    var pre = document.createElement("pre"); pre.className = "liscmd"; pre.textContent = a.comando;
+    cu.appendChild(pre);
+  }
+  // 1791: nada de `window.open` en la pwa; el perfil es un `<a target="_blank">` de verdad (in-app browser)
+  if(p.link){
+    var lk = document.createElement("a");
+    lk.className = "lisperfil"; lk.href = p.link; lk.target = "_blank"; lk.rel = "noopener";
+    lk.textContent = "ver el perfil";
+    cu.appendChild(lk);
+  }
+  var bs = [];
+  if(a.comando && a.confirma === "dale")
+    bs.push({txt: "dale", clase: "lisdale", accion: function(m){
+      (accMandarFn || mandar)(a.comando, "personal", true);
+      m.cerrar();
+      m.estado("");
+    }});
+  bs.push({txt: "hablar de esto en el chat", clase: "lishablar", accion: function(m){
+    m.cerrar();
+    lisHablar(p);
+  }});
+  return lisModal.abrir({titulo: p.nombre || p.cuenta, cuenta: "@" + p.cuenta, cuerpo: cu, botones: bs});
+}
+// "hablar de esto": deja el chat en `personal` con el contexto de esa persona ya escrito. no manda nada
+function lisHablar(p){
+  var a = p.accion || {};
+  selCerrar();
+  if(temaActivo() !== "personal") abrirTab("personal");
+  ponerCaja((a.chat || ("sobre @" + p.cuenta + ": ")) + " ");
+  guardarBorrador(temaActivo(), txt.value, true);
+  vistaPoner("chat");
+  try{ txt.focus(); }catch(x){}
+}
+
 // ---------- 1801: el dropdown del fueguito (facundo, 2026-09-16) ----------
 // "el fueguito `votar` de la cabecera deja de abrir el modal directo: abre un dropdown con tres items, cada uno con su
 // numero, y recien al elegir uno se abre el modal". los tres items estan siempre (en gris los que no tienen nada); si
@@ -4519,6 +4708,8 @@ function votItems(){
     out.push({col: a.coleccion, nombre: a.titulo || a.coleccion, n: n, hay: n > 0});
   });
   if(votPendiente()) out.push({col: "animaciones", nombre: "animaciones del spinner", n: 1, hay: true});
+  // 1879 {listas}: la otra sub-vista de la vista `tinder`, siempre clickeable (no necesita ninguna votacion abierta)
+  out.push({col: "listas", nombre: "ver listas", n: 0, hay: true});
   return out;
 }
 var votMenuAbierto = false;
@@ -4559,6 +4750,7 @@ function votMenuCerrar(){
 function votMenuElegir(col){
   votMenuCerrar();
   if(col === "animaciones") return votAbrirPendiente();
+  if(col === "listas") return lisAbrir();   // 1879: la sub-vista `listas`, sin votacion abierta
   return selAbrirCol(col);
 }
 // 1788: SIEMPRE lo toca facundo (el boton `votar` o el push). abre la primera que no cerraste; si cerraste todas,
@@ -8699,6 +8891,7 @@ $("ddfondo").addEventListener("click", cerrarDd);
 capaRegistrar({nombre: "visor", el: "visor", z: 60, abierta: function(){ return !!document.getElementById("visor"); },
                cerrar: function(){ document.getElementById("visor").__cerrar(); }});   // 1652: cierra con zoom tambien
 capaRegistrar({nombre: "seleccion", el: "selmodal", cerrar: function(){ selCerrar(); }});
+$("selsub").addEventListener("click", function(){ lisToggle(); });   // 1879 {listas}: `votar` <-> `listas`
 // 1801: el dropdown de los tres procesos, arriba de todo lo pegado (z 43) y cerrado por `esc` como cualquier capa
 capaRegistrar({nombre: "votmenu", el: "votmenu", z: 43, abierta: function(){ return !!votMenuAbierto; },
   cerrar: function(){ votMenuCerrar(); }});
@@ -8901,6 +9094,10 @@ window.__agente = {
   selEnviarTexto: selEnviarTexto, selCerrar: selCerrar,
   // 1407: boton `votar` y respaldo por el buzon (`prueba_web_votar`)
   selPoner: selPoner, selVotar: selVotar, selAbrirCol: selAbrirCol, selBoton: selBoton, selPendientes: selPendientes,
+  // 1879 {listas}: la sub-vista `listas` de la vista `tinder`
+  lisAbrir: lisAbrir, lisPoner: lisPoner, lisToggle: lisToggle, lisPintar: lisPintar, lisAccionModal: lisAccionModal,
+  lisSub: function(){ return lis.sub; },
+  lisDatos: function(d){ if(d){ lis.datos = d; lis.ts = Date.now(); } return lis.datos; },
   // 1801: el dropdown de los tres procesos y la fila de botones de cada uno
   votItems: votItems, votMenuAbrir: votMenuAbrir, votMenuCerrar: votMenuCerrar, votMenuElegir: votMenuElegir,
   votMenuAbierto: function(){ return !!votMenuAbierto; }, tjProcQs: tjProcQs, TJ_PROCS: TJ_PROCS,
