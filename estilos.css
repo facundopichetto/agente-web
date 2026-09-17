@@ -335,6 +335,33 @@
      sin borde ni caja (molde `.bglifo`) y con `flex:1` los tres reparten el ancho, asi en 390 px entran sin scroll */
   #selacciones .tjbtn{flex:1 1 0;min-height:46px;padding:6px 9px}
   #selacciones .tjbtn .tjglf{display:inline-block;transform:scale(1.25);transform-origin:center}
+  /* 1874 (facundo, 2026-09-17: "el tinder deberia abrir pantalla completa. dos bloques, uno al lado del otro en
+     wide, uno arriba del otro en mobile. todo full screen. primero foto lo mas grande que se pueda. luego la
+     informacion que ya tenemos"): al elegir un proceso del `#votmenu` el votador deja de ser una caja chica y ocupa
+     la pantalla entera (`.pantalla`, solo en modo tarjetas: la lista de checkboxes sigue siendo un modal). el molde
+     no cambia (`.capa` + `.mcaja`, `esc` cierra por la pila, sin borde de color): la caja pierde el ancho maximo, el
+     radio y la sombra, y el centro optico de la 1642 no aplica (la caja mide todo el alto). */
+  #selmodal.pantalla{padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom) 0;justify-content:stretch}
+  #selmodal.pantalla::after{display:none}
+  #selmodal.pantalla .selcaja{max-width:none;width:100%;height:100%;max-height:100%;flex:1 1 auto;min-height:0;
+    border-radius:0;box-shadow:none;gap:6px;padding:8px 10px}
+  /* mobile: un bloque arriba del otro (foto y despues los datos); wide: los dos bloques al lado. la foto se lleva
+     todo lo que sobra (`1fr`) y los datos lo que necesitan, hasta el 45% del alto, scrolleando adentro */
+  #selmodal.pantalla #seltarjeta{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) minmax(0,auto);
+    gap:8px;overflow:hidden}
+  #selmodal.pantalla #seltarjeta .tjinfo{min-height:0;max-height:45%;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    display:flex;flex-direction:column;gap:6px}
+  /* la foto no salta nunca: el cuadro lo mide la grilla (no la imagen) y la imagen entra entera con `contain`, asi
+     que ni el `padding-bottom` de la 1772 ni un `aspect-ratio` en un item flex (1655, safari del iphone) hacen falta */
+  #selmodal.pantalla #seltarjeta .tjfotos{min-height:0;height:100%;display:block}
+  #selmodal.pantalla #seltarjeta .tjppal{height:100%;padding-bottom:0}
+  #selmodal.pantalla #seltarjeta .tjppal img{object-fit:contain}
+  /* la fila de votos no se estira de borde a borde en una pantalla ancha: queda del ancho de una caja, centrada */
+  #selmodal.pantalla #selacciones{width:100%;max-width:520px;margin:0 auto}
+  @media (min-width:700px){
+    #selmodal.pantalla #seltarjeta{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr);gap:12px}
+    #selmodal.pantalla #seltarjeta .tjinfo{max-height:100%}
+  }
   /* 1556 (facundo, desde el iphone): "abajo los botones no tienen borde. izquierda en rojo una X, en el medio en blanco
      un guion, derecha un tick verde, tamaño 12px". sin borde ni caja, glifo de 12px y 38 px tocables; el nombre va en aria-label */
   /* el glifo, el color y el toque (opacidad) viven en el molde: `.bglifo.b-no` · `.b-queda` */
@@ -888,19 +915,45 @@
   /* 1829 (facundo, 2026-09-17): chat | widgets a la izquierda, pegado a los nodos, y el grupo de iconos
      (fueguito, campana, tipito, en ese orden) a la derecha: `margin-right:auto` empuja todo lo que sigue.
      en desktop `#vistas` no se pinta y `#nodos` (flex 1) sigue empujando los iconos a la derecha. */
-  #vistas{display:none;gap:6px;flex:0 0 auto;margin-right:auto}
+  #vistas{gap:6px;flex:0 0 auto;margin-right:auto}   /* 1875: se pinta siempre; el boton de la vista activa se esconde solo */
   /* chat | widgets sin borde; el que no esta activo en blanco (facundo, 2026-09-14, 1288) */
   #vistas button{border-color:transparent;color:var(--blanco)}
   #vistas button.on{color:var(--verde)}
   /* 1407/1567: `votar` a la izquierda de chat, solo con algo para votar en este dispositivo; 1794: paso a ser el
      fueguito `.ib` (reglas arriba, junto al badge) */
   body.sinlogin #cabecera,body.sinlogin #cuerpo{display:none}
+  /* ---------- 1875 (facundo, 2026-09-17): el board son VISTAS enteras ----------
+     "el tinder tiene que ser simplemente una vista entera, que se esconde cuando esta activa. chat / widget (o chat Y
+     widget) tiene que ser una o dos vistas segun si es mobile o desktop y tambien esconderse el que esta activo".
+     cuatro vistas (`chat`, `widgets`, `tinder`, `podcast`), una clase por vista en el body (`v-chat`...). el js
+     (`vistaPoner`) solo pone la clase: quien se pinta lo decide todo aca, asi que cambiar de vista no recarga nada
+     (1793). `tinder` y `podcast` van siempre solas; en desktop `chat` y `widgets` conviven, en mobile nunca. */
+  body:not(.v-chat) #panel-chat{display:none}
+  body:not(.v-widgets) #panel-widgets{display:none}
+  body:not(.v-chat) #sep,body:not(.v-widgets) #sep{display:none}
+  body.v-tinder #cuerpo,body.v-podcast #cuerpo{display:none}
+  /* el votador deja de ser un modal encima del chat: es un hermano de `#cuerpo` que ocupa lo que queda abajo de la
+     cabecera (por eso `position:static`, no `fixed`: la barra de iconos sigue arriba y se puede cambiar de vista).
+     el molde no cambia (`.capa` + `.mcaja`, `esc` cierra por la pila) y los dos bloques son los de la 1874. */
+  body.v-tinder #selmodal.pantalla{position:static;inset:auto;flex:1 1 auto;min-height:0;
+    background:var(--fondo-chat);padding:0;z-index:auto}
+  /* el podcast: la cuarta vista, con lo que ya arma su widget a pantalla completa */
+  #vista-podcast{display:none}
+  body.v-podcast #vista-podcast{display:block;flex:1 1 auto;min-height:0;overflow-y:auto;
+    -webkit-overflow-scrolling:touch;background:var(--fondo-panel);
+    padding:8px 10px calc(14px + env(safe-area-inset-bottom)) 10px}
+  body.v-podcast #vista-podcast .caja{margin:0}
+  body.v-podcast #vista-podcast button[data-pod]{display:none}   /* en la vista no se pliega: ya esta abierta */
+  body.sinlogin #vista-podcast{display:none!important}
+  /* el icono de la vista activa no se pinta (`vistaIconos`): en desktop, con chat y widgets activas, la barra
+     `#vistas` queda vacia y la cabecera se ve igual que antes de la 1875 */
+  #vistas{display:flex}
+  #vistas button.oculta,#cabecera .ib.oculta{display:none!important}
   /* vista mobile: una vista a la vez, la elige la barra de arriba. puro css, sin js de layout.
      entra cuando la ventana es angosta (celu) O cuando es mas alta que ancha (facundo, 2026-09-11:
      una ventana vertical en la compu, o el celu de pie, tambien quieren el toggle chat | widgets).
      el mismo media query vive en el js como `MQ_MOBILE`: si cambia uno, cambia el otro. */
   @media (max-width:899px), (max-aspect-ratio: 1/1){
-    #vistas{display:flex}
     /* dedo: los seis botones de la barra se tocan con el pulgar, todos del mismo alto */
     .bb{height:32px;padding:4px 6px;gap:4px}
     #nodos .nodo{min-height:32px}   /* dedo: el label se toca aunque no parezca boton */
@@ -926,9 +979,7 @@
     .caja > .tit{min-height:40px}
     #panel-widgets{flex:1 1 auto;padding-bottom:calc(14px + env(safe-area-inset-bottom))}
     #sep{display:none}
-    /* una vista a la vez: la elige la barra de arriba (chat | widgets) */
-    body:not(.ver-widgets) #panel-widgets{display:none}
-    body.ver-widgets #panel-chat{display:none}
+    /* 1875: una vista a la vez la decide `body.v-<vista>` (arriba), igual en celu y en compu */
     /* ios zoomea al enfocar un input de menos de 16px: lo frena maximum-scale=1 en el
        viewport, asi que el input del chat va chico como el resto del chat. los de login
        quedan en 16 (se tocan una vez y ahi no molesta). */

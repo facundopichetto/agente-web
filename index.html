@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.341">
-<link rel="manifest" href="manifest.json?v=4.341">
+<meta name="agente-web-version" content="4.342">
+<link rel="manifest" href="manifest.json?v=4.342">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.341">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.342">
 </head>
 <body>
 
@@ -38,6 +38,7 @@
     <button id="ver-widgets" class="bb" type="button">widgets</button>
   </div>
   <button id="ver-votar" class="ib bglifo oculta" type="button" title="votar" aria-label="votar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22c-4 0-7-2.8-7-6.5 0-2.6 1.4-4.6 2.8-6.3.3 1.3 1 2.3 2 2.9-.3-3 .9-6.2 4.2-8.1-.2 2.6.9 4.2 2.4 5.7 1.5 1.6 2.6 3.3 2.6 5.8 0 3.7-3 6.5-7 6.5z"/><path d="M12 22c-1.7 0-3-1.3-3-3 0-1.4.8-2.4 1.6-3.3.5.9 1.1 1.4 1.9 1.7.8-.5 1.2-1.3 1.3-2.2.8 1.1 1.2 2.2 1.2 3.8 0 1.7-1.3 3-3 3z"/></svg></button>
+    <button id="ver-podcast" class="ib" type="button" title="podcast" aria-label="podcast"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v4"/></svg></button>
   <button id="campana" class="ib" type="button" title="notificaciones" aria-label="notificaciones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 8 2.5 8h-17S6 15 6 9"/><path d="M10.3 20.5a2 2 0 0 0 3.4 0"/></svg><span id="badge" class="badge oculta"></span></button>
   <button id="persona" class="ib" type="button" title="cuenta" aria-label="cuenta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></button>
 </div>
@@ -141,6 +142,7 @@
      se abre el modal, y el titulo de arriba del modal dice cual de los tres se esta votando. molde: menu pegado a lo
      tocado (como `#nlista`), `esc` lo cierra por la pila de capas. -->
 <div id="votfondo" class="oculta"></div>
+<div id="vista-podcast"><div id="podvista"></div></div>
 <div id="votmenu" class="oculta" role="menu" aria-label="qué votar"></div>
 <div id="selmodal" class="capa oculta" role="dialog" aria-modal="true" aria-labelledby="seltitulo">
   <div class="selcaja mcaja">
@@ -232,6 +234,7 @@ function capaOptico(capa){
   if(!capa || !capa.classList || !capa.classList.contains("capa")) return;
   var caja = capa.firstElementChild;
   if(!caja) return;
+  if(capa.classList.contains("pantalla")){ capa.classList.remove("optico"); return; }   // 1874: la caja mide todo el alto
   if(capaRO && !capa.__optico){ capa.__optico = true; capaRO.observe(capa); capaRO.observe(caja); }
   var H = capa.clientHeight, h = caja.getBoundingClientRect().height;
   capa.classList.toggle("optico", H > 0 && h > 0 && h <= H * CAPA_OPTICO_MAX);
@@ -3931,6 +3934,9 @@ function selEsTarjetas(e){
   return (e.candidatas || []).some(function(c){ return c.fotos || c.privada !== undefined || c.etiquetas; });
 }
 function selModoLista(lista){
+  // 1874 (facundo, 2026-09-17): el votador (modo tarjetas) es una vista entera; la lista de checkboxes sigue
+  // siendo el modal de siempre. lo unico que cambia es la clase: el molde (`.capa`, `esc`, la pila) es el mismo
+  $("selmodal").classList.toggle("pantalla", !lista);
   $("sellista").classList.toggle("oculta", !lista);
   $("seltarjeta").classList.toggle("oculta", lista);
   $("selacciones").classList.toggle("oculta", lista);
@@ -4055,9 +4061,14 @@ var TJ_PROCS = {
     {q: "subir", tipo: "subir", aria: "empezar a seguir"}]},
   "ig-dejar": {nombre: "dejar de seguir", botones: [
     {q: "bajar", tipo: "bajar", aria: "dejar de seguir"},
-    {q: "igual", tipo: "igual", aria: "queda igual"}]}
+    {q: "igual", tipo: "igual", aria: "queda igual"}]},
+  // 1872 {maybe}: el cuarto proceso, la lista `maybe` (lo que junta el `-_-` de candidatas y el `↓` de empezar a seguir)
+  "ig-maybe": {nombre: "maybe", botones: [
+    {q: "bajar", tipo: "bajar", aria: "a ignoradas"},
+    {q: "igual", tipo: "igual", aria: "queda en maybe"},
+    {q: "subir", tipo: "subir", aria: "a interesan"}]}
 };
-var TJ_PROC_ORDEN = ["ig-embudo", "ig-seguir", "ig-dejar"];
+var TJ_PROC_ORDEN = ["ig-embudo", "ig-seguir", "ig-dejar", "ig-maybe"];
 function tjProc(col){ return TJ_PROCS[col] || TJ_PROCS["ig-embudo"]; }
 // la fila de abajo, armada con `moldeBoton` (nunca html fijo: son dos o tres botones segun el proceso)
 function tjBotones(e){
@@ -4096,6 +4107,7 @@ function tjAbrir(e){
   $("seltitulo").textContent = e.titulo || e.coleccion;
   $("seltxt").value = ""; $("selestado").textContent = "";
   tjPintar();
+  vistaPoner("tinder");   // 1875: el votador es una vista entera, no un modal encima del chat
   capaMostrar("selmodal");
   return true;
 }
@@ -4103,6 +4115,8 @@ function tjActual(){
   var e = sel.actual;
   return e && e.candidatas && sel.tj < e.candidatas.length ? e.candidatas[sel.tj] : null;
 }
+// 1874: la vista entera la pone `selModoLista` (modo tarjetas); lo que cambia es la clase del modal
+function tjPantalla(){ return $("selmodal").classList.contains("pantalla"); }
 function tjPintar(){
   var e = sel.actual, c = tjActual(), t = $("seltarjeta");
   t.textContent = "";
@@ -4140,9 +4154,12 @@ function tjPintar(){
   var ppUrl = c.privada ? "" : (c.link && /^https:\/\//.test(c.link) ? c.link : (c.cuenta ? "https://instagram.com/" + c.cuenta : ""));
   var pp = document.createElement(ppUrl ? "a" : "div"); pp.className = "tjppal";
   if(ppUrl){ pp.href = ppUrl; pp.target = "_blank"; pp.rel = "noopener"; }
-  // 1772: el alto sale del css (cuadrado); si la candidata trae `ratio` (ancho/alto) el placeholder ya nace con ese
-  if(typeof c.ratio === "number" && c.ratio > 0.2 && c.ratio < 5) pp.style.paddingBottom = (100 / c.ratio).toFixed(2) + "%";
+  // 1772: el alto sale del css (cuadrado); si la candidata trae `ratio` (ancho/alto) el placeholder ya nace con ese.
+  // 1874: en la vista entera el cuadro lo mide la grilla y la foto entra con `contain`, asi que no lleva `ratio`
+  if(!tjPantalla() && typeof c.ratio === "number" && c.ratio > 0.2 && c.ratio < 5) pp.style.paddingBottom = (100 / c.ratio).toFixed(2) + "%";
   fs.appendChild(pp); t.appendChild(fs);
+  // 1874: todo lo que no es la foto vive en UN bloque (`.tjinfo`): abajo de la foto en mobile, al lado en wide
+  var info = document.createElement("div"); info.className = "tjinfo"; t.appendChild(info);
   tjPrecargar(e, sel.tj);   // 1772: las dos tarjetas siguientes bajan mientras vota esta
   // 1665 (facundo): tocar la foto. cuenta publica -> el perfil de instagram en otra pestaña; privada (donde el perfil
   // no muestra nada) -> la foto a pantalla completa en el visor, que ya cierra con esc, la ✕ y el fondo
@@ -4184,7 +4201,7 @@ function tjPintar(){
     if(lk){ k.href = c.link; k.target = "_blank"; k.rel = "noopener"; k.addEventListener("click", function(ev){ ev.stopPropagation(); }); }
     nom.appendChild(k);
   }
-  t.appendChild(nom);
+  info.appendChild(nom);
   var est = document.createElement("div"); est.className = "tjestado";
   // 1677: el chip `pública` se comporta como el `@cuenta`: link al perfil (solo https), abre aparte y no vota ni
   // avanza la tarjeta; `privada` (y las etiquetas) siguen siendo texto
@@ -4197,27 +4214,27 @@ function tjPintar(){
   chip(c.privada ? "privada" : "pública", c.privada ? "priv" : "pub", c.privada ? "" : c.link);
   (c.etiquetas || []).forEach(function(x){ chip(x, "tag"); });
   if(c.estado) est.appendChild(document.createTextNode(c.estado));
-  t.appendChild(est);
+  info.appendChild(est);
   // 1642: lo que el embudo ya sabe (seguidores, en comun, reacciones), la bio y el motivo; la linea igual al nombre no va
   if((c.datos || []).length){
     var ds = document.createElement("div"); ds.className = "tjdatos";
     c.datos.forEach(function(s){ var y = document.createElement("span"); y.textContent = s; ds.appendChild(y); });
-    t.appendChild(ds);
+    info.appendChild(ds);
   }
-  function renglon(txt, cls){ var x = document.createElement("div"); x.className = cls; x.textContent = txt; t.appendChild(x); }
+  function renglon(txt, cls){ var x = document.createElement("div"); x.className = cls; x.textContent = txt; info.appendChild(x); }
   var mismo = function(s){ return String(s || "").trim().toLowerCase(); };
   if(c.detalle && mismo(c.detalle) !== mismo(c.titulo) && mismo(c.detalle) !== mismo(c.cuenta)) renglon(c.detalle, "tjdet");
   // 1665: la bio tiene su renglon siempre, vacio mientras no haya dato (lo llena la lectura de perfiles); `following`
   // entra solo en `datos` cuando existe
-  var bio = document.createElement("div"); bio.className = "tjbio"; bio.textContent = c.bio || ""; t.appendChild(bio);
+  var bio = document.createElement("div"); bio.className = "tjbio"; bio.textContent = c.bio || ""; info.appendChild(bio);
   if(c.motivo) renglon(c.motivo, "tjmot");
   if(c.desde) renglon("desde " + c.desde + (c.lista ? " · " + c.lista : ""), "tjdesde");
   if((c.historial || []).length){   // 1665: de donde salio, cada voto y cada mudanza, lo mas nuevo abajo
     var hs = document.createElement("div"); hs.className = "tjhist";
     c.historial.forEach(function(x){ var y = document.createElement("div"); y.textContent = x; hs.appendChild(y); });
-    t.appendChild(hs);
+    info.appendChild(hs);
   }
-  t.scrollTop = 0;
+  t.scrollTop = 0; info.scrollTop = 0;
 }
 // 1495: cada voto firma la tarjeta a la vista (`candidata_id` y `cuenta`). el server rechaza el que no los trae.
 function tjDecidir(q){
@@ -4311,6 +4328,7 @@ function tjSinFotos(e){
   sel.actual = null;
   selModoLista(true);
   capaOcultar("selmodal");
+  vistaVolver();   // 1875: sale de la vista tinder
   selBoton();
   selSubir();
 }
@@ -4327,14 +4345,17 @@ function tjFin(){
   sel.actual = null;
   selModoLista(true);
   capaOcultar("selmodal");
+  vistaVolver();   // 1875: sale de la vista tinder
   selBoton();
   selSubir();
 }
 function selCerrar(){
+  var tj = vistaEs("tinder");
   if(sel.actual) sel.ignorada[sel.actual.coleccion] = sel.actual.abrir_ts;
   sel.actual = null;
   selModoLista(true);   // 1440: la proxima puede ser una de checkboxes
   capaOcultar("selmodal");
+  if(tj) vistaVolver();   // 1875: `esc` en el tinder sale de la vista y vuelve a la anterior
   selBoton();
 }
 function selEncolar(tipo){
@@ -4352,6 +4373,7 @@ function selAceptar(){
   var h = selLeer("hechas", {}); h[e.coleccion] = e.abrir_ts; selEscribir("hechas", h);
   sel.actual = null;
   capaOcultar("selmodal");
+  if(vistaEs("tinder")) vistaVolver();   // 1875
   selBoton();
   selSubir();
   return true;
@@ -4459,7 +4481,8 @@ function selBoton(){
   var n = votItems().reduce(function(s, x){ return s + (x.n || 0); }, 0), b = $("ver-votar");
   b.title = n ? "votar: " + n + " en las listas" : "votar: nada por ahora";
   b.classList.toggle("apagado", !n);
-  b.classList.toggle("oculta", !!sel.actual || !$("votar").classList.contains("oculta"));   // con un votador abierto no estorba
+  // 1875: el icono de la vista activa no se pinta (el fueguito ES el icono de la vista `tinder`)
+  b.classList.toggle("oculta", vistaEs("tinder") || !!sel.actual || !$("votar").classList.contains("oculta"));
   // 1801: con el dropdown abierto, los numeros se repintan solos cuando el server manda otra cosa
   if(votMenuAbierto){ if(sel.actual) votMenuCerrar(); else votMenuPintar(); }
 }
@@ -6758,6 +6781,17 @@ function cajaPodcast(p){
   });
   return caja("podcast", extra, limFilas("podcast", filas).join("\n"), false, "podcast");
 }
+// 1875: la vista `podcast` a pantalla completa. por ahora es lo que ya arma el widget, siempre desplegado (facundo:
+// "sin inventar features nuevas, el contenido lo mejoramos despues"); el boton de plegar no se pinta (css).
+function podVistaPintar(){
+  var el = $("podvista");
+  if(!el) return "";
+  var antes = podAbierto;
+  podAbierto = true;
+  try{ el.innerHTML = cajaPodcast((widDatos || {}).podcast || {}); }
+  finally{ podAbierto = antes; }
+  return el.innerHTML;
+}
 
 function cajaDj(p){
   // motor `fuzzer/dj`: la cola nocturna de spotify. orden fijo, huecos aleatorios.
@@ -7432,6 +7466,7 @@ function pintarWidgets(d, err){
           }).join(" ") : "") + "</div></div>";
   var y = $("panel-widgets").scrollTop;
   widgetsEl.innerHTML = html;
+  if(typeof vistaEs === "function" && vistaEs("podcast")) podVistaPintar();   // 1875: la vista podcast vive del mismo json
   $("panel-widgets").scrollTop = y;
   pintarNodos(d.nodos);         // la barra de arriba: SERVER | MAC | CLOUD, con quien esta de guardia
   pintarNotis();                // los avisos sin leer, debajo de las pestañas
@@ -8495,18 +8530,93 @@ $("ctxfondo").addEventListener("contextmenu", function(e){ e.preventDefault(); c
 // scroll no burbujea: con captura se ve el de cualquier panel
 document.addEventListener("scroll", function(){ if(menuAbierto) cerrarMenu(); }, true);
 
-// celu: una vista a la vez (chat | widgets). en desktop los dos paneles se ven juntos y esta barra
-// no aparece.
-function verPanel(cual){
-  document.body.classList.toggle("ver-widgets", cual === "widgets");
-  $("ver-chat").classList.toggle("on", cual === "chat");
-  $("ver-widgets").classList.toggle("on", cual === "widgets");
-  if(cual === "widgets" && Date.now() - widUlt > 15000) cargarWidgets().catch(function(){});
-  if(cual === "chat") abajo();
+// ---------- 1875: el board son VISTAS enteras (facundo, 2026-09-17) ----------
+// "el tinder tiene que ser simplemente una vista entera, que se esconde cuando esta activa. chat / widget (o chat Y
+// widget) tiene que ser una o dos vistas segun si es mobile o desktop y tambien esconderse el que esta activo".
+// cuatro vistas: `chat`, `widgets`, `tinder` (el votador) y `podcast`. en DESKTOP chat y widgets van juntas, una al
+// lado de la otra; `tinder` y `podcast` siempre solas, a pantalla completa. en MOBILE una sola vista a la vez.
+// el icono de una vista activa se ESCONDE de la barra (`vistaIconos`) y tocar otro icono cambia de vista.
+// lo que se ve lo decide el css por `body.v-<vista>`: un cambio de vista no recarga nada (1793) y el ancla del chat
+// (1813) se guarda por vista, asi que volver al chat deja la primera linea visible donde estaba.
+var VISTAS_TODAS = ["chat", "widgets", "tinder", "podcast"];
+var VISTA_SOLAS = ["tinder", "podcast"];       // ocupan la pantalla entera, nunca conviven con otra
+var VISTA_LS = "agente_vista";
+var vistaOn = null, vistaPrevia = null, vistaAnclas = {};
+function vistaDefault(){ return esVistaMobile() ? ["chat"] : ["chat", "widgets"]; }
+// deja la combinacion en una valida para este ancho: una sola en mobile, chat+widgets juntas en desktop
+function vistaNorm(v){
+  v = (Array.isArray(v) ? v : [v]).filter(function(x){ return VISTAS_TODAS.indexOf(x) >= 0; });
+  if(!v.length) return vistaDefault();
+  var sola = v.filter(function(x){ return VISTA_SOLAS.indexOf(x) >= 0; })[0];
+  if(sola) return [sola];
+  return esVistaMobile() ? [v[0]] : ["chat", "widgets"];
 }
-function verWidgets(si){ verPanel(si ? "widgets" : "chat"); }
-$("ver-chat").addEventListener("click", function(){ verPanel("chat"); });
-$("ver-widgets").addEventListener("click", function(){ verPanel("widgets"); });
+function vistaEs(n){ return (vistaOn || []).indexOf(n) >= 0; }
+function vistaGuardar(){ try{ sessionStorage.setItem(VISTA_LS, JSON.stringify(vistaOn)); }catch(x){} }
+// el icono de la vista activa no se pinta: si estan chat y widgets, se esconden los dos
+function vistaIconos(){
+  $("ver-chat").classList.toggle("oculta", vistaEs("chat"));
+  $("ver-widgets").classList.toggle("oculta", vistaEs("widgets"));
+  $("ver-podcast").classList.toggle("oculta", vistaEs("podcast"));
+  if(typeof selBoton === "function") selBoton();   // el fueguito lo esconde el mismo (tambien cuenta lo que hay para votar)
+}
+function vistaPintar(){
+  VISTAS_TODAS.forEach(function(n){ document.body.classList.toggle("v-" + n, vistaEs(n)); });
+  // compat: el css y el modal de la campana venian mirando `ver-widgets` (una sola vista en el celu)
+  document.body.classList.toggle("ver-widgets", vistaEs("widgets") && !vistaEs("chat"));
+  $("ver-chat").classList.toggle("on", vistaEs("chat"));
+  $("ver-widgets").classList.toggle("on", vistaEs("widgets"));
+  vistaIconos();
+}
+// cambia de vista. `n` es el nombre de una vista o la combinacion entera; `vistaNorm` la acomoda al ancho
+function vistaPoner(n){
+  var nueva = vistaNorm(n), antes = (vistaOn || []).join("+"), ahora = nueva.join("+");
+  if(antes === ahora){ vistaPintar(); return false; }
+  if(vistaEs("chat")) vistaAnclas.chat = anclaUlt || anclaMedir();   // 1813: el ancla del chat es por vista
+  if(vistaOn) vistaPrevia = vistaOn;
+  vistaOn = nueva;
+  vistaGuardar();
+  vistaPintar();
+  if(vistaEs("widgets") && Date.now() - widUlt > 15000) cargarWidgets().catch(function(){});
+  if(vistaEs("podcast")) podVistaPintar();
+  if(vistaEs("chat")){
+    var a = vistaAnclas.chat;
+    if(a && anclaPoner(a)){
+      requestAnimationFrame(function(){ anclaPoner(a); });
+      setTimeout(function(){ anclaPoner(a); }, 60);
+    } else abajo();
+  }
+  return true;
+}
+// salir de una vista sola (`esc` en el tinder, cerrar el podcast): vuelve a la que estaba antes
+function vistaVolver(){
+  var v = (vistaPrevia || []).filter(function(x){ return VISTA_SOLAS.indexOf(x) < 0; });
+  return vistaPoner(v.length ? v : vistaDefault());
+}
+// al arrancar: lo guardado en la pestaña, menos `tinder` (necesita una votacion abierta, no se restaura sola)
+function vistaInicial(){
+  var v = null;
+  try{ v = JSON.parse(sessionStorage.getItem(VISTA_LS) || "null"); }catch(x){}
+  if(!Array.isArray(v) || v.indexOf("tinder") >= 0) v = null;
+  return vistaNorm(v || vistaDefault());
+}
+// compat con lo de antes (`verPanel` / `verWidgets` los siguen llamando las pruebas y el modal de la campana)
+function verPanel(cual){ return vistaPoner(cual === "widgets" ? "widgets" : "chat"); }
+function verWidgets(si){ return verPanel(si ? "widgets" : "chat"); }
+$("ver-chat").addEventListener("click", function(){ vistaPoner("chat"); });
+$("ver-widgets").addEventListener("click", function(){ vistaPoner("widgets"); });
+$("ver-podcast").addEventListener("click", function(){ vistaPoner("podcast"); });
+// el ancho cambio (girar el celu, agrandar la ventana): la combinacion se reacomoda sola, y solo si de verdad
+// cambia (en desktop chat+widgets, en mobile una sola): asi un `resize` cualquiera no repinta nada
+function vistaReacomodar(){
+  var n = vistaNorm(vistaOn || vistaDefault());
+  if(n.join("+") !== (vistaOn || []).join("+")) vistaPoner(n);
+}
+if(mqMobile && mqMobile.addEventListener) mqMobile.addEventListener("change", vistaReacomodar);
+window.addEventListener("resize", vistaReacomodar);
+window.addEventListener("orientationchange", vistaReacomodar);
+vistaOn = vistaInicial();
+vistaPintar();
 
 // ---------- barra de pestañas: click y el foco del input ----------
 $("tabs").addEventListener("click", function(e){
@@ -8587,6 +8697,11 @@ if(mqMobile){
   sep.addEventListener("pointerup", soltar);
   sep.addEventListener("pointercancel", soltar);
 })();
+// 1875: en la vista `podcast` una fila abre el mismo modal de item que en el widget
+$("vista-podcast").addEventListener("click", function(e){
+  var n = e.target.closest && e.target.closest("[data-it]");
+  if(n && itemsW[n.dataset.it]) abrirModal(itemsW[n.dataset.it]);
+});
 $("ddfondo").addEventListener("click", cerrarDd);
 // 1455 (facundo, 2026-09-15): `esc` cierra el modal u overlay de mas arriba, uno por toque, tambien escribiendo en un
 // campo. cerrar con esc = cerrar/basta sin mandar: no sube votos, no marca nada y no se reabre solo en esta carga
@@ -8612,6 +8727,9 @@ capaRegistrar({nombre: "modal", el: "modal", abierta: function(){ return !!modal
                cerrar: function(){ cerrarModal(); }});
 capaRegistrar({nombre: "notimodal", el: "notimodal", abierta: function(){ return !!notiPush; }, cerrar: function(){ cerrarNotiPush(); }});
 capaRegistrar({nombre: "dd", el: "dd", cerrar: function(){ cerrarDd(); }});
+// 1875: las vistas enteras son la capa mas baja: cualquier modal abierto gana y `esc` las saca recien al final
+capaRegistrar({nombre: "vista-podcast", el: "vista-podcast", z: 1, abierta: function(){ return vistaEs("podcast"); },
+               cerrar: function(){ vistaVolver(); }});
 function escTope(){
   var c = capaTope();
   if(!c) return null;
@@ -8781,7 +8899,8 @@ window.__agente = {
   selAgotadas: function(a){ sel.agotadas = a || []; }, selTotales: function(t){ sel.totales = t || {}; },   // 1836
   tjVista: function(){ var t = $("seltarjeta"), m = $("selmodal"); return {abierto: !!sel.actual && !m.classList.contains("oculta"),
     candidata: t.getAttribute("data-candidata"), espera: !!t.querySelector(".tjespera"), cierre: !!t.querySelector(".tjcierre"),
-    texto: t.textContent, agotada: !!(sel.actual && sel.actual.agotada)}; },
+    texto: t.textContent, agotada: !!(sel.actual && sel.actual.agotada),
+    pantalla: m.classList.contains("pantalla")}; },   // 1874: vista entera en modo tarjetas
   votarBoton: function(){ var b = $("ver-votar"), cs = getComputedStyle(b), sv = b.querySelector("svg");
     // 1836: sin badge (`n` y `badge` quedan por las pruebas viejas: siempre vacio / false); `apagado` = los tres en cero
     return {vis: !b.classList.contains("oculta") && b.getBoundingClientRect().width > 0, n: "", badge: !!b.querySelector(".badge"),
@@ -8936,6 +9055,16 @@ window.__agente = {
     ve: b.contains('ver-widgets') ? 'widgets' : 'chat',
     chatVisible: document.getElementById('panel-chat').offsetWidth > 0,
     widgetsVisible: document.getElementById('panel-widgets').offsetWidth > 0}; },
+  // 1875: las cuatro vistas enteras. `iconos` dice cual se pinta en la barra (el de la vista activa se esconde)
+  vistaPoner: vistaPoner, vistaVolver: vistaVolver, vistaNorm: vistaNorm, vistaReacomodar: vistaReacomodar, podVistaPintar: podVistaPintar,
+  vistaEstado: function(){
+    var vis = function(id){ var e = document.getElementById(id); return !!e && e.getBoundingClientRect().width > 0; };
+    return {on: (vistaOn || []).slice(), previa: (vistaPrevia || []).slice(), mobile: esVistaMobile(),
+            clases: VISTAS_TODAS.filter(function(n){ return document.body.classList.contains("v-" + n); }),
+            iconos: {chat: vis("ver-chat"), widgets: vis("ver-widgets"), tinder: vis("ver-votar"), podcast: vis("ver-podcast")},
+            paneles: {chat: vis("panel-chat"), widgets: vis("panel-widgets"), tinder: vis("selmodal"), podcast: vis("vista-podcast")},
+            guardada: (function(){ try{ return sessionStorage.getItem(VISTA_LS); }catch(x){ return null; } })()};
+  },
   estado: function(){ return {tabs: tabs, activo: activo, ts: layoutTs,
                               sync: tabsSync, dispositivo: DISPOSITIVO}; },
   aplicarLayout: aplicarLayout, sanearLayout: sanearLayout, recibirTabs: recibirTabs,
