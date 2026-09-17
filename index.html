@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.343">
-<link rel="manifest" href="manifest.json?v=4.343">
+<meta name="agente-web-version" content="4.344">
+<link rel="manifest" href="manifest.json?v=4.344">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.343">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.344">
 </head>
 <body>
 
@@ -8538,48 +8538,41 @@ document.addEventListener("scroll", function(){ if(menuAbierto) cerrarMenu(); },
 // ---------- 1875: el board son VISTAS enteras (facundo, 2026-09-17) ----------
 // "el tinder tiene que ser simplemente una vista entera, que se esconde cuando esta activa. chat / widget (o chat Y
 // widget) tiene que ser una o dos vistas segun si es mobile o desktop y tambien esconderse el que esta activo".
-// cuatro vistas: `chat`, `widgets`, `tinder` (el votador) y `podcast`. en DESKTOP chat y widgets van juntas, una al
-// lado de la otra; `tinder` y `podcast` siempre solas, a pantalla completa. en MOBILE una sola vista a la vez.
-// el icono de una vista activa se ESCONDE de la barra (`vistaIconos`) y tocar otro icono cambia de vista.
-// lo que se ve lo decide el css por `body.v-<vista>`: un cambio de vista no recarga nada (1793) y el ancla del chat
-// (1813) se guarda por vista, asi que volver al chat deja la primera linea visible donde estaba.
+// cuatro vistas: `chat`, `widgets`, `tinder` (el votador) y `podcast`. el estado es UNA sola (`vistaOn`, la que
+// facundo eligio) y el body lleva su clase `v-<vista>`: que en DESKTOP `chat` y `widgets` se vean las dos, una al
+// lado de la otra, lo decide el CSS con el mismo media query de siempre, no el js. asi girar el celu o agrandar la
+// ventana no puede dejar el board con un layout viejo aunque no llegue ningun evento.
+// el icono de la vista activa se esconde (en desktop, con chat o widgets puesta, se esconden los dos) y tocar otro
+// icono cambia de vista. cambiar de vista no recarga nada (1793) y el ancla del chat (1813) se guarda por vista.
 var VISTAS_TODAS = ["chat", "widgets", "tinder", "podcast"];
 var VISTA_SOLAS = ["tinder", "podcast"];       // ocupan la pantalla entera, nunca conviven con otra
 var VISTA_LS = "agente_vista";
-var vistaOn = null, vistaPrevia = null, vistaAnclas = {};
-function vistaDefault(){ return esVistaMobile() ? ["chat"] : ["chat", "widgets"]; }
-// deja la combinacion en una valida para este ancho: una sola en mobile, chat+widgets juntas en desktop
-function vistaNorm(v){
-  v = (Array.isArray(v) ? v : [v]).filter(function(x){ return VISTAS_TODAS.indexOf(x) >= 0; });
-  if(!v.length) return vistaDefault();
-  var sola = v.filter(function(x){ return VISTA_SOLAS.indexOf(x) >= 0; })[0];
-  if(sola) return [sola];
-  return esVistaMobile() ? [v[0]] : ["chat", "widgets"];
+var vistaOn = "chat", vistaPrevia = null, vistaAnclas = {};
+function vistaNorm(n){ return VISTAS_TODAS.indexOf(n) >= 0 ? n : "chat"; }
+// lo que se esta viendo de verdad: en desktop `chat` y `widgets` son la misma vista doble
+function vistaSet(){
+  if(VISTA_SOLAS.indexOf(vistaOn) >= 0) return [vistaOn];
+  return esVistaMobile() ? [vistaOn] : ["chat", "widgets"];
 }
-function vistaEs(n){ return (vistaOn || []).indexOf(n) >= 0; }
-function vistaGuardar(){ try{ sessionStorage.setItem(VISTA_LS, JSON.stringify(vistaOn)); }catch(x){} }
-// el icono de la vista activa no se pinta: si estan chat y widgets, se esconden los dos
-function vistaIconos(){
-  $("ver-chat").classList.toggle("oculta", vistaEs("chat"));
-  $("ver-widgets").classList.toggle("oculta", vistaEs("widgets"));
-  $("ver-podcast").classList.toggle("oculta", vistaEs("podcast"));
-  if(typeof selBoton === "function") selBoton();   // el fueguito lo esconde el mismo (tambien cuenta lo que hay para votar)
-}
+function vistaEs(n){ return vistaSet().indexOf(n) >= 0; }
+function vistaGuardar(){ try{ sessionStorage.setItem(VISTA_LS, vistaOn); }catch(x){} }
 function vistaPintar(){
-  VISTAS_TODAS.forEach(function(n){ document.body.classList.toggle("v-" + n, vistaEs(n)); });
-  // compat: el css y el modal de la campana venian mirando `ver-widgets` (una sola vista en el celu)
-  document.body.classList.toggle("ver-widgets", vistaEs("widgets") && !vistaEs("chat"));
-  $("ver-chat").classList.toggle("on", vistaEs("chat"));
-  $("ver-widgets").classList.toggle("on", vistaEs("widgets"));
-  vistaIconos();
+  VISTAS_TODAS.forEach(function(n){ document.body.classList.toggle("v-" + n, vistaOn === n); });
+  // compat: la vuelta del modal de la campana venia mirando `ver-widgets`
+  document.body.classList.toggle("ver-widgets", vistaOn === "widgets");
+  $("ver-chat").classList.toggle("on", vistaOn === "chat");
+  $("ver-widgets").classList.toggle("on", vistaOn === "widgets");
+  // el fueguito es el icono de la vista `tinder` y lo esconde `selBoton` (que ademas cuenta lo que hay para votar);
+  // los otros tres los esconde el css. esto nunca puede voltear el pintado de las vistas.
+  try{ selBoton(); }catch(x){}
 }
-// cambia de vista. `n` es el nombre de una vista o la combinacion entera; `vistaNorm` la acomoda al ancho
+// cambia de vista. guarda el ancla del chat antes de sacarlo de pantalla y lo repone al volver (1813)
 function vistaPoner(n){
-  var nueva = vistaNorm(n), antes = (vistaOn || []).join("+"), ahora = nueva.join("+");
-  if(antes === ahora){ vistaPintar(); return false; }
-  if(vistaEs("chat")) vistaAnclas.chat = anclaUlt || anclaMedir();   // 1813: el ancla del chat es por vista
-  if(vistaOn) vistaPrevia = vistaOn;
-  vistaOn = nueva;
+  n = vistaNorm(n);
+  if(n === vistaOn){ vistaPintar(); return false; }
+  if(vistaEs("chat")) vistaAnclas.chat = anclaUlt || anclaMedir();
+  vistaPrevia = vistaOn;
+  vistaOn = n;
   vistaGuardar();
   vistaPintar();
   if(vistaEs("widgets") && Date.now() - widUlt > 15000) cargarWidgets().catch(function(){});
@@ -8593,17 +8586,16 @@ function vistaPoner(n){
   }
   return true;
 }
-// salir de una vista sola (`esc` en el tinder, cerrar el podcast): vuelve a la que estaba antes
+// salir de una vista sola (`esc` en el tinder o en el podcast): vuelve a la que estaba antes
 function vistaVolver(){
-  var v = (vistaPrevia || []).filter(function(x){ return VISTA_SOLAS.indexOf(x) < 0; });
-  return vistaPoner(v.length ? v : vistaDefault());
+  var v = vistaPrevia && VISTA_SOLAS.indexOf(vistaPrevia) < 0 ? vistaPrevia : "chat";
+  return vistaPoner(v);
 }
 // al arrancar: lo guardado en la pestaña, menos `tinder` (necesita una votacion abierta, no se restaura sola)
 function vistaInicial(){
   var v = null;
-  try{ v = JSON.parse(sessionStorage.getItem(VISTA_LS) || "null"); }catch(x){}
-  if(!Array.isArray(v) || v.indexOf("tinder") >= 0) v = null;
-  return vistaNorm(v || vistaDefault());
+  try{ v = sessionStorage.getItem(VISTA_LS); }catch(x){}
+  return v && v !== "tinder" ? vistaNorm(v) : "chat";
 }
 // compat con lo de antes (`verPanel` / `verWidgets` los siguen llamando las pruebas y el modal de la campana)
 function verPanel(cual){ return vistaPoner(cual === "widgets" ? "widgets" : "chat"); }
@@ -8611,15 +8603,6 @@ function verWidgets(si){ return verPanel(si ? "widgets" : "chat"); }
 $("ver-chat").addEventListener("click", function(){ vistaPoner("chat"); });
 $("ver-widgets").addEventListener("click", function(){ vistaPoner("widgets"); });
 $("ver-podcast").addEventListener("click", function(){ vistaPoner("podcast"); });
-// el ancho cambio (girar el celu, agrandar la ventana): la combinacion se reacomoda sola, y solo si de verdad
-// cambia (en desktop chat+widgets, en mobile una sola): asi un `resize` cualquiera no repinta nada
-function vistaReacomodar(){
-  var n = vistaNorm(vistaOn || vistaDefault());
-  if(n.join("+") !== (vistaOn || []).join("+")) vistaPoner(n);
-}
-if(mqMobile && mqMobile.addEventListener) mqMobile.addEventListener("change", vistaReacomodar);
-window.addEventListener("resize", vistaReacomodar);
-window.addEventListener("orientationchange", vistaReacomodar);
 vistaOn = vistaInicial();
 vistaPintar();
 
@@ -9061,10 +9044,10 @@ window.__agente = {
     chatVisible: document.getElementById('panel-chat').offsetWidth > 0,
     widgetsVisible: document.getElementById('panel-widgets').offsetWidth > 0}; },
   // 1875: las cuatro vistas enteras. `iconos` dice cual se pinta en la barra (el de la vista activa se esconde)
-  vistaPoner: vistaPoner, vistaVolver: vistaVolver, vistaNorm: vistaNorm, vistaReacomodar: vistaReacomodar, podVistaPintar: podVistaPintar,
+  vistaPoner: vistaPoner, vistaVolver: vistaVolver, vistaSet: vistaSet, podVistaPintar: podVistaPintar,
   vistaEstado: function(){
     var vis = function(id){ var e = document.getElementById(id); return !!e && e.getBoundingClientRect().width > 0; };
-    return {on: (vistaOn || []).slice(), previa: (vistaPrevia || []).slice(), mobile: esVistaMobile(),
+    return {on: vistaSet(), elegida: vistaOn, previa: vistaPrevia, mobile: esVistaMobile(),
             clases: VISTAS_TODAS.filter(function(n){ return document.body.classList.contains("v-" + n); }),
             iconos: {chat: vis("ver-chat"), widgets: vis("ver-widgets"), tinder: vis("ver-votar"), podcast: vis("ver-podcast")},
             paneles: {chat: vis("panel-chat"), widgets: vis("panel-widgets"), tinder: vis("selmodal"), podcast: vis("vista-podcast")},

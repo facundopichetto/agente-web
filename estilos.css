@@ -925,13 +925,19 @@
   /* ---------- 1875 (facundo, 2026-09-17): el board son VISTAS enteras ----------
      "el tinder tiene que ser simplemente una vista entera, que se esconde cuando esta activa. chat / widget (o chat Y
      widget) tiene que ser una o dos vistas segun si es mobile o desktop y tambien esconderse el que esta activo".
-     cuatro vistas (`chat`, `widgets`, `tinder`, `podcast`), una clase por vista en el body (`v-chat`...). el js
-     (`vistaPoner`) solo pone la clase: quien se pinta lo decide todo aca, asi que cambiar de vista no recarga nada
-     (1793). `tinder` y `podcast` van siempre solas; en desktop `chat` y `widgets` conviven, en mobile nunca. */
-  body:not(.v-chat) #panel-chat{display:none}
-  body:not(.v-widgets) #panel-widgets{display:none}
-  body:not(.v-chat) #sep,body:not(.v-widgets) #sep{display:none}
+     el js guarda UNA sola vista elegida (`vistaOn`) y la deja en el body como `v-<vista>`; que en desktop `chat` y
+     `widgets` se vean las DOS lo decide aca el mismo media query de siempre, asi girar el celu o cambiar el tamaño de
+     la ventana no puede dejar un layout viejo aunque no llegue ningun evento al js. `tinder` y `podcast` van siempre
+     solas, a pantalla completa. cambiar de vista no recarga nada (1793). */
   body.v-tinder #cuerpo,body.v-podcast #cuerpo{display:none}
+  body.v-tinder #panel-chat,body.v-tinder #panel-widgets,body.v-tinder #sep,
+  body.v-podcast #panel-chat,body.v-podcast #panel-widgets,body.v-podcast #sep{display:none}
+  /* el icono de la vista activa no se pinta. en desktop `chat` y `widgets` son la misma vista doble: con cualquiera
+     de las dos puesta se esconden los dos botones, y la cabecera queda igual que antes de la 1875 */
+  body.v-chat #ver-chat,body.v-chat #ver-widgets,
+  body.v-widgets #ver-chat,body.v-widgets #ver-widgets{display:none}
+  body.v-podcast #ver-podcast{display:none}
+  #vistas button.oculta,#cabecera .ib.oculta{display:none!important}
   /* el votador deja de ser un modal encima del chat: es un hermano de `#cuerpo` que ocupa lo que queda abajo de la
      cabecera (por eso `position:static`, no `fixed`: la barra de iconos sigue arriba y se puede cambiar de vista).
      el molde no cambia (`.capa` + `.mcaja`, `esc` cierra por la pila) y los dos bloques son los de la 1874. */
@@ -945,10 +951,6 @@
   body.v-podcast #vista-podcast .caja{margin:0}
   body.v-podcast #vista-podcast button[data-pod]{display:none}   /* en la vista no se pliega: ya esta abierta */
   body.sinlogin #vista-podcast{display:none!important}
-  /* el icono de la vista activa no se pinta (`vistaIconos`): en desktop, con chat y widgets activas, la barra
-     `#vistas` queda vacia y la cabecera se ve igual que antes de la 1875 */
-  #vistas{display:flex}
-  #vistas button.oculta,#cabecera .ib.oculta{display:none!important}
   /* vista mobile: una vista a la vez, la elige la barra de arriba. puro css, sin js de layout.
      entra cuando la ventana es angosta (celu) O cuando es mas alta que ancha (facundo, 2026-09-11:
      una ventana vertical en la compu, o el celu de pie, tambien quieren el toggle chat | widgets).
@@ -979,7 +981,11 @@
     .caja > .tit{min-height:40px}
     #panel-widgets{flex:1 1 auto;padding-bottom:calc(14px + env(safe-area-inset-bottom))}
     #sep{display:none}
-    /* 1875: una vista a la vez la decide `body.v-<vista>` (arriba), igual en celu y en compu */
+    /* 1875: en la vista mobile va UNA sola, la que diga `body.v-<vista>`, y el icono de la otra vuelve a la barra
+       (en desktop las dos conviven y los dos botones se esconden: las reglas de arriba) */
+    body:not(.v-chat) #panel-chat{display:none}
+    body:not(.v-widgets) #panel-widgets{display:none}
+    body.v-chat #ver-widgets,body.v-widgets #ver-chat{display:inline-flex}
     /* ios zoomea al enfocar un input de menos de 16px: lo frena maximum-scale=1 en el
        viewport, asi que el input del chat va chico como el resto del chat. los de login
        quedan en 16 (se tocan una vez y ahi no molesta). */
