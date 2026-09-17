@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.347">
-<link rel="manifest" href="manifest.json?v=4.347">
+<meta name="agente-web-version" content="4.348">
+<link rel="manifest" href="manifest.json?v=4.348">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.347">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.348">
 </head>
 <body>
 
@@ -4141,25 +4141,35 @@ function tjQMedio(e){
   bs.forEach(function(b){ if(q === null && (b.tipo === "maybe" || b.tipo === "igual" || b.q === "maybe" || b.q === "igual")) q = b.q; });
   return q !== null ? q : (bs.length > 2 ? bs[1].q : null);
 }
-// el foco cuenta como "escribiendo" solo si el campo esta ADENTRO del votador: cualquier otro campo de la pagina
-// (el del chat, que la vista tapa) no frena el voto por teclado
+// 1905 (facundo, 2026-09-17, corrigiendo la 1893): el foco importa DOS veces y distinto.
+// `tjEnCampo` = hay un campo con el foco en cualquier parte de la pagina (el del chat incluido): ahi `backspace`
+// es del campo (borra texto) y nunca deshace un voto ni se le hace `preventDefault`, que fue justo el bug que
+// rompio el chat del board. `tjEnCampoVotador` = el campo es el del votador (`#seltxt`): ahi la tecla es entera del
+// campo y no vota nada. con el foco en el campo del CHAT las flechas y la barra si votan: la vista `tinder` tapa el
+// chat (1875) y el foco se queda abajo, que era lo que se comia todos los votos.
 function tjEnCampo(a){
-  if(!a || !(a.tagName === "TEXTAREA" || a.tagName === "INPUT" || a.isContentEditable)) return false;
+  return !!(a && (a.tagName === "TEXTAREA" || a.tagName === "INPUT" || a.isContentEditable));
+}
+function tjEnCampoVotador(a){
   var m = $("selmodal");
-  return !!(m && m.contains(a));
+  return tjEnCampo(a) && !!(m && m.contains(a));
 }
 function tjTecla(ev){
   if(ev.defaultPrevented || ev.metaKey || ev.ctrlKey || ev.altKey) return;
-  // primero el foco: si esta en el campo de escribir DEL VOTADOR (`#seltxt`), la tecla es del campo y no vota.
-  // el campo del chat (`#txt`) no cuenta: la vista `tinder` tapa el chat (1875) y ahi las flechas votan igual,
-  // aunque el foco se haya quedado en la caja de escribir de abajo (era esto lo que se comia todos los votos).
-  if(tjEnCampo(document.activeElement)) return;
-  if(ev.key === "Backspace") ev.preventDefault();   // fuera de un campo, backspace nunca navega hacia atras
+  var a = document.activeElement;
+  if(tjEnCampoVotador(a)) return;   // escribiendo en el votador: ni vota ni deshace
+  // los guards van ANTES de tocar la tecla: fuera del votador (otra vista, el modal cerrado, un modal arriba) la
+  // tecla es del navegador y del input, como siempre
   if(!sel.actual || !tjActual() || $("selacciones").classList.contains("oculta")) return;
   if(!vistaEs("tinder") || $("selmodal").classList.contains("oculta")) return;
   var tope = capaTope();
   if(!tope || tope.nombre !== "seleccion") return;   // hay un modal arriba (detalle de listas, visor): no se vota
-  if(ev.key === "Backspace"){ tjAtras(); return; }   // lo mismo que tocar `#selback`: con el back gris, nada
+  if(ev.key === "Backspace"){
+    if(tjEnCampo(a)) return;   // el campo del chat: backspace borra lo escrito, no deshace el voto
+    ev.preventDefault();       // adentro del votador backspace nunca navega hacia atras en el browser
+    tjAtras();                 // lo mismo que tocar `#selback`: con el back gris, nada
+    return;
+  }
   var qs = tjProcQs(sel.actual), q = null;
   if(ev.key === "ArrowLeft") q = qs[0];
   else if(ev.key === "ArrowRight") q = qs[qs.length - 1];
