@@ -25,12 +25,14 @@
     var filas = (d.cuentas || []).map(function(c){
       return esc(c.nombre) + " <b>" + esc(c.decision || "?") + "</b>";
     }).join(" · ");
-    var carriles = ["cola", "chat"].map(function(k){
+    var carriles = ["cola", "chat", "resumen"].map(function(k){
       return (d[k] || {}).modelo ? k + " " + d[k].modelo + " en " + ((d[k] || {}).cuenta || "?") : "";
     }).filter(Boolean).join(", ");
     return '<div class="usw">' +
       B.moldeSwitch({nombre: "modelomodo", valor: puesto, aria: "modo de modelo",
                    opciones: [{valor: "reparto", title: "lo decide el script, por cuenta"},
+                              // 1798: un modelo fijo por carril (cola fable, chat y resumen opus)
+                              {valor: "tareas", title: "cola fable, chat y resumen opus"},
                               {valor: "opus", title: "todo con opus hasta que lo saques"},
                               {valor: "fable", title: "todo con fable hasta que lo saques"}]}) +
       (esperando ? '<div class="uswl g">mandando…</div>'
