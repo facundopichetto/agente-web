@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.321">
-<link rel="manifest" href="manifest.json?v=4.321">
+<meta name="agente-web-version" content="4.322">
+<link rel="manifest" href="manifest.json?v=4.322">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,1050 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<style>
-  :root{
-    --verde:#39ff14; --blanco:#e8e8e8; --gris:#666; --cian:#22d3ee;
-    --magenta:#ff4fd8; --rojo:#ff4d4d; --amarillo:#ffd60a; --linea:#1c1c1c;
-    --verde-tenue:#1f7a12; --linea-clara:#3a3a3a; --yo:#9be88a;
-    --naranja:#ff9f1a;
-    /* 1541 (facundo, 2026-09-15): ningun texto del board mas grande que el del chat (`.msg`); lo que resalta usa peso o color */
-    --texto-max:12px;
-    /* molde de componentes (1558): el fondo de las capas y la sombra de los modales, un solo lugar */
-    --capa-fondo:rgba(0,0,0,.9);
-    /* 1652 (facundo, 2026-09-15): modales sin borde de color, solo una sombra suave clara que los despega del fondo negro */
-    --modal-sombra:0 2px 12px rgba(255,255,255,.06),0 14px 44px rgba(255,255,255,.09);
-    /* ---------- tonos de fondo (facundo, 2026-09-13, orden 1190) ----------
-       look plano: chat, panel de widgets y cajas casi del mismo tono, la diferencia justa para
-       distinguir el panel. se ajusta en un solo lugar: `--tono-paso` es cuanto aclara cada nivel
-       sobre `--tono-base`. nivel 0 = chat, 1 = panel (y sus barras: notis, sync), 2 = caja y
-       pestaña activa, 3 = lo hundido dentro de una caja (pista de las barras de usage).
-       los hex de abajo son el fallback si el navegador no tiene `color-mix`. */
-    --tono-base:#000000;
-    --tono-paso:1.5%;
-    --fondo-chat:var(--tono-base);
-    --fondo-panel:#040404;
-    --fondo-caja:#080808;
-    --fondo-hundido:#0b0b0b;
-  }
-  @supports (background: color-mix(in srgb, #fff 1%, #000)){
-    :root{
-      --fondo-panel:color-mix(in srgb, #fff var(--tono-paso), var(--tono-base));
-      --fondo-caja:color-mix(in srgb, #fff calc(var(--tono-paso) * 2), var(--tono-base));
-      --fondo-hundido:color-mix(in srgb, #fff calc(var(--tono-paso) * 3), var(--tono-base));
-    }
-  }
-  *{box-sizing:border-box}
-  html,body{margin:0;padding:0;background:#000;color:var(--blanco)}
-  /* ios safari: al abrir el teclado ademas de achicar el viewport visible scrollea la ventana
-     entera, y el body (que mide el alto del viewport visible) se iba para arriba dejando una
-     franja negra de ~150 px entre el input y el teclado (facundo, 2026-09-12). la ventana se
-     bloquea: nada scrollea salvo `#hist`, asi que `scrollY` es siempre 0 y el unico
-     desplazamiento que hay que compensar es el `offsetTop` del visualViewport. */
-  html{height:100%;overflow:hidden;position:fixed;top:0;left:0;right:0;bottom:0}
-  body{
-    font-family:"Fira Code",ui-monospace,SFMono-Regular,Menlo,Monaco,"Courier New",monospace;
-    font-size:12px;line-height:1.55;letter-spacing:.01em;
-    height:100dvh;height:var(--alto,100dvh);
-    position:fixed;top:0;left:0;right:0;width:100%;
-    display:flex;flex-direction:column;overflow:hidden;
-    -webkit-text-size-adjust:100%;
-  }
-  #cabecera{
-    /* sin linea divisoria (facundo, 2026-09-15, orden 1469): la cabecera se funde con el fondo negro.
-       el 1px que se saco se repone en el padding de abajo para que no cambie el alto ni salte nada. */
-    flex:0 0 auto;padding:8px 10px calc(8px + 1px) 10px;border-bottom:0;
-    padding-top:calc(8px + env(safe-area-inset-top));background:#000;
-    display:flex;gap:8px;align-items:center;justify-content:flex-end;
-  }
-  /* pwa de escritorio sin barra de titulo (facundo, 2026-09-13): con `window-controls-overlay` la barra
-     sube a la franja del titulo (al lado de los semaforos de la mac) y se arrastra la ventana desde ahi.
-     los botones y las pestañas no arrastran. en el celu no hay overlay: todo queda igual. */
-  #cabecera{-webkit-app-region:drag;app-region:drag}
-  #cabecera button,#tabs{-webkit-app-region:no-drag;app-region:no-drag}
-  @media (display-mode: window-controls-overlay){
-    #cabecera{
-      box-sizing:border-box;padding:0 10px;
-      margin-left:env(titlebar-area-x, 0px);
-      width:env(titlebar-area-width, 100%);
-      min-height:env(titlebar-area-height, 0px);
-      height:env(titlebar-area-height, auto);
-    }
-  }
-  /* `.bb` = boton de la barra de arriba. los seis (SERVER | MAC | CLOUD, chat | widgets y [⚙])
-     usan esta misma clase: mismo alto, padding, fuente y borde (facundo, 2026-09-12). */
-  .bb{
-    flex:0 0 auto;box-sizing:border-box;background:#000;color:var(--gris);
-    border:1px solid var(--linea);border-radius:4px;padding:4px 8px;margin:0;
-    font:inherit;font-size:9px;line-height:14px;height:24px;cursor:pointer;white-space:nowrap;
-    display:inline-flex;align-items:center;justify-content:center;gap:5px;
-  }
-  .bb:active{background:#111}
-  #modal .macc button.confirmar{color:var(--rojo);border-color:var(--rojo)}
-  #hist{
-    flex:1 1 auto;min-height:0;overflow-y:auto;padding:10px 12px;
-    -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
-  }
-  .msg{margin:0 0 14px 0;white-space:pre-wrap;word-break:break-word;font-size:12px}
-  .msg .ts{color:var(--gris);font-size:10px}
-  /* nodo · modelo y mini estado de cada respuesta (2026-09-13) */
-  .msg .nodo,.msg .mini{color:var(--gris);font-size:10px;user-select:none}
-  .msg .mini{margin-left:6px}
-  /* mensaje en vuelo: spinner de texto, fase y eta mientras contesta el agente */
-  .msg.vuelo .cuerpo{color:var(--gris)}
-  .msg.vuelo .giro{color:var(--verde);display:inline-block;min-width:1ch;cursor:pointer}
-  /* 1776 (facundo, 2026-09-16): la respuesta es un hilo que crece. `.hilo` son los tramos que el modelo ya termino
-     (texto, o la salida corta de un comando), en orden y nunca editados; abajo, en vuelo, la unica linea que cambia
-     es `.cuerpo` (bolita + lo que esta haciendo). en la respuesta guardada el hilo queda arriba del cuerpo final */
-  .msg .hilo{color:var(--blanco)}
-  .msg .hilo:empty{display:none}
-  .msg .hilo .tramo{margin:0 0 8px 0}
-  .msg .hilo .tramo.salida{color:var(--gris);font-size:11px}
-  .msg .hilo .tramo.salida .cmd{color:var(--cian)}
-  .msg.vuelo .hilo + .cuerpo{margin-top:2px}
-  /* animaciones de caracteres (1373): una linea, todos los cuadros del mismo ancho (`Nch` lo pone animPoner), el
-     alto fijo de una linea: ni saltan de costado ni empujan el renglon.
-     1681 (facundo, 2026-09-15, desde el ipad): el `inline-flex` + `vertical-align:top` colgaba el spinner del techo
-     del renglon y quedaba mas arriba que la fase y el eta de al lado. ahora es un `inline-block` alineado por linea
-     base (la del cuadro que se ve), con el alto fijo igual que antes: no empuja el renglon ni salta al cambiar de
-     cuadro. el `inline-flex` ademas apilaba los <i> de color por caracter (1670) uno abajo del otro */
-  .anim{display:inline-block;white-space:pre;vertical-align:baseline;height:1.25em;line-height:1.25em}
-  /* el ancho lo da un cuadro invisible de alto 0 (`data-medida`): `Nch` se quedaba corto con fuentes cuyo `0` no mide
-     lo mismo que el resto y cortaba las de 9+ caracteres. va como `::before` y con `overflow:hidden`: asi no deja una
-     linea despues del cuadro y la linea base del bloque sigue siendo la del texto que se ve (1681) */
-  .anim::before{content:attr(data-medida);display:block;height:0;overflow:hidden;visibility:hidden}
-  /* 1670: color por caracter (`colores` con una lista por cuadro): un <i> por caracter, sin italica ni espacio extra */
-  .anim i{font-style:normal;display:inline}
-  /* ---------- molde de componentes (facundo, 2026-09-15, orden 1558) ----------
-     un solo lugar por estilo: todo modal, votacion o boton nuevo reusa estas clases (docs/componentes-web.md) y nace con
-     los gustos de facundo: texto hasta --texto-max, esc cierra (pila `capaRegistrar`), decisiones con glifos sin borde
-     `✕` roja · `–` blanca · `✓` verde. el id del componente pone solo lo propio (z-index, ancho, gap, padding). */
-  .capa{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;box-sizing:border-box;
-    padding:calc(10px + env(safe-area-inset-top)) 10px calc(10px + env(safe-area-inset-bottom)) 10px;background:var(--capa-fondo)}
-  /* 1642 (facundo, 2026-09-15 18:48 y 18:55): centro optico. si la caja deja al menos 5% libre arriba y abajo (mide hasta
-     el 80% del alto), `capaOptico` pone `.optico` y un espacio de 10% abajo sube su centro al 45%; si no, centro real.
-     nunca sube de 45% ni se corta arriba */
-  .capa::after{content:"";flex:0 0 0;min-height:0}
-  .capa.optico::after{flex-basis:10%}
-  .capa > *{flex-shrink:0}
-  .capa.oculta{display:none!important}
-  /* 1652: sin borde de color; el 1px queda transparente para no mover medidas (tarjeta, lista) y despega la sombra */
-  .mcaja{background:#000;border:1px solid transparent;border-radius:4px;box-shadow:var(--modal-sombra)}
-  .mhead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;color:var(--verde);font-size:12px}
-  .mcuenta,.mestado{color:var(--gris);font-size:10.5px}
-  .mestado{min-height:1em}
-  .mfila{display:flex;gap:8px}
-  .mpie{display:flex;justify-content:space-between;align-items:center;gap:8px}
-  .mcerrar{background:none;border:0;color:var(--gris);font:inherit;font-size:var(--texto-max);padding:6px 2px;cursor:pointer}
-  .mlink,#modal .mcuerpo a,#notimodal .nmtexto a{color:var(--cian);text-decoration:none;border-bottom:1px dotted #1f3a44}
-  /* a/b/c con look terminal (#modal, notimodal, `modalMolde` tipo `term`) */
-  .bterm{background:#000;color:var(--cian);border:1px solid var(--linea);border-radius:4px;padding:8px 10px;font:inherit;
-    font-size:11.5px;cursor:pointer;text-align:left}
-  .bterm:active{background:#111}
-  .bterm.principal{color:var(--verde);border-color:var(--verde)}
-  .bterm .let{color:var(--verde);font-weight:600;margin-right:6px}
-  /* accion verde con borde (aceptar, mandar, basta): `b36`/`b52` = alto, `rojo` = la que corta, `llena` = se pinta al tocar */
-  .bverde{min-height:38px;padding:6px 10px;background:#000;color:var(--verde);border:1px solid var(--verde);border-radius:6px;
-    font:inherit;font-size:var(--texto-max);cursor:pointer;touch-action:manipulation}
-  .bverde.b36{min-height:36px;padding:4px 8px}
-  .bverde.b52{min-height:52px;padding:12px}
-  .bverde.rojo{color:var(--rojo);border-color:var(--rojo)}
-  .bverde.llena:active{background:var(--verde);color:#000}
-  .acciones{display:flex;flex-direction:column;gap:6px;margin:6px 0 2px}
-  .accion{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  .accion .acctxt{flex:1;min-width:140px;color:var(--gris);font-size:12px}
-  .accion .acccuenta{color:var(--verde);font-size:11px;opacity:.8}
-  .accion .accdale{min-width:74px}
-  .accion .accdale.hecho{opacity:.45;border-color:var(--gris);color:var(--gris)}
-  .bverde.llena.rojo:active{background:var(--rojo)}
-  /* decision no va / queda (1556, 1561): solo el glifo, sin borde ni caja, 38 px tocables, el nombre en aria-label */
-  .bglifo{min-height:38px;padding:5px 9px;background:none;border:0;font:inherit;font-size:var(--texto-max);font-weight:bold;
-    line-height:1;cursor:pointer;touch-action:manipulation}
-  .bglifo:active{opacity:.45}
-  /* 1642 (facundo desde el iphone: "no veo los botones blancos"): en safari un <button> puede quedar con la apariencia
-     nativa o el `text-fill` del sistema; se apagan los dos y el color va en hex antes de la variable */
-  .bglifo{-webkit-appearance:none;appearance:none;-webkit-text-fill-color:currentColor;opacity:1;min-width:38px}
-  .bglifo.b-no{color:#ff4d4d;color:var(--rojo)}
-  .bglifo.b-queda{color:#e8e8e8;color:var(--blanco)}
-  .bglifo.b-maybe{color:#e8e8e8;color:var(--blanco)}   /* 1657, 1667: `-_-` es maybe (a la lista `maybe`), en el medio de la fila de votos */
-  /* 1657 (facundo, 2026-09-15, "como te dije mil veces"): el back es `←` y vive FUERA de la fila de votos, arriba a la
-     izquierda del modal; apagado en gris cuando no hay nada que deshacer, blanco cuando si */
-  .bglifo.b-atras{color:#e8e8e8;color:var(--blanco)}
-  .bglifo.b-atras.apagado{color:#666;color:var(--gris)}
-  /* interruptor de N posiciones (1659, el modo de modelo del widget CLAUDE): una sola fila, la puesta en verde y
-     las otras en gris. sin fondo, sin borde de color y sin nada mas grande que --texto-max, como el resto. */
-  .msw{display:flex;align-items:stretch;gap:0;border:1px solid var(--linea);border-radius:6px;overflow:hidden}
-  .msw .mswb{flex:1 1 0;min-height:30px;padding:4px 6px;background:#000;color:#8a8a8a;color:var(--gris);border:0;
-    border-left:1px solid var(--linea);font:inherit;font-size:10.5px;line-height:1.2;cursor:pointer;
-    touch-action:manipulation;-webkit-appearance:none;appearance:none;-webkit-text-fill-color:currentColor}
-  .msw .mswb:first-child{border-left:0}
-  .msw .mswb.puesto{color:#4ad07d;color:var(--verde)}
-  .msw .mswb:active{background:#111}
-  .msw .mswb[disabled]{cursor:default;opacity:.6}
-  /* `modalMolde`: la caja de un modal nuevo */
-  .mmolde{width:100%;max-width:360px;max-height:100%;overflow-y:auto;box-sizing:border-box;display:flex;flex-direction:column;
-    gap:8px;padding:12px;font-size:12px}
-  .mmolde .mcuerpo2{color:var(--blanco);line-height:1.5;white-space:pre-wrap;word-break:break-word}
-  .mmolde .mbotones{flex-wrap:wrap}
-  .mmolde .mbotones > *{flex:1 1 0}
-  /* 1453: tocar el spinner abre un menu chico (mas de esto / menos de esto / ...), nunca el votador */
-  #animmenu{z-index:40;padding:10px;background:rgba(0,0,0,.75)}
-  #animmenu .oculta{display:none!important}
-  #animmenu .amcaja{width:100%;max-width:260px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;padding:12px;font-size:12px}
-  #animmenu .amtit{display:flex;align-items:center;gap:8px;color:var(--gris)}
-  #animmenu .amtit .anim{color:var(--verde);font-size:var(--texto-max);font-weight:bold}
-  #amnom{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  #amcerrar{padding:4px 6px}
-  #animmenu .ambtn{min-height:40px;padding:8px 10px;text-align:left;background:#000;color:var(--verde);border:1px solid var(--linea);
-    border-radius:4px;font:inherit;font-size:12px;cursor:pointer}
-  #animmenu .ambtn[data-tipo="mas"]{border-color:var(--verde)}
-  #amnota{display:flex;flex-direction:column;gap:6px}
-  #amtxt{width:100%;box-sizing:border-box;min-height:56px;padding:6px;background:#000;color:var(--verde);border:1px solid var(--linea);
-    border-radius:4px;font:inherit;font-size:12px;resize:vertical}
-  /* votador por pares (1373): dos animaciones en vivo, `esta` debajo de cada una y `basta`. lado a lado en la mac,
-     una arriba de la otra si no entran (celu) */
-  #votar{z-index:40}
-  #votar .oculta{display:none!important}
-  #votar .vtcaja{width:100%;max-width:360px;max-height:100%;overflow-y:auto;box-sizing:border-box;display:flex;
-    flex-direction:column;gap:12px;padding:14px}
-  /* 1382: facundo pidio "mas angosta aun": cada tarjeta a la mitad (360 -> 180 px en la mac), el alto no cambia */
-  #votar .vtpar{display:flex;flex-wrap:wrap;justify-content:center;gap:12px}
-  /* 1510: "muy anchas": tarjeta 180 -> 150 px y animacion 28 -> 20 px; la caja de la animacion sigue de 62 px de alto
-     (no salta). en el celu siguen una arriba de la otra, con el mismo ancho angosto */
-  #votar .vtlado{flex:0 1 150px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid var(--linea);border-radius:4px}
-  #votar .vtanim{display:flex;align-items:center;justify-content:center;height:62px;font-size:var(--texto-max);color:var(--verde)}
-  @media (max-width:600px){ #votar .vtpar{flex-direction:column;align-items:center} #votar .vtlado{flex:none;width:150px} }
-  #votar .vtchico{text-align:center;font-size:12px;color:var(--gris)}
-  #votar .vtchico .anim{color:var(--verde)}
-  #votar .vtnom{text-align:center;font-size:10.5px;color:var(--gris)}
-  #votar .vtfin{display:flex;flex-direction:column;gap:8px}
-  #vttxt{min-height:90px;padding:8px;background:#000;color:var(--blanco);border:1px solid var(--linea);border-radius:4px;
-    font:inherit;font-size:var(--texto-max);resize:vertical}
-  #vtfinbtns .vtbtn{flex:1 1 0}
-  /* seleccion con checkboxes (1388): modal generico, un renglon tocable por candidata (entero, no solo el cuadradito),
-     texto libre, `aceptar` y `enviar texto`. en el celu ocupa el ancho y scrollea la lista; textarea a 16 px para que
-     ios no haga zoom al tocarla */
-  #selmodal{z-index:41}
-  /* 1533 (facundo, 2026-09-15, desde el iphone): "el modal tiene cosas muy grandes y el texto que escribí no lo puedo
-     leer". todo baja a la escala del board (12-13 px, botones de 38, foto de 32) y el campo crece con lo escrito y se
-     queda arriba del teclado (`body.teclado`, visualViewport) */
-  #selmodal .selcaja{width:100%;max-width:520px;max-height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;
-    padding:10px}
-  body.teclado #selmodal{bottom:auto;height:var(--alto,100dvh);justify-content:flex-end;padding-top:4px;padding-bottom:4px}
-  body.teclado #selmodal::after{display:none}   /* 1642: con teclado la caja va pegada abajo, sin el espacio del centro optico */
-  body.teclado #selcont{display:none!important}
-  #selcuenta{white-space:nowrap}
-  #sellista{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:6px}
-  #sellista .selitem{flex:0 0 auto;display:flex;align-items:flex-start;gap:8px;min-height:38px;padding:5px 8px;box-sizing:border-box;
-    border:1px solid var(--linea);border-radius:4px;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
-  #sellista .selitem.on{border-color:var(--verde)}
-  #sellista input{flex:0 0 auto;width:18px;height:18px;margin:2px 0 0 0;accent-color:var(--verde);cursor:pointer}
-  #sellista .seltxt{display:flex;flex-direction:column;gap:1px;min-width:0}
-  #sellista .selnom{color:var(--blanco);font-size:var(--texto-max)}
-  #sellista .seldet,#sellista .selmot{color:var(--gris);font-size:11px;word-break:break-word}
-  #sellista .selmot{font-style:italic}
-  /* 1404: foto redonda (96 px servida por chat_lan, se pinta a 32 desde 1533) y `@cuenta` al lado del nombre. sin
-     foto o mientras baja, la inicial sobre gris neutro: se lee igual con fondo oscuro y claro */
-  #sellista .selfoto{flex:0 0 auto;flex-shrink:0;box-sizing:border-box;width:32px;height:32px;min-height:32px;border-radius:50%;overflow:hidden;align-self:center;display:flex;
-    align-items:center;justify-content:center;background:#8a8a8a;color:#fff;font-size:var(--texto-max);border:1px solid var(--linea)}
-  #sellista .selfoto img{width:100%;height:100%;object-fit:cover;display:block}
-  #sellista .selcta{color:var(--gris);font-size:11px;margin-left:6px;word-break:break-all}
-  /* 1398: la candidata puede traer su animacion corriendo en el renglon (`anim`), a la derecha del checkbox */
-  #sellista .selanim{flex:0 0 auto;min-width:4ch;color:var(--verde);font-size:var(--texto-max);text-align:center}
-  /* 1394: plantilla contador + meta + lista premarcada + ok = accion. arriba el contador en vivo (`actual - marcadas`
-     contra la meta), link al perfil al costado de cada renglon, y el boton dice la accion y cuantas */
-  #selcont{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;color:var(--gris);font-size:12px}
-  #selcont.oculta{display:none}
-  #selcont .selnum{color:var(--blanco);font-size:var(--texto-max);font-weight:bold;line-height:1}
-  #selcont.llego .selnum{color:var(--verde)}
-  #sellista .sellink{flex:0 0 auto;margin-left:auto;align-self:center;min-width:44px;min-height:32px;display:flex;align-items:center;
-    justify-content:center;color:var(--verde);font-size:12px;text-decoration:none;border:1px solid var(--linea);border-radius:4px}
-  /* 1533: el campo crece con lo escrito (`selTxtCrecer`, hasta 40% del alto visible) en vez de scrollear adentro de
-     64 px, letra de 13 px casi blanca sobre gris muy oscuro y borde verde con foco: se lee mientras se escribe */
-  #seltxt{flex:0 0 auto;min-height:52px;max-height:40vh;padding:7px 9px;box-sizing:border-box;background:#0b0b0b;color:#f2f2f2;
-    caret-color:var(--verde);border:1px solid #555;border-radius:4px;font:inherit;font-size:var(--texto-max);line-height:1.45;resize:none;overflow-y:auto}
-  #seltxt::placeholder{color:#8a8a8a}
-  #seltxt:focus{outline:none;border-color:var(--verde)}
-  #selmodal .selbtns.oculta{display:none!important}   /* 1440: en tarjetas mandan los cuatro botones, no `aceptar` */
-  #selmodal .selbtn{flex:1 1 0}
-  /* 1440 (facundo, 2026-09-15, por audio): modo `tarjetas`. de a UNA candidata: foto grande, el estado arriba, la
-     marca publica/privada y las etiquetas, y cuatro botones grandes abajo. nada de grillas ni de listas largas. */
-  #seltarjeta{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:8px}
-  #seltarjeta.oculta,#sellista.oculta{display:none!important}
-  #seltarjeta .tjestado{display:flex;align-items:center;gap:6px;flex-wrap:wrap;color:var(--gris);font-size:11px}
-  #seltarjeta .tjchip{padding:2px 7px;border:1px solid var(--linea);border-radius:999px;font-size:10.5px;color:var(--gris)}
-  #seltarjeta .tjchip.priv{color:var(--amarillo,#d8b25a);border-color:currentColor}
-  #seltarjeta .tjchip.pub{color:var(--verde);border-color:currentColor}
-  #seltarjeta a.tjchip{text-decoration:none;cursor:pointer}   /* 1677: el chip `pública` es link al perfil */
-  #seltarjeta a.tjchip:hover{background:rgba(57,255,20,.12)}
-  #seltarjeta .tjchip.tag{color:var(--magenta);border-color:currentColor}
-  /* 1495 (facundo, 2026-09-15): la foto de perfil arriba y grande, siempre; abajo nombre, marca, estado y en comun */
-  #seltarjeta .tjfotos{display:block;flex:0 0 auto;width:100%}
-  /* 1772 (facundo, 2026-09-16): "placeholder del mismo tamaño que la foto, sin mask tipo esfera, foto normal 100% width".
-     el contenedor nace ya del tamaño final: 100% del ancho de la tarjeta y el alto por `padding-bottom` (cuadrado:
-     `foto_hd` y la del cdn son recortes cuadrados; si la candidata trae `ratio` ancho/alto, manda ese), asi el
-     placeholder mide lo mismo que la foto y el `onload` no toca nada (antes saltaba de 150 al techo de 420).
-     `padding-bottom` y no `aspect-ratio`: safari del iphone lo ovalaba en un item flex (1655); el `- 2px` son los dos
-     bordes, asi el cuadro es cuadrado de verdad (probado a 348x348 en viewport de iphone). la img va absoluta
-     con `cover` y el radio es el chico del board (4 px, como `.tjf` y `.tjlink`), nunca 50%. */
-  #seltarjeta .tjppal{position:relative;width:100%;height:0;padding-bottom:calc(100% - 2px);box-sizing:border-box;border-radius:4px;
-    overflow:hidden;display:block;background:#111;border:1px solid var(--linea)}
-  #seltarjeta .tjppal img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block}
-  #seltarjeta .tjmas{flex:1 1 auto;display:flex;gap:6px;flex-wrap:wrap;min-width:0}
-  #seltarjeta .tjmas .tjf{width:56px;height:56px;border-radius:4px;overflow:hidden;border:1px solid var(--linea);background:#111}
-  #seltarjeta .tjfotos img{width:100%;height:100%;object-fit:cover;display:block}
-  #seltarjeta .tjnom{color:var(--blanco);font-size:var(--texto-max);font-weight:bold;word-break:break-word}
-  #seltarjeta .tjcta{color:var(--gris);font-size:var(--texto-max);margin-left:6px;word-break:break-all}
-  #seltarjeta a.tjcta{color:var(--verde);text-decoration:none}   /* 1515: link al perfil, mismo verde que el `ver` de la lista */
-  #seltarjeta .tjdet,#seltarjeta .tjmot{color:var(--gris);font-size:11.5px;word-break:break-word}
-  #seltarjeta .tjmot{font-style:italic}
-  /* 1642: seguidores, en comun y reacciones en una fila de texto (sin caja), la bio abajo en blanco apagado */
-  #seltarjeta .tjdatos{display:flex;flex-wrap:wrap;gap:2px 10px;color:var(--cian);font-size:11.5px}
-  #seltarjeta .tjbio{color:#cfcfcf;font-size:11.5px;white-space:pre-line;word-break:break-word}
-  /* 1665: la foto se toca (publica: perfil en otra pestaña; privada: la agranda en el visor) y abajo van `desde`
-     y el historial de votos, en gris chico para que no le compitan a los datos */
-  #seltarjeta .tjppal{cursor:pointer}
-  #seltarjeta a.tjppal{text-decoration:none;color:inherit}   /* 1791: la foto de una publica es un `<a>`, no un `div` */
-  #seltarjeta .tjdesde{color:var(--gris);font-size:11px}
-  #seltarjeta .tjhist{display:flex;flex-direction:column;gap:1px;color:var(--gris);font-size:10.5px;opacity:.85}
-  #seltarjeta .tjlink{align-self:flex-start;min-height:34px;display:flex;align-items:center;padding:0 10px;color:var(--verde);
-    font-size:12px;text-decoration:none;border:1px solid var(--linea);border-radius:4px}
-  /* 1561 (facundo, 2026-09-15): "no quiero volver a ver maybes ni si ni no". dos glifos en una fila: `✕` roja (no va)
-     y `→` blanca (queda). sin `escribir` ni campo de texto en la tarjeta.
-     1657 (facundo, 2026-09-15): tres glifos de VOTO: `✕` no va, `-_-` blanco en el medio (maybe: a la lista `maybe`) y `🔥` a la
-     derecha (queda). el back (`←`) nunca va en esta fila: vive en la cabecera del modal (`#selback`) */
-  /* 1657: la flecha de back, arriba a la izquierda del modal, en otro contexto que los votos */
-  #selmodal .seltit{align-items:center}
-  #selback{flex:0 0 auto;margin-right:2px;padding:5px 7px;min-width:38px;min-height:38px}   /* 38 px tocables, como los votos */
-  #selacciones{display:flex;flex-wrap:wrap;gap:6px}
-  #selacciones.oculta,#selmodal #seltxt.oculta{display:none!important}
-  #selacciones .tjbtn{flex:1 1 0}
-  /* 1556 (facundo, desde el iphone): "abajo los botones no tienen borde. izquierda en rojo una X, en el medio en blanco
-     un guion, derecha un tick verde, tamaño 12px". sin borde ni caja, glifo de 12px y 38 px tocables; el nombre va en aria-label */
-  /* el glifo, el color y el toque (opacidad) viven en el molde: `.bglifo.b-no` · `.b-queda` */
-  .msg .quien,.msg .ts{user-select:none}
-  .msg .quien{color:var(--magenta)}
-  .agente .quien{color:var(--magenta)}
-  .agente .cuerpo{color:var(--blanco)}
-  .yo .quien{color:var(--verde)}   /* `f` en verde (facundo, 2026-09-13) */
-  .yo .cuerpo{color:var(--yo)}
-  .error .cuerpo{color:var(--rojo)}
-  /* cajas a/b/c debajo de una respuesta (facundo, 2026-09-13): A verde (la que haria claudio), B celeste (la
-     segura), C fucsia (la transgresora). sin elegir: fondo negro, letra y borde del color. elegida: fondo del
-     color, letra negra. **un solo toque manda y la deja marcada** (1202); tocar una caja de una respuesta que
-     ya tiene marca pide confirmacion adentro de esa misma caja (`revertir?` / `sumo esta tambien?`) con un
-     `si` / `no` de un tap. en fila; si no entran, apiladas. */
-  .tnum{font-size:.8em;opacity:.7}
-  .drafts{margin:6px 0 2px 0}
-  .drafts .draft{position:relative;margin:4px 0}
-  .drafts pre{margin:0;padding:6px 8px;background:#07222a;color:var(--cian);border:1px solid #1f3a44;border-radius:4px;
-    white-space:pre-wrap;word-break:break-word;font:inherit;font-size:12px;user-select:text;-webkit-user-select:text}
-  .drafts .copiar{position:absolute;top:3px;right:3px;background:#000;color:var(--gris);border:1px solid #1f3a44;
-    border-radius:3px;font:inherit;font-size:10px;padding:1px 6px;cursor:pointer}
-  /* 1214: `copiar` chico al lado de cada link, clave o `code` copiable de una respuesta de claudio. un toque copia
-     (sin hold en el iphone) y dice `copiado` 1 s. el texto va por ::after asi no ensucia el textContent del mensaje.
-     el hold sobre el boton no abre ni el menu propio ni el callout de ios. */
-  .cuerpo .cp{display:inline-block;vertical-align:1px;margin:0 0 0 4px;background:#000;color:var(--gris);
-    border:1px solid #1f3a44;border-radius:3px;font:inherit;font-size:9.5px;line-height:1.3;padding:0 5px;
-    cursor:pointer;white-space:nowrap}
-  .cuerpo .cp::after{content:attr(data-t)}
-  .copiar,.cuerpo .cp{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation;
-    -webkit-tap-highlight-color:transparent}
-  .copiar.ok,.cuerpo .cp.ok{color:var(--verde);border-color:var(--verde-tenue)}
-  .opciones{display:flex;gap:6px;margin:6px 0 2px 0;white-space:normal}
-  .opciones .opc{
-    flex:1 1 0;min-width:0;box-sizing:border-box;background:#000;border:1px solid;border-radius:4px;
-    padding:6px 8px;font:inherit;font-size:11px;line-height:1.35;text-align:left;cursor:pointer;
-    min-height:40px;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
-    touch-action:pan-y;word-break:break-word;
-  }
-  .opciones .opc .l{font-weight:600;margin-right:5px}
-  /* 1203: hora de envio del mensaje que salio al tocar esa caja (hh:mm de buenos aires). chiquita, a la
-     derecha; cada letra lleva la suya (al sumar `A y C`, la A conserva la hora de su toque). */
-  .opciones .opc .hh{margin-left:6px;font-size:9px;opacity:.75;font-variant-numeric:tabular-nums;white-space:nowrap}
-  .opciones .opc .hh:empty{display:none}
-  .opciones .opc.conf .hh{display:none}       /* mientras pregunta, la caja es solo la pregunta */
-  .opciones .opc.A{color:var(--verde);border-color:var(--verde)}
-  .opciones .opc.B{color:var(--cian);border-color:var(--cian)}
-  .opciones .opc.C{color:var(--magenta);border-color:var(--magenta)}
-  .opciones .opc.A.sel{background:var(--verde);color:#000}
-  .opciones .opc.B.sel{background:var(--cian);color:#000}
-  .opciones .opc.C.sel{background:var(--magenta);color:#000}
-  .opciones.hecho .opc:not(.sel){opacity:.45}          /* las no elegidas se apagan, pero se siguen pudiendo tocar */
-  /* la confirmacion vive DENTRO de la caja tocada: le tapa el texto y deja `si` / `no` (facundo, 1202) */
-  .opciones .opc .cf{display:none}
-  .opciones .opc.conf{opacity:1}
-  .opciones .opc.conf .t{display:none}
-  .opciones .opc.conf .cf{display:block}
-  .opciones .opc .cf .q{display:block;margin-bottom:4px}     /* la pregunta arriba, el sí/no abajo: entra en el celu */
-  .opciones .opc .cf .si,.opciones .opc .cf .no{
-    display:inline-block;border:1px solid;border-radius:3px;padding:1px 8px;margin-right:8px;font-weight:600;
-  }
-  @media (max-width:380px){ .opciones{flex-direction:column} }
-  .sistema .cuerpo{color:var(--gris)}
-  /* los mensajes se muestran siempre enteros: no hay plegado (facundo, 2026-09-10) */
-  .cuerpo .ok{color:var(--verde)}
-  .cuerpo .fallo{color:var(--rojo)}
-  .cuerpo .pend{color:var(--amarillo)}
-  .cuerpo .corriendo{color:var(--cian)}
-  .cuerpo .costo{color:var(--magenta)}
-  .cuerpo .marca{color:var(--gris)}
-  /* ---------- color del texto (facundo, 2026-09-11: la paleta fluo tambien adentro del mensaje) ---------- */
-  .cuerpo .neg{color:var(--amarillo);font-weight:600}          /* **negrita** */
-  .cuerpo .cod{color:var(--cian);background:#07222a;border-radius:3px;padding:0 3px}  /* `code` */
-  .cuerpo .tit{color:var(--magenta);font-weight:600}           /* ## titulo */
-  .cuerpo .sep{color:var(--verde-tenue);display:block;height:0;border-top:1px solid currentColor;opacity:.45;margin:6px 0}  /* --- sin guiones (1400) */
-  .cuerpo .orden{color:var(--amarillo)}                        /* ORDEN: / PROPUESTA: */
-  .cuerpo .aprendi{color:var(--naranja)}                       /* APRENDÍ: del loop de la cola (1502) */
-  .cuerpo .tag{color:var(--verde)}                             /* [tema] / [openrouter/x] */
-  .cuerpo .vin{color:var(--verde-tenue)}                       /* el guion de cada bullet */
-  /* urls clickeables: una url larga (oauth) se abre tocandola, nunca se copia a mano ni se corta */
-  .msg .cuerpo a{color:var(--cian);text-decoration:none;border-bottom:1px dotted #1f3a44;
-                 overflow-wrap:anywhere;word-break:break-all}
-  .msg .cuerpo a:active{color:var(--verde)}
-  .cuerpo .tcab{color:var(--magenta);font-weight:600}          /* cabecera de tabla */
-  .cuerpo .tsep{color:var(--linea-clara)}                      /* |---|---| */
-  .cuerpo .tfila{color:var(--blanco)}
-  .cuerpo .tfila.par{color:#b9c2c8;background:#0b0b0b}         /* filas alternadas */
-  /* 1400: tabla markdown dibujada con css; en el celu envuelve o se desplaza adentro de su caja */
-  .cuerpo .tmd{display:block;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;margin:4px 0}
-  .cuerpo .tmd table{border-collapse:collapse;white-space:normal;font-size:inherit;line-height:1.45}
-  .cuerpo .tmd th,.cuerpo .tmd td{border:1px solid var(--linea-clara);padding:3px 8px;text-align:left;vertical-align:top;
-    white-space:normal;overflow-wrap:break-word;word-break:normal;min-width:5ch}   /* break-word: no parte palabras al medio */
-  .cuerpo .tmd td:first-child{color:var(--amarillo);font-weight:600}
-  /* imagenes inline (facundo, 2026-09-11): el daemon publica el png en el repo del buzon y aca se
-     baja con el mismo token (blob). click = tamaño real en el visor. */
-  .cuerpo .img{display:block;margin:6px 0}
-  .cuerpo .img img{
-    display:block;max-width:100%;max-height:42vh;border:1px solid var(--linea-clara);
-    border-radius:4px;background:#000;cursor:zoom-in
-  }
-  .cuerpo .img .pie{display:block;color:var(--gris);font-size:10px;margin-top:2px}
-  .cuerpo .img .cargando{color:var(--cian)}
-  .cuerpo .img .rota{color:var(--rojo)}
-  /* 1652 (facundo, 2026-09-15): pinch zoom en el iphone sin perder la salida. `touch-action:none` solo en el visor
-     (la pagina no escala), la imagen entra entera a 1x y escala con transform; la `✕` va fija afuera de lo que escala */
-  #visor{
-    position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.92);overflow:hidden;
-    display:flex;align-items:center;justify-content:center;touch-action:none;overscroll-behavior:contain;
-    -webkit-user-select:none;user-select:none
-  }
-  #visor img{max-width:100vw;max-height:100dvh;width:auto;height:auto;object-fit:contain;transform-origin:50% 50%;
-    will-change:transform;touch-action:none;-webkit-user-drag:none}
-  #visor.zoom img{cursor:grab}
-  #visor .cerrar{position:fixed;z-index:1;top:calc(4px + env(safe-area-inset-top));right:calc(4px + env(safe-area-inset-right));
-    width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:19px;background:rgba(0,0,0,.55);
-    color:#e8e8e8;color:var(--blanco);font-size:var(--texto-max);cursor:pointer;touch-action:manipulation}
-  #pie{
-    flex:0 0 auto;border-top:0;background:transparent;
-    padding:4px 10px calc(4px + env(safe-area-inset-bottom)) 10px;
-  }
-  /* con el teclado abierto ios deja igual el safe-area de abajo y queda una franja negra entre el
-     input y el teclado (facundo, 2026-09-11: "hay un gap abajo de la linea del input"). mientras el
-     teclado esta arriba el pie va pegado: lo marca `body.teclado` (visualViewport). */
-  body.teclado #pie{padding-bottom:4px}
-  /* adjunto pendiente (facundo, 2026-09-12: "cuando suba una foto tengo que poder borrarla o escribir
-     algo, es decir que no se mande automaticamente el mensaje"). la foto o el audio quedan aca arriba
-     del input hasta que facundo toca enviar; la `×` los descarta y no se sube nada. */
-  #adjunto{
-    display:flex;align-items:center;gap:7px;padding:4px 0 3px 0;margin:0;
-  }
-  #adjunto.oculta{display:none}
-  #adjunto img{
-    width:44px;height:44px;object-fit:cover;border:1px solid var(--linea-clara);
-    border-radius:4px;background:#000;flex:0 0 auto
-  }
-  #adjunto .adj-info{flex:1 1 auto;min-width:0;color:var(--gris);font-size:10px;line-height:1.35}
-  #adjunto .adj-info .n{color:var(--cian);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  /* lo que transcribio el celu antes de mandar (1209): se lee y se puede descartar con la × */
-  #adjunto .adj-info .adj-dicho{display:block;color:var(--verde);margin-top:2px;overflow:hidden;
-    text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
-  #adjunto .adj-play{flex:0 0 auto}
-  #adjunto .adj-x{
-    flex:0 0 auto;background:#000;color:var(--rojo);border:1px solid transparent;border-radius:4px;
-    font:inherit;font-size:12px;line-height:1.3;padding:2px 5px;cursor:pointer;letter-spacing:0;
-  }
-  #adjunto .adj-x:hover{border-color:var(--rojo)}
-  /* la fila de comandos rapidos se saco (facundo, 2026-09-11): esos comandos quedan en el widget `agent` */
-  /* sugerencias de respuesta: salen de la ultima respuesta del daemon en esta pestaña (cero tokens) */
-  /* pegados a la caja de texto: sin padding ni margen abajo (facundo, 2026-09-12: "entre el input
-     y el si/no no quiero que haya nada"). lo chequea `prueba_web_tabs` (chipsPegados). */
-  #chips{display:flex;gap:5px;overflow-x:auto;padding:0;margin:0;scrollbar-width:none;-webkit-overflow-scrolling:touch}
-  #chips::-webkit-scrollbar{display:none}
-  #chips.oculta,#chips:empty{display:none;padding:0;margin:0}   /* sin chips no ocupa ni alto ni margen */
-  #chips button{
-    flex:0 0 auto;background:#000;color:var(--gris);border:1px solid var(--linea);
-    border-radius:3px;padding:3px 7px;font:inherit;font-size:10.5px;line-height:1.3;
-    cursor:pointer;white-space:nowrap;
-  }
-  #chips button .l{color:var(--amarillo)}
-  #chips button:hover{color:var(--blanco);border-color:#2a2a2a}
-  #chips button:active{background:#111}
-  /* la fila del input (facundo, 2026-09-13, desde el celu): `f>`, la caja y los tres iconos a la misma altura,
-     centrados entre si (align-items:center), y la caja sin borde ni fondo propio: se funde con el panel. */
-  #fila{display:flex;gap:4px;align-items:center}
-  /* 1631: el `f>` paso a ser el glifo `/` de comandos (molde `.bglifo`: sin fondo ni borde, 38 px tocables).
-     el id solo pone lo propio: color verde y el ancho, asi la caja no se corre. */
-  #prompt{color:var(--verde);flex:0 0 auto;user-select:none;min-width:30px;padding:5px 6px}
-  /* el modal de comandos (`cmdAbrir`, molde `modalMolde`): grupos por tema, una fila tocable por comando */
-  #cmdmodal .mmolde{max-width:420px}
-  #cmdmodal .mcuerpo2{display:flex;flex-direction:column;gap:2px}
-  .cmdgrupo{color:var(--amarillo);font-weight:bold;margin:8px 0 2px}
-  .cmdgrupo:first-child{margin-top:0}
-  .cmdfila{display:flex;align-items:baseline;gap:8px;width:100%;min-height:38px;padding:4px 2px;background:none;border:0;
-    color:var(--blanco);font:inherit;font-size:var(--texto-max);text-align:left;cursor:pointer;touch-action:manipulation}
-  .cmdfila:active{opacity:.45}
-  .cmdfila .cmdc{color:var(--cian);flex:0 0 auto;white-space:nowrap}
-  .cmdfila .cmdq{color:#9a9a9a;flex:1 1 auto;line-height:1.3}
-  .cmdfila .cmdo{flex:0 0 auto;font-size:10px;color:#5f8a58;white-space:nowrap}
-  .cmdfila .cmdo.local{color:var(--verde)}
-  .cmdfila.nuevo .cmdq{color:var(--naranja)}
-  #txt{
-    flex:1 1 auto;background:transparent;color:var(--blanco);border:0;
-    border-radius:0;padding:5px 4px;font:inherit;font-size:12px;line-height:1.4;
-    resize:none;max-height:28dvh;min-height:28px;box-sizing:border-box;align-self:center;
-  }
-  #txt:focus{outline:none;border:0}
-  /* los tres iconos: svg de linea en el color del tema, mismo tamaño (18px) y misma caja (32px, 40px en el celu) */
-  .ico{
-    flex:0 0 auto;box-sizing:border-box;background:transparent;border:0;border-radius:6px;
-    width:32px;height:32px;padding:0;margin:0;display:inline-flex;align-items:center;justify-content:center;
-    font:inherit;font-size:12px;line-height:1.4;cursor:pointer;letter-spacing:0;
-  }
-  .ico svg{width:18px;height:18px;display:block;pointer-events:none}
-  #mandar{color:var(--verde);font-size:12px}
-  #mandar:active{background:#0a1a06}
-  /* camara (facundo, 2026-09-11: "se puede poner una funcion tipo camara aca? como en whatsapp").
-     mismo look terminal que el boton de mandar; el input file de verdad esta escondido. */
-  #camara{color:var(--cian)}
-  #camara:active{background:#001a1a}
-  #camara:disabled{color:var(--gris)}
-  #foto{display:none;font-size:var(--texto-max)}
-  /* grabar un audio (facundo, 2026-09-11: "estaria bueno poder mandarte audios como en whatsapp").
-     tap and hold como whatsapp: se aprieta y graba, se suelta y manda. */
-  #grabar{color:var(--magenta);touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
-  /* mientras graba el microfono se pinta rojo (tap and hold) */
-  #grabar.grabando{color:var(--rojo);background:#1a0000;animation:lat 1s steps(2,start) infinite}
-  #grabar:disabled{color:var(--gris)}
-  @keyframes lat{50%{opacity:.55}}
-  #grabinfo{
-    flex:0 0 auto;color:var(--rojo);font-size:10.5px;user-select:none;display:none;
-  }
-  #grabinfo.viendo{display:block}
-  /* el [▶] de daniela al lado del [tema] de cada respuesta, y el player de los audios de facundo.
-     look terminal: un boton de texto, nada de controles nativos grises. */
-  .play{
-    background:#000;color:var(--verde);border:1px solid transparent;border-radius:4px;
-    font:inherit;font-size:10px;line-height:1.3;padding:0 3px;cursor:pointer;letter-spacing:0;
-  }
-  .play:disabled{color:var(--gris);cursor:default}
-  .play.sonando{color:var(--amarillo)}
-  .msg .play{margin-left:6px}
-  .cuerpo .aud{display:inline-flex;align-items:center;gap:6px;color:var(--cian)}
-  .cuerpo .aud .play{color:var(--cian)}
-  .cuerpo .aud .dur{color:var(--gris);font-size:10px}
-  /* 1650: el audio de facundo mientras sube y se manda, como whatsapp: .8 hasta que el server lo confirma */
-  .msg.enviando{opacity:.8}
-  #mandar:disabled{color:var(--gris);border-color:transparent}
-  #alfinal{
-    position:absolute;right:12px;bottom:8px;z-index:5;display:none;
-    background:#001a00;color:var(--verde);border:1px solid var(--verde);
-    border-radius:14px;padding:6px 12px;font:inherit;font-size:10.5px;cursor:pointer;
-  }
-  #envoltorio{position:relative;flex:1 1 auto;min-height:0;display:flex}
-  #login{padding:16px;display:none;flex-direction:column;gap:10px}
-  #login p{color:var(--gris);font-size:10px;margin:0;white-space:pre-wrap}
-  #login input{
-    background:#000;color:var(--verde);border:1px solid var(--linea);border-radius:4px;
-    padding:9px;font:inherit;
-  }
-  /* ---------- web 2: dos paneles (chat | widgets) ---------- */
-  #cuerpo{flex:1 1 auto;min-height:0;display:flex;flex-direction:row}
-  #panel-chat{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;background:var(--fondo-chat)}
-  /* sin bordes (orden 1188): el panel de widgets va un tono arriba del chat y cada caja otro tono mas */
-  #panel-widgets{
-    flex:0 0 420px;min-width:0;overflow-y:auto;background:var(--fondo-panel);
-    padding:8px 10px calc(8px + env(safe-area-inset-bottom)) 10px;
-    -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
-  }
-  /* separador arrastrable entre el chat y los widgets (facundo, 2026-09-11). la linea del medio es
-     el borde que antes pintaba #panel-widgets; el area de agarre es mas ancha que la linea. */
-  #sep{
-    flex:0 0 7px;position:relative;cursor:col-resize;background:transparent;
-    touch-action:none;-webkit-user-select:none;user-select:none;
-  }
-  /* sin linea en reposo (facundo, 2026-09-13, orden 1188): chat y widgets se separan por el tono del fondo.
-     la linea verde solo aparece al pasar el mouse o arrastrar. */
-  #sep::after{
-    content:"";position:absolute;top:0;bottom:0;left:3px;width:1px;background:transparent;
-  }
-  #sep:hover::after,#sep.arrastrando::after{background:var(--verde);box-shadow:0 0 6px var(--verde)}
-  body.arrastrando-sep{cursor:col-resize}
-  body.arrastrando-sep #hist,body.arrastrando-sep #panel-widgets{pointer-events:none}
-  .caja{border:0;outline:0;background:var(--fondo-caja);border-radius:6px;padding:7px 9px 8px 9px;margin:0 0 8px 0}
-  .caja > .tit{
-    color:var(--gris);font-size:9px;letter-spacing:.06em;text-transform:uppercase;
-    margin:0 0 5px 0;display:flex;justify-content:space-between;gap:8px;align-items:center;
-  }
-  /* ---------- header de cada widget (facundo, 2026-09-12) ----------
-     izquierda: titulo + un dato esencial de una linea. derecha: [↻] actualizar y [⚙] settings. */
-  .caja > .tit > .wtit{flex:0 0 auto;cursor:pointer;color:var(--gris)}
-  .caja > .tit > .wtit:hover{color:var(--verde)}
-  .caja > .tit > .wesc{
-    flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-    text-transform:none;letter-spacing:0;font-size:10px;
-  }
-  .caja > .tit > .wacc{flex:0 0 auto;display:flex;align-items:center;gap:4px}
-  .caja > .tit > .wacc .wage{color:#4a4a4a;font-size:8.5px;letter-spacing:0;text-transform:none}
-  .caja > .tit > .wacc .wage.wage-vieja{color:var(--amarillo)}
-  .caja > .tit > .wacc .wage.wage-muy{color:var(--rojo)}
-  /* iconos mas grandes y la `x` que oculta la caja (facundo, 2026-09-13, orden 1166) */
-  .wbtn{
-    background:transparent;color:var(--gris);border:none;border-radius:4px;
-    font:inherit;font-size:var(--texto-max);line-height:1;padding:2px 5px;cursor:pointer;
-  }
-  .wbtn:hover{color:var(--verde)}
-  .wbtn:active{color:var(--verde)}
-  .wbtn.girando{color:var(--verde)}
-  /* ---------- arrastrar los widgets (facundo, 2026-09-12) ----------
-     se agarran del header: en desktop con el mouse, en el celu con tap and hold. */
-  .caja > .tit{cursor:grab}
-  .caja.arrastrando{
-    opacity:.95;background:#121a14;box-shadow:0 6px 18px rgba(0,0,0,.6);
-    pointer-events:none;cursor:grabbing;
-  }
-  .caja.fantasma{background:#0d1411}
-  body.arrastrando-w{user-select:none;-webkit-user-select:none}
-  body.arrastrando-w #panel-widgets{overflow:hidden}
-  /* los ocultos del pie (orden 1378): texto de la linea, sin pinta de boton, se siguen tocando */
-  .wbtn.oc{font:inherit;font-size:inherit;line-height:inherit;color:inherit;letter-spacing:inherit;
-           padding:0;margin:0;border:0;background:none;text-decoration:underline dotted;text-underline-offset:2px}
-  .caja.plegada > .cuerpo{display:none}
-  .caja .cuerpo{white-space:pre-wrap;word-break:break-word;font-size:11px;line-height:1.5}
-  .caja .cuerpo.tabla{white-space:pre;overflow-x:auto;-webkit-overflow-scrolling:touch}
-  .caja .vacio{color:var(--gris)}
-  .caja .cuerpo a{color:var(--cian);text-decoration:none;border-bottom:1px dotted #1f3a44;
-                  overflow-wrap:anywhere;word-break:break-all}
-  .caja .cuerpo a:active{color:var(--verde)}
-  .bar .lleno{color:var(--verde)}
-  .bar.med .lleno{color:var(--amarillo)}
-  .bar.alto .lleno{color:var(--rojo)}
-  .bar .hueco{color:#333}
-  .pct{font-weight:500}
-  .pct.ok{color:var(--verde)} .pct.med{color:var(--amarillo)} .pct.alto{color:var(--rojo)}
-  /* ---------- widget usage: una barra grafica por limite, con el tick de la linea ---------- */
-  /* el color sale del ratio (pct usado / linea = fraccion de la ventana transcurrida), no del pct */
-  .usage{white-space:normal}
-  .usage .cta{display:flex;align-items:center;gap:6px;margin:0 0 4px 0}
-  .usage .cta + .ub{margin-top:0}
-  .usage .cta .nom{color:var(--cian);font-weight:600;letter-spacing:.04em}
-  .usage .rep{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 6px 0;padding-bottom:5px;border-bottom:1px solid var(--linea)}
-  .usage .rep .nom{color:var(--cian);font-weight:600;letter-spacing:.04em}
-  .usage .rep .por{flex:1 1 100%;opacity:.8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .usage .bloque + .bloque{margin-top:9px;padding-top:8px;border-top:1px solid var(--linea)}
-  .ub{display:flex;align-items:center;gap:6px;margin:0 0 5px 0}
-  .ub-n{flex:0 0 40px;min-width:40px;white-space:nowrap;color:var(--gris);font-size:10px;letter-spacing:.04em}
-  .ub-pista{
-    flex:1 1 auto;min-width:0;position:relative;height:11px;background:var(--fondo-hundido);
-    border:1px solid var(--linea);border-radius:2px;overflow:hidden;
-  }
-  .ub-lleno{position:absolute;left:0;top:0;bottom:0;background:#333;border-radius:1px}
-  .ub-tick{position:absolute;top:0;bottom:0;width:1px;background:var(--blanco);opacity:.8}
-  .ub-p{flex:0 0 34px;text-align:right;font-weight:600;color:var(--gris)}
-  .ub-r{flex:0 0 46px;text-align:right;color:var(--gris);font-size:10px}
-  .ub.n-ok .ub-lleno{background:var(--verde)}
-  .ub.n-ok .ub-p{color:var(--verde)}
-  .ub.n-cerca .ub-lleno{background:var(--amarillo)}
-  .ub.n-cerca .ub-p{color:var(--amarillo)}
-  .ub.n-sobre .ub-lleno{background:var(--naranja)}
-  .ub.n-sobre .ub-p{color:var(--naranja)}
-  /* el mismo color del nivel, para el dato esencial del header de usage */
-  .wesc .uw.n-ok{color:var(--verde)} .wesc .uw.n-cerca{color:var(--amarillo)}
-  .wesc .uw.n-sobre{color:var(--naranja)} .wesc .uw.n-mal{color:var(--rojo);font-weight:700}
-  .ub.n-mal .ub-lleno{background:var(--rojo);box-shadow:0 0 7px var(--rojo)}
-  .ub.n-mal .ub-p{color:var(--rojo);font-weight:700}
-  .usage.off{opacity:.45}
-  /* usage en dos columnas (facundo, 2026-09-14): arriba la proyeccion general, abajo facu | orugote con las
-     tres barras a la misma altura, mismo alto y mismo ancho. un numero por barra, nada mas. */
-  .usage .uproy{margin:0 0 7px 0;padding-bottom:6px;border-bottom:1px solid var(--linea)}
-  .usage .uproy .ub{margin-bottom:3px}
-  .usage .uproy .lect{display:block;font-size:10px;color:var(--gris);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .usage .umod{display:flex;gap:6px;font-size:10px;margin:0 0 5px 0;white-space:nowrap;overflow:hidden}
-  .usage .umod .nom{color:var(--cian);font-weight:600}
-  .usage .umod .por{color:var(--gris);overflow:hidden;text-overflow:ellipsis;min-width:0}
-  .usage .ucols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  .usage .ucol{min-width:0}
-  .usage .ucol .cta{height:16px;margin:0 0 4px 0;white-space:nowrap;overflow:hidden}
-  .usage .ucol .cta .pj{font-size:10px;color:var(--gris)}
-  .usage .ucol.elegida .cta .nom{text-decoration:underline;text-underline-offset:3px}
-  .usage .ucols .ub-n{flex:0 0 28px}
-  .usage .ucols .ub-p{flex:0 0 30px}
-  .usage .ucols .ub-hueco{height:13px;margin:0 0 5px 0}
-  /* widget `CLAUDE` (ordenes 1376/1377/1379, facundo 2026-09-14): linea de reparto, color por cuenta, bateria, semana */
-  /* orden 1396: la linea entera en varios renglones (en el celu se cortaba con `...`) */
-  .usage .urep{margin:0 0 6px 0;white-space:normal;overflow-wrap:anywhere;color:var(--blanco)}
-  /* 1659: el interruptor del modo de modelo y, abajo, que sale hoy en cada cuenta */
-  .usage .usw{margin:0 0 7px 0}
-  .usage .uswl{margin-top:3px;font-size:10px;line-height:1.35;color:var(--blanco);overflow-wrap:anywhere}
-  .usage .uswl.g{color:var(--gris)}
-  .usage .uswl b{color:var(--verde);font-weight:600}
-  .usage .ucol .cta .nom.e-ok{color:#a6f5a0}
-  .usage .ucol .cta .nom.e-warn{color:var(--amarillo)}
-  .usage .ucol .cta .nom.e-mal{color:var(--rojo)}
-  .ubat{display:inline-block;vertical-align:middle;position:relative;width:20px;height:9px;margin:0 5px 0 2px;
-        border:1px solid #555;border-radius:2px;padding:1px;box-sizing:border-box}
-  .ubat::after{content:"";position:absolute;right:-3px;top:2px;width:2px;height:3px;background:#555;border-radius:0 1px 1px 0}
-  .ubat .ubat-c{display:block;height:100%;background:var(--verde);border-radius:1px}
-  .ubat.baja{border-color:var(--rojo)}
-  .ubat.baja::after{background:var(--rojo)}
-  .usage .usem{margin:8px 0 0 0}
-  /* 1736: alto al doble (22 -> 44 px). las barras van en % del contenedor, asi que escalan solas y el ancho,
-     el gap, las etiquetas y el tooltip quedan igual. */
-  .usage .usem-g{position:relative;display:flex;align-items:flex-end;gap:3px;height:44px;border-bottom:1px solid #333}
-  .usage .usem-g .usd{flex:1 1 0;background:var(--verde);opacity:.75;border-radius:1px 1px 0 0}
-  .usage .usem-g .usd.sobre{background:var(--amarillo)}
-  .usage .usem-g .usd.sin{opacity:0}
-  .usage .usem-g .usem-l{position:absolute;left:0;right:0;height:0;border-top:1px dashed var(--blanco);opacity:.7;pointer-events:none}
-  .usage .usem-et{display:flex;gap:3px;font-size:8px;color:var(--gris);line-height:1.2}
-  .usage .usem-et span{flex:1 1 0;text-align:center}
-  .ub.n-sin .ub-lleno{background:#333}
-  .v{color:var(--verde)} .r{color:var(--rojo)} .a{color:var(--amarillo)}
-  .c{color:var(--cian)} .m{color:var(--magenta)} .g{color:var(--gris)}
-  /* widget queue (1521): blanco lo que paso, verde lo que corre, verde apagado lo que espera; la hora mas tenue */
-  .qpaso{color:var(--blanco)} .qcorre{color:var(--verde)} .qcola{color:#5f8a58} .qpaso .qh,.qcola .qh{opacity:.6}
-  .qcorre .qh{color:#8fcf7f}
-  .b{font-weight:500}
-  .btn{
-    background:#000;color:var(--cian);border:1px solid var(--linea);border-radius:12px;
-    padding:2px 9px;font:inherit;font-size:9.5px;cursor:pointer;margin:2px 4px 2px 0;
-  }
-  .btn:active{background:#111}
-  .btn.voto{color:var(--verde);border-color:#1f3a14}
-  .btn.dale{color:var(--verde);border-color:var(--verde)}
-  /* barra de nodos (facundo, 2026-09-13; pisa el look de boton y el `chat` verde): solo los labels
-     server | mac | cloud, sin borde ni fondo, cada uno con un circulito a la izquierda. el label se
-     toca y abre el menu del nodo (revivir, guardia). el orden lo pone `uptime_s`: el que lleva mas
-     tiempo corriendo a la izquierda (`pintarNodos`, igual que `nodos.orden_uptime`).
-     circulito: opacidad 1 el main (el de guardia, al que le habla la web), .9 los otros. color =
-     estado real del nodo (`nodos.color_nodo`): verde solo con todo ok, amarillo advertencia, naranja
-     problemas sin emergencia, rojo emergencia, gris apagado o sin responder. el motivo va en el title. */
-  #nodos{display:flex;align-items:center;gap:18px;flex:1 1 auto;min-width:0;overflow-x:auto;scrollbar-width:none}
-  #nodos::-webkit-scrollbar{display:none}
-  #nodos .nodo{display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;background:none;border:0;
-    padding:0;margin:0;color:var(--blanco);font-size:10px;line-height:14px;cursor:pointer;white-space:nowrap;
-    text-transform:lowercase;user-select:none;-webkit-user-select:none}
-  #nodos .luz{width:7px;height:7px;border-radius:50%;background:var(--gris);flex:0 0 auto;opacity:.9}
-  #nodos .nodo.main .luz{opacity:1}
-  #nodos .luz.verde{background:var(--verde)}
-  #nodos .luz.amarillo{background:var(--amarillo)}
-  #nodos .luz.naranja{background:var(--naranja)}
-  #nodos .luz.rojo{background:var(--rojo)}
-  #nodos .luz.gris{background:var(--gris)}
-  /* campana y persona (facundo, 2026-09-13, orden 1166): iconos svg sin look de boton, como la barra de nodos.
-     el cartel `lan / tailscale / buzón` se saco del header: vive en el menu del nodo server ("habla por"). */
-  /* cartel chico de la via (1668): texto pelado, sin borde ni fondo; verde por lan/tailscale, celeste por la nube,
-     gris por el buzon de github */
-  #via{flex:0 0 auto;font-size:10px;line-height:1;opacity:.85;letter-spacing:.02em;cursor:default;user-select:none}
-  #via.lan{color:var(--verde)} #via.nube{color:var(--cian)} #via.buzon{color:var(--gris)}
-  .ib{flex:0 0 auto;position:relative;background:none;border:0;padding:0;margin:0;color:var(--blanco);font-size:var(--texto-max);
-    width:26px;height:24px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;
-    -webkit-tap-highlight-color:transparent}
-  .ib svg{width:14px;height:14px}   /* facundo 2026-09-14 (1342): un poco mas chicos */
-  .ib:hover,.ib:active,.ib.on{color:var(--verde)}
-  #campana .badge{position:absolute;top:-2px;right:-2px;min-width:12px;height:12px;padding:0 3px;border-radius:6px;
-    font-size:8px;line-height:12px;font-weight:600;text-align:center;color:#000;background:var(--gris);pointer-events:none}
-  #campana .badge.oculta{display:none}
-  #campana .badge.gris{color:var(--blanco)}
-  /* el nivel de cada notificacion: la misma paleta que `recetas/nodos.py` (`recetas/nivel_aviso.py`) */
-  #notis .luz.rojo,#nlista .luz.rojo,#campana .badge.rojo{background:var(--rojo)}
-  #notis .luz.naranja,#nlista .luz.naranja,#campana .badge.naranja{background:var(--naranja)}
-  #notis .luz.amarillo,#nlista .luz.amarillo,#campana .badge.amarillo{background:var(--amarillo)}
-  #notis .luz.verde,#nlista .luz.verde,#campana .badge.verde{background:var(--verde)}
-  #notis .luz.gris,#nlista .luz.gris,#campana .badge.gris{background:var(--gris)}
-  /* el desplegable de la campana: solo las no leidas, la mas nueva arriba */
-  #nfondo{position:fixed;inset:0;z-index:33}
-  #nfondo.oculta,#nlista.oculta{display:none}
-  #nlista{position:fixed;z-index:34;top:44px;right:8px;width:min(440px,calc(100vw - 16px));max-height:70dvh;
-    overflow-y:auto;background:#000;border:1px solid transparent;border-radius:5px;padding:4px;
-    display:flex;flex-direction:column;gap:1px;box-shadow:var(--modal-sombra);
-    -webkit-overflow-scrolling:touch;overscroll-behavior:contain}
-  #nlista .ntit{color:var(--gris);font-size:9px;text-transform:uppercase;letter-spacing:.06em;padding:3px 6px 4px 6px;
-    border-bottom:1px solid var(--linea);margin-bottom:2px}
-  #nlista .nfila{display:flex;align-items:center;min-height:30px;border-radius:3px}
-  #nlista .nfila:hover{background:#0d1410}
-  #nlista .nabrir{flex:1 1 auto;min-width:0;align-self:stretch;display:flex;align-items:center;gap:6px;background:none;border:0;
-    padding:0 0 0 6px;margin:0;color:var(--blanco);font:inherit;font-size:10.5px;text-align:left;cursor:pointer;
-    white-space:nowrap;-webkit-tap-highlight-color:transparent}
-  #nlista .luz{width:7px;height:7px;border-radius:50%;background:var(--gris);flex:0 0 auto}
-  #nlista .nh{color:var(--gris);flex:0 0 auto}
-  #nlista .nt{overflow:hidden;text-overflow:ellipsis;min-width:0}
-  #nlista .nacc{flex:0 0 auto;background:none;border:0;color:var(--gris);font:inherit;font-size:10px;padding:0 6px;
-    height:30px;cursor:pointer;-webkit-tap-highlight-color:transparent}
-  #nlista .nacc.nx{font-size:var(--texto-max);width:30px;padding:0}
-  #nlista .nacc:hover,#nlista .nacc:active{color:var(--blanco)}
-  #nlista .ntodas{background:none;border:0;border-top:1px solid var(--linea);margin-top:2px;color:var(--cian);font:inherit;
-    font-size:10px;padding:6px;text-align:left;cursor:pointer}
-  #nlista .nvacio{color:var(--gris);padding:8px 6px;font-size:10.5px}
-  #vistas{display:none;gap:6px;flex:0 0 auto}
-  /* chat | widgets sin borde; el que no esta activo en blanco (facundo, 2026-09-14, 1288) */
-  #vistas button{border-color:transparent;color:var(--blanco)}
-  #vistas button.on{color:var(--verde)}
-  /* 1407: `votar` en celeste a la izquierda de chat, solo con una votacion abierta sin votar en este dispositivo.
-     se ve en la mac (sin chat | widgets) y en el celu; al tocarlo abre el modal de esa votacion */
-  /* 1567 (facundo, 2026-09-15): `votar` en celeste al lado de `chat`, sin fondo y sin borde; el 1px del borde vuelve al
-     padding (1557) y el alto lo fija `.bb`. al tocar baja la opacidad, no pinta una caja */
-  #ver-votar{color:var(--cian);background:transparent;border:0;padding-left:9px;padding-right:9px;font-weight:600;
-    touch-action:manipulation;-webkit-tap-highlight-color:transparent}
-  #ver-votar:active{background:transparent;color:var(--cian);opacity:.55}
-  #ver-votar.oculta{display:none!important}
-  body.sinlogin #cabecera,body.sinlogin #cuerpo{display:none}
-  /* vista mobile: una vista a la vez, la elige la barra de arriba. puro css, sin js de layout.
-     entra cuando la ventana es angosta (celu) O cuando es mas alta que ancha (facundo, 2026-09-11:
-     una ventana vertical en la compu, o el celu de pie, tambien quieren el toggle chat | widgets).
-     el mismo media query vive en el js como `MQ_MOBILE`: si cambia uno, cambia el otro. */
-  @media (max-width:899px), (max-aspect-ratio: 1/1){
-    #vistas{display:flex}
-    /* orden 1396: la linea del reparto guarda dos renglones, asi el widget no salta de alto en cada refresco */
-    .usage .urep{min-height:3.1em}
-    /* dedo: los seis botones de la barra se tocan con el pulgar, todos del mismo alto */
-    .bb{height:32px;padding:4px 6px;gap:4px}
-    #ver-votar{padding-left:7px;padding-right:7px}
-    #nodos .nodo{min-height:32px}   /* dedo: el label se toca aunque no parezca boton */
-    #notis .noti{min-height:40px;font-size:12px}   /* dedo: el aviso y su `x` se tocan con el pulgar */
-    #mcuerpo textarea.nresp{font-size:var(--texto-max)}   /* ios no zoomea al enfocar */
-    #nodos{gap:10px}
-    #vistas{gap:5px}
-    #cabecera{gap:6px}
-    /* dedo: campana, persona, filas de la campana y el menu de persona con 40px (1166) */
-    .ib{width:36px;height:40px;margin:-4px 0}
-    .ib svg{width:16px;height:16px}
-    #campana .badge{top:4px;right:0}   /* afuera del icono de 16px, que no lo tape (1342) */
-    #nlista .nfila{min-height:40px}
-    #nlista .nabrir{font-size:12px}
-    #nlista .nacc{height:40px;min-width:40px;font-size:11px}
-    #nlista .ntodas{min-height:40px;font-size:11px}
-    #ctx button{min-height:40px}
-    /* dedo: los botones del header de cada widget con area tactil de 40px (facundo, 2026-09-12) */
-    .caja > .tit > .wacc .wbtn{min-width:40px;min-height:40px;font-size:var(--texto-max);padding:0}
-    .caja > .tit{min-height:40px}
-    #panel-widgets{flex:1 1 auto;padding-bottom:calc(14px + env(safe-area-inset-bottom))}
-    #sep{display:none}
-    /* una vista a la vez: la elige la barra de arriba (chat | widgets) */
-    body:not(.ver-widgets) #panel-widgets{display:none}
-    body.ver-widgets #panel-chat{display:none}
-    /* ios zoomea al enfocar un input de menos de 16px: lo frena maximum-scale=1 en el
-       viewport, asi que el input del chat va chico como el resto del chat. los de login
-       quedan en 16 (se tocan una vez y ahi no molesta). */
-    #login input,#clave,#tok{font-size:var(--texto-max)}
-    /* dedo: los tres iconos del input con area de toque de 40px (facundo, 2026-09-13) */
-    .ico{width:40px;height:40px}
-    /* la caja mide lo mismo que los iconos: el texto queda centrado y los chips siguen pegados arriba */
-    #txt{min-height:40px;padding:11px 4px}
-  }
-  #login button{
-    background:#000;color:var(--verde);border:1px solid var(--verde);border-radius:4px;
-    padding:9px;font:inherit;cursor:pointer;
-  }
-  /* ---------- pestañas por tema (2026-09-11, las mismas que la consola) ---------- */
-  /* la barra es el borde de arriba del panel de chat (estilo vscode): la pestaña activa se
-     come el borde y se funde con la charla, sin renglon extra. */
-  #tabs{
-    flex:0 0 auto;display:flex;align-items:flex-end;gap:0;overflow-x:auto;
-    padding:0 6px;scrollbar-width:none;
-    -webkit-overflow-scrolling:touch;
-  }
-  #tabs::-webkit-scrollbar{display:none}
-  #tabs .tab{
-    flex:0 0 auto;background:#000;color:var(--gris);border:0;
-    border-radius:4px 4px 0 0;padding:4px 9px;font:inherit;font-size:10.5px;cursor:pointer;
-    white-space:nowrap;
-  }
-  #tabs .tab.enpanel{color:var(--cian)}
-  #tabs .tab.activo{
-    color:var(--verde);background:var(--fondo-caja);
-  }
-  #tabs .tab .x{color:#555;margin-left:7px}
-  #tabs .barrabtn{
-    flex:0 0 auto;background:#000;color:var(--gris);border:1px solid var(--linea);border-radius:4px;
-    padding:2px 7px;font:inherit;font-size:9.5px;cursor:pointer;white-space:nowrap;
-    margin:0 0 3px 5px;
-  }
-  #tabs .barrabtn:active{background:#111}
-  /* + de pestaña nueva sin borde (facundo, 2026-09-15, orden 1557): el 1px vuelve al padding, mismo alto */
-  #tabs .barrabtn[data-accion="nueva_tab"]{border:0;padding:3px 8px}
-  #tabs .relleno{flex:1 1 auto;min-width:8px}
-  /* ---------- notificaciones (facundo, 2026-09-13, orden 1162) ----------
-     solo el ultimo aviso sin leer, debajo de las pestañas, en una linea (hora + primeras palabras), sin look de
-     boton como la barra de nodos. tocar abre el detalle; la `x` lo marca leido y pasa al siguiente (1170: "leer
-     mas no, solo la ultima. y que se pueda cerrar"). la lista entera vive en la campanita del header. */
-  #notis{flex:0 0 auto;display:flex;align-items:center;padding:0 0 0 10px;background:var(--fondo-panel)}
-  #notis.oculta{display:none}
-  #notis .noti{flex:1 1 auto;display:flex;align-items:center;gap:6px;min-width:0;background:none;border:0;padding:0;margin:0;
-    color:var(--blanco);font-size:10px;line-height:18px;cursor:pointer;white-space:nowrap;
-    user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
-  #notis .luz{width:7px;height:7px;border-radius:50%;background:var(--amarillo);flex:0 0 auto}
-  #notis .nh{color:var(--gris);flex:0 0 auto}
-  #notis .nt{overflow:hidden;text-overflow:ellipsis;min-width:0}
-  #notis .nx{flex:0 0 auto;width:40px;height:40px;margin:-11px 0;display:flex;align-items:center;justify-content:center;
-    background:none;border:0;padding:0;color:var(--gris);font:inherit;font-size:var(--texto-max);cursor:pointer;
-    -webkit-tap-highlight-color:transparent}
-  #notis .nx:active{color:var(--blanco)}
-  #mcuerpo textarea.nresp{display:block;width:100%;box-sizing:border-box;margin-top:10px;background:#000;color:var(--blanco);
-    border:1px solid var(--linea);border-radius:4px;padding:6px;font:inherit;resize:vertical;min-height:60px}
-  /* ---------- sincronizando (facundo, 2026-09-11) ----------
-     al abrir la web o al volver al foco, el cache de localStorage no se pinta como si fuera el
-     estado real: mientras baja el buzon se ve esta linea y lo cacheado queda apagado. */
-  #sync{
-    flex:0 0 auto;padding:2px 10px;font-size:10px;color:var(--cian);
-    background:var(--fondo-panel);
-  }
-  #sync.oculta{display:none}
-  #sync.off{color:var(--amarillo)}
-  body.sincronizando #lista,
-  body.sincronizando #widgets,body.sincronizando #tabs .tab{opacity:.45}
-  /* soltar una imagen sobre el chat (desktop, facundo 2026-09-11) */
-  #panel-chat.soltar-img{position:relative}
-  #panel-chat.soltar-img::after{
-    content:"soltar la imagen acá";position:absolute;inset:6px;z-index:55;pointer-events:none;
-    display:flex;align-items:center;justify-content:center;
-    border:1px dashed var(--verde);border-radius:6px;background:rgba(0,255,120,.10);
-    color:var(--verde);font-size:11px;letter-spacing:.04em;
-  }
-  /* dropdown: pestaña nueva y la pregunta de "esto parece de otro tema" */
-  #ddfondo{position:fixed;inset:0;z-index:19;background:rgba(0,0,0,.45)}
-  #ddfondo.oculta,#dd.oculta{display:none}
-  #dd{
-    position:fixed;left:8px;right:8px;bottom:calc(72px + env(safe-area-inset-bottom));z-index:20;
-    max-width:460px;margin:0 auto;background:#000;border:1px solid transparent;border-radius:6px;box-shadow:var(--modal-sombra);
-    padding:6px;display:flex;flex-direction:column;gap:4px;max-height:60dvh;overflow-y:auto;
-  }
-  #dd .ddtit{color:var(--gris);font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;padding:2px 4px}
-  #dd .ddop{
-    background:#000;color:var(--cian);border:1px solid var(--linea);border-radius:4px;
-    padding:8px 10px;font:inherit;font-size:11.5px;cursor:pointer;text-align:left;
-  }
-  #dd .ddop:active{background:#111}
-
-  /* ---------- modal de item de widget (facundo, 2026-09-11) ----------
-     tocar cualquier fila de un widget la expande y ofrece 2 a 4 acciones a/b/c. look terminal. */
-  .it{cursor:pointer;border-radius:3px}
-  /* `que ver` (1229): cada fila se swipea en celu (derecha = visto, izquierda = no me interesa) y en
-     desktop muestra dos botones al pasar el mouse. sin bordes, tonos de la caja. */
-  .qv{position:relative;display:inline-block;width:100%;vertical-align:top;overflow:hidden;border-radius:4px;touch-action:pan-y}
-  .qv .qvin{position:relative;display:block;background:var(--fondo-caja);will-change:transform}
-  .qv.suelta .qvin{transition:transform .18s ease-out}
-  .qv .qvf{position:absolute;inset:0;display:none;align-items:center;padding:0 10px;font-size:10.5px;color:#000;font-weight:700}
-  .qv .qvf.qvv{background:var(--verde);justify-content:flex-start}
-  .qv .qvf.qvn{background:var(--rojo);justify-content:flex-end}
-  .qv.der .qvf.qvv,.qv.izq .qvf.qvn{display:flex}
-  .qv.listo .qvf{filter:brightness(1.15)}
-  .qv.chau{transition:max-height .2s ease-in .16s,opacity .2s ease-in .16s;max-height:0 !important;opacity:0}
-  .qv .qvb{display:none;position:absolute;top:0;right:0;gap:4px;background:var(--fondo-caja);padding:0 0 2px 6px}
-  .qv .qvb button{border:0;outline:0;background:#000;color:var(--gris);font:inherit;font-size:10px;padding:1px 6px;border-radius:3px;cursor:pointer}
-  .qv .qvb button[data-qvacc="visto"]:hover{color:var(--verde)}
-  .qv .qvb button[data-qvacc="no"]:hover{color:var(--rojo)}
-  @media (hover:hover) and (pointer:fine){ .qv:hover .qvb{display:flex} }
-  .it:hover{background:#0d1410}
-  #mfondo{position:fixed;inset:0;z-index:29;background:rgba(0,0,0,.65)}
-  #mfondo.oculta,#modal.oculta{display:none}
-  #modal{
-    position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:30;
-    width:min(560px,calc(100vw - 20px));max-height:82dvh;overflow-y:auto;border-radius:6px;box-shadow:var(--modal-sombra);
-    -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
-  }
-  #modal .mtit{
-    position:sticky;top:0;background:#000;display:flex;justify-content:space-between;gap:8px;
-    align-items:center;border-bottom:1px solid var(--linea);padding:7px 9px;
-    color:var(--verde);font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;
-  }
-  #modal .mx{
-    background:#000;color:var(--gris);border:1px solid var(--linea);border-radius:4px;
-    padding:2px 7px;font:inherit;font-size:9px;cursor:pointer;flex:0 0 auto;
-  }
-  #modal .mcuerpo{
-    padding:9px;font-size:11.5px;line-height:1.55;color:var(--blanco);
-    white-space:pre-wrap;word-break:break-word;
-  }
-  #modal .macc{display:flex;flex-direction:column;gap:5px;padding:0 9px 10px 9px}
-
-  /* ---------- tocar una push (facundo, 2026-09-14, notimodal 1350) ----------
-     del tamaño del area del chat, encima del chat y de las pestañas, con el titulo centrado a la altura de la barra.
-     la posicion la pone `posNotiModal` con el rect de #panel-chat (igual en el celu y en la mac). */
-  #notimodal{
-    position:fixed;z-index:28;display:flex;flex-direction:column;box-sizing:border-box;overflow:hidden;box-shadow:var(--modal-sombra);
-  }
-  #notimodal.oculta{display:none}
-  #notimodal .nmtit{
-    position:relative;flex:0 0 auto;display:flex;align-items:center;justify-content:center;box-sizing:border-box;
-    padding:0 44px;border-bottom:1px solid var(--linea);color:var(--verde);font-size:10.5px;
-  }
-  #nmtitulo{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
-  #notimodal .nmx{
-    position:absolute;right:5px;top:50%;transform:translateY(-50%);background:#000;color:var(--gris);
-    border:1px solid var(--linea);border-radius:4px;padding:0 8px;font:inherit;font-size:var(--texto-max);line-height:18px;cursor:pointer;
-  }
-  #notimodal .nmcuerpo{
-    flex:1 1 auto;overflow-y:auto;padding:10px;font-size:12px;line-height:1.55;color:var(--blanco);
-    -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
-  }
-  #notimodal .nmtexto{white-space:pre-wrap;word-break:break-word}
-  #notimodal .nmopc{display:flex;flex-direction:column;gap:5px;margin-top:10px}
-  #notimodal .nmop.sel{color:#000;background:var(--verde);border-color:var(--verde)}
-  #notimodal .nmop.sel .let{color:#000}
-  #notimodal .nmmeta{margin-top:10px;font-size:10px}
-  #notimodal .nmpie{
-    flex:0 0 auto;display:flex;flex-direction:column;gap:5px;border-top:1px solid var(--linea);
-    padding:6px 8px calc(6px + env(safe-area-inset-bottom)) 8px;
-  }
-  #notimodal .nmfila{display:flex;align-items:center;gap:6px;min-height:18px}
-  #nmoir{display:flex;align-items:center;gap:4px;color:var(--gris);font-size:10.5px}
-  #nmoir .nmhabla{background:none;border:0;color:var(--cian);font:inherit;font-size:11px;padding:0;cursor:pointer}
-  #nmestado{color:var(--gris);font-size:10px;margin-left:auto}
-  #nmtxt{
-    flex:1 1 auto;min-width:0;background:#000;color:var(--blanco);border:1px solid var(--linea);border-radius:4px;
-    font:inherit;font-size:12px;padding:6px;resize:none;
-  }
-  #nmgrabar{color:var(--magenta);touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
-  #nmmandar{color:var(--verde)}
-  #nmgrabar.grabando{color:var(--rojo);background:#1a0000;animation:lat 1s steps(2,start) infinite}
-
-  /* ---------- menu contextual (facundo, 2026-09-11) ----------
-     tap and hold en el celu, click derecho en desktop, sobre un mensaje del chat, una fila de widget
-     o una pestaña. mismo look terminal que el modal, pero pegado a donde se toco. */
-  #ctxfondo{position:fixed;inset:0;z-index:31}
-  #ctxfondo.oculta,#ctx.oculta{display:none}
-  #ctx{
-    position:fixed;z-index:32;min-width:180px;max-width:min(300px,calc(100vw - 16px));
-    background:#000;border:1px solid transparent;border-radius:5px;padding:4px;
-    display:flex;flex-direction:column;gap:2px;
-    box-shadow:var(--modal-sombra);
-  }
-  #ctx .ctit{
-    color:var(--gris);font-size:9px;text-transform:uppercase;letter-spacing:.06em;padding:3px 6px 4px 6px;
-    border-bottom:1px solid var(--linea);margin-bottom:2px;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  }
-  #ctx button{
-    background:#000;color:var(--cian);border:1px solid transparent;border-radius:4px;
-    padding:8px 9px;font:inherit;font-size:11.5px;cursor:pointer;text-align:left;
-  }
-  #ctx button:hover{border-color:var(--linea);background:#0d1410}
-  #ctx button:active{background:#111}
-  /* lo que se toco queda marcado mientras el menu esta abierto */
-  .msg.marcado,#widgets .it.marcado,#tabs .tab.marcado{outline:0;background:#0d1410;border-radius:3px}
-  /* el hold no tiene que disparar el menu de ios ("copiar / buscar"): el nuestro lo reemplaza */
-  .msg .cuerpo,#tabs .tab{-webkit-touch-callout:none}
-  body.sinsel,body.sinsel *{-webkit-user-select:none;user-select:none}
-  /* cita de un mensaje anterior (`> ...`), la que deja "responder" */
-  .cita{color:#7e8f86}
-
-  @media (max-width:899px), (max-aspect-ratio: 1/1){
-    /* en la vista mobile el modal ocupa toda la pantalla */
-    #modal{
-      left:0;top:0;transform:none;width:100vw;max-width:none;height:100dvh;max-height:none;
-      border:none;border-radius:0;padding-bottom:env(safe-area-inset-bottom);
-    }
-  }
-</style>
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.321">
 </head>
 <body>
 
@@ -4196,15 +3153,51 @@ window.addEventListener("beforeunload", soltarBorrador);
 // si pages me sirvio un html viejo del cache, version.json ya viene nuevo y hay que recargar igual.
 var verEmbebida = (document.querySelector('meta[name="agente-web-version"]') || {}).content || null;
 var verWeb = null;
+// ---------- que cambio, en vez de recargar todo (1793) ----------
+// `partesVistas` son los hashes que estoy mostrando. si lo nuevo difiere SOLO en pedazos que se saben
+// repintar (el css, o el modulo de un widget ya migrado y cargado), se hace eso y se vuelve true: nadie
+// recarga, el chat ni se entera. cualquier otra cosa (el shell, un modulo que no cargo, un json sin
+// `partes`) devuelve false y sigue el reload de siempre.
+var partesVistas = null, partesUlt = null;
+function partePintable(parte){
+  if(parte === "css") return true;
+  if(parte.indexOf("widget:") !== 0) return false;
+  var clave = parte.slice(7);
+  return MODULOS.indexOf(clave) >= 0 && !!mods[clave];
+}
+function partesDistintas(a, b){
+  var ks = {}, out = [];
+  Object.keys(a || {}).forEach(function(k){ ks[k] = 1; });
+  Object.keys(b || {}).forEach(function(k){ ks[k] = 1; });
+  Object.keys(ks).forEach(function(k){ if((a || {})[k] !== (b || {})[k]) out.push(k); });
+  return out.sort();
+}
+function aplicarPartes(j){
+  if(!j.partes || !partesVistas) return false;
+  var dif = partesDistintas(partesVistas, j.partes);
+  if(!dif.length || !dif.every(partePintable)) return false;
+  partesUlt = dif;
+  dif.forEach(function(parte){
+    if(parte === "css") swapCss(j.version);
+    else repintarMod(parte.slice(7), j.version);
+  });
+  partesVistas = j.partes;
+  verEmbebida = j.version;        // ya estoy mostrando lo de esta version: no recargar en el proximo chequeo
+  return true;
+}
 function mirarVersion(){
   return fetch("version.json?_=" + Date.now(), {cache: "no-store"})
     .then(function(r){ return r.ok ? r.json() : null; })
     .then(function(j){
       if(!j || !j.version) return;
       var v = j.version + "/" + (j.ts || "");
+      // 1793: `version.json` ya no es un numero solo, trae el hash de cada pedazo (`partes`). la base es el
+      // primer json que coincide con el html que cargue: desde ahi se sabe QUE cambio, no solo que cambio algo.
+      if(j.partes && !partesVistas && j.version === verEmbebida) partesVistas = j.partes;
       var cambio = (verEmbebida && j.version !== verEmbebida) || (verWeb !== null && v !== verWeb);
       verWeb = v;
       if(!cambio) return;
+      if(aplicarPartes(j)) return;    // cambio solo el css y/o un widget ya migrado: se repinta eso y listo
       // ya recargue por esta version (?v= en la url) y el html sigue viniendo viejo: no entro en loop
       if(new URLSearchParams(location.search).get("v") === j.version){ verEmbebida = j.version; return; }
       if(grabador) return;              // grabando un audio: la recarga espera al proximo chequeo
@@ -7238,147 +6231,10 @@ function cajaSalud(s){
 // week y fable de cada cuenta), `opus` y `fable` (override a mano, se respeta hasta que lo saque). manda el comando
 // `modelos <modo>` a la pestaña tools sin tocar la caja del chat, y lo contesta el daemon sin modelo.
 // abajo, una linea por cuenta con que modelo sale hoy ahi. usa el molde `moldeSwitch` (docs/componentes-web.md).
-var swEspera = null, swUltimo = null, SW_ESPERA_MS = 30 * 1000;
-moldeSwitchReg("modelomodo", function(v){
-  swEspera = {modo: v, ts: Date.now()};
-  swUltimo = {cmd: "modelos " + v, tema: "tools", aparte: true};   // lo lee `prueba_web_modelos` (como `spEstado`)
-  mandarAparte = true;
-  try{ mandar(swUltimo.cmd, "tools", false); }
-  finally{ mandarAparte = false; }
-  repintarWidgets();
-});
-function swEstado(){ return {ultimo: swUltimo, esperando: swEspera && swEspera.modo}; }
-function swModelo(rep){
-  var modo = (rep || {}).modelo_modo, d = (rep || {}).modelo || {};
-  if(!modo) return "";
-  // mientras el server no confirma, la posicion tocada queda puesta (y se dice): nunca un switch que no se mueve
-  var esperando = swEspera && Date.now() - swEspera.ts < SW_ESPERA_MS && swEspera.modo !== modo;
-  if(swEspera && swEspera.modo === modo) swEspera = null;
-  var puesto = esperando ? swEspera.modo : modo;
-  var filas = (d.cuentas || []).map(function(c){
-    return esc(c.nombre) + " <b>" + esc(c.decision || "?") + "</b>";
-  }).join(" · ");
-  var carriles = ["cola", "chat"].map(function(k){
-    return (d[k] || {}).modelo ? k + " " + d[k].modelo + " en " + ((d[k] || {}).cuenta || "?") : "";
-  }).filter(Boolean).join(", ");
-  return '<div class="usw">' +
-    moldeSwitch({nombre: "modelomodo", valor: puesto, aria: "modo de modelo",
-                 opciones: [{valor: "reparto", title: "lo decide el script, por cuenta"},
-                            {valor: "opus", title: "todo con opus hasta que lo saques"},
-                            {valor: "fable", title: "todo con fable hasta que lo saques"}]}) +
-    (esperando ? '<div class="uswl g">mandando…</div>'
-               : (filas ? '<div class="uswl">' + filas + "</div>" : "")) +
-    (carriles && !esperando ? '<div class="uswl g">' + esc(carriles) + "</div>" : "") + "</div>";
-}
-var USAGE_ORDEN = ["facu", "orugote"];
-var USAGE_BARRAS = [["five_hour", "5h"], ["seven_day", "week"], ["fable", "fable"]];
-function cajaUsage(u){
-  var cuentas = (u.cuentas || []).slice(), rep = u.reparto || {}, pr = u.proyeccion || {}, html = "";
-  if(!cuentas.length && (u.barras || []).length)
-    cuentas = [{nombre: "cuenta", activa: true, barras: u.barras}];
-  var soloCta = wset("usage", "cuentas");
-  if(soloCta && soloCta !== "todas")
-    cuentas = cuentas.filter(function(c){ return c.nombre === soloCta; });
-  cuentas.sort(function(x, y){
-    var ix = USAGE_ORDEN.indexOf(x.nombre), iy = USAGE_ORDEN.indexOf(y.nombre);
-    return (ix < 0 ? 9 : ix) - (iy < 0 ? 9 : iy);
-  });
-  // orden 1376/1377 (facundo, 2026-09-14): el titulo dice `CLAUDE` y al lado va solo la bateria. afuera la
-  // proyeccion general, las lineas por modelo, excluidas y brecha. arriba de las cuentas UNA linea del reparto.
-  if(rep.linea)
-    // orden 1396 (facundo, 2026-09-15): tipo propio. como `cuenta` salia "cuenta undefined" (el reparto no tiene nombre)
-    html += it({tipo: "reparto", tema: "tools", d: rep,
-                completo: rep.linea + (rep.porque && rep.porque !== rep.linea ? " (" + rep.porque + ")" : "")},
-               '<div class="urep">' + esc(rep.linea) + "</div>");
-  html += swModelo(rep);
-  // las dos columnas: el nombre pintado por `estado` (ok verde clarito, warn amarillo, mal rojo)
-  var cols = cuentas.map(function(cu){
-    var est = cu.estado || (cu.sin_login ? "mal" : "");
-    var cab = '<span class="cta"><span class="nom' + (est ? " e-" + esc(est) : "") + '">' + esc(cu.nombre) + "</span></span>";
-    var cuerpo;
-    if(cu.sin_login){
-      // sin login propio: no se repiten los numeros de la otra, pero el hueco guarda la altura de las barras
-      cuerpo = USAGE_BARRAS.map(function(){ return '<div class="ub-hueco"></div>'; }).join("");
-    } else {
-      var bs = cu.barras || [];
-      cuerpo = USAGE_BARRAS.map(function(k){
-        var b = bs.filter(function(x){ return x.clave === k[0] || x.nombre === k[1]; })[0];
-        return barraUso(b || {nombre: k[1], pct: null, linea: null, nivel: "sin"});
-      }).join("");
-    }
-    return '<div class="ucol' + (cu.elegida ? " elegida" : "") + '">' +
-      it({tipo: "cuenta", tema: "tools", d: cu, completo: cu.motivo || ""}, cab) + cuerpo + "</div>";
-  });
-  if(cols.length) html += '<div class="ucols">' + cols.join("") + "</div>";
-  html += graficoSemana(u.semana);
-  // al lado del titulo solo la bateria: sin numero, sin texto y sin tooltip
-  return caja("CLAUDE", bateriaUso(u.bateria), '<div class="usage">' + (html || vacio("sin datos")) + "</div>",
-              false, "usage");
-}
-// orden 1377: lo que QUEDA (promedio de week y fable del tanque de las dos cuentas, lo calcula widgets_json).
-// llena = verde, se vacia proporcional, con 15% o menos le aparece el borde rojo.
-function bateriaUso(b){
-  if(!b || b.carga === null || b.carga === undefined) return "";
-  var c = Math.max(0, Math.min(100, +b.carga || 0));
-  return '<span class="ubat' + (c <= 15 ? " baja" : "") + '"><span class="ubat-c" style="width:' + c + '%"></span></span>';
-}
-// orden 1379: una barrita por dia de los ultimos 7 (uso sumado de las dos cuentas en % de un cupo) y la linea de
-// cuanto usar por dia para llegar al 100% de week en cada reset. los dias viejos son aproximados (ver uso_historial.py).
-function graficoSemana(s){
-  if(!s || !(s.dias || []).length) return "";
-  var mx = Math.max(+s.max || 1, 1);
-  var alto = function(v){ return Math.max(0, Math.min(100, Math.round(v / mx * 100))); };
-  var barras = s.dias.map(function(d){
-    var sin = d.pct === null || d.pct === undefined;
-    var sobre = !sin && s.linea !== null && s.linea !== undefined && d.pct > s.linea;
-    return '<span class="usd' + (sin ? " sin" : "") + (sobre ? " sobre" : "") + '" style="height:' +
-           (sin ? 0 : Math.max(6, alto(d.pct))) + '%"></span>';
-  }).join("");
-  var ln = (s.linea === null || s.linea === undefined) ? "" :
-           '<span class="usem-l" style="bottom:' + alto(s.linea) + '%"></span>';
-  var ets = s.dias.map(function(d){ return "<span>" + esc(d.et || "") + "</span>"; }).join("");
-  return it({tipo: "cuenta", tema: "tools", d: s,
-             completo: "uso por dia de las dos cuentas (% de un cupo semanal); la linea es " + s.linea +
-                       "% por dia para llegar al 100% de week en cada reset" + (s.aprox ? ". los dias viejos son aproximados" : "")},
-            '<div class="usem"><div class="usem-g">' + ln + barras + '</div><div class="usem-et">' + ets + "</div></div>");
-}
-
-// el nombre de una palabra de la tarea primero y el numero chico (facundo, 2026-09-13, 1165)
-function nomTarea(t){
-  if(!t || !t.nombre) return "";
-  return '<span class="c b tnom">' + esc(t.nombre) + "</span>" +
-         (t.n ? ' <span class="g tnum">' + esc(String(t.n)) + "</span>" : "") + " ";
-}
-// widget `queue` (facundo, 2026-09-15, 1521): arriba en blanco las 2 ultimas que pasaron, en el medio en verde lo
-// que corre (nombre, hora del pedido, cuanto va) y abajo en verde apagado lo que espera. una linea corta por tarea,
-// sin texto, recursos ni modelo: el detalle esta en el modal de cada fila. la clave sigue `agent` (orden y settings).
-function qNom(t){ return esc(t.nombre || corto(t.texto || "?", 24)); }
-function qHora(h){ return '<span class="qh">' + esc(h || "--:--") + "</span>"; }
-function cajaAgente(a){
-  var filas = [], corr = a.corriendo || [];
-  (a.hechas || []).slice(0, 2).reverse().forEach(function(t){
-    filas.push(it({tipo: "tarea", estado: "hecha", tema: t.tema, d: t},
-               '<span class="qpaso">' + qNom(t) + " " + qHora(hora12((t.fecha || "").slice(11, 16))) + " " +
-               (t.ok ? "ok" : '<span class="r b">!!</span>') + "</span>"));
-  });
-  corr.forEach(function(t){
-    filas.push(it({tipo: "tarea", estado: "corriendo", tema: t.tema, d: t},
-               '<span class="qcorre">' + qNom(t) + " " + qHora(t.pedido) + " " +
-               '<span class="b">' + (t.min === null || t.min === undefined ? "?" : t.min) + "m</span></span>"));
-  });
-  if(!corr.length) filas.push(a.pausa ? '<span class="r b">PAUSA</span>' : vacio("nada corriendo"));
-  if(wset("agent", "cola")) (a.cola || []).forEach(function(t){
-    filas.push(it({tipo: "tarea", estado: "cola", tema: t.tema, d: t},
-               '<span class="qcola">' + qNom(t) + " " + qHora(t.pedido) + "</span>"));
-  });
-  filas = limFilas("agent", filas);
-  // dato esencial, corto para que entre en el celu: la cuenta, cuantas corren (verde) y +las que esperan
-  var ese = '<span class="c b">' + esc(a.cuenta || "?") + "</span> " +
-            (a.pausa ? '<span class="r b">PAUSA</span>'
-                     : corr.length ? '<span class="v b">' + corr.length + "</span>" : '<span class="g">idle</span>') +
-            (a.pendientes ? ' <span class="qcola">+' + a.pendientes + "</span>" : "");
-  return caja("queue", ese, filas.join("\n"), false, "agent");
-}
+// widgets `usage` (CLAUDE) y `agent` (queue): se fueron a `web/widgets/usage.js` y `web/widgets/agent.js`
+// (orden 1793, 2026-09-16). el shell los carga con `cargarModulo()` y pide su html con `modHtml()`; cuando
+// `version.json` dice que cambio SOLO uno de esos modulos, se recarga ese archivo y se repinta ESA caja, sin
+// tocar el chat ni el scroll. lo que un modulo puede usar del shell esta en `BOARD` (`window.__board`).
 
 function cajaVerif(v){
   if(v.verify === undefined)
@@ -8056,6 +6912,126 @@ document.addEventListener("keydown", function(e){
   }
 });
 
+// ---------- el board por modulos (orden 1793, 2026-09-16: "como las secciones de shopify") ----------
+// el shell (este archivo) es el arranque, el transporte, las pestañas y el chat. cada widget migrado vive en
+// `web/widgets/<clave>.js` y se carga aparte, con su version en el `?v=`. cuando `version.json` dice que cambio
+// SOLO el css, se intercambia el `href` del `<link>` (`swapCss`) y no se recarga nada; si cambio SOLO el modulo
+// de un widget ya migrado, se vuelve a cargar ese archivo y se repinta ESA caja (`repintarMod`), sin tocar el
+// chat, su scroll ni lo que este tipeado. si cambio el shell (o algo que no se sabe repintar), el reload de
+// siempre. un modulo no ve el adentro del shell: solo esto.
+var MODULOS = ["usage", "agent"];             // widgets migrados, en `web/widgets/<clave>.js`
+var MOD_DATOS = {usage: "usage", agent: "agente"};   // de que campo de `widgets.json` come cada uno
+var mods = {}, modsVer = {}, modsTimers = {}, modsError = {}, modCargando = null, modsCargas = 0;
+
+var BOARD = {
+  contrato: 1,
+  registrar: function(clave, api){ mods[clave] = api; delete modsError[clave]; modsCargas++; },
+  // lo que un modulo puede usar del shell, y nada mas
+  esc: esc, it: it, caja: caja, vacio: vacio, wset: wset, limFilas: limFilas, corto: corto,
+  barraUso: barraUso, moldeSwitch: moldeSwitch, moldeSwitchReg: moldeSwitchReg,
+  moldeSwitchSacar: function(nombre){ delete MOLDE_SW[nombre]; },
+  repintarWidgets: repintarWidgets,
+  // el chat es del shell: un widget que manda un comando lo manda por aca (sin burbuja, como el switch)
+  mandarAparte: function(cmd, tema){
+    mandarAparte = true;
+    try{ mandar(cmd, tema || "tools", false); }
+    finally{ mandarAparte = false; }
+  },
+  // cambiar UNA caja sin tocar el resto del panel
+  reemplazar: function(nodo, html){
+    if(!nodo) return null;
+    var t = document.createElement("div");
+    t.innerHTML = html;
+    var n = t.firstElementChild;
+    if(!n){ nodo.parentNode.removeChild(nodo); return null; }
+    nodo.parentNode.replaceChild(n, nodo);
+    return n;
+  },
+  // un timer de un modulo lo anota el shell: cuando el modulo se suelta, se apagan todos (nada colgado)
+  cada: function(ms, fn){
+    var id = setInterval(fn, ms);
+    if(modCargando) (modsTimers[modCargando] = modsTimers[modCargando] || []).push(id);
+    return id;
+  },
+  parar: function(id){ clearInterval(id); }
+};
+window.__board = BOARD;
+
+function modUrl(clave, v){ return "widgets/" + clave + ".js?v=" + encodeURIComponent(v || verWebCorta()); }
+function verWebCorta(){ return (verWeb || verEmbebida || "0").split("/")[0]; }
+// `file://` no deja `import()` (lo pide con cors y lo rechaza): ahi el MISMO archivo entra como script clasico.
+// por eso los modulos no tienen `export`: se registran en `window.__board` y sirven para las dos formas.
+function modScript(url){
+  return new Promise(function(res, rej){
+    var e = document.createElement("script");
+    e.src = url; e.async = false;
+    e.onload = function(){ if(e.parentNode) e.parentNode.removeChild(e); res(); };
+    e.onerror = function(){ if(e.parentNode) e.parentNode.removeChild(e); rej(new Error("no cargo " + url)); };
+    document.head.appendChild(e);
+  });
+}
+function cargarModulo(clave, v){
+  var url = modUrl(clave, v);
+  modCargando = clave;
+  var p = location.protocol === "file:" ? modScript(url)
+        : Promise.resolve().then(function(){ return import("./" + url); }).catch(function(){ return modScript(url); });
+  return p.then(function(){ modsVer[clave] = v || verWebCorta(); },
+                function(e){ modsError[clave] = e.message || "no cargo"; })
+          .then(function(){ modCargando = null; });
+}
+// de a uno: el modulo que se esta evaluando es el que anota sus timers (`BOARD.cada`)
+function cargarModulos(v){
+  return MODULOS.reduce(function(p, clave){
+    return p.then(function(){ return mods[clave] ? null : cargarModulo(clave, v); });
+  }, Promise.resolve()).then(function(){ if(widDatos) repintarWidgets(); });
+}
+function soltarMod(clave){
+  (modsTimers[clave] || []).forEach(function(id){ clearInterval(id); });
+  modsTimers[clave] = [];
+  var m = mods[clave];
+  delete mods[clave];
+  if(m && m.destruir){ try{ m.destruir(); }catch(x){} }
+}
+function modDatos(clave){ return (widDatos || {})[MOD_DATOS[clave] || clave] || {}; }
+// el html de un widget migrado; mientras no cargo, su caja dice que esta cargando (y no rompe el orden)
+function modHtml(clave){
+  var m = mods[clave];
+  if(m) return m.html(modDatos(clave));
+  return caja(clave, "", modsError[clave] ? '<span class="r">' + esc(modsError[clave]) + "</span>"
+                                          : vacio("cargando..."), false, clave);
+}
+// cambio el modulo de un widget: se suelta el viejo (timers y listeners incluidos), se carga el nuevo
+// y se repinta SOLO esa caja. el chat no se entera.
+function repintarMod(clave, v){
+  soltarMod(clave);
+  return cargarModulo(clave, v).then(function(){
+    var nodo = document.querySelector('#widgets [data-w="' + clave + '"]');
+    if(nodo && mods[clave]) mods[clave].pintar(modDatos(clave), nodo);
+    else repintarWidgets();
+    return !!mods[clave];
+  });
+}
+// css: se enchufa el `<link>` nuevo al lado del viejo y recien cuando cargo se saca el viejo (sin parpadeo,
+// sin perder scroll, ni lo tipeado, ni un modal abierto). es el hot reload de assets de shopify theme dev.
+function swapCss(v){
+  var vieja = $("cssppal");
+  if(!vieja) return Promise.resolve(false);
+  return new Promise(function(res){
+    var n = document.createElement("link");
+    n.rel = "stylesheet";
+    n.href = "estilos.css?v=" + encodeURIComponent(v);
+    vieja.id = "cssviejo";
+    var listo = function(){
+      if(vieja.parentNode) vieja.parentNode.removeChild(vieja);
+      n.id = "cssppal";
+      res(true);
+    };
+    n.onload = listo;
+    n.onerror = listo;
+    vieja.parentNode.insertBefore(n, vieja.nextSibling);
+  });
+}
+
 function pintarWidgets(d, err){
   if(!d && !widDatos){
     widgetsEl.innerHTML = caja("widgets", "", err ? '<span class="r">' + esc(err) + "</span>" : vacio("cargando..."));
@@ -8071,9 +7047,9 @@ function pintarWidgets(d, err){
   // tengan la setting `oculto` no se pintan, pero se pueden volver a mostrar desde el pie.
   var partes = [
     ["server", cajaServer(d.server || {})],
-    ["usage", cajaUsage(d.usage || {})],
+    ["usage", modHtml("usage")],
     ["salud", cajaSalud(d.salud || {})],
-    ["agent", cajaAgente(d.agente || {})],
+    ["agent", modHtml("agent")],
     ["verificaciones", cajaVerif(d.verificaciones || {})],
     ["tickets", cajaTickets(d.tickets || {})],
     ["oportunidades", cajaOportunidades(d.oportunidades || {})],
@@ -8473,16 +7449,17 @@ function accEscribir(o, m){
 function modalDe(o){
   var d = o.d || {}, tema = temaItem(o), m = {tema: tema, acciones: [], titulo: o.tipo, cuerpo: ""};
   if(o.tipo === "tarea"){
-    m.titulo = o.estado === "corriendo" ? "tarea corriendo" : o.estado === "hecha" ? "tarea terminada" : "tarea en la cola";
+    var cerrada = o.estado === "hecha" || o.estado === "fallo";   // 1792: la tabla distingue `[x]` de `[!]`
+    m.titulo = o.estado === "corriendo" ? "tarea corriendo" : cerrada ? "tarea terminada" : "tarea en la cola";
     m.cuerpo = esc(d.completo || d.texto || "") + '\n\n<span class="g">tema</span> <span class="c">' + esc(tema) + "</span>" +
       (d.modelo ? ' <span class="g">modelo</span> <span class="m">' + esc(d.modelo) + "</span>" : "") +
       (d.tags ? ' <span class="g">' + esc(d.tags) + "</span>" : "") +
       (d.min !== null && d.min !== undefined ? ' <span class="g">' + d.min + " min</span>" : "") +
       (d.fecha ? ' <span class="g">' + esc(d.fecha) + "</span>" : "") +
       (d.usd ? ' <span class="m">$' + d.usd.toFixed(2) + "</span>" : "") +
-      (o.estado === "hecha" ? (d.ok ? ' <span class="v">ok</span>' : ' <span class="r">fallo</span>') : "") +
+      (cerrada ? (o.estado !== "fallo" && d.ok !== false ? ' <span class="v">ok</span>' : ' <span class="r">fallo</span>') : "") +
       (d.meta ? '\n<span class="g">' + esc(d.meta) + "</span>" : "");
-    if(o.estado === "hecha")
+    if(cerrada)
       m.acciones.push(["ver el log de esta tarea", function(){
         actuar(tema, "mostrame el log de la tarea «" + corto(d.texto, 90) + "»" +
                      (d.log ? " (logs/" + d.log + ".txt)" : "") + ": qué hizo, qué falló y cuánto costó");
@@ -9239,6 +8216,10 @@ document.addEventListener("keydown", function(e){
 });
 pintarTabs();
 
+// 1793: los widgets migrados viven en `web/widgets/`: se cargan una vez al arrancar y, cuando
+// terminan, repintan su caja (hasta entonces la caja dice "cargando...", nada mas).
+cargarModulos();
+
 pintarWidgets(null);
 
 // ---------- token ----------
@@ -9401,7 +8382,11 @@ window.__agente = {
   // 1453: rotacion y menu del toque
   animRotable: animRotable, animGus: animGus, animMenuAbrir: animMenuAbrir, animMenuCerrar: animMenuCerrar,
   animPoner: animPoner, animIdx: animIdx, animColor: animColor,   // 1670: color por caracter y `ritmo`
-  escTope: escTope, capaTope: function(){ var c = capaTope(); return c && c.nombre; }, modalMolde: modalMolde, moldeBoton: moldeBoton, moldeSwitch: moldeSwitch, swModelo: swModelo, swEstado: swEstado, verImagen: verImagen,   // 1455: esc cierra el de mas arriba (`prueba_web_votar`)
+  escTope: escTope, capaTope: function(){ var c = capaTope(); return c && c.nombre; }, modalMolde: modalMolde, moldeBoton: moldeBoton, moldeSwitch: moldeSwitch,
+  // 1793: `usage` vive en `web/widgets/usage.js`: lo que era global se pide al modulo cargado
+  swModelo: function(r){ return mods.usage ? mods.usage.swModelo(r) : ""; },
+  swEstado: function(){ return mods.usage ? mods.usage.swEstado() : {ultimo: null, esperando: null}; },
+  verImagen: verImagen,   // 1455: esc cierra el de mas arriba (`prueba_web_votar`)
   glifos: function(){ var o = {}; Object.keys(GLIFOS).forEach(function(k){ o[k] = GLIFOS[k][0]; }); return o; },   // 1657: `prueba_web_votar` chequea que `-_-` sea maybe y `←` el back
   animGusto: animGusto, animGustosSubir: animGustosSubir, animPeso: animPeso,
   animPintar: animPintar,   // 1681: las pruebas pintan un cuadro y miden la linea base
@@ -9819,7 +8804,23 @@ window.__agente = {
   // 1776: el hilo progresivo. `tramos()` = los textos pintados en el chat, en orden (vuelo y respuestas)
   tramos: function(){ return lista ? [].map.call(lista.querySelectorAll(".msg .hilo .tramo"), function(d){
     return {clase: d.className, texto: d.textContent, msg: (d.closest(".msg") || {}).id || ((d.closest(".msg") || {}).dataset || {}).id || ""}; }) : []; },
-  tramosSinFinal: tramosSinFinal, normTramo: normTramo
+  tramosSinFinal: tramosSinFinal, normTramo: normTramo,
+  // 1793: el board por modulos. `prueba_web_modulos` mira desde aca que un repintado no toque el chat,
+  // que `destruir()` no deje timers ni handlers colgados y que el fallback al reload siga estando.
+  modulos: MODULOS,
+  modInfo: function(){
+    return {cargados: MODULOS.filter(function(k){ return !!mods[k]; }), cargas: modsCargas,
+            ver: modsVer, error: modsError, cargando: modCargando,
+            timers: MODULOS.reduce(function(n, k){ return n + (modsTimers[k] || []).length; }, 0),
+            switches: Object.keys(MOLDE_SW).length,
+            links: document.querySelectorAll('link[rel="stylesheet"][href*="estilos.css"]').length,
+            css: (($("cssppal") || {}).href || "").split("?v=")[1] || null,
+            scripts: document.querySelectorAll('script[src*="widgets/"]').length};
+  },
+  cargarModulos: cargarModulos, repintarMod: repintarMod, soltarMod: soltarMod, swapCss: swapCss,
+  modHtml: modHtml, partes: function(){ return {vistas: partesVistas, ult: partesUlt}; },
+  ponerPartes: function(p){ partesVistas = p || null; },
+  partesDistintas: partesDistintas, partePintable: partePintable, aplicarPartes: aplicarPartes
 };
 
 })();

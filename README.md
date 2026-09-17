@@ -3,10 +3,15 @@
 **claudio board** es el nombre de esta interfaz (facundo, 2026-09-11): la interfaz principal de
 claudio. el repo y la url siguen siendo `agente-web`.
 
-terminal web del agente de fondo de facundo. es un solo `index.html` (html + css + js inline,
-todo dentro de un iife), servido por github pages en
+terminal web del agente de fondo de facundo, servida por github pages en
 `https://facundopichetto.github.io/agente-web/`. dos paneles: chat | widgets (en el celu, uno
 a la vez con el toggle). el buzon es un issue de `facundopichetto/agente-buzon`.
+
+desde el 2026-09-16 (orden 1793) **ya no es un archivo solo**: `index.html` es el shell (html, arranque,
+transporte lan/tailscale/nube/buzon, pestañas y chat, todo dentro de un iife), `estilos.css` es el css y
+`widgets/<clave>.js` es un modulo por widget migrado. la gracia es la misma que las secciones de shopify:
+un cambio de css no recarga nada y un cambio en un widget repinta solo esa caja. ver **el board por
+modulos** mas abajo.
 
 ## auto actualizacion (la pestaña abierta se recarga sola)
 
@@ -30,9 +35,10 @@ abiertas se recargan solas en menos de 60 s.
   cuando el cdn tarda en propagar).
 - si facundo esta escribiendo (`#txt` con texto), la recarga espera al chequeo siguiente.
 - el html va con `cache-control: no-cache, no-store, must-revalidate` + `pragma` + `expires`.
-- **no hay service worker** y no hay js/css externos (todo inline), asi que no queda nada
-  cacheado aparte del html. si algun dia se agrega un `sw.js`: `skipWaiting()` + `clients.claim()`
-  y `bump_web()` ya le escribe la version (`RE_SW_VER`) para invalidar el cache.
+- el css y los modulos de widget van con `?v=<version>`, que `bump_web()` tambien sube: pages los
+  puede cachear fuerte y aun asi nunca sirve uno viejo.
+- **desde 1793 la recarga entera es el ultimo recurso**: si `version.json` dice que cambio solo el css
+  o solo el modulo de un widget ya migrado, se cambia eso en caliente y la pagina sigue viva.
 
 **probarlo** (cero tokens, chrome headless, no toca el repo):
 
@@ -1407,3 +1413,60 @@ chars; `<clave: algo>` es un tapado de la boveda y no lleva boton). los bloques 
 - **app o safari (1215)**: la marca `[desde: celu <id> <os/nav> <disp> <modo>]` lleva `app` si la pagina corre como pwa (`esStandalone()`), `safari` o `navegador` si no; la cabecera lo pinta `f · hh:mm · iphone · app` y el daemon lo guarda en `desde.modo` y se lo pasa al chat.
 
 - **avisos solo en la campanita, fin de tarea sin pregunta falsa (1237)**: `despachar_avisos` ya no comenta `aviso: ...` en el buzon (solo push, telegram y el widget `notificaciones`); `agregar` descarta los comentarios viejos `aviso: ...` y `recibirChat` las filas cuya respuesta arranca con `aviso: `. la fila de `tarea_al_chat` (`fuente: tarea`, `(tarea <nombre>: ...)`) no se pinta como mensaje de f: el informe sale solo; el prompt del chat la sigue viendo como contexto (`_fila_texto` sin `facundo:`). `web_enviar` y `push_al_toque` no salen con `chat_es_real()` falso (pruebas de la mula).
+
+
+## el board por modulos (orden 1793, 2026-09-16)
+
+"como hace shopify": el css es hot swap puro y cada widget es una seccion que se puede repintar sola.
+
+**los archivos**
+
+| parte | que es |
+|---|---|
+| `index.html` | el shell: html, css de arranque no hay, el iife con transporte, pestañas, chat, widgets sin migrar |
+| `estilos.css` | todo el css, servido con `?v=<version>` y enganchado por `<link id="cssppal">` |
+| `widgets/usage.js` | widget `usage` (CLAUDE): barras por cuenta, switch de modelo, grafico de la semana |
+| `widgets/agent.js` | widget `queue`: la tabla de la cola |
+
+`recetas/web_fuentes.py` es el unico lugar que sabe cual es cual: `texto()` (la suma, para las pruebas),
+`partes()` (un hash por pedazo, para `version.json`).
+
+**`version.json`**
+
+    {"version": "4.322", "ts": 1789..., "fecha": "...",
+     "partes": {"shell": "281aaf439840", "css": "41ea12530d17",
+                "widget:usage": "...", "widget:agent": "..."}}
+
+`version` y `ts` siguen igual: un board viejo lee solo eso y se recarga como siempre. el board nuevo guarda
+como base el primer json cuya `version` coincide con la del html que cargo y despues compara `partes`:
+
+- cambio **solo `css`** -> `swapCss(v)`: `<link>` nuevo al lado del viejo, y cuando carga se saca el viejo.
+  no se recarga, no se pierde el scroll, ni lo tipeado, ni un modal abierto.
+- cambio **solo `widget:<clave>`** de un widget migrado y cargado -> `repintarMod(clave, v)`: se apagan los
+  timers del modulo, se llama a su `destruir()`, se vuelve a cargar el archivo con el `?v=` nuevo y se
+  repinta **solo** `#widgets [data-w=<clave>]`. el chat ni se entera.
+- cualquier otra cosa (el `shell`, un widget sin migrar, un `version.json` sin `partes`) -> el reload de
+  siempre. cambiar el js del chat en caliente **no** se hace, igual que shopify con el js de un theme.
+
+**el contrato de un modulo** (`window.__board`, lo unico que un modulo ve del shell)
+
+    B.registrar("usage", {html: fn(datos), pintar: fn(datos, nodo), destruir: fn()})
+
+y como ayudas `esc`, `caja`, `it`, `vacio`, `wset`, `limFilas`, `corto`, `barraUso`, `moldeSwitch`,
+`moldeSwitchReg`, `moldeSwitchSacar`, `mandarAparte(cmd, tema)`, `reemplazar(nodo, html)`,
+`repintarWidgets()` y `cada(ms, fn)` (los timers que se piden asi se apagan solos cuando el modulo se
+suelta: por eso repintar 10 veces no deja 10 relojes andando).
+
+**por que los modulos no tienen `export`**: `file://` rechaza `import()` por cors (medido en chrome: un
+`<script src>` carga, un `import()` falla), y las pruebas abren el board con `file://`. entonces el mismo
+archivo se registra en `window.__board` y sirve para las dos formas: `import()` cuando la pagina viene por
+http/https, un `<script>` cuando viene por `file://`. se cargan **de a uno**, para que `B.cada` sepa de
+que modulo es cada timer.
+
+**migrar otro widget**: mover su `cajaX()` (y lo que solo usa ella) a `web/widgets/<clave>.js` con el
+molde de los dos que ya estan, sumar la clave a `MODULOS` y, si su dato no se llama igual, a `MOD_DATOS`;
+en `pintarWidgets` la fila pasa a `["<clave>", modHtml("<clave>")]`. nada mas.
+
+**probarlo** (cero tokens, chrome headless, levanta un http local para probar tambien el `import()`):
+
+    sh scripts/prueba_corta python3 -m recetas.prueba_web_modulos
