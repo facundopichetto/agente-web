@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.328">
-<link rel="manifest" href="manifest.json?v=4.328">
+<meta name="agente-web-version" content="4.329">
+<link rel="manifest" href="manifest.json?v=4.329">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.327">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.329">
 </head>
 <body>
 
@@ -1025,13 +1025,17 @@ function guardarVista(ya){
   var cambio = false;
   var tema = temaActivo();
   if(tema){
-    var abajo = alFondo(), ancla = abajo ? null : anclaDe(), v = vistas[tema] || {};
+    // 1805: una sola medicion (la misma que usa el ancla dura) y de ahi salen `abajo`, `ancla` y `delta`
+    var med = anclaMedir() || {abajo: alFondo(), id: null, delta: 0};
+    var abajo = !!med.abajo, ancla = abajo ? null : (med.id || null), v = vistas[tema] || {};
+    anclaUlt = med;
+    anclaGuardarSS(tema, med);
     // este dispositivo trae menos historial que el otro: el ancla del celu todavia no esta cargada.
     // no se pisa con un "estoy al final" que en realidad es "no lo encontre" (perderia el lugar).
     if(!(!!v.abajo === abajo && (v.ancla || null) === ancla) && !(abajo && v.ancla && !cargado(v.ancla))){
-      vistas[tema] = {ancla: ancla, abajo: abajo, ts: Math.max(Date.now(), (+v.ts || 0) + 1)};
+      vistas[tema] = {ancla: ancla, abajo: abajo, delta: +med.delta || 0, ts: Math.max(Date.now(), (+v.ts || 0) + 1)};
       cambio = true;
-    }
+    } else if(vistas[tema]) vistas[tema].delta = +med.delta || 0;   // misma linea, otro desplazamiento
   }
   if(!cambio) return;
   guardarCache();
@@ -1053,6 +1057,7 @@ function guardarPosicion(){
     desvio = n ? hist.scrollTop - n.offsetTop : 0;
   }
   posLocal = {tema: tema, ancla: ancla, abajo: abajo, desvio: desvio, ts: Date.now()};
+  anclaGuardarSS(tema, anclaMedir());       // 1805: y el ancla de esta ventana, con su delta
   try{ localStorage.setItem("agente_scroll", JSON.stringify(posLocal)); }catch(x){}
   return posLocal;
 }
@@ -1069,12 +1074,20 @@ function aplicarVista(){
   if(!tema || !hist || !lista) return false;
   var v = vistas[tema];
   if(!v || v.abajo || !v.ancla) return false;
+  // 1805: el `delta` (los px que le sobran arriba a esa linea) sale de la vista o del ancla de esta
+  // ventana (`sessionStorage`, que sobrevive al reload). con delta se restaura al pixel.
+  var ss = anclaSS(tema), delta = null;
+  if(v.delta != null) delta = +v.delta || 0;
+  else if(ss && !ss.abajo && String(ss.id) === String(v.ancla)) delta = +ss.delta || 0;
+  if(delta != null) return anclaPoner({abajo: false, id: v.ancla, delta: delta});
+  // sin delta la vista vino del otro dispositivo (sus altos no son los de aca): el ancla pegada arriba,
+  // con el pixel exacto local si es la misma, que es lo de siempre
   var n = lista.querySelector('.msg[data-id="' + String(v.ancla).replace(/"/g, "") + '"]');
   if(!n) return false;
-  // misma pestaña y misma ancla que la posicion exacta de este dispositivo: al pixel
   var desvio = (posLocal && posLocal.tema === tema && String(posLocal.ancla) === String(v.ancla)) ? (+posLocal.desvio || 0) : 0;
   aplicandoVista = true;
   try{ hist.scrollTop = Math.max(0, n.offsetTop + desvio); }finally{ aplicandoVista = false; }
+  anclaUlt = anclaMedir();
   return true;
 }
 // llegaron las vistas del buzon (o del cache): gana el `ts` mas nuevo de cada tema
@@ -1090,6 +1103,90 @@ function recibirVistas(rem){
   });
   if(cambio){ guardarCache(); aplicarVista(); }
   return cambio;
+}
+
+// ---------- 1805: la primera linea visible no se mueve (facundo, 2026-09-16, ipad y celu) ----------
+// "si cualquier cosa pasa con el chat, seguir viendo la primera linea que estaba viendo arriba de todo.
+// hago resize? la primera linea no cambia (excepto de tamano), el resto si. giro el celu? lo mismo, no
+// deberia cambiar la primera linea, al volver tampoco".
+// el ancla no es un `scrollTop` en px (eso se rompe apenas algo cambia de alto): es QUE mensaje esta
+// pegado al borde de arriba del scroller y cuantos px le sobran arriba (`delta`). si estabas pegado al
+// fondo el ancla es el fondo, que es lo que se espera cuando llega una respuesta nueva.
+var anclaFija = null,     // el ancla de antes del relayout (rafaga de resize, girar, swap de css)
+    anclaUlt = null,      // la ultima medicion buena: un `resize` llega DESPUES del reflow, tarde para medir
+    anclaRaf = 0, anclaTimer = null;
+function anclaMedir(){
+  if(!hist || !lista || !hist.clientHeight) return null;
+  if(alFondo()) return {abajo: true, id: null, delta: 0};
+  var r = hist.getBoundingClientRect(), ns = lista.querySelectorAll(".msg[data-id]"), n = null;
+  for(var i = 0; i < ns.length; i++){
+    n = ns[i];
+    if(n.getBoundingClientRect().top >= r.top - 1) break;   // el primero que empieza dentro;
+  }                                                         // si ninguno, el ultimo que empezo antes
+  if(!n) return null;
+  return {abajo: false, id: n.dataset.id, delta: Math.round(n.getBoundingClientRect().top - r.top)};
+}
+// vuelve a poner esa linea donde estaba. por rects, no por `offsetTop`: no depende del `offsetParent`.
+function anclaPoner(a){
+  if(!a || !hist || !lista) return false;
+  if(a.abajo){ hist.scrollTop = hist.scrollHeight; anclaUlt = a; return true; }
+  if(!a.id) return false;
+  var n = lista.querySelector('.msg[data-id="' + String(a.id).replace(/"/g, "") + '"]');
+  if(!n) return false;
+  var d = n.getBoundingClientRect().top - hist.getBoundingClientRect().top - (+a.delta || 0);
+  if(Math.abs(d) >= 0.5){
+    aplicandoVista = true;
+    try{ hist.scrollTop = Math.max(0, Math.round(hist.scrollTop + d)); }finally{ aplicandoVista = false; }
+  }
+  anclaUlt = a;
+  return true;
+}
+// clava el ancla antes de algo que va a mover el layout. en una rafaga manda el PRIMER evento.
+function anclaClavar(forzar){
+  if(anclaFija && !forzar) return anclaFija;
+  anclaFija = anclaUlt || anclaMedir();
+  return anclaFija;
+}
+// la suelta: la aplica ya y de nuevo post-layout (dos rAF), por si el alto todavia estaba cambiando
+function anclaSoltar(){
+  var a = anclaFija;
+  anclaFija = null;
+  if(!a) return false;
+  anclaPoner(a);
+  requestAnimationFrame(function(){ requestAnimationFrame(function(){ anclaPoner(a); }); });
+  return true;
+}
+// el ancla de AHORA, medida mientras nadie mueve nada: un `resize` llega despues del reflow y ahi ya no
+// se puede saber que linea estabas viendo, asi que se mide al scrollear, una vez por frame.
+function anclaMirar(){
+  if(anclaRaf || anclaFija) return;
+  anclaRaf = requestAnimationFrame(function(){
+    anclaRaf = 0;
+    if(!anclaFija && !aplicandoVista) anclaUlt = anclaMedir();
+  });
+}
+// el ancho o el alto cambiaron (resize, girar, teclado, ventana partida, swap de css): se clava con la
+// medicion previa al reflow y se suelta al final de la rafaga, que es donde antes se perdia la linea.
+function anclaRelayout(){
+  var a = anclaClavar();
+  if(a) anclaPoner(a);
+  if(anclaTimer) clearTimeout(anclaTimer);
+  anclaTimer = setTimeout(function(){ anclaTimer = null; anclaSoltar(); }, 180);
+}
+// el ancla por pestaña de tema en `sessionStorage`: es de ESTA ventana (el delta en px solo vale aca) y
+// sobrevive al reload por version nueva, que es el caso que se iba "reee para arriba".
+var ANCLA_SS = "agente_ancla";
+function anclasSS(){ try{ return JSON.parse(sessionStorage.getItem(ANCLA_SS) || "{}") || {}; }catch(x){ return {}; } }
+function anclaGuardarSS(tema, a){
+  if(!tema || !a) return null;
+  var m = anclasSS();
+  m[tema] = {id: a.id || null, delta: +a.delta || 0, abajo: !!a.abajo, ts: Date.now()};
+  try{ sessionStorage.setItem(ANCLA_SS, JSON.stringify(m)); }catch(x){}
+  return m[tema];
+}
+function anclaSS(tema){
+  var a = anclasSS()[tema || temaActivo()];
+  return (a && (a.abajo || a.id)) ? a : null;
 }
 
 // el mensaje salio: el borrador de esa pestaña se borra en todos los dispositivos
@@ -1108,6 +1205,15 @@ function borrarBorrador(tema){
     // 1770: la posicion exacta guardada al recargar manda sobre una vista mas vieja del buzon
     posLocal = leerPosicion();
     if(posLocal){ var pv = {}; pv[posLocal.tema] = {ancla: posLocal.ancla, abajo: !!posLocal.abajo, ts: +posLocal.ts || 0}; recibirVistas(pv); }
+    // 1805: el ancla de ESTA ventana (sessionStorage) es la mas precisa: trae el delta en px
+    var ssTodas = anclasSS();
+    Object.keys(ssTodas).forEach(function(t){
+      var a = ssTodas[t];
+      if(!a || !(a.abajo || a.id)) return;
+      var pa = {}; pa[t] = {ancla: a.abajo ? null : a.id, abajo: !!a.abajo, ts: +a.ts || 0};
+      recibirVistas(pa);
+      if(vistas[t] && (+vistas[t].ts || 0) === (+a.ts || 0)) vistas[t].delta = +a.delta || 0;
+    });
     if(L && L.split) recibirSplit(L.split);
     if(L && L.wsets) recibirWsets(L.wsets);
     if(L && L.orden_widgets) recibirOrden(L.orden_widgets);
@@ -1415,6 +1521,7 @@ function anotarVista(){
 }
 hist.addEventListener("scroll", function(){
   if(pegadoAbajo()) alfinal.style.display = "none";
+  anclaMirar();      // 1805: la linea de arriba, medida antes de que algo mueva el layout
   anotarVista();
 });
 // 1770: scrollear a mano (dedo o rueda) apaga el asentado de la vista: no se le pelea al gesto
@@ -1540,8 +1647,25 @@ function conImagenes(l){
   RE_IMG.lastIndex = 0;
   return l.replace(RE_IMG, function(m0, alt, src){
     return '<span class="img" data-src="' + att(src) + '" data-alt="' + att(alt) + '">' +
-           '<span class="cargando">bajando imagen...</span></span>';
+           imgHueco(src) + '</span>';
   });
+}
+// 1805: el alto de cada imagen queda guardado (`src -> [ancho, alto]`) y el hueco lo reserva ANTES de
+// bajarla: una foto que carga tarde es la causa mas comun de que el chat pegue el salto.
+var IMG_DIM = "agente_img_dim";
+var imgDim = (function(){ try{ return JSON.parse(localStorage.getItem(IMG_DIM) || "{}") || {}; }catch(x){ return {}; } })();
+function imgDimDe(src){ return imgDim[src] || imgDim[srcBuzon(src)] || null; }
+function imgDimGuardar(src, im){
+  if(!im || !im.naturalWidth || !im.naturalHeight) return;
+  var v = imgDimDe(src);
+  if(v && v[0] === im.naturalWidth && v[1] === im.naturalHeight) return;
+  imgDim[src] = imgDim[srcBuzon(src)] = [im.naturalWidth, im.naturalHeight];
+  try{ localStorage.setItem(IMG_DIM, JSON.stringify(imgDim)); }catch(x){}
+}
+function imgHueco(src){
+  var d = imgDimDe(src);
+  return d ? '<span class="hueco" style="width:' + d[0] + 'px;aspect-ratio:' + d[0] + '/' + d[1] + '"></span>'
+           : '<span class="cargando">bajando imagen...</span>';
 }
 var imgUrls = {};        // src -> object url (una sola bajada por imagen)
 function srcBuzon(src){  // ruta local vieja del server (`/home/.../tmp/img/x.png`) -> `img/x.png` del buzon
@@ -1562,12 +1686,17 @@ function cargarImagenes(nodo){
   Array.prototype.forEach.call(spans, function(sp){
     var src = sp.dataset.src, alt = sp.dataset.alt || src;
     bajarImagen(src).then(function(url){
-      var pego = pegadoAbajo();
+      var pego = pegadoAbajo(), ancla = pego ? null : anclaMedir();   // 1805
       sp.innerHTML = "";
       var im = document.createElement("img");
+      var dim = imgDimDe(src);
+      if(dim) im.style.aspectRatio = dim[0] + "/" + dim[1];      // el alto ya estaba reservado: no se mueve
       im.src = url; im.alt = alt; im.title = alt;
       im.addEventListener("click", function(){ verImagen(url, alt); });
-      im.addEventListener("load", function(){ if(pego) alFinal(); });
+      im.addEventListener("load", function(){
+        imgDimGuardar(src, im);
+        if(pego) alFinal(); else if(ancla) anclaPoner(ancla);
+      });
       var pie = document.createElement("span");
       pie.className = "pie"; pie.textContent = alt;
       sp.appendChild(im); sp.appendChild(pie);
@@ -2535,11 +2664,13 @@ function pintarMsg(m, arriba){
 }
 var renderando = false;   // el render entero arma cada caja ya con todos los mensajes: no hace falta refrescar
 function render(){
+  var ancla = anclaMedir();          // 1805: llego mas charla y se repinta todo: la linea de arriba no se mueve
   if(lista) lista.innerHTML = "";
   renderando = true;
   try{ msgs.forEach(function(m){ pintarMsg(m, false); }); } finally { renderando = false; }
   pintarChips();
   if(!vueloContestado()) pintarVuelo();
+  if(ancla && !ancla.abajo) anclaPoner(ancla);
 }
 function alFinal(){ abajo(); }
 // abrir la web, volver al foco o cambiar de pestaña te deja **donde estabas**, no al final (facundo,
@@ -4549,7 +4680,7 @@ function nodoTramo(t){
 function vueloTramos(lista){
   if(!vuelo || !Array.isArray(lista)) return 0;
   var n = document.getElementById("vuelo"), hilo = n && n.querySelector(".hilo"), nuevos = 0;
-  var pego = pegadoAbajo();
+  var pego = pegadoAbajo(), ancla = pego ? null : anclaMedir();   // 1805
   for(var i = vuelo.tramos.length; i < lista.length; i++){
     var t = lista[i];
     if(!t || !String(t.texto || "").trim()) { vuelo.tramos.push({i: i, tipo: "vacio", texto: ""}); continue; }
@@ -4559,6 +4690,7 @@ function vueloTramos(lista){
     nuevos++;
   }
   if(nuevos && pego) alFinal();
+  else if(nuevos && ancla) anclaPoner(ancla);
   return nuevos;
 }
 // la respuesta final repite el ultimo bloque de texto (el `result` de claude): ese no se pinta dos veces
@@ -7179,11 +7311,13 @@ function modHtml(clave){
 // cambio el modulo de un widget: se suelta el viejo (timers y listeners incluidos), se carga el nuevo
 // y se repinta SOLO esa caja. el chat no se entera.
 function repintarMod(clave, v){
+  anclaClavar();                      // 1805: repintar una caja de widget no mueve el chat
   soltarMod(clave);
   return cargarModulo(clave, v).then(function(){
     var nodo = document.querySelector('#widgets [data-w="' + clave + '"]');
     if(nodo && mods[clave]) mods[clave].pintar(modDatos(clave), nodo);
     else repintarWidgets();
+    anclaSoltar();
     return !!mods[clave];
   });
 }
@@ -7192,6 +7326,7 @@ function repintarMod(clave, v){
 function swapCss(v){
   var vieja = $("cssppal");
   if(!vieja) return Promise.resolve(false);
+  anclaClavar();                      // 1805: el css nuevo puede cambiar los altos del chat
   return new Promise(function(res){
     var n = document.createElement("link");
     n.rel = "stylesheet";
@@ -7200,6 +7335,7 @@ function swapCss(v){
     var listo = function(){
       if(vieja.parentNode) vieja.parentNode.removeChild(vieja);
       n.id = "cssppal";
+      anclaSoltar();
       res(true);
     };
     n.onload = listo;
@@ -8304,13 +8440,26 @@ $("tabs").addEventListener("click", function(e){
 // la ventana cambio de forma (ancho, alto, girar el celu): el css ya cambio de vista solo, aca
 // se acomoda lo que el css no puede. sin recargar y sin leer `innerWidth` por su cuenta.
 function sincronizarVista(){
+  anclaClavar();     // 1805: antes de mover el split, la linea que se estaba viendo
   // el pct sigue valiendo, pero hay que recortarlo si algun panel quedaria abajo del minimo
   // (y en la vista mobile el separador desaparece y mandan los anchos de siempre)
   if(splitPct() !== null){ var p = limitarPct(splitPct()); if(p !== null) split.pct = p; }
   aplicarSplit();
+  anclaRelayout();
 }
 window.addEventListener("resize", sincronizarVista);
 window.addEventListener("orientationchange", sincronizarVista);
+// 1805: cambiar de ancho o girar el celu no mueve la primera linea del chat. el `resize` llega DESPUES
+// del reflow, asi que lo que se aplica es la medicion de antes (`anclaUlt`), clavada en el primer evento
+// de la rafaga y soltada en el debounce final.
+window.addEventListener("resize", anclaRelayout);
+window.addEventListener("orientationchange", anclaRelayout);
+if(window.matchMedia){
+  var mqGiro = matchMedia("(orientation: portrait)");
+  if(mqGiro.addEventListener) mqGiro.addEventListener("change", anclaRelayout);
+  else if(mqGiro.addListener) mqGiro.addListener(anclaRelayout);
+}
+if(window.visualViewport) visualViewport.addEventListener("resize", anclaRelayout);
 // el salto de vista lo avisa el propio media query: asi tambien reacciona si cambia el zoom o la
 // altura sin que haya un `resize` util (ios al abrir el teclado, pip, ventana partida)
 if(mqMobile){
@@ -8790,6 +8939,9 @@ window.__agente = {
   // 1770: posicion exacta local y asentado de la vista (`prueba_autoupdate`, `prueba_web_tabs`)
   guardarPosicion: guardarPosicion, leerPosicion: leerPosicion, asentarVista: asentarVista, irDonde: irDonde,
   restaurarVistas: restaurarVistas, anclaDe: anclaDe,
+  // 1805: el ancla dura (la primera linea visible no se mueve). `prueba_web_ancla`
+  anclaMedir: anclaMedir, anclaPoner: anclaPoner, anclaClavar: anclaClavar, anclaSoltar: anclaSoltar,
+  anclaRelayout: anclaRelayout, anclaSS: anclaSS, anclaGuardarSS: anclaGuardarSS,
   sync: function(){ return {sincronizando: sincronizando, texto: $("sync").textContent,
                             visible: !$("sync").classList.contains("oculta"),
                             off: $("sync").classList.contains("off")}; },

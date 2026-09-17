@@ -13,7 +13,7 @@
     },
     {
      "cmd": "cola",
-     "que": "las órdenes: corriendo, pendientes y últimas",
+     "que": "la tabla de la cola: nombre, pedida, iniciada, cuánto va y cuándo terminó",
      "escribe": null,
      "offline": "cola"
     },
@@ -203,7 +203,7 @@
     },
     {
      "cmd": "modelos modo",
-     "que": "fija el modelo: reparto, opus o fable",
+     "que": "fija el modelo: reparto, tareas (por carril), opus o fable",
      "escribe": "modelos ",
      "offline": "cola"
     },

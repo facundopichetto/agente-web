@@ -426,6 +426,12 @@
   }
   .cuerpo .img .pie{display:block;color:var(--gris);font-size:10px;margin-top:2px}
   .cuerpo .img .cargando{color:var(--cian)}
+  /* 1805: el hueco de una imagen que todavia no bajo, con el mismo alto que va a tener (aspect-ratio
+     inline con las medidas guardadas): asi el chat no pega el salto cuando la foto termina de cargar */
+  .cuerpo .img .hueco{
+    display:block;max-width:100%;max-height:42vh;border:1px solid var(--linea-clara);
+    border-radius:4px;background:#000
+  }
   .cuerpo .img .rota{color:var(--rojo)}
   /* 1652 (facundo, 2026-09-15): pinch zoom en el iphone sin perder la salida. `touch-action:none` solo en el visor
      (la pagina no escala), la imagen entra entera a 1x y escala con transform; la `✕` va fija afuera de lo que escala */
