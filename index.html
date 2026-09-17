@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.329">
-<link rel="manifest" href="manifest.json?v=4.329">
+<meta name="agente-web-version" content="4.330">
+<link rel="manifest" href="manifest.json?v=4.330">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.329">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.330">
 </head>
 <body>
 
@@ -1051,7 +1051,10 @@ var POS_VIDA = 600000, posLocal = null;
 function guardarPosicion(){
   var tema = temaActivo();
   if(!tema || !hist || !lista) return null;
-  var abajo = alFondo(), ancla = abajo ? null : anclaDe(), desvio = 0;
+  // 1813: la misma medicion que el ancla dura (`anclaDe` devuelve el mensaje que CRUZA el borde, uno mas
+  // arriba: con los dos mezclados el reload restauraba el mensaje de antes)
+  var med = anclaMedir();
+  var abajo = med ? !!med.abajo : alFondo(), ancla = abajo ? null : ((med && med.id) || anclaDe()), desvio = 0;
   if(ancla){
     var n = lista.querySelector('.msg[data-id="' + String(ancla).replace(/"/g, "") + '"]');
     desvio = n ? hist.scrollTop - n.offsetTop : 0;
@@ -1114,22 +1117,29 @@ function recibirVistas(rem){
 // fondo el ancla es el fondo, que es lo que se espera cuando llega una respuesta nueva.
 var anclaFija = null,     // el ancla de antes del relayout (rafaga de resize, girar, swap de css)
     anclaUlt = null,      // la ultima medicion buena: un `resize` llega DESPUES del reflow, tarde para medir
-    anclaRaf = 0, anclaTimer = null;
+    anclaGeo = null,      // la forma del scroller cuando se midio (`ancho x alto`)
+    anclaTimer = null;
+function anclaForma(){ return hist ? hist.clientWidth + "x" + hist.clientHeight : ""; }
+// 1813: se mide en el acto (no en un `requestAnimationFrame`) y por busqueda binaria: los mensajes van en
+// orden, asi que con ~7 mediciones alcanza aunque la charla tenga cientos. medir en un rAF llegaba tarde
+// (y en una pestaña que no dibuja, el rAF directamente no corre).
 function anclaMedir(){
   if(!hist || !lista || !hist.clientHeight) return null;
   if(alFondo()) return {abajo: true, id: null, delta: 0};
-  var r = hist.getBoundingClientRect(), ns = lista.querySelectorAll(".msg[data-id]"), n = null;
-  for(var i = 0; i < ns.length; i++){
-    n = ns[i];
-    if(n.getBoundingClientRect().top >= r.top - 1) break;   // el primero que empieza dentro;
-  }                                                         // si ninguno, el ultimo que empezo antes
-  if(!n) return null;
+  var r = hist.getBoundingClientRect(), ns = lista.querySelectorAll(".msg[data-id]");
+  if(!ns.length) return null;
+  var lo = 0, hi = ns.length - 1, n = ns[hi];
+  while(lo <= hi){                                          // el primero que empieza dentro;
+    var m = (lo + hi) >> 1;                                 // si ninguno, el ultimo que empezo antes
+    if(ns[m].getBoundingClientRect().top >= r.top - 1){ n = ns[m]; hi = m - 1; }
+    else lo = m + 1;
+  }
   return {abajo: false, id: n.dataset.id, delta: Math.round(n.getBoundingClientRect().top - r.top)};
 }
 // vuelve a poner esa linea donde estaba. por rects, no por `offsetTop`: no depende del `offsetParent`.
 function anclaPoner(a){
   if(!a || !hist || !lista) return false;
-  if(a.abajo){ hist.scrollTop = hist.scrollHeight; anclaUlt = a; return true; }
+  if(a.abajo){ hist.scrollTop = hist.scrollHeight; anclaUlt = a; anclaGeo = anclaForma(); return true; }
   if(!a.id) return false;
   var n = lista.querySelector('.msg[data-id="' + String(a.id).replace(/"/g, "") + '"]');
   if(!n) return false;
@@ -1139,6 +1149,7 @@ function anclaPoner(a){
     try{ hist.scrollTop = Math.max(0, Math.round(hist.scrollTop + d)); }finally{ aplicandoVista = false; }
   }
   anclaUlt = a;
+  anclaGeo = anclaForma();
   return true;
 }
 // clava el ancla antes de algo que va a mover el layout. en una rafaga manda el PRIMER evento.
@@ -1153,17 +1164,26 @@ function anclaSoltar(){
   anclaFija = null;
   if(!a) return false;
   anclaPoner(a);
+  // post-layout por las dos vias: el rAF doble (lo normal) y un timer, porque una pestaña que no esta
+  // dibujando (celu con la pantalla apagada, board de fondo) no corre ningun rAF hasta que vuelve
   requestAnimationFrame(function(){ requestAnimationFrame(function(){ anclaPoner(a); }); });
+  setTimeout(function(){ anclaPoner(a); }, 60);
+  setTimeout(function(){ anclaPoner(a); }, 240);
   return true;
 }
 // el ancla de AHORA, medida mientras nadie mueve nada: un `resize` llega despues del reflow y ahi ya no
 // se puede saber que linea estabas viendo, asi que se mide al scrollear, una vez por frame.
+// 1813: el navegador tambien scrollea solo cuando la ventana cambia de forma (su "scroll anchoring"), y
+// ese scroll llega ANTES que el `resize`. si esa medicion se tomara como buena, el ancla que se restaura
+// seria la de despues del salto y la linea de arriba ya se habria ido. por eso: si el scroller cambio de
+// forma desde la ultima medicion, la medicion NO se toma, manda la vieja y se trata como un relayout.
 function anclaMirar(){
-  if(anclaRaf || anclaFija) return;
-  anclaRaf = requestAnimationFrame(function(){
-    anclaRaf = 0;
-    if(!anclaFija && !aplicandoVista) anclaUlt = anclaMedir();
-  });
+  if(anclaFija || aplicandoVista) return;
+  var g = anclaForma();
+  if(anclaUlt && anclaGeo !== null && g !== anclaGeo){ anclaGeo = g; anclaRelayout(); return; }
+  anclaGeo = g;
+  var m = anclaMedir();
+  if(m) anclaUlt = m;
 }
 // el ancho o el alto cambiaron (resize, girar, teclado, ventana partida, swap de css): se clava con la
 // medicion previa al reflow y se suelta al final de la rafaga, que es donde antes se perdia la linea.
@@ -1212,7 +1232,7 @@ function borrarBorrador(tema){
       if(!a || !(a.abajo || a.id)) return;
       var pa = {}; pa[t] = {ancla: a.abajo ? null : a.id, abajo: !!a.abajo, ts: +a.ts || 0};
       recibirVistas(pa);
-      if(vistas[t] && (+vistas[t].ts || 0) === (+a.ts || 0)) vistas[t].delta = +a.delta || 0;
+      if(vistas[t] && !a.abajo && String(vistas[t].ancla || "") === String(a.id || "")) vistas[t].delta = +a.delta || 0;
     });
     if(L && L.split) recibirSplit(L.split);
     if(L && L.wsets) recibirWsets(L.wsets);
