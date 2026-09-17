@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.351">
-<link rel="manifest" href="manifest.json?v=4.351">
+<meta name="agente-web-version" content="4.352">
+<link rel="manifest" href="manifest.json?v=4.352">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.351">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.352">
 </head>
 <body>
 
@@ -2109,7 +2109,8 @@ function nodoMsg(m){
     var tt = m.tramos.filter(function(t){ return t && tipoTramo(t) && String(t.texto || "").trim(); });
     if(tt.length){
       hilo = document.createElement("div"); hilo.className = "hilo";
-      tt.forEach(function(t, i){ hilo.appendChild(nodoTramo({i: t.i !== undefined ? t.i : i, tipo: tipoTramo(t), texto: t.texto})); });
+      tt.forEach(function(t, i){ hilo.appendChild(nodoTramo({i: t.i !== undefined ? t.i : i, tipo: tipoTramo(t), texto: t.texto,
+                                                             voto: t.voto || null, etapa: t.etapa || null})); });
     }
   }
   var b = document.createElement("div");
@@ -4087,11 +4088,13 @@ var TJ_PROCS = {
     {q: "bajar", tipo: "bajar", aria: "dejar de seguir"},
     {q: "igual", tipo: "igual", aria: "queda igual"}]},
   // 1872 {maybe}: el cuarto proceso, la lista `maybe` (lo que junta el `-_-` de candidatas y el `↓` de empezar a seguir)
-  // 1873 {arrepenti}: el quinto proceso deshace el ultimo voto. no hay boton izquierdo: `=` confirma como esta y
-  // `↑` verde devuelve a la persona a la lista donde estaba antes de ese voto
+  // 1928 {arrepenti} (reemplaza la 1873): el quinto proceso es `activa` + `follow` y ya no deshace ningun voto.
+  // los DOS de los costados sacan gente, asi que el de la derecha no es la flecha verde que sube: es la `✕` roja
+  // del corte (`dejo de seguirla`, que ademas programa el unfollow de madrugada). el que no mueve a nadie, al medio
   "ig-arrepentir": {nombre: "me arrepentí", botones: [
-    {q: "igual", tipo: "igual", aria: "queda como está"},
-    {q: "subir", tipo: "subir", aria: "deshacer ese voto"}]},
+    {q: "bajar", tipo: "bajar", aria: "la ignoro"},
+    {q: "igual", tipo: "igual", aria: "no hago nada"},
+    {q: "cortar", tipo: "no", aria: "dejo de seguirla"}]},
   "ig-maybe": {nombre: "maybe", botones: [
     {q: "bajar", tipo: "bajar", aria: "a ignoradas"},
     {q: "igual", tipo: "igual", aria: "queda en maybe"},
@@ -4107,7 +4110,11 @@ var TJ_SVG = {
   bajar: '<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false">' +
     '<path d="M10 3.2v12M4.6 10.4 10 15.8l5.4-5.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   subir: '<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false">' +
-    '<path d="M10 16.8v-12M4.6 9.6 10 4.2l5.4 5.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    '<path d="M10 16.8v-12M4.6 9.6 10 4.2l5.4 5.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  // 1928 {arrepenti}: la `✕` del corte, por el mismo motivo que las flechas: ninguna fuente la dibuja igual en los
+  // tres tamaños (el iphone es el que falla). el color sigue siendo del molde (`.bglifo.b-no`, rojo)
+  no: '<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false">' +
+    '<path d="M5 5l10 10M15 5 5 15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>'
 };
 // 1883: el orden, el glifo y la frase de cada boton los manda el server (`seleccion.BOTONES_COL`, que viaja en
 // `botones` del json de la votacion): la web no redacta ninguna. `TJ_PROCS` queda como red de abajo para un json
@@ -4146,7 +4153,8 @@ function tjProcQs(e){ return tjBotonesSpec(e).map(function(b){ return b.q; }); }
 // 1883 {teclado} + 1893 {mapa}: votar sin tocar la pantalla. las flechas votan POR POSICION, como se ven:
 // `←` el boton de la izquierda (baja de lista), `→` el de la derecha (sube) y `↓` (o la barra) el del MEDIO, el
 // que no mueve a nadie: `-_-` maybe en candidatas y `=` en el resto. un proceso de dos botones no tiene hueco en el
-// medio: en `dejar de seguir` y en `me arrepentí` la que no mueve a nadie es la `=`, y esa vota `↓` (`tjQMedio`).
+// medio: en `dejar de seguir` (dos botones) la que no mueve a nadie es la `=`, y esa vota `↓` (`tjQMedio`). 1928
+// {arrepenti}: `me arrepentí` ya tiene tres, con la `=` en el medio como todos.
 // `backspace` es el `←` de la cabecera (`#selback`, deshacer el ultimo voto): con el back gris no hace nada, y
 // nunca borra texto ni vuelve atras en el browser (`preventDefault()` salvo que el foco sea del campo de escribir).
 // `esc` sigue cerrando por la pila y el `←` de la cabecera sigue siendo el deshacer, nunca un voto.
@@ -5123,13 +5131,29 @@ function normTramo(t){
   return String(t || "").replace(/^\s*\[[\w\/-]+\]\s*/, "").replace(/\s+/g, " ").trim();
 }
 function tipoTramo(t){
-  return t && t.tipo === "hecho" ? "hecho" : (!t || !t.tipo || t.tipo === "texto") ? "texto" : null;   // null = no se pinta
+  if(!t) return "texto";
+  if(t.tipo === "hecho") return "hecho";
+  if(t.tipo === "paso") return "paso";   // 1931: el rastro de la bolita
+  return (!t.tipo || t.tipo === "texto") ? "texto" : null;   // null = no se pinta
 }
+// 1931 (facundo, 2026-09-17: "cuando cambie, la anterior queda arriba en la linea de arriba como ya paso, en gris
+// [...] quiero poder votar, quiero tocar y decirte mas de esto, menos de esto, o escribir"): un `paso` (la linea de
+// estado que se fue) se pinta igual que un `hecho`, apagado y en su propia linea, y los dos son TOCABLES: abren el
+// menu del rastro. la frase y la plantilla del voto las manda el server (`chat_estado._rastrear`): la web no redacta
+// ni adivina nada.
 function nodoTramo(t){
   var d = document.createElement("div");
-  d.className = "tramo " + (t.tipo === "hecho" ? "hecho" : "texto") + (t.i === 0 && t.tipo !== "hecho" ? " entendi" : "");
-  if(t.tipo === "hecho") d.textContent = String(t.texto || "");
+  var tipo = tipoTramo(t) || "texto", apagado = tipo === "hecho" || tipo === "paso";
+  d.className = "tramo " + tipo + (t.i === 0 && !apagado ? " entendi" : "");
+  if(apagado) d.textContent = String(t.texto || "");
   else d.innerHTML = resaltar(String(t.texto || ""));
+  if(apagado){
+    d.setAttribute("role", "button");
+    d.setAttribute("tabindex", "0");
+    d.title = "más de esto, menos de esto o preguntame por este paso";
+    var dato = {texto: String(t.texto || ""), voto: t.voto || null, etapa: t.etapa || null, tipo: tipo};
+    d.addEventListener("click", function(){ rastroMenu(dato); });
+  }
   return d;
 }
 function vueloTramos(lista){
@@ -5140,6 +5164,8 @@ function vueloTramos(lista){
     var t = lista[i], tipo = tipoTramo(t);
     if(!tipo || !String(t.texto || "").trim()) { vuelo.tramos.push({i: i, tipo: "vacio", texto: ""}); continue; }
     var copia = {i: i, tipo: tipo, texto: String(t.texto)};
+    if(t.voto) copia.voto = String(t.voto);      // 1931: la plantilla del pool, para el `mas`/`menos`
+    if(t.etapa) copia.etapa = String(t.etapa);
     vuelo.tramos.push(copia);
     if(hilo) hilo.appendChild(nodoTramo(copia));
     nuevos++;
@@ -5160,6 +5186,76 @@ function tramosSinFinal(tramos, final){
     if(a && b && (a === b || b.indexOf(a.slice(0, 120)) === 0)) l = l.slice(0, ult).concat(l.slice(ult + 1));
   }
   return l.length ? l : null;
+}
+// 1931 (facundo, 2026-09-17, audio): el menu del rastro. tocar una linea del hilo que quedo atras (un `paso` de la
+// bolita o el `hecho` de un comando) abre el molde de siempre (`modalMolde` + `moldeBoton`, nunca un diseño nuevo)
+// con `más de esto` / `menos de esto` (solo si esa linea sale de un pool: el server manda `voto` con la plantilla) y
+// un campo para escribir, que manda un mensaje al chat con el contexto de ESE paso. el voto es cero tokens y no pasa
+// por el modelo: sube por `POST /votos/etapas {gustos}` y, sin lan, por el buzon (`seleccion-web/etapas-gustos--<id>.json`),
+// igual que el menu del spinner de la 1453 (`reglas_chat.gustos_recibir` lo aplica con dedup por id).
+var rastroM = null, rastroT = null, rastroSub = null;
+function rastroMenu(t){
+  if(!t || !t.texto) return false;
+  rastroT = t;
+  if(!rastroM) rastroM = modalMolde({id: "rastromenu", z: 44, sinServer: true});
+  var cu = document.createElement("div");
+  var f = document.createElement("div");
+  f.className = "rmfrase"; f.textContent = t.texto;
+  cu.appendChild(f);
+  var ta = document.createElement("textarea");
+  ta.placeholder = "preguntame por este paso";
+  ta.setAttribute("autocomplete", "off"); ta.setAttribute("autocapitalize", "off"); ta.setAttribute("spellcheck", "false");
+  ta.addEventListener("focus", function(){ try{ tecladoMirarFoco(ta); }catch(x){} });
+  cu.appendChild(ta);
+  var botones = [];
+  if(t.voto){
+    botones.push({tipo: "term", txt: "más de esto", accion: function(m){ rastroVoto("mas", m); }});
+    botones.push({tipo: "term", txt: "menos de esto", accion: function(m){ rastroVoto("menos", m); }});
+  }
+  botones.push({tipo: "term", txt: "preguntar", accion: function(m){ rastroPreguntar(ta.value, m); }});
+  return rastroM.abrir({titulo: t.tipo === "hecho" ? "este comando" : "este paso", cuerpo: cu, botones: botones});
+}
+function rastroVoto(tipo, m){
+  var t = rastroT;
+  if(!t || !t.voto || ["mas", "menos"].indexOf(tipo) < 0) return false;
+  var pend = votLeer("rastro_pend", []);
+  if(!Array.isArray(pend)) pend = [];
+  pend.push({id: lidNuevo(), tipo: tipo, frase: t.voto, ts: Date.now()});
+  votEscribir("rastro_pend", pend);
+  if(m) m.estado(tipo === "mas" ? "anotado: sale más seguido" : "anotado: sale menos seguido");
+  rastroSubir();
+  setTimeout(function(){ if(rastroM) rastroM.cerrar(false); }, 1200);
+  return true;
+}
+function rastroPreguntar(texto, m){
+  texto = String(texto || "").trim();
+  if(!texto){ if(m) m.estado("escribí algo primero"); return false; }
+  mandar("sobre este paso (`" + (rastroT ? rastroT.texto : "") + "`): " + texto);
+  if(m) m.estado("va al chat");
+  setTimeout(function(){ if(rastroM) rastroM.cerrar(false); }, 600);
+  return true;
+}
+function rastroSubir(){
+  if(rastroSub) return rastroSub;
+  var pend = votLeer("rastro_pend", []);
+  if(!Array.isArray(pend) || !pend.length) return Promise.resolve(true);
+  function sacar(){
+    var ids = {};
+    pend.forEach(function(r){ ids[r.id] = true; });
+    var q = votLeer("rastro_pend", []);
+    votEscribir("rastro_pend", (Array.isArray(q) ? q : []).filter(function(r){ return !ids[r.id]; }));
+  }
+  rastroSub = votLan().then(function(base){
+    if(!base) throw new Error("sin lan");
+    return lanFetch(base + "/votos/etapas", {method: "POST", cache: "no-store", body: JSON.stringify({gustos: pend}),
+                    headers: {"authorization": "Bearer " + token, "content-type": "application/json"}});
+  }).then(function(r){
+    if(!r || !r.ok) throw new Error("http " + (r && r.status));
+    sacar(); return true;
+  }, function(){ return selBuzon("etapas-gustos", pend).then(function(){ sacar(); return true; }); })
+    .catch(function(){ return false; })
+    .then(function(ok){ rastroSub = null; return ok; });
+  return rastroSub;
 }
 // 1292: en la fase `modelo` el daemon publica lo que hace el modelo (`recetas/chat_stream.py`).
 // 1835 (facundo, 2026-09-17: "no quiero ver todo lo que hay antes de la respuesta"): el daemon manda ademas `paso`,
@@ -8997,7 +9093,7 @@ document.addEventListener("scroll", function(){ if(menuAbierto) cerrarMenu(); },
 var VISTAS_TODAS = ["chat", "widgets", "tinder", "podcast"];
 var VISTA_SOLAS = ["tinder", "podcast"];       // ocupan la pantalla entera, nunca conviven con otra
 var VISTA_LS = "agente_vista";
-// 1929 {barra} (facundo, 2026-09-17): "lo que vos tenes que guardar es, en el caso de que yo me haya ido de la vista
+// 1930 {barra} (facundo, 2026-09-17): "lo que vos tenes que guardar es, en el caso de que yo me haya ido de la vista
 // de chat, lo que sea que este viendo de las dos opciones en el celular; y si es en el desktop queda por default chat".
 // `vistaDoble` es cual de las dos (`chat` | `widgets`) estabas viendo: se guarda por pestaña y es a la que se vuelve
 // al salir de `tinder` o de `podcast`, tambien despues de un reload.
@@ -9021,7 +9117,7 @@ function vistaPintar(){
   VISTAS_TODAS.forEach(function(n){ document.body.classList.toggle("v-" + n, vistaOn === n); });
   // compat: la vuelta del modal de la campana venia mirando `ver-widgets`
   document.body.classList.toggle("ver-widgets", vistaOn === "widgets");
-  // 1929: el icono de la vista activa no se pinta, asi que ninguno de los dos lleva nunca el verde de `.on`
+  // 1930: el icono de la vista activa no se pinta, asi que ninguno de los dos lleva nunca el verde de `.on`
   // el fueguito es el icono de la vista `tinder` y lo esconde `selBoton` (que ademas cuenta lo que hay para votar);
   // los otros tres los esconde el css. esto nunca puede voltear el pintado de las vistas.
   try{ selBoton(); }catch(x){}
@@ -9033,7 +9129,7 @@ function vistaPoner(n){
   if(vistaEs("chat")) vistaAnclas.chat = anclaUlt || anclaMedir();
   vistaPrevia = vistaOn;
   vistaOn = n;
-  if(vistaEsDoble(n)) vistaDoble = n;   // 1929: a esta se vuelve al salir del tinder o del podcast
+  if(vistaEsDoble(n)) vistaDoble = n;   // 1930: a esta se vuelve al salir del tinder o del podcast
   vistaGuardar();
   // 1922 {vistatinder}: dejar la vista `tinder` por la barra cierra su caja; al volver arranca en `home`
   if(vistaPrevia === "tinder" && n !== "tinder") tinderSalir();
@@ -9052,7 +9148,7 @@ function vistaPoner(n){
 }
 // salir de una vista sola (`esc` en el tinder o en el podcast): vuelve a la que estaba antes
 function vistaVolver(){
-  // 1929: vuelve a la que estabas viendo de las dos (guardada por pestaña), no siempre a `chat`
+  // 1930: vuelve a la que estabas viendo de las dos (guardada por pestaña), no siempre a `chat`
   var v = vistaPrevia && VISTA_SOLAS.indexOf(vistaPrevia) < 0 ? vistaPrevia : vistaDoble;
   return vistaPoner(vistaEsDoble(v) ? v : vistaDoble);
 }
@@ -9060,7 +9156,7 @@ function vistaVolver(){
 function vistaInicial(){
   var v = null, d = null;
   try{ v = sessionStorage.getItem(VISTA_LS); d = sessionStorage.getItem(VISTA_DOBLE_LS); }catch(x){}
-  vistaDoble = vistaEsDoble(d) ? d : "chat";   // 1929: cual de las dos estabas viendo en esta pestaña
+  vistaDoble = vistaEsDoble(d) ? d : "chat";   // 1930: cual de las dos estabas viendo en esta pestaña
   return v && v !== "tinder" ? vistaNorm(v) : vistaDoble;
 }
 // compat con lo de antes (`verPanel` / `verWidgets` los siguen llamando las pruebas y el modal de la campana)
@@ -9423,6 +9519,13 @@ window.__agente = {
   amEstado: function(){ return {abierto: !$("animmenu").classList.contains("oculta"), anim: amAnim && amAnim.id,
                                  pend: votLeer("gustos_pend", []), loc: votLeer("gustos_loc", null), gustos: anims.gustos,
                                  estado: $("amestado").textContent}; },
+  // 1931: el menu del rastro (tocar una linea que quedo atras)
+  rastroMenu: rastroMenu, rastroVoto: rastroVoto, rastroPreguntar: rastroPreguntar,
+  rastroEstado: function(){ var c = document.getElementById("rastromenu");
+    return {abierto: !!(c && !c.classList.contains("oculta")), frase: rastroT && rastroT.texto, voto: rastroT && rastroT.voto,
+            botones: c ? [].map.call(c.querySelectorAll(".mbotones button"), function(b){ return b.textContent; }) : [],
+            pend: votLeer("rastro_pend", []), estado: c ? (c.querySelector(".mestado") || {}).textContent : ""}; },
+  rastroReset: function(){ try{ localStorage.removeItem("agente_votos_" + VOT_COL + "_rastro_pend"); }catch(x){} },
   amReset: function(){ ["gustos_pend", "gustos_loc"].forEach(function(s){ try{ localStorage.removeItem("agente_votos_" + VOT_COL + "_" + s); }catch(x){} }); },
   votEstado: function(){ return {abierto: votAbierto, par: votPar ? [votPar[0].id, votPar[1].id] : null, pend: votLeer("pend", []),
                                  basta: votLeer("basta", false), items: anims.items.length, votos: votTodos().length,

@@ -70,7 +70,7 @@
     }
   }
   /* `.bb` = boton con texto de la barra de arriba: mismo alto, padding, fuente y borde (facundo, 2026-09-12).
-     desde la 1929 `chat | widgets` ya no la usan (son iconos `.ib`): queda el molde, por si vuelve un boton con texto. */
+     desde la 1930 `chat | widgets` ya no la usan (son iconos `.ib`): queda el molde, por si vuelve un boton con texto. */
   .bb{
     flex:0 0 auto;box-sizing:border-box;background:#000;color:var(--gris);
     border:1px solid var(--linea);border-radius:4px;padding:4px 8px;margin:0;
@@ -116,7 +116,7 @@
   .msg .hilo .tramo.paso:hover, .msg .hilo .tramo.hecho:hover{opacity:1}
   #rastromenu .rmfrase{color:var(--gris);font-size:11px;margin:0 0 8px 0}
   #rastromenu textarea{width:100%;box-sizing:border-box;min-height:56px;background:transparent;color:var(--blanco);
-    border:1px solid var(--borde);border-radius:6px;padding:6px;font:inherit;font-size:12px}
+    border:1px solid var(--linea-clara);border-radius:6px;padding:6px;font:inherit;font-size:12px}
   .msg.vuelo .hilo + .cuerpo{margin-top:2px}
   /* animaciones de caracteres (1373): una linea, todos los cuadros del mismo ancho (`Nch` lo pone animPoner), el
      alto fijo de una linea: ni saltan de costado ni empujan el renglon.
@@ -1004,7 +1004,7 @@
   #nlista .nvacio{color:var(--gris);padding:8px 6px;font-size:10.5px}
   /* 1829 (facundo, 2026-09-17): el grupo de iconos (fueguito, campana, tipito, en ese orden) contra el borde
      derecho; lo empuja `#nodos` (flex 1), y sin nodos pintados la cabecera ya alinea al final. */
-  /* 1929 {barra} (facundo, 2026-09-17): `chat` y `widgets` dejaron de ser botones con texto (`.bb`): son dos iconos
+  /* 1930 {barra} (facundo, 2026-09-17): `chat` y `widgets` dejaron de ser botones con texto (`.bb`): son dos iconos
      svg del mismo molde `.ib` que el fueguito, el podcast, la campana y el tipito, y viven a la DERECHA de la barra,
      a la izquierda del fueguito. `#vistas` deja de ser una caja (`display:contents`): no empuja mas (lo empuja
      `#nodos`) y los dos iconos son items de la cabecera, con su mismo `gap` que los otros cuatro. */
@@ -1027,7 +1027,7 @@
      de las dos puesta se esconden los dos botones, y la cabecera queda igual que antes de la 1875 */
   body.v-chat #ver-chat,body.v-chat #ver-widgets,
   body.v-widgets #ver-chat,body.v-widgets #ver-widgets{display:none}
-  /* 1929: en la compu `chat` y `widgets` son UNA sola vista, asi que el unico icono es el de `chat` (y estando en
+  /* 1930: en la compu `chat` y `widgets` son UNA sola vista, asi que el unico icono es el de `chat` (y estando en
      ella tampoco se ve): el de `widgets` no se pinta nunca aca. en mobile son dos sub-vistas y vuelve (abajo). */
   #ver-widgets{display:none}
   body.v-podcast #ver-podcast{display:none}
@@ -1073,7 +1073,7 @@
     #mcuerpo textarea.nresp{font-size:var(--texto-max)}   /* ios no zoomea al enfocar */
     /* 1829: en celu los nodos ocupan solo lo suyo (no empujan) para que chat | widgets quede contra el borde
        izquierdo; sin nodos pintados, la caja no deja ni el gap */
-    /* 1929: los nodos empujan (los iconos quedan contra el borde derecho); sin nodos pintados no dejan ni el gap */
+    /* 1930: los nodos empujan (los iconos quedan contra el borde derecho); sin nodos pintados no dejan ni el gap */
     #nodos{gap:10px;flex:1 1 auto}
     #nodos:empty{display:none}
     #cabecera{gap:6px}
@@ -1095,7 +1095,7 @@
        (en desktop las dos conviven y los dos botones se esconden: las reglas de arriba) */
     body:not(.v-chat) #panel-chat{display:none}
     body:not(.v-widgets) #panel-widgets{display:none}
-    /* 1929: en mobile son dos sub-vistas del mismo lugar. el icono es siempre A DONDE VAS: en `chat` se ve el de
+    /* 1930: en mobile son dos sub-vistas del mismo lugar. el icono es siempre A DONDE VAS: en `chat` se ve el de
        `widgets`, en `widgets` el de `chat`, y en `tinder` o `podcast` (ninguna de las dos activa) se ven los DOS. */
     #ver-widgets{display:inline-flex}
     body.v-chat #ver-widgets,body.v-widgets #ver-chat{display:inline-flex}
