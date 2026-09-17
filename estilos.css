@@ -323,7 +323,12 @@
   #selback{flex:0 0 auto;margin-right:2px;padding:5px 7px;min-width:38px;min-height:38px}   /* 38 px tocables, como los votos */
   #selacciones{display:flex;flex-wrap:wrap;gap:6px}
   #selacciones.oculta,#selmodal #seltxt.oculta{display:none!important}
-  #selacciones .tjbtn{flex:1 1 0}
+  /* 1841 (facundo, 2026-09-17: "esos tres botones son muy chicos, agrandalos un poquito"): los votos de la tarjeta
+     pasan de 38 a 46 px de alto y el glifo se ve un 25% mas grande con `transform:scale` sobre el span `.tjglf`: el
+     `font-size` sigue en el tope de 12 px de la 1541 (es un icono, no texto, y el tope computado no se toca). siguen
+     sin borde ni caja (molde `.bglifo`) y con `flex:1` los tres reparten el ancho, asi en 390 px entran sin scroll */
+  #selacciones .tjbtn{flex:1 1 0;min-height:46px;padding:6px 9px}
+  #selacciones .tjbtn .tjglf{display:inline-block;transform:scale(1.25);transform-origin:center}
   /* 1556 (facundo, desde el iphone): "abajo los botones no tienen borde. izquierda en rojo una X, en el medio en blanco
      un guion, derecha un tick verde, tamaño 12px". sin borde ni caja, glifo de 12px y 38 px tocables; el nombre va en aria-label */
   /* el glifo, el color y el toque (opacidad) viven en el molde: `.bglifo.b-no` · `.b-queda` */
@@ -746,15 +751,22 @@
      y las cinco horas apretadas contra el borde derecho, con medio widget en negro en el medio. `max-content`
      con `minmax(0,...)` lo deja del ancho del nombre mas largo y sigue pudiendo achicarse hasta cortarse con
      `…` en el celu, que es lo que evita el scroll horizontal. */
-  .qtab{display:grid;grid-template-columns:minmax(0,max-content) max-content max-content max-content max-content;
+  /* 1843 (facundo, 2026-09-17): las columnas se estiran proporcionalmente al contenido hasta ocupar el 100% del
+     ancho de la caja (`fr`, nunca `max-content` que deja hueco a la derecha). el valor exacto lo pone el widget
+     con `B.gridFr` segun lo que hay en cada columna; esto es el default con el ancho fijo de `08:49:12 pm` (11)
+     y `0:04:12` (7). el nombre sigue siendo el unico que se achica (`minmax(0,...)`): sin scroll horizontal. */
+  .qtab{display:grid;grid-template-columns:minmax(0,14fr) 11fr 11fr 7fr 11fr;width:100%;
         column-gap:7px;row-gap:1px;white-space:nowrap;font-size:10.5px;line-height:1.6;max-width:100%}
   .qtab .it{display:contents}
   .qtab .qth{color:var(--gris);font-size:9px;letter-spacing:.3px;opacity:.75}
+  /* 1843: la cabecera `transcurrido / tardó` es mas ancha que sus celdas (`0:04:12`): se parte en dos lineas en vez
+     de ensanchar la columna y aplastar el nombre (con `nowrap` llegaba a 117 px y el nombre quedaba en 5 px) */
+  .qtab .qth.qtiempo{white-space:normal;line-height:1.15;align-self:end;padding-bottom:2px}
   .qtab .qnom{min-width:0;overflow:hidden;text-overflow:ellipsis}
   .qtab .qcel{text-align:right;font-variant-numeric:tabular-nums}
   /* 1832: la escalera de modelos del widget `models`: grid de 7 columnas, entra en el celu sin scroll horizontal */
-  .esctab{display:grid;grid-template-columns:minmax(0,max-content) repeat(6,max-content);column-gap:6px;row-gap:1px;
-          font-variant-numeric:tabular-nums;max-width:100%;overflow:hidden;white-space:nowrap}
+  .esctab{display:grid;grid-template-columns:minmax(0,8fr) 3fr 12fr 3fr 3fr 6fr 8fr;width:100%;column-gap:6px;row-gap:1px;
+          font-variant-numeric:tabular-nums;max-width:100%;overflow:hidden;white-space:nowrap}   /* 1843: `fr`, ver .qtab */
   .esctab .eth{color:var(--gris);font-size:9px;letter-spacing:.3px;opacity:.75}
   .esctab .enom{min-width:0;overflow:hidden;text-overflow:ellipsis}
   .esctab .ecel{text-align:right}

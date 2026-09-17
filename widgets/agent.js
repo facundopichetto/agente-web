@@ -33,7 +33,7 @@
   function qCabecera(){
     return '<span class="qth qnom">nombre</span><span class="qth qcel">pedida</span>' +
            '<span class="qth qcel">iniciada</span>' +
-           '<span class="qth qcel"><span class="qhw">transcurrido / tardó</span><span class="qhn">tiempo</span></span>' +
+           '<span class="qth qcel qtiempo"><span class="qhw">transcurrido / tardó</span><span class="qhn">tiempo</span></span>' +
            '<span class="qth qcel">terminó</span>';
   }
   function cajaAgente(a){
@@ -41,7 +41,13 @@
     var verCola = wset("agent", "cola");
     var filas = tabla.filter(function(f){ return verCola || f.estado !== "cola"; }).map(qFila);
     filas = B.limFilas("agent", filas);
-    var cuerpo = filas.length ? '<div class="qtab">' + qCabecera() + filas.join("") + "</div>"
+    // 1843: columnas `fr` proporcionales a lo que hay en cada una, para ocupar el 100% del ancho de la caja
+    var vis = tabla.filter(function(f){ return verCola || f.estado !== "cola"; });
+    var cols = [vis.map(function(f){ return f.nombre || ("" + f.n); }), vis.map(function(f){ return f.pedida; }),
+                vis.map(function(f){ return f.iniciada; }), vis.map(function(f){ return f.dur; }),
+                vis.map(function(f){ return f.termino; })];
+    var cuerpo = filas.length ? '<div class="qtab" style="grid-template-columns:' + esc(B.gridFr(cols)) + '">' +
+                                qCabecera() + filas.join("") + "</div>"
                : (a.pausa ? '<span class="r b">PAUSA</span>' : vacio("nada en la cola"));
     // dato esencial, corto para que entre en el celu: la cuenta, cuantas corren (verde) y +las que esperan
     var ese = '<span class="c b">' + esc(a.cuenta || "?") + "</span> " +

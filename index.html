@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.334">
-<link rel="manifest" href="manifest.json?v=4.334">
+<meta name="agente-web-version" content="4.335">
+<link rel="manifest" href="manifest.json?v=4.335">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.334">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.335">
 </head>
 <body>
 
@@ -4058,6 +4058,9 @@ function tjBotones(e){
   p.botones.forEach(function(b){
     var el = moldeBoton({tipo: b.tipo, aria: b.aria, clase: "tjbtn " + b.q});
     el.setAttribute("data-q", b.q);
+    // 1841: el glifo va en un span para agrandarlo con `transform:scale` sin pasar el tope de 12 px (`.tjglf`)
+    var glf = document.createElement("span"); glf.className = "tjglf"; glf.textContent = el.textContent;
+    el.textContent = ""; el.appendChild(glf);
     caja.appendChild(el);
   });
   return caja;
@@ -4661,7 +4664,7 @@ function claveEstado(cuerpo){
 function vueloIniciar(m, cuerpo){
   var t0 = fecha(m.iso) || Date.now();
   vuelo = {id: m.id, tema: m.tema, iso: m.iso, t: t0, ref: fecha(m.creado) || t0, clave: claveEstado(cuerpo),
-           palabra: "enviado", eta: null, fin: 0, giro: 0, listo: 0, anim: animSpinner(),   // 1373: sin animaciones, la ruedita
+           palabra: "", eta: null, fin: 0, giro: 0, listo: 0, anim: animSpinner(),   // 1373: sin animaciones, la ruedita. 1842: arranca solo la animacion, sin texto
            tramos: []};   // 1776: lo ya pintado del hilo, en orden; solo crece
   etagEstado = null;
   if(vueloGiro) clearInterval(vueloGiro);
@@ -4740,18 +4743,17 @@ function tramosSinFinal(tramos, final){
   if(u.tipo !== "salida" && a && b && (a === b || b.indexOf(a.slice(0, 120)) === 0)) l = l.slice(0, -1);
   return l.length ? l : null;
 }
-// 1292: en la fase `modelo` el daemon publica lo que hace el modelo (`opus: leyendo daemon.py`, `recetas/chat_stream.py`).
-// si pasan VUELO_PENSANDO_MS desde que arranco el modelo sin ninguna accion, `opus: pensando...`
+// 1292: en la fase `modelo` el daemon publica lo que hace el modelo (`recetas/chat_stream.py`).
 // 1835 (facundo, 2026-09-17: "no quiero ver todo lo que hay antes de la respuesta"): el daemon manda ademas `paso`,
-// el ruteo del mensaje (`recibido por ollama`, `no hay comando directo, consulto con opus`,
-// `chat_estado.Intercambio.paso`). es la MISMA linea de estado: se pisa, nunca se anexa al hilo ni queda en el
-// historial: se va con el bloque en vuelo cuando llega la respuesta y ninguna fila del jsonl la trae.
-var VUELO_PENSANDO_MS = 3000;
+// el ruteo del mensaje (`chat_estado.Intercambio.paso`). es la MISMA linea de estado: se pisa, nunca se anexa al
+// hilo ni queda en el historial: se va con el bloque en vuelo cuando llega la respuesta y ninguna fila del jsonl la trae.
+// 1842 (facundo, 2026-09-17): la linea habla en su idioma (`recibiendo`, `calculando porongas con opus`, `ejecutando
+// poronguismos: git log`, `porongueo aceptado`, `respondiendo`) y arranca vacia: solo la animacion hasta que el server
+// dice algo. TODAS las frases las arma el server (`recetas/reglas_chat.ETAPAS`): la web no tiene vocabulario propio,
+// pinta `paso` si hay y si no `palabra`, tal cual llegan.
 function faseTexto(ahora){
   if(!vuelo) return "";
-  if(vuelo.fase !== "modelo" || !vuelo.modelo || vuelo.accion) return vuelo.paso || vuelo.palabra;
-  ahora = ahora === undefined ? Date.now() : ahora;
-  return ahora - (vuelo.modeloDesde || ahora) >= VUELO_PENSANDO_MS ? vuelo.modelo + ": pensando..." : vuelo.palabra;
+  return vuelo.paso || vuelo.palabra || "";
 }
 // `eta_respuesta_s` = segundos hasta la respuesta completa, contados desde `ts_inicio` (reloj del daemon). el numero
 // es SIEMPRE lo que falta para poder leer la respuesta (facundo, 2026-09-13, orden 1160): en cada tick
@@ -4805,7 +4807,7 @@ function vueloGirar(){
   var f = document.querySelector("#vuelo .fase"), ft = faseTexto();
   if(f && f.textContent !== ft) faseCambiar(f, ft);
 }
-// 1835 + 1813: la linea de estado cambia de largo (un paso del ruteo, `opus: pensando...`) y puede pasar a dos
+// 1835 + 1813: la linea de estado cambia de largo (un paso del ruteo, `calculando porongas con opus`) y puede pasar a dos
 // renglones: pegado abajo sigue pegado, scrolleado arriba el ancla no se mueve (el bloque en vuelo esta abajo de
 // todo, asi que lo que esta arriba no se corre; si algo se moviera, `anclaPoner` lo devuelve).
 function faseCambiar(f, ft){
@@ -4825,7 +4827,6 @@ function recibirEstado(e, ahora){
   vuelo.paso = e.paso ? String(e.paso) : null;   // 1835: el ruteo, efimero: se pisa, no se anexa
   if(e.fase === "modelo"){
     vuelo.modelo = e.modelo || vuelo.modelo || e.palabra;   // un daemon viejo no manda `modelo`: la palabra es el modelo
-    if(!vuelo.modeloDesde) vuelo.modeloDesde = ahora;
     vuelo.accion = e.accion || null;
   } else vuelo.accion = null;
   vuelo.fase = e.fase;
@@ -7220,11 +7221,24 @@ var MODULOS = ["usage", "agent", "sombra"];   // widgets migrados, en `web/widge
 var MOD_DATOS = {usage: "usage", agent: "agente"};   // de que campo de `widgets.json` come cada uno
 var mods = {}, modsVer = {}, modsTimers = {}, modsError = {}, modCargando = null, modsCargas = 0;
 
+// 1843 (facundo, 2026-09-17): toda tabla de widget (`queue`, la escalera de `models`) ocupa el 100% del ancho de
+// la caja con columnas `fr` proporcionales al contenido, nunca anchos fijos que dejen hueco a la derecha. `cols` es
+// una lista por columna con los textos de sus celdas (sin la cabecera: su `min-content` ya pone el piso); el valor
+// es `grid-template-columns`. la primera columna es el nombre: `minmax(0, Nfr)`, la unica que se achica y se corta
+// con `…`, asi en el celu entra sin scroll horizontal; las demas `Nfr` con piso `auto` (una hora no se parte).
+function gridFr(cols){
+  return (cols || []).map(function(celdas, i){
+    var n = 2;
+    (celdas || []).forEach(function(t){ n = Math.max(n, String(t == null ? "" : t).length); });
+    return i === 0 ? "minmax(0," + n + "fr)" : n + "fr";
+  }).join(" ");
+}
 var BOARD = {
   contrato: 1,
   registrar: function(clave, api){ mods[clave] = api; delete modsError[clave]; modsCargas++; },
   // lo que un modulo puede usar del shell, y nada mas
   esc: esc, it: it, caja: caja, vacio: vacio, wset: wset, limFilas: limFilas, corto: corto, pad: pad,
+  gridFr: gridFr,   // 1843: las columnas de una tabla de widget, en `fr` proporcional al contenido
   barraUso: barraUso, moldeSwitch: moldeSwitch, moldeSwitchReg: moldeSwitchReg,
   moldeSwitchSacar: function(nombre){ delete MOLDE_SW[nombre]; },
   modalMolde: modalMolde,   // 1806: el modal de una cuenta del widget `usage` usa el molde (esc cierra, sin borde)
@@ -7389,20 +7403,26 @@ function pintarWidgets(d, err){
 // el `[↻]` del header: vuelve a bajar widgets.json aunque no haya cambiado (sin etag) y repinta.
 // el json lo republica el script `widgets_web` del daemon cada 60 s, asi que esto trae lo ultimo
 // publicado sin gastar un solo token.
-var refrescando = false, refrescos = 0;
+// 1841 (facundo, 2026-09-17: "el widget no refresca cuando toco en refrescar"): dos causas. (1) por la lan el endpoint
+// servia el json del script de 60 s (ahora `?fresco=1`, `cargarWidgets`). (2) `refrescando` podia quedar trabado en
+// `true` para siempre: si `pintarWidgets` tiraba adentro del `catch`, el `then` que lo soltaba no corria y desde ahi
+// cada toque del `[↻]` volvia sin hacer nada. ahora se suelta pase lo que pase y un refresco de mas de 15 s se da
+// por muerto (`REFRESCO_TRABADO_MS`).
+var refrescando = false, refrescos = 0, refrescandoDesde = 0, REFRESCO_TRABADO_MS = 15000;
 function refrescarWidgets(clave){
-  if(refrescando) return Promise.resolve();
-  refrescando = true; refrescos++;
+  if(refrescando && Date.now() - refrescandoDesde < REFRESCO_TRABADO_MS) return Promise.resolve();
+  refrescando = true; refrescandoDesde = Date.now(); refrescos++;
   var b = document.querySelector('#widgets [data-ref="' + (clave || "").replace(/"/g, "") + '"]');
   if(b) b.classList.add("girando");
   etagWid = null;
-  return cargarWidgets().catch(function(e){
-    if(ruidoso(e)) pintarWidgets(null, e.message);
-  }).then(function(){
+  function listo(){
     refrescando = false;
     var n = document.querySelector('#widgets [data-ref="' + (clave || "").replace(/"/g, "") + '"]');
     if(n) n.classList.remove("girando");
-  });
+  }
+  return cargarWidgets(true).catch(function(e){
+    if(ruidoso(e)) pintarWidgets(null, e.message);
+  }).then(listo, function(e){ listo(); throw e; });
 }
 
 // 1666: `votaciones.json`, el archivo chico con las votaciones abiertas. va aparte de `widgets.json` porque el
@@ -7419,9 +7439,13 @@ function cargarVotaciones(){
   }).catch(function(e){ if(e && /404/.test(e.message || "")) return; throw e; });   // todavia no lo publico ningun daemon
 }
 
-function cargarWidgets(){
+// 1841 (facundo, 2026-09-17: "el widget no refresca cuando toco en refrescar"): por la lan el endpoint servia el json
+// que dejo el script de 60 s, asi que tres toques seguidos traian lo mismo (mismo `ts`, mismo etag). con `fresco`
+// (el `[↻]`) va `?fresco=1` y el daemon lo arma en el momento, cero tokens. sin lan (buzon) se baja lo publicado.
+function cargarWidgets(fresco){
   widUlt = Date.now();
-  return api("GET", "/repos/" + REPO + "/contents/widgets.json", null, etagWid,
+  var q = fresco && lan.base ? "?fresco=1" : "";
+  return api("GET", "/repos/" + REPO + "/contents/widgets.json" + q, null, fresco ? null : etagWid,
              "application/vnd.github.raw+json").then(function(r){
     if(r.status === 304){ pintarWidgets(null); return; }
     etagWid = r.etag;
@@ -8888,6 +8912,7 @@ window.__agente = {
   },
   arrastrando: function(){ return !!arrW; },
   refrescos: function(){ return refrescos; }, etagWid: function(){ return etagWid; },
+  refrescando: function(){ return {en: refrescando, desde: refrescandoDesde}; },   // 1841: la prueba mira si quedo trabado
   headers: function(){
     return [].map.call(document.querySelectorAll("#widgets > .caja"), function(c){
       var t = c.querySelector(".tit") || {};

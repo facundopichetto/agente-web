@@ -21,7 +21,16 @@
   }
   function escaleraHtml(e){
     if(!e || e.error) return '<span class="g">escalera: ' + esc((e && e.error) || "sin datos") + "</span>";
-    var h = '<div class="esctab">' +
+    // 1843: columnas `fr` proporcionales al contenido (100% del ancho de la caja, sin hueco a la derecha)
+    var cols = [[], [], [], [], [], [], []];
+    (e.filas || []).forEach(function(f){
+      var g = f.gratis || {};
+      cols[0].push(f.tarea); cols[1].push(f.pct_script == null ? "-" : String(Math.round(f.pct_script)));
+      cols[2].push(g.columna ? cortoCol(g.columna) + " " + g.puntaje + "x" : "-");
+      cols[3].push(f.opus == null ? "-" : String(f.opus)); cols[4].push(f.fable == null ? "-" : String(f.fable));
+      cols[5].push(f.hoy || "-"); cols[6].push(f.plan_b ? (f.plan_b === g.columna ? "idem" : cortoCol(f.plan_b)) : "-");
+    });
+    var h = '<div class="esctab" style="grid-template-columns:' + esc(B.gridFr(cols)) + '">' +
       ["tarea", "script", "gratis", "opus", "fable", "hoy", "plan b"].map(function(t){ return '<span class="eth">' + t + "</span>"; }).join("");
     (e.filas || []).forEach(function(f){
       var g = f.gratis || {};
