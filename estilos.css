@@ -806,7 +806,8 @@
   #ver-votar{min-height:0;min-width:0;padding:0;font-weight:normal;color:var(--blanco);font-size:var(--texto-max)}
   #ver-votar:active{opacity:.55}
   #ver-votar.oculta{display:none!important}
-  #ver-votar .badge{background:var(--cian)}
+  /* 1836: el fueguito va pelado (sin badge); gris solo con los tres procesos en cero */
+  #ver-votar.apagado{color:var(--gris)}
   /* el nivel de cada notificacion: la misma paleta que `recetas/nodos.py` (`recetas/nivel_aviso.py`) */
   #notis .luz.rojo,#nlista .luz.rojo,#campana .badge.rojo{background:var(--rojo)}
   #notis .luz.naranja,#nlista .luz.naranja,#campana .badge.naranja{background:var(--naranja)}

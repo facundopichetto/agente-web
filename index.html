@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.332">
-<link rel="manifest" href="manifest.json?v=4.332">
+<meta name="agente-web-version" content="4.333">
+<link rel="manifest" href="manifest.json?v=4.333">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.332">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.333">
 </head>
 <body>
 
@@ -37,7 +37,7 @@
     <button id="ver-chat" class="bb on" type="button">chat</button>
     <button id="ver-widgets" class="bb" type="button">widgets</button>
   </div>
-  <button id="ver-votar" class="ib bglifo oculta" type="button" title="votar" aria-label="votar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22c-4 0-7-2.8-7-6.5 0-2.6 1.4-4.6 2.8-6.3.3 1.3 1 2.3 2 2.9-.3-3 .9-6.2 4.2-8.1-.2 2.6.9 4.2 2.4 5.7 1.5 1.6 2.6 3.3 2.6 5.8 0 3.7-3 6.5-7 6.5z"/><path d="M12 22c-1.7 0-3-1.3-3-3 0-1.4.8-2.4 1.6-3.3.5.9 1.1 1.4 1.9 1.7.8-.5 1.2-1.3 1.3-2.2.8 1.1 1.2 2.2 1.2 3.8 0 1.7-1.3 3-3 3z"/></svg><span id="vbadge" class="badge oculta"></span></button>
+  <button id="ver-votar" class="ib bglifo oculta" type="button" title="votar" aria-label="votar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22c-4 0-7-2.8-7-6.5 0-2.6 1.4-4.6 2.8-6.3.3 1.3 1 2.3 2 2.9-.3-3 .9-6.2 4.2-8.1-.2 2.6.9 4.2 2.4 5.7 1.5 1.6 2.6 3.3 2.6 5.8 0 3.7-3 6.5-7 6.5z"/><path d="M12 22c-1.7 0-3-1.3-3-3 0-1.4.8-2.4 1.6-3.3.5.9 1.1 1.4 1.9 1.7.8-.5 1.2-1.3 1.3-2.2.8 1.1 1.2 2.2 1.2 3.8 0 1.7-1.3 3-3 3z"/></svg></button>
   <button id="campana" class="ib" type="button" title="notificaciones" aria-label="notificaciones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 8 2.5 8h-17S6 15 6 9"/><path d="M10.3 20.5a2 2 0 0 0 3.4 0"/></svg><span id="badge" class="badge oculta"></span></button>
   <button id="persona" class="ib" type="button" title="cuenta" aria-label="cuenta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></button>
 </div>
@@ -135,7 +135,9 @@
   </div>
 </div>
 <!-- 1801 (facundo, 2026-09-16): el fueguito `votar` ya no abre el modal: abre este dropdown con los tres procesos
-     (`candidatas`, `empezar a seguir`, `dejar de seguir`), cada uno con su badge de pendientes. recien al elegir uno
+     (`candidatas`, `empezar a seguir`, `dejar de seguir`), cada uno con su numero. 1836 (facundo, 2026-09-17): el
+     fueguito va pelado, sin badge (gris solo con los tres procesos en cero), y el numero de cada proceso es el TOTAL
+     de la lista sin votar en el embudo (`totales` del server), nunca lo cargado ni "cuantas quedan". recien al elegir uno
      se abre el modal, y el titulo de arriba del modal dice cual de los tres se esta votando. molde: menu pegado a lo
      tocado (como `#nlista`), `esc` lo cierra por la pila de capas. -->
 <div id="votfondo" class="oculta"></div>
@@ -4064,9 +4066,9 @@ function tjProcQs(e){ return tjProc(e && e.coleccion).botones.map(function(b){ r
 function tjContar(){
   var e = sel.actual, c = tjActual();
   if(!e) return;
+  // 1836 (facundo, 2026-09-17: "tampoco me pongas cuantas quedan"): la fila continua no cuenta nada en el modal
   if(e.continua){
-    var q = e.candidatas.length - sel.tj;
-    $("selcuenta").textContent = c ? "quedan " + q + (e.mas ? "+" : "") : "al día";
+    $("selcuenta").textContent = "";
   } else $("selcuenta").textContent = c ? (sel.tj + 1) + " de " + e.candidatas.length : "listo";
 }
 function tjAbrir(e){
@@ -4424,30 +4426,34 @@ function selPendientes(){
     .sort(function(a, b){ return (a.abrir_ts || 0) - (b.abrir_ts || 0); });
 }
 function selBoton(){
-  // 1567: `votar` desde 1 pendiente y oculto con 0; una fila suma sus tarjetas, una tanda cuenta como una
-  // 1788: como nada se abre solo, el boton es lo unico que avisa que hay algo esperando: tambien cuenta el votador
-  // de animaciones (una votacion mas) para que facundo pueda abrirlo el mismo desde el board.
-  var n = selPendientes().reduce(function(s, a){ return s + (a.continua ? filaFaltan(a) : 1); }, 0), b = $("ver-votar"), bd = $("vbadge");
-  if(votPendiente()) n += 1;
-  // 1794 (facundo, 2026-09-16): el boton es un fueguito en outline (svg, molde `.ib` de la campana y el tipito) y el
-  // numero de pendientes va en el badge, como el de la campana
-  bd.textContent = n ? String(n) : "";
-  bd.classList.toggle("oculta", !n);
-  b.title = n ? "votar: " + n + " esperando" : "votar";
-  b.classList.toggle("oculta", !n || !!sel.actual);
-  // 1801: con el dropdown abierto, los badges se repintan solos cuando el server manda otra cosa
-  if(votMenuAbierto){ if(!n || sel.actual) votMenuCerrar(); else votMenuPintar(); }
+  // 1567/1788: como nada se abre solo, el boton es lo unico que avisa que hay algo esperando; tambien cuenta el
+  // votador de animaciones (una votacion mas) para que facundo pueda abrirlo el mismo desde el board.
+  // 1836 (facundo, 2026-09-17): el fueguito va PELADO, sin badge: el numero vive solo adentro del dropdown y es el
+  // total de la lista. el glifo queda gris (`apagado`) solo si los tres procesos estan en cero (y no hay otra
+  // votacion); se esconde nada mas mientras el modal esta abierto.
+  var n = votItems().reduce(function(s, x){ return s + (x.n || 0); }, 0), b = $("ver-votar");
+  b.title = n ? "votar: " + n + " en las listas" : "votar: nada por ahora";
+  b.classList.toggle("apagado", !n);
+  b.classList.toggle("oculta", !!sel.actual || !$("votar").classList.contains("oculta"));   // con un votador abierto no estorba
+  // 1801: con el dropdown abierto, los numeros se repintan solos cuando el server manda otra cosa
+  if(votMenuAbierto){ if(sel.actual) votMenuCerrar(); else votMenuPintar(); }
 }
 // ---------- 1801: el dropdown del fueguito (facundo, 2026-09-16) ----------
 // "el fueguito `votar` de la cabecera deja de abrir el modal directo: abre un dropdown con tres items, cada uno con su
-// badge de pendientes, y recien al elegir uno se abre el modal". los tres items estan siempre (en gris los que no
-// tienen nada); si el votador de animaciones esta confirmado, se suma abajo como un cuarto.
+// numero, y recien al elegir uno se abre el modal". los tres items estan siempre (en gris los que no tienen nada); si
+// el votador de animaciones esta confirmado, se suma abajo como un cuarto.
+// 1836 (facundo, 2026-09-17): el numero de cada proceso es `totales[col]` del server (el TOTAL de la lista sin votar
+// en el embudo, contado sin red y sin modelo), nunca el buffer ni lo que queda en la fila cargada; sin ese dato (un
+// server viejo) cae a lo cargado. con total `0` el item queda gris y no clickeable. el item es clickeable solo si
+// ademas hay una fila abierta con tarjetas listas (si la lista tiene gente pero la cola todavia no leyo a nadie, el
+// numero se ve y el item espera en gris).
 function votItems(){
-  var por = {}, out = [];
+  var por = {}, out = [], tot = sel.totales || {};
   sel.abiertas.forEach(function(a){ por[a.coleccion] = a; });
   TJ_PROC_ORDEN.forEach(function(col){
-    var a = por[col], n = a ? (a.continua ? filaFaltan(a) : 1) : 0;
-    out.push({col: col, nombre: tjProc(col).nombre, n: n, hay: !!a && n > 0});
+    var a = por[col], t = typeof tot[col] === "number" ? tot[col] : (a && typeof a.total_sin_votar === "number" ? a.total_sin_votar : null);
+    var n = t !== null ? t : (a ? (a.continua ? filaFaltan(a) : 1) : 0);
+    out.push({col: col, nombre: tjProc(col).nombre, n: n, hay: !!a && n > 0 && (!a.continua || filaFaltan(a) > 0)});
   });
   // cualquier otra seleccion abierta (checkboxes, animaciones de una tanda) tambien se abre de aca, en el orden de
   // siempre: la mas vieja primero (`selPendientes`), y solo si le falta algo por votar en este dispositivo
@@ -4579,7 +4585,7 @@ function selDesdeWidgets(j){
   }
   if(vt.anim_gustos && !lan.base) anims.gustos = animGusServer(vt.anim_gustos);   // 1453/1682
   sel.wid = vt.abiertas; sel.widFresco = fresco;
-  if(!lan.base && fresco) sel.agotadas = vt.agotadas || [];   // 1794
+  if(!lan.base && fresco){ sel.agotadas = vt.agotadas || []; sel.totales = vt.totales || {}; }   // 1794, 1836
   return lan.base ? false : selPoner(sel.wid, "buzón", fresco);
 }
 // trae las abiertas de la lan; sin lan, las del ultimo `widgets.json` (`votaciones`, 1407)
@@ -4588,7 +4594,7 @@ function selMirar(){
     if(!base) throw new Error("sin lan");
     return lanFetch(selUrl(base), {method: "GET", cache: "no-store", headers: {"authorization": "Bearer " + token}})
       .then(function(r){ if(!r || !r.ok) throw new Error("http " + (r && r.status)); return r.json(); })
-      .then(function(j){ sel.agotadas = (j && j.agotadas) || []; return selPoner((j && j.abiertas) || [], "lan"); });
+      .then(function(j){ sel.agotadas = (j && j.agotadas) || []; sel.totales = (j && j.totales) || {}; return selPoner((j && j.abiertas) || [], "lan"); });
   }).catch(function(){ return sel.wid ? selPoner(sel.wid, "buzón", sel.widFresco !== false) : false; });
 }
 function selArrancar(){
@@ -8664,12 +8670,14 @@ window.__agente = {
   filaFaltan: filaFaltan, filaSumar: filaSumar, tjToqueMs: function(ms){ TJ_TOQUE_MS = ms; },   // 1567: fila continua
   // 1794: voto continuo (`prueba_ig_embudo_tarjetas`, `prueba_web_votar`)
   selPedir: selPedir, filaAplicar: filaAplicar, tjResumen: tjResumen, selTrasSubir: selTrasSubir,
-  selAgotadas: function(a){ sel.agotadas = a || []; },
+  selAgotadas: function(a){ sel.agotadas = a || []; }, selTotales: function(t){ sel.totales = t || {}; },   // 1836
   tjVista: function(){ var t = $("seltarjeta"), m = $("selmodal"); return {abierto: !!sel.actual && !m.classList.contains("oculta"),
     candidata: t.getAttribute("data-candidata"), espera: !!t.querySelector(".tjespera"), cierre: !!t.querySelector(".tjcierre"),
     texto: t.textContent, agotada: !!(sel.actual && sel.actual.agotada)}; },
-  votarBoton: function(){ var b = $("ver-votar"), bd = $("vbadge"), cs = getComputedStyle(b), sv = b.querySelector("svg");
-    return {vis: !b.classList.contains("oculta") && b.getBoundingClientRect().width > 0, n: bd.textContent, badge: !bd.classList.contains("oculta"),
+  votarBoton: function(){ var b = $("ver-votar"), cs = getComputedStyle(b), sv = b.querySelector("svg");
+    // 1836: sin badge (`n` y `badge` quedan por las pruebas viejas: siempre vacio / false); `apagado` = los tres en cero
+    return {vis: !b.classList.contains("oculta") && b.getBoundingClientRect().width > 0, n: "", badge: !!b.querySelector(".badge"),
+            apagado: b.classList.contains("apagado"),
             svg: !!sv, trazo: sv ? sv.getAttribute("stroke-width") : null, relleno: sv ? sv.getAttribute("fill") : null,
             color: cs.color, txt: b.textContent.trim()}; },
   tjAbrir: tjAbrir, tjReintentos: function(a){ TJ_REINTENTOS = a; },   // 1524: fotos que no bajan
@@ -8694,7 +8702,7 @@ window.__agente = {
   selPutStub: function(f){ selPutStub = f; },
   selEstado: function(){ return {abierto: !!sel.actual, col: sel.actual && sel.actual.coleccion, pend: selLeer("pend", []), fuente: sel.fuente,
                                  marcadas: selMarcadas(), abiertas: sel.abiertas.map(function(a){ return a.coleccion; })}; },
-  selReset: function(){ sel.actual = null; sel.abiertas = []; sel.ignorada = {}; sel.tjHistorial = []; selTs = 0; sel.agotadas = [];
+  selReset: function(){ sel.actual = null; sel.abiertas = []; sel.ignorada = {}; sel.tjHistorial = []; selTs = 0; sel.agotadas = []; sel.totales = {};
                         ["pend", "hechas", "fila"].forEach(function(s){ try{ localStorage.removeItem("agente_sel_" + s); }catch(x){} }); },
   selFila: function(){ return selLeer("fila", {}); },   // correccion 18:12
   animRanking: animRanking, animSpinner: animSpinner, animSinVer: animSinVer, animValida: animValida,
