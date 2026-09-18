@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.358">
-<link rel="manifest" href="manifest.json?v=4.358">
+<meta name="agente-web-version" content="4.359">
+<link rel="manifest" href="manifest.json?v=4.359">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.358">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.359">
 </head>
 <body>
 
@@ -377,7 +377,7 @@ var alfinal = $("alfinal"), envoltorio = $("envoltorio");
 /* TEMAS-JS: generado por `python3 -m recetas.clasificar_tema --sync-web`, no editar a mano */
 var TEMAS = ["tools", "awtomic", "awtomic/qa", "flabs", "fuzzer", "juegos", "plata", "server", "personal", "podcast", "flaudio", "audio"];
 var PRIORIDAD = ["awtomic/qa", "flabs", "podcast", "server", "juegos", "plata", "fuzzer", "awtomic", "flaudio", "tools"];
-var MODOS = ["audio"];
+var MODOS_TAB = ["audio"];
 var ALIAS = {"awtomic-qa": "awtomic/qa", "claudio": "flaudio"};
 var RE_CORTE_SRC = "(\\n+)|([.;!?]\\s+)|(^|[\\s,;:])(?:y\\s+otra\\s+cosa|otra\\s+cosa|aparte|adem[a\u00e1]s|tambi[e\u00e9]n)(?!\\w)";
 var PALABRAS = {
@@ -402,10 +402,10 @@ var RE_TEMA = /^\s*tema\s+([\w\/-]+)\s*:\s*/i;
 function normTema(t){ t = (t || "").trim().toLowerCase(); return (ALIAS && ALIAS[t]) || t; }
 function padreTema(t){ return normTema(t).split("/")[0]; }
 function esTema(t){ return TEMAS.indexOf(normTema(t)) >= 0; }
-// 1959 {audio}: un **modo** es una pestaña que existe pero no clasifica nada (`MODOS`, generado con
+// 1959 {audio}: un **modo** es una pestaña que existe pero no clasifica nada (`MODOS_TAB`, generado con
 // el resto del bloque). `porPalabras` no lo puede devolver (no tiene palabras) y el daemon tampoco lo
 // recuerda como ultimo tema: entra solo lo que facundo escribe ahi, con su `tema audio:` explicito.
-function esModo(t){ return (typeof MODOS !== "undefined" ? MODOS : []).indexOf(normTema(t)) >= 0; }
+function esModo(t){ return (typeof MODOS_TAB !== "undefined" ? MODOS_TAB : []).indexOf(normTema(t)) >= 0; }
 // lo que el daemon atiende por texto exacto (sin modelo): sale crudo, sin `tema x:` adelante
 var RE_CRUDO = /^(status|estado|pausa|segu[ií]|log|cola|[oó]rdenes|ordenes|propuestas|avisos|reinicia|reiniciar|cuenta(\s+\S+)?|op\s+\d+\s+[a-dA-D]|dale\s+\d+)$/i;
 
@@ -444,7 +444,7 @@ function clasificar(txt){
 // resolucion de conflictos: **el ultimo que escribe gana**, por el `ts` de cada layout.
 // el chat es un panel UNICO (facundo, 2026-09-12: "las pestañas del chat no tienen que poder ser
 // dragandropeables"): no hay segundo panel ni arrastre, solo la pestaña activa.
-var tabs = ["tools", AUTO], activo = "tools";
+var tabs = ["tools", "audio", AUTO], activo = "tools";   // 1959: `audio` es un modo fijo, como la general
 var layoutTs = 0;                 // cuando se escribio el layout que estoy mostrando
 var shaTabs = null;               // sha del tabs.json remoto (para el PUT)
 var etagTabs = null, tabsUlt = 0; // poll con etag, como los widgets
@@ -595,6 +595,9 @@ function sanearLayout(L){
     if((esTema(t) || t === AUTO) && ts.indexOf(t) < 0) ts.push(t);
   });
   if(!ts.length) return null;
+  // 1959 {audio}: los modos son pestañas fijas, como la general: si el layout viene sin `audio` (un tabs.json
+  // de antes, o un dispositivo que la cerro) igual esta, a la derecha de las de tema y a la izquierda de la general
+  MODOS_TAB.forEach(function(m){ if(ts.indexOf(m) < 0) ts.splice(Math.max(0, ts.indexOf(AUTO) < 0 ? ts.length : ts.indexOf(AUTO)), 0, m); });
   var a = L.activo || (L.paneles || [])[0] || ts[0];
   a = a === AUTO ? AUTO : normTema(a);
   if(ts.indexOf(a) < 0) a = ts[0];
@@ -1431,7 +1434,7 @@ function pintarTabs(){
     b.className = "tab" + (t === temaActivo() ? " activo" : "");
     b.dataset.tema = t;
     b.textContent = ETIQUETA[t] || t;
-    if(t === temaActivo() && tabs.length > 1){
+    if(t === temaActivo() && tabs.length > 1 && !esModo(t)){   // 1959: un modo es fijo, no se cierra
       var x = document.createElement("span");
       x.className = "x"; x.textContent = "×"; x.dataset.cerrar = t;
       b.appendChild(x);
@@ -1476,7 +1479,7 @@ function cerrarTab(tema){
 }
 function nuevaTab(){
   var ops = [["general (sin tema, la puerta de entrada)", AUTO]];
-  TEMAS.forEach(function(t){ if(tabs.indexOf(t) < 0) ops.push([t, t]); });
+  TEMAS.forEach(function(t){ if(tabs.indexOf(t) < 0 && !esModo(t)) ops.push([t, t]); });   // los modos ya estan
   dd("pestaña nueva: qué tema?", ops, abrirTab);
 }
 
