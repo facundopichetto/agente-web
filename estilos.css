@@ -6,8 +6,9 @@
     --magenta:#ff4fd8; --rojo:#ff4d4d; --rojo-apagado:#b84a4a; --amarillo:#ffd60a; --linea:#1c1c1c;
     --verde-tenue:#1f7a12; --linea-clara:#3a3a3a; --yo:#9be88a;
     --naranja:#ff9f1a;
-    /* 1541 (facundo, 2026-09-15): ningun texto del board mas grande que el del chat (`.msg`); lo que resalta usa peso o color */
-    --texto-max:12px;
+    /* 1541 (facundo, 2026-09-15): ningun texto del board mas grande que el del chat (`.msg`); lo que resalta usa peso o color.
+       1938 (facundo, 2026-09-17: "agranda 2 puntos TODAS LAS FUENTES DEL BOARD"): el tope pasa de 12 a 14 px, como todo lo demas */
+    --texto-max:14px;
     /* molde de componentes (1558): el fondo de las capas y la sombra de los modales, un solo lugar */
     --capa-fondo:rgba(0,0,0,.9);
     /* 1652 (facundo, 2026-09-15): modales sin borde de color, solo una sombra suave clara que los despega del fondo negro */
@@ -42,7 +43,7 @@
   html{height:100%;overflow:hidden;position:fixed;top:0;left:0;right:0;bottom:0}
   body{
     font-family:"Fira Code",ui-monospace,SFMono-Regular,Menlo,Monaco,"Courier New",monospace;
-    font-size:12px;line-height:1.55;letter-spacing:.01em;
+    font-size:14px;line-height:1.55;letter-spacing:.01em;
     height:100dvh;height:var(--alto,100dvh);
     position:fixed;top:0;left:0;right:0;width:100%;
     display:flex;flex-direction:column;overflow:hidden;
@@ -74,7 +75,7 @@
   .bb{
     flex:0 0 auto;box-sizing:border-box;background:#000;color:var(--gris);
     border:1px solid var(--linea);border-radius:4px;padding:4px 8px;margin:0;
-    font:inherit;font-size:9px;line-height:14px;height:24px;cursor:pointer;white-space:nowrap;
+    font:inherit;font-size:11px;line-height:14px;height:24px;cursor:pointer;white-space:nowrap;
     display:inline-flex;align-items:center;justify-content:center;gap:5px;
   }
   .bb:active{background:#111}
@@ -83,10 +84,10 @@
     flex:1 1 auto;min-height:0;overflow-y:auto;padding:10px 12px;
     -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
   }
-  .msg{margin:0 0 14px 0;white-space:pre-wrap;word-break:break-word;font-size:12px}
-  .msg .ts{color:var(--gris);font-size:10px}
+  .msg{margin:0 0 14px 0;white-space:pre-wrap;word-break:break-word;font-size:14px}
+  .msg .ts{color:var(--gris);font-size:12px}
   /* nodo · modelo y mini estado de cada respuesta (2026-09-13) */
-  .msg .nodo,.msg .mini{color:var(--gris);font-size:10px;user-select:none}
+  .msg .nodo,.msg .mini{color:var(--gris);font-size:12px;user-select:none}
   .msg .mini{margin-left:6px}
   /* mensaje en vuelo: spinner de texto, fase y eta mientras contesta el agente */
   .msg.vuelo .cuerpo{color:var(--gris)}
@@ -102,21 +103,21 @@
   .msg .hilo{color:var(--blanco)}
   .msg .hilo:empty{display:none}
   .msg .hilo .tramo{margin:0 0 8px 0}
-  .msg .hilo .tramo.hecho{color:var(--gris);font-size:11px;opacity:.7;margin:0 0 2px 0}
+  .msg .hilo .tramo.hecho{color:var(--gris);font-size:13px;opacity:.7;margin:0 0 2px 0}
   .msg .hilo .tramo.hecho + .tramo.texto{margin-top:8px}
   .msg .hilo .tramo.hecho:last-child{margin-bottom:8px}
   /* 1931 (facundo, 2026-09-17: "cuando cambie, la anterior queda arriba en la linea de arriba como ya paso, en
      gris [...] quiero poder votar, quiero tocar y decirte mas de esto, menos de esto, o escribir"): el rastro de la
      bolita. cada linea de estado que se fue queda con el mismo estilo apagado que un `hecho`, y las dos son
      tocables: abren el menu de voto (`rastroMenu`). lo tocable parece tocable (1808) */
-  .msg .hilo .tramo.paso{color:var(--gris);font-size:11px;opacity:.7;margin:0 0 2px 0}
+  .msg .hilo .tramo.paso{color:var(--gris);font-size:13px;opacity:.7;margin:0 0 2px 0}
   .msg .hilo .tramo.paso + .tramo.texto{margin-top:8px}
   .msg .hilo .tramo.paso:last-child{margin-bottom:8px}
   .msg .hilo .tramo.paso, .msg .hilo .tramo.hecho{cursor:pointer}
   .msg .hilo .tramo.paso:hover, .msg .hilo .tramo.hecho:hover{opacity:1}
-  #rastromenu .rmfrase{color:var(--gris);font-size:11px;margin:0 0 8px 0}
+  #rastromenu .rmfrase{color:var(--gris);font-size:13px;margin:0 0 8px 0}
   #rastromenu textarea{width:100%;box-sizing:border-box;min-height:56px;background:transparent;color:var(--blanco);
-    border:1px solid var(--linea-clara);border-radius:6px;padding:6px;font:inherit;font-size:12px}
+    border:1px solid var(--linea-clara);border-radius:6px;padding:6px;font:inherit;font-size:14px}
   .msg.vuelo .hilo + .cuerpo{margin-top:2px}
   /* animaciones de caracteres (1373): una linea, todos los cuadros del mismo ancho (`Nch` lo pone animPoner), el
      alto fijo de una linea: ni saltan de costado ni empujan el renglon.
@@ -146,8 +147,8 @@
   .capa.oculta{display:none!important}
   /* 1652: sin borde de color; el 1px queda transparente para no mover medidas (tarjeta, lista) y despega la sombra */
   .mcaja{background:#000;border:1px solid transparent;border-radius:4px;box-shadow:var(--modal-sombra)}
-  .mhead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;color:var(--verde);font-size:12px}
-  .mcuenta,.mestado{color:var(--gris);font-size:10.5px}
+  .mhead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;color:var(--verde);font-size:14px}
+  .mcuenta,.mestado{color:var(--gris);font-size:12.5px}
   .mestado{min-height:1em}
   .mfila{display:flex;gap:8px}
   .mpie{display:flex;justify-content:space-between;align-items:center;gap:8px}
@@ -155,7 +156,7 @@
   .mlink,#modal .mcuerpo a,#notimodal .nmtexto a{color:var(--cian);text-decoration:none;border-bottom:1px dotted #1f3a44}
   /* a/b/c con look terminal (#modal, notimodal, `modalMolde` tipo `term`) */
   .bterm{background:#000;color:var(--cian);border:1px solid var(--linea);border-radius:4px;padding:8px 10px;font:inherit;
-    font-size:11.5px;cursor:pointer;text-align:left}
+    font-size:13.5px;cursor:pointer;text-align:left}
   .bterm:active{background:#111}
   .bterm.principal{color:var(--verde);border-color:var(--verde)}
   .bterm .let{color:var(--verde);font-weight:600;margin-right:6px}
@@ -168,8 +169,8 @@
   .bverde.llena:active{background:var(--verde);color:#000}
   .acciones{display:flex;flex-direction:column;gap:6px;margin:6px 0 2px}
   .accion{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  .accion .acctxt{flex:1;min-width:140px;color:var(--gris);font-size:12px}
-  .accion .acccuenta{color:var(--verde);font-size:11px;opacity:.8}
+  .accion .acctxt{flex:1;min-width:140px;color:var(--gris);font-size:14px}
+  .accion .acccuenta{color:var(--verde);font-size:13px;opacity:.8}
   .accion .accdale{min-width:74px}
   .accion .accdale.hecho{opacity:.45;border-color:var(--gris);color:var(--gris)}
   .bverde.llena.rojo:active{background:var(--rojo)}
@@ -206,7 +207,7 @@
      las otras en gris. sin fondo, sin borde de color y sin nada mas grande que --texto-max, como el resto. */
   .msw{display:flex;align-items:stretch;gap:0;border:1px solid var(--linea);border-radius:6px;overflow:hidden}
   .msw .mswb{flex:1 1 0;min-height:30px;padding:4px 6px;background:#000;color:#8a8a8a;color:var(--gris);border:0;
-    border-left:1px solid var(--linea);font:inherit;font-size:10.5px;line-height:1.2;cursor:pointer;
+    border-left:1px solid var(--linea);font:inherit;font-size:12.5px;line-height:1.2;cursor:pointer;
     touch-action:manipulation;-webkit-appearance:none;appearance:none;-webkit-text-fill-color:currentColor}
   .msw .mswb:first-child{border-left:0}
   .msw .mswb.puesto{color:#4ad07d;color:var(--verde)}
@@ -214,24 +215,24 @@
   .msw .mswb[disabled]{cursor:default;opacity:.6}
   /* `modalMolde`: la caja de un modal nuevo */
   .mmolde{width:100%;max-width:360px;max-height:100%;overflow-y:auto;box-sizing:border-box;display:flex;flex-direction:column;
-    gap:8px;padding:12px;font-size:12px}
+    gap:8px;padding:12px;font-size:14px}
   .mmolde .mcuerpo2{color:var(--blanco);line-height:1.5;white-space:pre-wrap;word-break:break-word}
   .mmolde .mbotones{flex-wrap:wrap}
   .mmolde .mbotones > *{flex:1 1 0}
   /* 1453: tocar el spinner abre un menu chico (mas de esto / menos de esto / ...), nunca el votador */
   #animmenu{z-index:40;padding:10px;background:rgba(0,0,0,.75)}
   #animmenu .oculta{display:none!important}
-  #animmenu .amcaja{width:100%;max-width:260px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;padding:12px;font-size:12px}
+  #animmenu .amcaja{width:100%;max-width:260px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;padding:12px;font-size:14px}
   #animmenu .amtit{display:flex;align-items:center;gap:8px;color:var(--gris)}
   #animmenu .amtit .anim{color:var(--verde);font-size:var(--texto-max);font-weight:bold}
   #amnom{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   #amcerrar{padding:4px 6px}
   #animmenu .ambtn{min-height:40px;padding:8px 10px;text-align:left;background:#000;color:var(--verde);border:1px solid var(--linea);
-    border-radius:4px;font:inherit;font-size:12px;cursor:pointer}
+    border-radius:4px;font:inherit;font-size:14px;cursor:pointer}
   #animmenu .ambtn[data-tipo="mas"]{border-color:var(--verde)}
   #amnota{display:flex;flex-direction:column;gap:6px}
   #amtxt{width:100%;box-sizing:border-box;min-height:56px;padding:6px;background:#000;color:var(--verde);border:1px solid var(--linea);
-    border-radius:4px;font:inherit;font-size:12px;resize:vertical}
+    border-radius:4px;font:inherit;font-size:14px;resize:vertical}
   /* votador por pares (1373): dos animaciones en vivo, `esta` debajo de cada una y `basta`. lado a lado en la mac,
      una arriba de la otra si no entran (celu) */
   #votar{z-index:40}
@@ -245,9 +246,9 @@
   #votar .vtlado{flex:0 1 150px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid var(--linea);border-radius:4px}
   #votar .vtanim{display:flex;align-items:center;justify-content:center;height:62px;font-size:var(--texto-max);color:var(--verde)}
   @media (max-width:600px){ #votar .vtpar{flex-direction:column;align-items:center} #votar .vtlado{flex:none;width:150px} }
-  #votar .vtchico{text-align:center;font-size:12px;color:var(--gris)}
+  #votar .vtchico{text-align:center;font-size:14px;color:var(--gris)}
   #votar .vtchico .anim{color:var(--verde)}
-  #votar .vtnom{text-align:center;font-size:10.5px;color:var(--gris)}
+  #votar .vtnom{text-align:center;font-size:12.5px;color:var(--gris)}
   #votar .vtfin{display:flex;flex-direction:column;gap:8px}
   #vttxt{min-height:90px;padding:8px;background:#000;color:var(--blanco);border:1px solid var(--linea);border-radius:4px;
     font:inherit;font-size:var(--texto-max);resize:vertical}
@@ -272,24 +273,24 @@
   #sellista input{flex:0 0 auto;width:18px;height:18px;margin:2px 0 0 0;accent-color:var(--verde);cursor:pointer}
   #sellista .seltxt{display:flex;flex-direction:column;gap:1px;min-width:0}
   #sellista .selnom{color:var(--blanco);font-size:var(--texto-max)}
-  #sellista .seldet,#sellista .selmot{color:var(--gris);font-size:11px;word-break:break-word}
+  #sellista .seldet,#sellista .selmot{color:var(--gris);font-size:13px;word-break:break-word}
   #sellista .selmot{font-style:italic}
   /* 1404: foto redonda (96 px servida por chat_lan, se pinta a 32 desde 1533) y `@cuenta` al lado del nombre. sin
      foto o mientras baja, la inicial sobre gris neutro: se lee igual con fondo oscuro y claro */
   #sellista .selfoto{flex:0 0 auto;flex-shrink:0;box-sizing:border-box;width:32px;height:32px;min-height:32px;border-radius:50%;overflow:hidden;align-self:center;display:flex;
     align-items:center;justify-content:center;background:#8a8a8a;color:#fff;font-size:var(--texto-max);border:1px solid var(--linea)}
   #sellista .selfoto img{width:100%;height:100%;object-fit:cover;display:block}
-  #sellista .selcta{color:var(--gris);font-size:11px;margin-left:6px;word-break:break-all}
+  #sellista .selcta{color:var(--gris);font-size:13px;margin-left:6px;word-break:break-all}
   /* 1398: la candidata puede traer su animacion corriendo en el renglon (`anim`), a la derecha del checkbox */
   #sellista .selanim{flex:0 0 auto;min-width:4ch;color:var(--verde);font-size:var(--texto-max);text-align:center}
   /* 1394: plantilla contador + meta + lista premarcada + ok = accion. arriba el contador en vivo (`actual - marcadas`
      contra la meta), link al perfil al costado de cada renglon, y el boton dice la accion y cuantas */
-  #selcont{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;color:var(--gris);font-size:12px}
+  #selcont{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;color:var(--gris);font-size:14px}
   #selcont.oculta{display:none}
   #selcont .selnum{color:var(--blanco);font-size:var(--texto-max);font-weight:bold;line-height:1}
   #selcont.llego .selnum{color:var(--verde)}
   #sellista .sellink{flex:0 0 auto;margin-left:auto;align-self:center;min-width:44px;min-height:32px;display:flex;align-items:center;
-    justify-content:center;color:var(--verde);font-size:12px;text-decoration:none;border:1px solid var(--linea);border-radius:4px}
+    justify-content:center;color:var(--verde);font-size:14px;text-decoration:none;border:1px solid var(--linea);border-radius:4px}
   /* 1533: el campo crece con lo escrito (`selTxtCrecer`, hasta 40% del alto visible) en vez de scrollear adentro de
      64 px, letra de 13 px casi blanca sobre gris muy oscuro y borde verde con foco: se lee mientras se escribe */
   #seltxt{flex:0 0 auto;min-height:52px;max-height:40vh;padding:7px 9px;box-sizing:border-box;background:#0b0b0b;color:#f2f2f2;
@@ -302,8 +303,8 @@
      marca publica/privada y las etiquetas, y cuatro botones grandes abajo. nada de grillas ni de listas largas. */
   #seltarjeta{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:8px}
   #seltarjeta.oculta,#sellista.oculta{display:none!important}
-  #seltarjeta .tjestado{display:flex;align-items:center;gap:6px;flex-wrap:wrap;color:var(--gris);font-size:11px}
-  #seltarjeta .tjchip{padding:2px 7px;border:1px solid var(--linea);border-radius:999px;font-size:10.5px;color:var(--gris)}
+  #seltarjeta .tjestado{display:flex;align-items:center;gap:6px;flex-wrap:wrap;color:var(--gris);font-size:13px}
+  #seltarjeta .tjchip{padding:2px 7px;border:1px solid var(--linea);border-radius:999px;font-size:12.5px;color:var(--gris)}
   #seltarjeta .tjchip.priv{color:var(--amarillo,#d8b25a);border-color:currentColor}
   #seltarjeta .tjchip.pub{color:var(--verde);border-color:currentColor}
   #seltarjeta a.tjchip{text-decoration:none;cursor:pointer}   /* 1677: el chip `pública` es link al perfil */
@@ -327,20 +328,20 @@
   #seltarjeta .tjnom{color:var(--blanco);font-size:var(--texto-max);font-weight:bold;word-break:break-word}
   #seltarjeta .tjcta{color:var(--gris);font-size:var(--texto-max);margin-left:6px;word-break:break-all}
   #seltarjeta a.tjcta{color:var(--verde);text-decoration:none}   /* 1515: link al perfil, mismo verde que el `ver` de la lista */
-  #seltarjeta .tjdet,#seltarjeta .tjmot{color:var(--gris);font-size:11.5px;word-break:break-word}
+  #seltarjeta .tjdet,#seltarjeta .tjmot{color:var(--gris);font-size:13.5px;word-break:break-word}
   #seltarjeta .tjcierre{color:var(--amarillo)}   /* 1794: el cierre de la sesion de voto continuo (`votaste N: ...`) */
   #seltarjeta .tjmot{font-style:italic}
   /* 1642: seguidores, en comun y reacciones en una fila de texto (sin caja), la bio abajo en blanco apagado */
-  #seltarjeta .tjdatos{display:flex;flex-wrap:wrap;gap:2px 10px;color:var(--cian);font-size:11.5px}
-  #seltarjeta .tjbio{color:#cfcfcf;font-size:11.5px;white-space:pre-line;word-break:break-word}
+  #seltarjeta .tjdatos{display:flex;flex-wrap:wrap;gap:2px 10px;color:var(--cian);font-size:13.5px}
+  #seltarjeta .tjbio{color:#cfcfcf;font-size:13.5px;white-space:pre-line;word-break:break-word}
   /* 1665: la foto se toca (publica: perfil en otra pestaña; privada: la agranda en el visor) y abajo van `desde`
      y el historial de votos, en gris chico para que no le compitan a los datos */
   #seltarjeta .tjppal{cursor:pointer}
   #seltarjeta a.tjppal{text-decoration:none;color:inherit}   /* 1791: la foto de una publica es un `<a>`, no un `div` */
-  #seltarjeta .tjdesde{color:var(--gris);font-size:11px}
-  #seltarjeta .tjhist{display:flex;flex-direction:column;gap:1px;color:var(--gris);font-size:10.5px;opacity:.85}
+  #seltarjeta .tjdesde{color:var(--gris);font-size:13px}
+  #seltarjeta .tjhist{display:flex;flex-direction:column;gap:1px;color:var(--gris);font-size:12.5px;opacity:.85}
   #seltarjeta .tjlink{align-self:flex-start;min-height:34px;display:flex;align-items:center;padding:0 10px;color:var(--verde);
-    font-size:12px;text-decoration:none;border:1px solid var(--linea);border-radius:4px}
+    font-size:14px;text-decoration:none;border:1px solid var(--linea);border-radius:4px}
   /* 1561 (facundo, 2026-09-15): "no quiero volver a ver maybes ni si ni no". dos glifos en una fila: `✕` roja (no va)
      y `→` blanca (queda). sin `escribir` ni campo de texto en la tarjeta.
      1657 (facundo, 2026-09-15): tres glifos de VOTO: `✕` no va, `-_-` blanco en el medio (maybe: a la lista `maybe`) y `🔥` a la
@@ -354,23 +355,23 @@
   #selback.oculta,#selmodal .selpie.oculta,#podback.oculta{display:none!important}
   /* 1841 (facundo, 2026-09-17: "esos tres botones son muy chicos, agrandalos un poquito"): los votos de la tarjeta
      pasan de 38 a 46 px de alto y el glifo se ve un 25% mas grande con `transform:scale` sobre el span `.tjglf`: el
-     `font-size` sigue en el tope de 12 px de la 1541 (es un icono, no texto, y el tope computado no se toca). siguen
+     `font-size` sigue en el tope de 14 px de la 1541 (1938) (es un icono, no texto, y el tope computado no se toca). siguen
      sin borde ni caja (molde `.bglifo`) y con `flex:1` los tres reparten el ancho, asi en 390 px entran sin scroll */
   #selacciones .tjbtn{flex:1 1 0;min-height:46px;padding:6px 9px}
   #selacciones .tjbtn .tjglf{display:inline-block;transform:scale(1.25);transform-origin:center}
   /* 1883 {teclado} (facundo, 2026-09-17: "en todos los dispositivos tiene que decir que hace el boton"): abajo del
      glifo va la frase de ESE proceso, que escribe el server (`seleccion.BOTONES_COL`) y viaja en `botones` del json:
      la web no redacta ninguna. el boton pasa a columna (glifo arriba, frase abajo, centrada) y los 46 px de la 1841
-     son el PISO, no el alto: con la frase crece lo que haga falta. la frase va a 9.5 px, bien abajo del tope de
-     12 px de la 1541, envuelve en varias lineas y corta una palabra larga antes que empujar el ancho, asi en 390 px
+     son el PISO, no el alto: con la frase crece lo que haga falta. la frase va a 11.5 px, bien abajo del tope de
+     14 px de la 1541 (1938), envuelve en varias lineas y corta una palabra larga antes que empujar el ancho, asi en 390 px
      los tres siguen entrando sin scroll horizontal */
   #selacciones .tjbtn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
     height:auto;line-height:1.15}
-  #selacciones .tjbtn .tjtxt{font-size:9.5px;font-weight:normal;color:var(--blanco);opacity:.75;text-align:center;
+  #selacciones .tjbtn .tjtxt{font-size:11.5px;font-weight:normal;color:var(--blanco);opacity:.75;text-align:center;
     white-space:normal;overflow-wrap:anywhere;max-width:100%}
   /* 1883 {teclado} (facundo, 2026-09-17: "cerrar se reemplaza por enviar y tiene que ser mas grande. enter envia"):
      el boton del pie es `enviar`, con el molde `.bverde` de `docs/componentes-web.md`. mas grande es mas caja, no
-     mas letra: el `font-size` sigue en el tope de 12 px de la 1541 y lo que crece es el alto (52 px, como `.b52`),
+     mas letra: el `font-size` sigue en el tope de 14 px de la 1541 (1938) y lo que crece es el alto (52 px, como `.b52`),
      el ancho minimo y el padding. la tecla enter hace lo mismo que tocarlo */
   #selmodal .selenviar{min-height:52px;min-width:124px;padding:12px 20px;font-weight:bold}
   /* 1874 (facundo, 2026-09-17: "el tinder deberia abrir pantalla completa. dos bloques, uno al lado del otro en
@@ -415,41 +416,41 @@
      vez de glifo). la sub-vista `listas` es una columna de cajas, una por lista del embudo: titulo, cuantos son y
      por que estan ahi; una lista grande termina ahi, una chica lista a su gente con fotito, lo que ya se sabe y UNA
      frase de accion tocable. lo arma todo el server (`recetas/ig_listas.py`): aca solo se pinta. */
-  #selsub{flex:0 0 auto;margin-left:auto;padding:5px 9px;min-height:38px;font-size:11.5px;color:var(--verde)}
+  #selsub{flex:0 0 auto;margin-left:auto;padding:5px 9px;min-height:38px;font-size:13.5px;color:var(--verde)}
   #selsub.oculta{display:none!important}
   #sellistas{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
     display:flex;flex-direction:column;gap:10px;width:100%;max-width:760px;margin:0 auto}
   #sellistas.oculta{display:none!important}
-  #sellistas .lisvacio{color:var(--gris);font-size:11.5px}
+  #sellistas .lisvacio{color:var(--gris);font-size:13.5px}
   #sellistas .liscaja{border:1px solid var(--linea);border-radius:4px;padding:8px;display:flex;flex-direction:column;gap:6px}
   #sellistas .listit{display:flex;align-items:baseline;gap:8px}
   #sellistas .lisnom{color:var(--blanco);font-size:var(--texto-max)}
   #sellistas .lisn{color:var(--cian);font-size:var(--texto-max)}
-  #sellistas .lisporque{color:var(--gris);font-size:11.5px;word-break:break-word}
-  #sellistas .lisgrande{color:var(--gris);font-size:11px;opacity:.85}
+  #sellistas .lisporque{color:var(--gris);font-size:13.5px;word-break:break-word}
+  #sellistas .lisgrande{color:var(--gris);font-size:13px;opacity:.85}
   #sellistas .lisfila{display:flex;gap:8px;align-items:flex-start;padding-top:6px;border-top:1px solid var(--linea)}
   #sellistas .lisfoto{flex:0 0 auto;width:44px;height:44px;border-radius:4px;overflow:hidden;border:1px solid var(--linea);background:#111}
   #sellistas .lisfoto img{width:100%;height:100%;object-fit:cover;display:block}
   #sellistas .liscol{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px}
-  #sellistas .lisquien{color:var(--blanco);font-size:11.5px;word-break:break-word}
+  #sellistas .lisquien{color:var(--blanco);font-size:13.5px;word-break:break-word}
   #sellistas .liscuenta{color:var(--gris);margin-left:6px;word-break:break-all}
-  #sellistas .lisdatos{color:var(--cian);font-size:11px;word-break:break-word}
-  #sellistas .lispq{color:var(--gris);font-size:11px;font-style:italic;word-break:break-word}
+  #sellistas .lisdatos{color:var(--cian);font-size:13px;word-break:break-word}
+  #sellistas .lispq{color:var(--gris);font-size:13px;font-style:italic;word-break:break-word}
   /* la frase de accion es lo unico tocable de la fila: se ve tocable (1808) y la que toca afuera va en amarillo */
   #sellistas .lisacc{align-self:flex-start;max-width:100%;text-align:left;margin-top:3px;min-height:34px;
     padding:4px 9px;border:1px solid var(--verde);border-radius:999px;background:none;color:var(--verde);
-    font:inherit;font-size:11px;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+    font:inherit;font-size:13px;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
     word-break:break-word;white-space:normal}
   #sellistas .lisacc.toca{border-color:var(--amarillo,#d8b25a);color:var(--amarillo,#d8b25a)}
   #sellistas .lisacc:active{opacity:.6}
   #lismodal .lisdet{display:flex;flex-direction:column;gap:6px}
   #lismodal .lisdetacc{color:var(--blanco);font-size:var(--texto-max);word-break:break-word}
-  #lismodal .lisdatos{color:var(--cian);font-size:11px;word-break:break-word}
+  #lismodal .lisdatos{color:var(--cian);font-size:13px;word-break:break-word}
   #lismodal .liscmd{margin:0;padding:6px 8px;border:1px solid var(--linea);border-radius:4px;background:#111;
-    color:var(--cian);font-size:11px;white-space:pre-wrap;word-break:break-all}
-  #lismodal .lisperfil{align-self:flex-start;color:var(--verde);font-size:11.5px;text-decoration:none}
+    color:var(--cian);font-size:13px;white-space:pre-wrap;word-break:break-all}
+  #lismodal .lisperfil{align-self:flex-start;color:var(--verde);font-size:13.5px;text-decoration:none}
   /* 1556 (facundo, desde el iphone): "abajo los botones no tienen borde. izquierda en rojo una X, en el medio en blanco
-     un guion, derecha un tick verde, tamaño 12px". sin borde ni caja, glifo de 12px y 38 px tocables; el nombre va en aria-label */
+     un guion, derecha un tick verde, tamaño 12px". sin borde ni caja, glifo de 14px (1938: era 12) y 38 px tocables; el nombre va en aria-label */
   /* el glifo, el color y el toque (opacidad) viven en el molde: `.bglifo.b-no` · `.b-queda` */
   .msg .quien,.msg .ts{user-select:none}
   .msg .quien{color:var(--magenta)}
@@ -467,14 +468,14 @@
   .drafts{margin:6px 0 2px 0}
   .drafts .draft{position:relative;margin:4px 0}
   .drafts pre{margin:0;padding:6px 8px;background:#07222a;color:var(--cian);border:1px solid #1f3a44;border-radius:4px;
-    white-space:pre-wrap;word-break:break-word;font:inherit;font-size:12px;user-select:text;-webkit-user-select:text}
+    white-space:pre-wrap;word-break:break-word;font:inherit;font-size:14px;user-select:text;-webkit-user-select:text}
   .drafts .copiar{position:absolute;top:3px;right:3px;background:#000;color:var(--gris);border:1px solid #1f3a44;
-    border-radius:3px;font:inherit;font-size:10px;padding:1px 6px;cursor:pointer}
+    border-radius:3px;font:inherit;font-size:12px;padding:1px 6px;cursor:pointer}
   /* 1214: `copiar` chico al lado de cada link, clave o `code` copiable de una respuesta de claudio. un toque copia
      (sin hold en el iphone) y dice `copiado` 1 s. el texto va por ::after asi no ensucia el textContent del mensaje.
      el hold sobre el boton no abre ni el menu propio ni el callout de ios. */
   .cuerpo .cp{display:inline-block;vertical-align:1px;margin:0 0 0 4px;background:#000;color:var(--gris);
-    border:1px solid #1f3a44;border-radius:3px;font:inherit;font-size:9.5px;line-height:1.3;padding:0 5px;
+    border:1px solid #1f3a44;border-radius:3px;font:inherit;font-size:11.5px;line-height:1.3;padding:0 5px;
     cursor:pointer;white-space:nowrap}
   .cuerpo .cp::after{content:attr(data-t)}
   .copiar,.cuerpo .cp{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation;
@@ -483,14 +484,14 @@
   .opciones{display:flex;gap:6px;margin:6px 0 2px 0;white-space:normal}
   .opciones .opc{
     flex:1 1 0;min-width:0;box-sizing:border-box;background:#000;border:1px solid;border-radius:4px;
-    padding:6px 8px;font:inherit;font-size:11px;line-height:1.35;text-align:left;cursor:pointer;
+    padding:6px 8px;font:inherit;font-size:13px;line-height:1.35;text-align:left;cursor:pointer;
     min-height:40px;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
     touch-action:pan-y;word-break:break-word;
   }
   .opciones .opc .l{font-weight:600;margin-right:5px}
   /* 1203: hora de envio del mensaje que salio al tocar esa caja (hh:mm de buenos aires). chiquita, a la
      derecha; cada letra lleva la suya (al sumar `A y C`, la A conserva la hora de su toque). */
-  .opciones .opc .hh{margin-left:6px;font-size:9px;opacity:.75;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .opciones .opc .hh{margin-left:6px;font-size:11px;opacity:.75;font-variant-numeric:tabular-nums;white-space:nowrap}
   .opciones .opc .hh:empty{display:none}
   .opciones .opc.conf .hh{display:none}       /* mientras pregunta, la caja es solo la pregunta */
   .opciones .opc.A{color:var(--verde);border-color:var(--verde)}
@@ -548,7 +549,7 @@
     display:block;max-width:100%;max-height:42vh;border:1px solid var(--linea-clara);
     border-radius:4px;background:#000;cursor:zoom-in
   }
-  .cuerpo .img .pie{display:block;color:var(--gris);font-size:10px;margin-top:2px}
+  .cuerpo .img .pie{display:block;color:var(--gris);font-size:12px;margin-top:2px}
   .cuerpo .img .cargando{color:var(--cian)}
   /* 1805: el hueco de una imagen que todavia no bajo, con el mismo alto que va a tener (aspect-ratio
      inline con las medidas guardadas): asi el chat no pega el salto cuando la foto termina de cargar */
@@ -589,7 +590,7 @@
     width:44px;height:44px;object-fit:cover;border:1px solid var(--linea-clara);
     border-radius:4px;background:#000;flex:0 0 auto
   }
-  #adjunto .adj-info{flex:1 1 auto;min-width:0;color:var(--gris);font-size:10px;line-height:1.35}
+  #adjunto .adj-info{flex:1 1 auto;min-width:0;color:var(--gris);font-size:12px;line-height:1.35}
   #adjunto .adj-info .n{color:var(--cian);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   /* lo que transcribio el celu antes de mandar (1209): se lee y se puede descartar con la × */
   #adjunto .adj-info .adj-dicho{display:block;color:var(--verde);margin-top:2px;overflow:hidden;
@@ -597,7 +598,7 @@
   #adjunto .adj-play{flex:0 0 auto}
   #adjunto .adj-x{
     flex:0 0 auto;background:#000;color:var(--rojo);border:1px solid transparent;border-radius:4px;
-    font:inherit;font-size:12px;line-height:1.3;padding:2px 5px;cursor:pointer;letter-spacing:0;
+    font:inherit;font-size:14px;line-height:1.3;padding:2px 5px;cursor:pointer;letter-spacing:0;
   }
   #adjunto .adj-x:hover{border-color:var(--rojo)}
   /* la fila de comandos rapidos se saco (facundo, 2026-09-11): esos comandos quedan en el widget `agent` */
@@ -609,7 +610,7 @@
   #chips.oculta,#chips:empty{display:none;padding:0;margin:0}   /* sin chips no ocupa ni alto ni margen */
   #chips button{
     flex:0 0 auto;background:#000;color:var(--gris);border:1px solid var(--linea);
-    border-radius:3px;padding:3px 7px;font:inherit;font-size:10.5px;line-height:1.3;
+    border-radius:3px;padding:3px 7px;font:inherit;font-size:12.5px;line-height:1.3;
     cursor:pointer;white-space:nowrap;
   }
   #chips button .l{color:var(--amarillo)}
@@ -631,12 +632,12 @@
   .cmdfila:active{opacity:.45}
   .cmdfila .cmdc{color:var(--cian);flex:0 0 auto;white-space:nowrap}
   .cmdfila .cmdq{color:#9a9a9a;flex:1 1 auto;line-height:1.3}
-  .cmdfila .cmdo{flex:0 0 auto;font-size:10px;color:#5f8a58;white-space:nowrap}
+  .cmdfila .cmdo{flex:0 0 auto;font-size:12px;color:#5f8a58;white-space:nowrap}
   .cmdfila .cmdo.local{color:var(--verde)}
   .cmdfila.nuevo .cmdq{color:var(--naranja)}
   #txt{
     flex:1 1 auto;background:transparent;color:var(--blanco);border:0;
-    border-radius:0;padding:5px 4px;font:inherit;font-size:12px;line-height:1.4;
+    border-radius:0;padding:5px 4px;font:inherit;font-size:14px;line-height:1.4;
     resize:none;max-height:28dvh;min-height:28px;box-sizing:border-box;align-self:center;
   }
   #txt:focus{outline:none;border:0}
@@ -644,10 +645,10 @@
   .ico{
     flex:0 0 auto;box-sizing:border-box;background:transparent;border:0;border-radius:6px;
     width:32px;height:32px;padding:0;margin:0;display:inline-flex;align-items:center;justify-content:center;
-    font:inherit;font-size:12px;line-height:1.4;cursor:pointer;letter-spacing:0;
+    font:inherit;font-size:14px;line-height:1.4;cursor:pointer;letter-spacing:0;
   }
   .ico svg{width:18px;height:18px;display:block;pointer-events:none}
-  #mandar{color:var(--verde);font-size:12px}
+  #mandar{color:var(--verde);font-size:14px}
   #mandar:active{background:#0a1a06}
   /* camara (facundo, 2026-09-11: "se puede poner una funcion tipo camara aca? como en whatsapp").
      mismo look terminal que el boton de mandar; el input file de verdad esta escondido. */
@@ -663,32 +664,32 @@
   #grabar:disabled{color:var(--gris)}
   @keyframes lat{50%{opacity:.55}}
   #grabinfo{
-    flex:0 0 auto;color:var(--rojo);font-size:10.5px;user-select:none;display:none;
+    flex:0 0 auto;color:var(--rojo);font-size:12.5px;user-select:none;display:none;
   }
   #grabinfo.viendo{display:block}
   /* el [▶] de daniela al lado del [tema] de cada respuesta, y el player de los audios de facundo.
      look terminal: un boton de texto, nada de controles nativos grises. */
   .play{
     background:#000;color:var(--verde);border:1px solid transparent;border-radius:4px;
-    font:inherit;font-size:10px;line-height:1.3;padding:0 3px;cursor:pointer;letter-spacing:0;
+    font:inherit;font-size:12px;line-height:1.3;padding:0 3px;cursor:pointer;letter-spacing:0;
   }
   .play:disabled{color:var(--gris);cursor:default}
   .play.sonando{color:var(--amarillo)}
   .msg .play{margin-left:6px}
   .cuerpo .aud{display:inline-flex;align-items:center;gap:6px;color:var(--cian)}
   .cuerpo .aud .play{color:var(--cian)}
-  .cuerpo .aud .dur{color:var(--gris);font-size:10px}
+  .cuerpo .aud .dur{color:var(--gris);font-size:12px}
   /* 1650: el audio de facundo mientras sube y se manda, como whatsapp: .8 hasta que el server lo confirma */
   .msg.enviando{opacity:.8}
   #mandar:disabled{color:var(--gris);border-color:transparent}
   #alfinal{
     position:absolute;right:12px;bottom:8px;z-index:5;display:none;
     background:#001a00;color:var(--verde);border:1px solid var(--verde);
-    border-radius:14px;padding:6px 12px;font:inherit;font-size:10.5px;cursor:pointer;
+    border-radius:14px;padding:6px 12px;font:inherit;font-size:12.5px;cursor:pointer;
   }
   #envoltorio{position:relative;flex:1 1 auto;min-height:0;display:flex}
   #login{padding:16px;display:none;flex-direction:column;gap:10px}
-  #login p{color:var(--gris);font-size:10px;margin:0;white-space:pre-wrap}
+  #login p{color:var(--gris);font-size:12px;margin:0;white-space:pre-wrap}
   #login input{
     background:#000;color:var(--verde);border:1px solid var(--linea);border-radius:4px;
     padding:9px;font:inherit;
@@ -718,7 +719,7 @@
   body.arrastrando-sep #hist,body.arrastrando-sep #panel-widgets{pointer-events:none}
   .caja{border:0;outline:0;background:var(--fondo-caja);border-radius:6px;padding:7px 9px 8px 9px;margin:0 0 8px 0}
   .caja > .tit{
-    color:var(--gris);font-size:9px;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--gris);font-size:11px;letter-spacing:.06em;text-transform:uppercase;
     margin:0 0 5px 0;display:flex;justify-content:space-between;gap:8px;align-items:center;
   }
   /* ---------- header de cada widget (facundo, 2026-09-12) ----------
@@ -727,10 +728,10 @@
   .caja > .tit > .wtit:hover{color:var(--verde)}
   .caja > .tit > .wesc{
     flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-    text-transform:none;letter-spacing:0;font-size:10px;
+    text-transform:none;letter-spacing:0;font-size:12px;
   }
   .caja > .tit > .wacc{flex:0 0 auto;display:flex;align-items:center;gap:4px}
-  .caja > .tit > .wacc .wage{color:#4a4a4a;font-size:8.5px;letter-spacing:0;text-transform:none}
+  .caja > .tit > .wacc .wage{color:#4a4a4a;font-size:10.5px;letter-spacing:0;text-transform:none}
   .caja > .tit > .wacc .wage.wage-vieja{color:var(--amarillo)}
   .caja > .tit > .wacc .wage.wage-muy{color:var(--rojo)}
   /* iconos mas grandes y la `x` que oculta la caja (facundo, 2026-09-13, orden 1166) */
@@ -755,7 +756,7 @@
   .wbtn.oc{font:inherit;font-size:inherit;line-height:inherit;color:inherit;letter-spacing:inherit;
            padding:0;margin:0;border:0;background:none;text-decoration:underline dotted;text-underline-offset:2px}
   .caja.plegada > .cuerpo{display:none}
-  .caja .cuerpo{white-space:pre-wrap;word-break:break-word;font-size:11px;line-height:1.5}
+  .caja .cuerpo{white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.5}
   .caja .cuerpo.tabla{white-space:pre;overflow-x:auto;-webkit-overflow-scrolling:touch}
   .caja .vacio{color:var(--gris)}
   .caja .cuerpo a{color:var(--cian);text-decoration:none;border-bottom:1px dotted #1f3a44;
@@ -779,7 +780,7 @@
   .usage .rep .por{flex:1 1 100%;opacity:.8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .usage .bloque + .bloque{margin-top:9px;padding-top:8px;border-top:1px solid var(--linea)}
   .ub{display:flex;align-items:center;gap:6px;margin:0 0 5px 0}
-  .ub-n{flex:0 0 40px;min-width:40px;white-space:nowrap;color:var(--gris);font-size:10px;letter-spacing:.04em}
+  .ub-n{flex:0 0 40px;min-width:40px;white-space:nowrap;color:var(--gris);font-size:12px;letter-spacing:.04em}
   .ub-pista{
     flex:1 1 auto;min-width:0;position:relative;height:11px;background:var(--fondo-hundido);
     border:1px solid var(--linea);border-radius:2px;overflow:hidden;
@@ -787,7 +788,7 @@
   .ub-lleno{position:absolute;left:0;top:0;bottom:0;background:#333;border-radius:1px}
   .ub-tick{position:absolute;top:0;bottom:0;width:1px;background:var(--blanco);opacity:.8}
   .ub-p{flex:0 0 34px;text-align:right;font-weight:600;color:var(--gris)}
-  .ub-r{flex:0 0 46px;text-align:right;color:var(--gris);font-size:10px}
+  .ub-r{flex:0 0 46px;text-align:right;color:var(--gris);font-size:12px}
   .ub.n-ok .ub-lleno{background:var(--verde)}
   .ub.n-ok .ub-p{color:var(--verde)}
   .ub.n-cerca .ub-lleno{background:var(--amarillo)}
@@ -804,17 +805,19 @@
      tres barras a la misma altura, mismo alto y mismo ancho. un numero por barra, nada mas. */
   .usage .uproy{margin:0 0 7px 0;padding-bottom:6px;border-bottom:1px solid var(--linea)}
   .usage .uproy .ub{margin-bottom:3px}
-  .usage .uproy .lect{display:block;font-size:10px;color:var(--gris);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .usage .umod{display:flex;gap:6px;font-size:10px;margin:0 0 5px 0;white-space:nowrap;overflow:hidden}
+  .usage .uproy .lect{display:block;font-size:12px;color:var(--gris);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .usage .umod{display:flex;gap:6px;font-size:12px;margin:0 0 5px 0;white-space:nowrap;overflow:hidden}
   .usage .umod .nom{color:var(--cian);font-weight:600}
   .usage .umod .por{color:var(--gris);overflow:hidden;text-overflow:ellipsis;min-width:0}
   .usage .ucols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   .usage .ucol{min-width:0}
   .usage .ucol .cta{height:16px;margin:0 0 4px 0;white-space:nowrap;overflow:hidden}
-  .usage .ucol .cta .pj{font-size:10px;color:var(--gris)}
+  .usage .ucol .cta .pj{font-size:12px;color:var(--gris)}
   .usage .ucol.elegida .cta .nom{text-decoration:underline;text-underline-offset:3px}
-  .usage .ucols .ub-n{flex:0 0 28px}
-  .usage .ucols .ub-p{flex:0 0 30px}
+  /* 1938: con la letra 2 px mas grande `fable` y `100%` ya no entraban en 28/30 px y se partian en dos lineas,
+     lo que desalineaba la tercera barra de una columna contra la otra: mas ancho y `nowrap`, nunca menos letra */
+  .usage .ucols .ub-n{flex:0 0 34px;white-space:nowrap}
+  .usage .ucols .ub-p{flex:0 0 36px;white-space:nowrap}
   .usage .ucols .ub-hueco{height:13px;margin:0 0 5px 0}
   /* widget `CLAUDE` (ordenes 1376/1377/1379, facundo 2026-09-14): color por cuenta, bateria, semana.
      1806 (2026-09-16): sin linea de reparto ni switch de modelo: abajo del titulo van directo las dos cuentas. */
@@ -826,7 +829,7 @@
   .usage .ucol .cta[data-cta]:hover{background:#0d1410}
   /* 1861 {claude}: el tiempo hasta el reset va A LA DERECHA del nombre, en UNA linea y con el texto entero que
      manda el server (`renueva_txt`: `6d 19h 10m to renew`); las dos lineas `week`/`fable` de abajo se fueron */
-  .usage .ucol .cta .ren{flex:1 1 auto;min-width:0;font-size:10px;color:var(--gris);text-align:right;
+  .usage .ucol .cta .ren{flex:1 1 auto;min-width:0;font-size:12px;color:var(--gris);text-align:right;
                          white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   /* 1806/1861: cuenta agotada (excluida por el tope): 100% en week y fable, la 5h invisible, el rojo COMPLETO
      (1861: se fue el `--rojo-apagado`) y la tarjeta entera a opacidad .8 MENOS el tiempo de renew, que tiene que
@@ -846,7 +849,7 @@
   .cmod .cmod-b{margin:8px 0 0 0;white-space:normal}
   .cmod .cmod-b .ub-n{flex:0 0 40px}
   .cmod .cmod-r{margin:4px 0 0 0;white-space:normal}
-  .cmod .cmod-r > span{display:block;font-size:11px;line-height:1.4}
+  .cmod .cmod-r > span{display:block;font-size:13px;line-height:1.4}
   /* 1808: cuenta sin limite que cuente: gris apagado, sin hover y sin cursor de tocable */
   .usage .ucol.sinlim .cta .nom{color:var(--gris);opacity:.7}
   .usage .ucol.sinlim .cta{cursor:default}
@@ -865,7 +868,7 @@
   .usage .usem-g .usd.sobre{background:var(--amarillo)}
   .usage .usem-g .usd.sin{opacity:0}
   .usage .usem-g .usem-l{position:absolute;left:0;right:0;height:0;border-top:1px dashed var(--blanco);opacity:.7;pointer-events:none}
-  .usage .usem-et{display:flex;gap:3px;font-size:8px;color:var(--gris);line-height:1.2}
+  .usage .usem-et{display:flex;gap:3px;font-size:10px;color:var(--gris);line-height:1.2}
   .usage .usem-et span{flex:1 1 0;text-align:center}
   .ub.n-sin .ub-lleno{background:#333}
   .v{color:var(--verde)} .r{color:var(--rojo)} .a{color:var(--amarillo)}
@@ -886,9 +889,9 @@
      y `0:04:12` (7). el nombre sigue siendo el unico que se achica (`minmax(0,...)`): sin scroll horizontal. */
   /* 1862 {cola}: seis columnas, `delay` (7, `0:04:12`) entre `pedida` e `iniciada` */
   .qtab{display:grid;grid-template-columns:minmax(0,14fr) 11fr 7fr 11fr 7fr 11fr;width:100%;
-        column-gap:4px;row-gap:1px;white-space:nowrap;font-size:9.5px;line-height:1.6;max-width:100%}
+        column-gap:4px;row-gap:1px;white-space:nowrap;font-size:11.5px;line-height:1.6;max-width:100%}
   .qtab .it{display:contents}
-  .qtab .qth{color:var(--gris);font-size:9px;letter-spacing:.3px;opacity:.75}
+  .qtab .qth{color:var(--gris);font-size:11px;letter-spacing:.3px;opacity:.75}
   /* 1843: la cabecera de la duracion se partia en dos lineas para no aplastar el nombre; desde la 1845 dice `delta`
      (5 letras, mas angosta que `0:04:12`) asi que ya no se parte, la regla queda por si vuelve a crecer */
   .qtab .qth.qtiempo{white-space:normal;line-height:1.15;align-self:end;padding-bottom:2px}
@@ -897,31 +900,31 @@
   /* 1929 {colaig}: la tabla de la cola de instagram del widget `igcola`: cinco columnas (que, quien, pedido,
      sale, estado) con las mismas reglas que `.qtab` (el ancho lo pone `B.gridFr`, `qué` y `quién` son las unicas
      que se achican con `…`, las horas no se parten); en 390 px entra sin scroll horizontal */
-  .igtab{display:grid;width:100%;column-gap:4px;row-gap:1px;white-space:nowrap;font-size:9.5px;line-height:1.6;max-width:100%}
-  .igtab .qth{color:var(--gris);font-size:9px;letter-spacing:.3px;opacity:.75}
+  .igtab{display:grid;width:100%;column-gap:4px;row-gap:1px;white-space:nowrap;font-size:11.5px;line-height:1.6;max-width:100%}
+  .igtab .qth{color:var(--gris);font-size:11px;letter-spacing:.3px;opacity:.75}
   .igtab .qnom,.igtab .ignom{min-width:0;overflow:hidden;text-overflow:ellipsis}
   .igtab .qcel{text-align:right;font-variant-numeric:tabular-nums}
   .igtab .igest{text-align:right}
   /* lo que todavia no salio se lee entero; lo que ya paso queda atras, apagado (el gris de `.qpaso`) */
   .igtab .qpaso{opacity:.55} .igtab .qcorre{color:#8fcf7f} .igtab .qfren{color:var(--rojo)}
-  .igpie{font-size:9.5px;margin-top:3px}
-  @media (max-width:430px){ .igtab{font-size:9px;column-gap:3px} }
+  .igpie{font-size:11.5px;margin-top:3px}
+  @media (max-width:430px){ .igtab{font-size:11px;column-gap:3px} }
   /* 1832: la escalera de modelos del widget `models`: grid de 7 columnas, entra en el celu sin scroll horizontal */
   .esctab{display:grid;grid-template-columns:minmax(0,8fr) 3fr 12fr 3fr 3fr 6fr 8fr;width:100%;column-gap:6px;row-gap:1px;
           font-variant-numeric:tabular-nums;max-width:100%;overflow:hidden;white-space:nowrap}   /* 1843: `fr`, ver .qtab */
-  .esctab .eth{color:var(--gris);font-size:9px;letter-spacing:.3px;opacity:.75}
+  .esctab .eth{color:var(--gris);font-size:11px;letter-spacing:.3px;opacity:.75}
   .esctab .enom{min-width:0;overflow:hidden;text-overflow:ellipsis}
   .esctab .ecel{text-align:right}
-  @media (max-width:480px){ .esctab{column-gap:3px;font-size:10px} }   /* 10px y 3px: asi las 7 columnas entran en 390px */
+  @media (max-width:480px){ .esctab{column-gap:3px;font-size:12px} }   /* 1938: 12px y 3px (era 10px); asi las 7 columnas siguen entrando en 390px */
   .qtab .qpaso.qh,.qtab .qcola.qh{opacity:.6} .qtab .qcorre.qh{color:#8fcf7f}
-  /* 1862: con la sexta columna (`delay`) las cinco horas ocupan mas: la tabla baja a 9.5px y 4px de gap tambien
+  /* 1862: con la sexta columna (`delay`) las cinco horas ocupan mas: la tabla baja a 11.5px (1938: era 9.5) y 4px de gap tambien
      en la compu (antes 10.5/7, solo el celu bajaba), asi el nombre sigue teniendo lugar y no se corta con `…`;
      en 390 px baja un poco mas */
-  @media (max-width:430px){ .qtab{font-size:9px;column-gap:3px} }
+  @media (max-width:430px){ .qtab{font-size:11px;column-gap:3px} }
   .b{font-weight:500}
   .btn{
     background:#000;color:var(--cian);border:1px solid var(--linea);border-radius:12px;
-    padding:2px 9px;font:inherit;font-size:9.5px;cursor:pointer;margin:2px 4px 2px 0;
+    padding:2px 9px;font:inherit;font-size:11.5px;cursor:pointer;margin:2px 4px 2px 0;
   }
   .btn:active{background:#111}
   .btn.voto{color:var(--verde);border-color:#1f3a14}
@@ -936,7 +939,7 @@
   #nodos{display:flex;align-items:center;gap:18px;flex:1 1 auto;min-width:0;overflow-x:auto;scrollbar-width:none}
   #nodos::-webkit-scrollbar{display:none}
   #nodos .nodo{display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;background:none;border:0;
-    padding:0;margin:0;color:var(--blanco);font-size:10px;line-height:14px;cursor:pointer;white-space:nowrap;
+    padding:0;margin:0;color:var(--blanco);font-size:12px;line-height:14px;cursor:pointer;white-space:nowrap;
     text-transform:lowercase;user-select:none;-webkit-user-select:none}
   #nodos .luz{width:7px;height:7px;border-radius:50%;background:var(--gris);flex:0 0 auto;opacity:.9}
   #nodos .nodo.main .luz{opacity:1}
@@ -954,7 +957,7 @@
   .ib svg{width:14px;height:14px}   /* facundo 2026-09-14 (1342): un poco mas chicos */
   .ib:hover,.ib:active,.ib.on{color:var(--verde)}
   .ib .badge{position:absolute;top:-2px;right:-2px;min-width:12px;height:12px;padding:0 3px;border-radius:6px;
-    font-size:8px;line-height:12px;font-weight:600;text-align:center;color:#000;background:var(--gris);pointer-events:none}
+    font-size:10px;line-height:12px;font-weight:600;text-align:center;color:#000;background:var(--gris);pointer-events:none}
   .ib .badge.oculta{display:none}
   .ib .badge.gris{color:var(--blanco)}
   /* 1794 (facundo, 2026-09-16): `votar` es un fueguito en outline con el molde de la campana y el tipito (`.ib`: mismo
@@ -991,12 +994,12 @@
     width:100%;max-width:520px;margin:0 auto;padding:6px 0}
   #votmenu .vmfila{flex:1 1 0}
   #selmodal.pantalla.home .seltit{justify-content:center}
-  #votmenu .ntit{color:var(--gris);font-size:9px;text-transform:uppercase;letter-spacing:.06em;padding:0 0 2px 0}
+  #votmenu .ntit{color:var(--gris);font-size:11px;text-transform:uppercase;letter-spacing:.06em;padding:0 0 2px 0}
   #votmenu .vmfila{display:flex;align-items:center;gap:8px}
   #votmenu .vmfila.apagado{color:var(--gris);border-color:var(--linea);cursor:default}
   #votmenu .vmnom{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   #votmenu .vmbadge{flex:0 0 auto;min-width:16px;padding:0 5px;border-radius:8px;background:var(--cian);color:#000;
-    font-size:9.5px;line-height:16px;text-align:center}
+    font-size:11.5px;line-height:16px;text-align:center}
   #votmenu .vmfila.apagado .vmbadge{background:var(--gris)}
   #votmenu .vmbadge.oculta{display:none}
 
@@ -1007,23 +1010,23 @@
     overflow-y:auto;background:#000;border:1px solid transparent;border-radius:5px;padding:4px;
     display:flex;flex-direction:column;gap:1px;box-shadow:var(--modal-sombra);
     -webkit-overflow-scrolling:touch;overscroll-behavior:contain}
-  #nlista .ntit{color:var(--gris);font-size:9px;text-transform:uppercase;letter-spacing:.06em;padding:3px 6px 4px 6px;
+  #nlista .ntit{color:var(--gris);font-size:11px;text-transform:uppercase;letter-spacing:.06em;padding:3px 6px 4px 6px;
     border-bottom:1px solid var(--linea);margin-bottom:2px}
   #nlista .nfila{display:flex;align-items:center;min-height:30px;border-radius:3px}
   #nlista .nfila:hover{background:#0d1410}
   #nlista .nabrir{flex:1 1 auto;min-width:0;align-self:stretch;display:flex;align-items:center;gap:6px;background:none;border:0;
-    padding:0 0 0 6px;margin:0;color:var(--blanco);font:inherit;font-size:10.5px;text-align:left;cursor:pointer;
+    padding:0 0 0 6px;margin:0;color:var(--blanco);font:inherit;font-size:12.5px;text-align:left;cursor:pointer;
     white-space:nowrap;-webkit-tap-highlight-color:transparent}
   #nlista .luz{width:7px;height:7px;border-radius:50%;background:var(--gris);flex:0 0 auto}
   #nlista .nh{color:var(--gris);flex:0 0 auto}
   #nlista .nt{overflow:hidden;text-overflow:ellipsis;min-width:0}
-  #nlista .nacc{flex:0 0 auto;background:none;border:0;color:var(--gris);font:inherit;font-size:10px;padding:0 6px;
+  #nlista .nacc{flex:0 0 auto;background:none;border:0;color:var(--gris);font:inherit;font-size:12px;padding:0 6px;
     height:30px;cursor:pointer;-webkit-tap-highlight-color:transparent}
   #nlista .nacc.nx{font-size:var(--texto-max);width:30px;padding:0}
   #nlista .nacc:hover,#nlista .nacc:active{color:var(--blanco)}
   #nlista .ntodas{background:none;border:0;border-top:1px solid var(--linea);margin-top:2px;color:var(--cian);font:inherit;
-    font-size:10px;padding:6px;text-align:left;cursor:pointer}
-  #nlista .nvacio{color:var(--gris);padding:8px 6px;font-size:10.5px}
+    font-size:12px;padding:6px;text-align:left;cursor:pointer}
+  #nlista .nvacio{color:var(--gris);padding:8px 6px;font-size:12.5px}
   /* 1829 (facundo, 2026-09-17): el grupo de iconos (fueguito, campana, tipito, en ese orden) contra el borde
      derecho; lo empuja `#nodos` (flex 1), y sin nodos pintados la cabecera ya alinea al final. */
   /* 1930 {barra} (facundo, 2026-09-17): `chat` y `widgets` dejaron de ser botones con texto (`.bb`): son dos iconos
@@ -1077,16 +1080,60 @@
   #podvista{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
     display:flex;flex-direction:column;gap:6px;width:100%;max-width:760px;margin:0 auto}
   #podvista .podnom{flex:1 1 auto;min-width:0;color:var(--blanco);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  #podvista .poddet{flex:0 0 auto;color:var(--gris);font-size:11px}
-  #podvista .podpausa{color:var(--amarillo,#d8b25a);font-size:11.5px}
-  #podvista .podvacio{color:var(--gris);font-size:11.5px}
-  #podvista .podweb{align-self:flex-start;color:var(--verde);font-size:11.5px;text-decoration:none;margin-top:2px}
+  #podvista .poddet{flex:0 0 auto;color:var(--gris);font-size:13px}
+  #podvista .podpausa{color:var(--amarillo,#d8b25a);font-size:13.5px}
+  #podvista .podvacio{color:var(--gris);font-size:13.5px}
+  #podvista .podweb{align-self:flex-start;color:var(--verde);font-size:13.5px;text-decoration:none;margin-top:2px}
   /* una fila por voz: el `[\25b6]` de texto de la 1650, el nombre, la duracion y el link. nada de controles nativos */
   #podvista .podvoz{display:flex;align-items:center;gap:8px;min-height:38px;
     border:1px solid var(--linea);border-radius:4px;padding:6px 8px}
   #podvista .podvoz .podnom{flex:0 0 auto}
-  #podvista .podvoz .dur{flex:1 1 auto;min-width:0;color:var(--gris);font-size:11px}
-  #podvista .podbajar{flex:0 0 auto;color:var(--verde);font-size:11px;text-decoration:none}
+  #podvista .podvoz .dur{flex:1 1 auto;min-width:0;color:var(--gris);font-size:13px}
+  #podvista .podbajar{flex:0 0 auto;color:var(--verde);font-size:13px;text-decoration:none}
+  /* 1939 {vistapodcast} (facundo, 2026-09-17): el `home` es una tarjeta CUADRADA por episodio que ocupa todo el
+     alto en el celu (390 px sin scroll horizontal). la grilla es `grid` y no `flex` a proposito: el `aspect-ratio`
+     de un item flex no lo dibuja bien el safari del iphone (1655), el de un item de grilla si. */
+  #podvista .podgrilla{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    display:grid;grid-template-columns:minmax(0,1fr);gap:10px;align-content:start;
+    width:100%;max-width:520px;margin:0 auto;padding:2px 0;scroll-snap-type:y proximity}
+  #podvista .podcard{scroll-snap-align:center;width:100%;aspect-ratio:1/1;height:auto;min-height:0;
+    align-items:stretch;padding:12px;overflow:hidden}
+  #podvista .podprog{box-sizing:border-box;border:1px dashed var(--linea);border-radius:4px;color:var(--gris)}
+  #podvista .podtapa{display:flex;flex-direction:column;justify-content:space-between;gap:6px;width:100%;min-width:0}
+  #podvista .podtapa .podnom{flex:0 0 auto;white-space:normal;overflow:hidden;font-size:var(--texto-max)}
+  #podvista .podmarca{color:var(--verde);font-size:13px}
+  /* el texto entero del guion, que es lo que se puede anotar: tocar un parrafo (o una palabra seleccionada) deja
+     una nota anclada ahi. una nota de pronunciacion queda `pendiente` hasta que facundo la confirma. */
+  #podvista .podguion{display:flex;flex-direction:column;gap:6px;margin-top:4px}
+  #podvista .podcap{margin:8px 0 0 0;color:var(--verde);font-size:var(--texto-max);font-weight:bold}
+  #podvista .podp{margin:0;color:var(--blanco);font-size:13.5px;line-height:1.55;cursor:pointer;
+    touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+  #podvista .podp:active{opacity:.6}
+  #podvista .podnota{border-left:2px solid var(--verde);padding:2px 0 2px 8px;color:var(--gris);font-size:12.5px}
+  #podvista .podnota.pendiente{border-left-color:var(--amarillo)}
+  /* el hilo del episodio: lo que dejo facundo y lo que contesto flaudio, en el tema del episodio y no en el chat */
+  #podvista .podhilo{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+  #podvista .podmsg{display:flex;flex-direction:column;gap:3px;border:1px solid var(--linea);border-radius:4px;padding:6px 8px}
+  #podvista .podmsg.de-flaudio{border-color:var(--verde)}
+  #podvista .podquien{color:var(--gris);font-size:12px}
+  #podvista .podtexto{color:var(--blanco);font-size:13.5px;white-space:pre-wrap}
+  #podvista .podprox{color:var(--cian);font-size:13px}
+  #podvista .podaccion{color:var(--amarillo);font-size:13px}
+  #podvista .podespera{color:var(--gris);font-size:12.5px}
+  #podvista .podaudio{display:inline-flex;align-items:center;gap:6px}
+  /* dejar varios audios, borrables uno por uno como en un chat de whatsapp: recien al tocar `enviar` salen */
+  #podvista .podresp{display:flex;flex-direction:column;gap:6px;margin-top:8px;padding-top:6px;border-top:1px solid var(--linea)}
+  #podvista .podpend{display:flex;flex-wrap:wrap;gap:6px}
+  #podvista .podaud{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--linea);border-radius:4px;padding:2px 4px}
+  #podvista .podaud .dur{color:var(--gris);font-size:12.5px}
+  #podvista .podaud .podx{min-height:26px;padding:0 6px;color:var(--gris)}
+  #podvista #podtxt{width:100%;box-sizing:border-box;min-height:44px;background:none;border:1px solid var(--linea);
+    border-radius:4px;color:var(--blanco);font:inherit;font-size:var(--texto-max);padding:6px 8px;resize:vertical}
+  #podvista .podpie{display:flex;align-items:center;gap:8px}
+  #podvista .podpie .mestado{flex:1 1 auto;min-width:0;color:var(--gris);font-size:12.5px}
+  #podvista #podgrab.grabando{color:var(--rojo)}
+  /* el toggle `es de pronunciacion` vive en el modal de la nota, fuera de `#podvista` */
+  .podpron.on{border-color:var(--verde);color:var(--verde)}
   body.sinlogin #vista-podcast{display:none!important}
   /* vista mobile: una vista a la vez, la elige la barra de arriba. puro css, sin js de layout.
      entra cuando la ventana es angosta (celu) O cuando es mas alta que ancha (facundo, 2026-09-11:
@@ -1096,12 +1143,13 @@
     /* dedo: los seis botones de la barra se tocan con el pulgar, todos del mismo alto */
     .bb{height:32px;padding:4px 6px;gap:4px}
     #nodos .nodo{min-height:32px}   /* dedo: el label se toca aunque no parezca boton */
-    #notis .noti{min-height:40px;font-size:12px}   /* dedo: el aviso y su `x` se tocan con el pulgar */
+    #notis .noti{min-height:40px;font-size:14px}   /* dedo: el aviso y su `x` se tocan con el pulgar */
     #mcuerpo textarea.nresp{font-size:var(--texto-max)}   /* ios no zoomea al enfocar */
     /* 1829: en celu los nodos ocupan solo lo suyo (no empujan) para que chat | widgets quede contra el borde
        izquierdo; sin nodos pintados, la caja no deja ni el gap */
     /* 1930: los nodos empujan (los iconos quedan contra el borde derecho); sin nodos pintados no dejan ni el gap */
-    #nodos{gap:10px;flex:1 1 auto}
+    /* 1938: con la letra 2 px mas grande los tres labels no entraban en 390 px; se achica el gap, nunca la letra */
+    #nodos{gap:8px;flex:1 1 auto}
     #nodos:empty{display:none}
     #cabecera{gap:6px}
     /* dedo: campana, persona, filas de la campana y el menu de persona con 40px (1166) */
@@ -1109,9 +1157,9 @@
     .ib svg{width:16px;height:16px}
     .ib .badge{top:4px;right:0}   /* afuera del icono de 16px, que no lo tape (1342) */
     #nlista .nfila{min-height:40px}
-    #nlista .nabrir{font-size:12px}
-    #nlista .nacc{height:40px;min-width:40px;font-size:11px}
-    #nlista .ntodas{min-height:40px;font-size:11px}
+    #nlista .nabrir{font-size:14px}
+    #nlista .nacc{height:40px;min-width:40px;font-size:13px}
+    #nlista .ntodas{min-height:40px;font-size:13px}
     #ctx button{min-height:40px}
     /* dedo: los botones del header de cada widget con area tactil de 40px (facundo, 2026-09-12) */
     .caja > .tit > .wacc .wbtn{min-width:40px;min-height:40px;font-size:var(--texto-max);padding:0}
@@ -1150,7 +1198,7 @@
   #tabs::-webkit-scrollbar{display:none}
   #tabs .tab{
     flex:0 0 auto;background:#000;color:var(--gris);border:0;
-    border-radius:4px 4px 0 0;padding:4px 9px;font:inherit;font-size:10.5px;cursor:pointer;
+    border-radius:4px 4px 0 0;padding:4px 9px;font:inherit;font-size:12.5px;cursor:pointer;
     white-space:nowrap;
   }
   #tabs .tab.enpanel{color:var(--cian)}
@@ -1160,7 +1208,7 @@
   #tabs .tab .x{color:#555;margin-left:7px}
   #tabs .barrabtn{
     flex:0 0 auto;background:#000;color:var(--gris);border:1px solid var(--linea);border-radius:4px;
-    padding:2px 7px;font:inherit;font-size:9.5px;cursor:pointer;white-space:nowrap;
+    padding:2px 7px;font:inherit;font-size:11.5px;cursor:pointer;white-space:nowrap;
     margin:0 0 3px 5px;
   }
   #tabs .barrabtn:active{background:#111}
@@ -1174,7 +1222,7 @@
   #notis{flex:0 0 auto;display:flex;align-items:center;padding:0 0 0 10px;background:var(--fondo-panel)}
   #notis.oculta{display:none}
   #notis .noti{flex:1 1 auto;display:flex;align-items:center;gap:6px;min-width:0;background:none;border:0;padding:0;margin:0;
-    color:var(--blanco);font-size:10px;line-height:18px;cursor:pointer;white-space:nowrap;
+    color:var(--blanco);font-size:12px;line-height:18px;cursor:pointer;white-space:nowrap;
     user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
   #notis .luz{width:7px;height:7px;border-radius:50%;background:var(--amarillo);flex:0 0 auto}
   #notis .nh{color:var(--gris);flex:0 0 auto}
@@ -1189,7 +1237,7 @@
      al abrir la web o al volver al foco, el cache de localStorage no se pinta como si fuera el
      estado real: mientras baja el buzon se ve esta linea y lo cacheado queda apagado. */
   #sync{
-    flex:0 0 auto;padding:2px 10px;font-size:10px;color:var(--cian);
+    flex:0 0 auto;padding:2px 10px;font-size:12px;color:var(--cian);
     background:var(--fondo-panel);
   }
   #sync.oculta{display:none}
@@ -1202,7 +1250,7 @@
     content:"soltar la imagen acá";position:absolute;inset:6px;z-index:55;pointer-events:none;
     display:flex;align-items:center;justify-content:center;
     border:1px dashed var(--verde);border-radius:6px;background:rgba(0,255,120,.10);
-    color:var(--verde);font-size:11px;letter-spacing:.04em;
+    color:var(--verde);font-size:13px;letter-spacing:.04em;
   }
   /* dropdown: pestaña nueva y la pregunta de "esto parece de otro tema" */
   #ddfondo{position:fixed;inset:0;z-index:19;background:rgba(0,0,0,.45)}
@@ -1212,10 +1260,10 @@
     max-width:460px;margin:0 auto;background:#000;border:1px solid transparent;border-radius:6px;box-shadow:var(--modal-sombra);
     padding:6px;display:flex;flex-direction:column;gap:4px;max-height:60dvh;overflow-y:auto;
   }
-  #dd .ddtit{color:var(--gris);font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;padding:2px 4px}
+  #dd .ddtit{color:var(--gris);font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;padding:2px 4px}
   #dd .ddop{
     background:#000;color:var(--cian);border:1px solid var(--linea);border-radius:4px;
-    padding:8px 10px;font:inherit;font-size:11.5px;cursor:pointer;text-align:left;
+    padding:8px 10px;font:inherit;font-size:13.5px;cursor:pointer;text-align:left;
   }
   #dd .ddop:active{background:#111}
 
@@ -1227,14 +1275,14 @@
   .qv{position:relative;display:inline-block;width:100%;vertical-align:top;overflow:hidden;border-radius:4px;touch-action:pan-y}
   .qv .qvin{position:relative;display:block;background:var(--fondo-caja);will-change:transform}
   .qv.suelta .qvin{transition:transform .18s ease-out}
-  .qv .qvf{position:absolute;inset:0;display:none;align-items:center;padding:0 10px;font-size:10.5px;color:#000;font-weight:700}
+  .qv .qvf{position:absolute;inset:0;display:none;align-items:center;padding:0 10px;font-size:12.5px;color:#000;font-weight:700}
   .qv .qvf.qvv{background:var(--verde);justify-content:flex-start}
   .qv .qvf.qvn{background:var(--rojo);justify-content:flex-end}
   .qv.der .qvf.qvv,.qv.izq .qvf.qvn{display:flex}
   .qv.listo .qvf{filter:brightness(1.15)}
   .qv.chau{transition:max-height .2s ease-in .16s,opacity .2s ease-in .16s;max-height:0 !important;opacity:0}
   .qv .qvb{display:none;position:absolute;top:0;right:0;gap:4px;background:var(--fondo-caja);padding:0 0 2px 6px}
-  .qv .qvb button{border:0;outline:0;background:#000;color:var(--gris);font:inherit;font-size:10px;padding:1px 6px;border-radius:3px;cursor:pointer}
+  .qv .qvb button{border:0;outline:0;background:#000;color:var(--gris);font:inherit;font-size:12px;padding:1px 6px;border-radius:3px;cursor:pointer}
   .qv .qvb button[data-qvacc="visto"]:hover{color:var(--verde)}
   .qv .qvb button[data-qvacc="no"]:hover{color:var(--rojo)}
   @media (hover:hover) and (pointer:fine){ .qv:hover .qvb{display:flex} }
@@ -1249,14 +1297,14 @@
   #modal .mtit{
     position:sticky;top:0;background:#000;display:flex;justify-content:space-between;gap:8px;
     align-items:center;border-bottom:1px solid var(--linea);padding:7px 9px;
-    color:var(--verde);font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;
+    color:var(--verde);font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;
   }
   #modal .mx{
     background:#000;color:var(--gris);border:1px solid var(--linea);border-radius:4px;
-    padding:2px 7px;font:inherit;font-size:9px;cursor:pointer;flex:0 0 auto;
+    padding:2px 7px;font:inherit;font-size:11px;cursor:pointer;flex:0 0 auto;
   }
   #modal .mcuerpo{
-    padding:9px;font-size:11.5px;line-height:1.55;color:var(--blanco);
+    padding:9px;font-size:13.5px;line-height:1.55;color:var(--blanco);
     white-space:pre-wrap;word-break:break-word;
   }
   #modal .macc{display:flex;flex-direction:column;gap:5px;padding:0 9px 10px 9px}
@@ -1270,7 +1318,7 @@
   #notimodal.oculta{display:none}
   #notimodal .nmtit{
     position:relative;flex:0 0 auto;display:flex;align-items:center;justify-content:center;box-sizing:border-box;
-    padding:0 44px;border-bottom:1px solid var(--linea);color:var(--verde);font-size:10.5px;
+    padding:0 44px;border-bottom:1px solid var(--linea);color:var(--verde);font-size:12.5px;
   }
   #nmtitulo{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
   #notimodal .nmx{
@@ -1278,25 +1326,25 @@
     border:1px solid var(--linea);border-radius:4px;padding:0 8px;font:inherit;font-size:var(--texto-max);line-height:18px;cursor:pointer;
   }
   #notimodal .nmcuerpo{
-    flex:1 1 auto;overflow-y:auto;padding:10px;font-size:12px;line-height:1.55;color:var(--blanco);
+    flex:1 1 auto;overflow-y:auto;padding:10px;font-size:14px;line-height:1.55;color:var(--blanco);
     -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
   }
   #notimodal .nmtexto{white-space:pre-wrap;word-break:break-word}
   #notimodal .nmopc{display:flex;flex-direction:column;gap:5px;margin-top:10px}
   #notimodal .nmop.sel{color:#000;background:var(--verde);border-color:var(--verde)}
   #notimodal .nmop.sel .let{color:#000}
-  #notimodal .nmmeta{margin-top:10px;font-size:10px}
+  #notimodal .nmmeta{margin-top:10px;font-size:12px}
   #notimodal .nmpie{
     flex:0 0 auto;display:flex;flex-direction:column;gap:5px;border-top:1px solid var(--linea);
     padding:6px 8px calc(6px + env(safe-area-inset-bottom)) 8px;
   }
   #notimodal .nmfila{display:flex;align-items:center;gap:6px;min-height:18px}
-  #nmoir{display:flex;align-items:center;gap:4px;color:var(--gris);font-size:10.5px}
-  #nmoir .nmhabla{background:none;border:0;color:var(--cian);font:inherit;font-size:11px;padding:0;cursor:pointer}
-  #nmestado{color:var(--gris);font-size:10px;margin-left:auto}
+  #nmoir{display:flex;align-items:center;gap:4px;color:var(--gris);font-size:12.5px}
+  #nmoir .nmhabla{background:none;border:0;color:var(--cian);font:inherit;font-size:13px;padding:0;cursor:pointer}
+  #nmestado{color:var(--gris);font-size:12px;margin-left:auto}
   #nmtxt{
     flex:1 1 auto;min-width:0;background:#000;color:var(--blanco);border:1px solid var(--linea);border-radius:4px;
-    font:inherit;font-size:12px;padding:6px;resize:none;
+    font:inherit;font-size:14px;padding:6px;resize:none;
   }
   #nmgrabar{color:var(--magenta);touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
   #nmmandar{color:var(--verde)}
@@ -1314,13 +1362,13 @@
     box-shadow:var(--modal-sombra);
   }
   #ctx .ctit{
-    color:var(--gris);font-size:9px;text-transform:uppercase;letter-spacing:.06em;padding:3px 6px 4px 6px;
+    color:var(--gris);font-size:11px;text-transform:uppercase;letter-spacing:.06em;padding:3px 6px 4px 6px;
     border-bottom:1px solid var(--linea);margin-bottom:2px;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   }
   #ctx button{
     background:#000;color:var(--cian);border:1px solid transparent;border-radius:4px;
-    padding:8px 9px;font:inherit;font-size:11.5px;cursor:pointer;text-align:left;
+    padding:8px 9px;font:inherit;font-size:13.5px;cursor:pointer;text-align:left;
   }
   #ctx button:hover{border-color:var(--linea);background:#0d1410}
   #ctx button:active{background:#111}

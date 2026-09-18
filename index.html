@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.353">
-<link rel="manifest" href="manifest.json?v=4.353">
+<meta name="agente-web-version" content="4.354">
+<link rel="manifest" href="manifest.json?v=4.354">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.353">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.354">
 </head>
 <body>
 
@@ -6579,6 +6579,7 @@ function terminarGrabacion(enviar){
     try{ g.stop(); }catch(e){ res(null); }
   }).then(function(blob){
     soltarMicro();
+    var pg = podGrabando; podGrabando = false;   // 1939: el audio es una respuesta del episodio, no un mensaje del chat
     if(!enviar){ audioDestino = null; cortarDictado(); return null; }
     if(!blob || !blob.size){
       // el micro no dejo nada (en ios el reconocedor puede pelearle la sesion de audio): si el celu igual
@@ -6597,6 +6598,8 @@ function terminarGrabacion(enviar){
     }
     // el texto del celu se espera aca (1209): al soltar ya casi siempre esta, y como mucho DICT_GRACIA
     return terminarDictado().then(function(d){
+      // 1939: el audio de la vista `podcast` no sale: queda en la fila del episodio, borrable, hasta el `enviar`
+      if(pg) return podSumarAudio(blob, mime, ms, d);
       // 1350: la voz del modal de una push sale ya, a su tema y con la cita (no hay adjunto que revisar)
       if(audioDestino){
         var ad = audioDestino; audioDestino = null;
@@ -7297,15 +7300,15 @@ function cajaPodcast(p){
 // adentro de la vista). dos sub-vistas como el tinder: `home` (los episodios como cajas tocables) y el detalle de un
 // episodio (su player), con el `←` volviendo al home. el widget `podcast` de la vista `widgets` no se toca.
 // nada se calcula ni se redacta aca: los episodios salen tal cual de `widgets_json.w_podcast` (`widDatos.podcast`).
-var pod = {ep: null};
+var pod = {ep: null, audios: [], enviando: null};   // 1939: los audios que todavia no salieron viven aca
 function podEps(){ return ((widDatos || {}).podcast || {}).episodios || []; }
 function podId(e){ return String(e.id || e.titulo || e.fecha || ""); }
+// 1939: la hora la arma el server (`act hh:mm am/pm`, `recetas/hora.py`); la web no arma ninguna
 function podCuando(e){
-  var f = String(e.fecha || "").slice(5);
-  var a = /T(\d\d:\d\d)/.exec(e.actualizado || "");
-  return f + (a ? " · act " + hora12(a[1]) : "");
+  return [String(e.fecha || "").slice(5), e.act || ""].filter(Boolean).join(" · ");
 }
 function podAbrirEp(id){
+  if(pod.ep !== (id || null)) pod.audios = [];
   pod.ep = id || null;
   return podVistaPintar();
 }
@@ -7322,26 +7325,37 @@ function podVistaPintar(){
   if(ep) podDetalle(el, ep); else podHome(el, p, eps);
   return el.innerHTML;
 }
-// el `home`: una caja tocable por episodio, el mas nuevo arriba (el orden lo manda el server)
+// 1939 {vistapodcast} (facundo, 2026-09-17): el `home` es una tarjeta CUADRADA por episodio, que ocupa todo el
+// alto en el celu. el episodio es tematico (un tema por episodio) y algunos estan programados: esos van como una
+// tarjeta mas, sin audio, con la hora a la que sale. todo lo que dice la tarjeta lo arma el server
+// (`widgets_json.w_podcast`): el titulo, la fecha, el `act hh:mm am/pm` y cuantas voces. la web no arma ninguna hora.
 function podHome(el, p, eps){
   if(p.pausa){
     var pa = document.createElement("div"); pa.className = "podpausa"; pa.textContent = p.pausa;
     el.appendChild(pa);
   }
-  if(!eps.length){
+  var grilla = document.createElement("div"); grilla.className = "podgrilla";
+  el.appendChild(grilla);
+  if(!eps.length && !(p.programados || []).length){
     var v = document.createElement("div"); v.className = "podvacio"; v.textContent = "todavía no hay episodios";
-    el.appendChild(v);
+    grilla.appendChild(v);
   }
+  (p.programados || []).forEach(function(x){
+    var c = document.createElement("div");
+    c.className = "podcard podprog";
+    c.setAttribute("data-prog", x.titulo || "");
+    c.appendChild(podTapa(x.titulo || "", [x.cuando || "programado", x.tema || ""]));
+    grilla.appendChild(c);
+  });
   eps.forEach(function(e){
     var id = podId(e);
-    var c = moldeBoton({tipo: "caja", clase: "podcaja", accion: function(){ podAbrirEp(id); }});
+    var c = moldeBoton({tipo: "caja", clase: "podcard", accion: function(){ podAbrirEp(id); }});
     c.setAttribute("data-ep", id);
-    var t = document.createElement("span"); t.className = "podnom"; t.textContent = e.titulo || id;
-    var d = document.createElement("span"); d.className = "poddet";
     var nv = (e.voces || []).length;
-    d.textContent = podCuando(e) + " · " + nv + (nv === 1 ? " voz" : " voces");
-    c.appendChild(t); c.appendChild(d);
-    el.appendChild(c);
+    var pie = [podCuando(e), nv + (nv === 1 ? " voz" : " voces")];
+    if(e.min) pie.splice(1, 0, e.min + " min");
+    c.appendChild(podTapa(e.titulo || id, pie, e));
+    grilla.appendChild(c);
   });
   if(p.web){
     var a = document.createElement("a");
@@ -7350,9 +7364,27 @@ function podHome(el, p, eps){
     el.appendChild(a);
   }
 }
-// el detalle: una fila por voz con su player y su link. el mp3 lo sirve pages (no pasa por la lan ni por el buzon),
-// asi que no es `reproductor()`, pero el look es el mismo: el `[▶]` de texto de la 1650, nunca los controles
-// nativos grises (`docs/gustos-diseno.md`: "look terminal, nada de controles nativos")
+// la cara de la tarjeta: el tema arriba, lo que ya sabe el server abajo, y el aviso de lo que quedo abierto
+function podTapa(titulo, pie, e){
+  var caja = document.createElement("span"); caja.className = "podtapa";
+  var t = document.createElement("span"); t.className = "podnom"; t.textContent = titulo;
+  caja.appendChild(t);
+  var h = (e && e.hilo) || {};
+  if(h.esperando || (h.notas || []).filter(podNotaPend).length){
+    var m = document.createElement("span"); m.className = "podmarca";
+    var ns = (h.notas || []).filter(podNotaPend).length;
+    m.textContent = [h.esperando ? "te debo una respuesta" : "", ns ? ns + (ns === 1 ? " nota" : " notas") : ""]
+      .filter(Boolean).join(" · ");
+    caja.appendChild(m);
+  }
+  var d = document.createElement("span"); d.className = "poddet";
+  d.textContent = pie.filter(Boolean).join(" · ");
+  caja.appendChild(d);
+  return caja;
+}
+function podNotaPend(n){ return (n || {}).estado === "pendiente"; }
+// el detalle: el audio con el `[▶]` de texto de la 1650 (nunca los controles nativos), el texto entero del guion
+// (que es lo que se puede anotar), el hilo del ida y vuelta con flaudio y la fila de audios que todavia no salieron
 function podDetalle(el, e){
   (e.voces || []).forEach(function(v){
     var f = document.createElement("div"); f.className = "podvoz";
@@ -7368,6 +7400,303 @@ function podDetalle(el, e){
     var x = document.createElement("div"); x.className = "podvacio"; x.textContent = "este episodio no tiene audio";
     el.appendChild(x);
   }
+  podGuion(el, e);
+  podHilo(el, e);
+  podResponder(el, e);
+}
+// ---------- el guion leible, y las notas pegadas a un parrafo o a una palabra ----------
+// el texto sale del server ya partido en parrafos con id estable (`podcast.guion_parrafos`): `c2p3` es el tercer
+// parrafo del segundo capitulo, y una nota anclada ahi sigue apuntando al mismo lado aunque se re-renderice.
+var podGuiones = {};      // el guion de un episodio viejo, pedido por la lan (los nuevos ya vienen en el json)
+function podParrafos(e){
+  var g = (e.guion && e.guion.length) ? e.guion : podGuiones[podId(e)];
+  return g || null;
+}
+function podGuion(el, e){
+  var caja = document.createElement("div"); caja.id = "podguion"; caja.className = "podguion";
+  el.appendChild(caja);
+  var g = podParrafos(e);
+  if(!g){
+    var esp = document.createElement("div"); esp.className = "podvacio"; esp.textContent = "buscando el texto…";
+    caja.appendChild(esp);
+    podTraerGuion(podId(e));
+    return;
+  }
+  var notas = ((e.hilo || {}).notas) || [];
+  g.forEach(function(x){
+    var n = document.createElement(x.tipo === "cap" ? "h4" : "p");
+    n.className = x.tipo === "cap" ? "podcap" : "podp";
+    n.setAttribute("data-p", x.id);
+    n.textContent = x.texto;
+    if(x.tipo === "p") n.addEventListener("click", function(){ podNotaAbrir(e, x); });
+    caja.appendChild(n);
+    notas.filter(function(t){ return t.p === x.id; }).forEach(function(t){
+      caja.appendChild(podNotaNodo(t));
+    });
+  });
+}
+function podNotaNodo(t){
+  var d = document.createElement("div");
+  d.className = "podnota" + (t.estado === "pendiente" ? " pendiente" : "");
+  d.setAttribute("data-nota", t.id);
+  d.textContent = (t.pron ? "pronunciación: " : "nota: ") + t.texto +
+                  (t.cita ? " (" + t.cita + ")" : "") +
+                  (t.estado === "pendiente" ? " · te la muestro para que la confirmes" : " · " + t.estado);
+  return d;
+}
+// el guion de un episodio viejo no viaja en `widgets.json` (son ~25 kb cada uno): se pide por la lan
+function podTraerGuion(id){
+  if(podGuiones[id] || podGuiones["..." + id]) return Promise.resolve(null);
+  podGuiones["..." + id] = true;
+  return votLan().then(function(base){
+    if(!base) throw new Error("sin lan");
+    return lanFetch(base + "/podcast/" + encodeURIComponent(id), {cache: "no-store",
+                    headers: {"authorization": "Bearer " + token}});
+  }).then(function(r){
+    if(!r || !r.ok) throw new Error("http " + (r && r.status));
+    return r.json();
+  }).then(function(j){
+    podGuiones[id] = (j && j.guion) || [];
+    if(pod.ep === id) podVistaPintar();
+    return podGuiones[id];
+  }).catch(function(){
+    podGuiones[id] = [];
+    if(pod.ep === id) podVistaPintar();
+    return null;
+  });
+}
+// tocar un parrafo (o una palabra, si hay algo seleccionado) deja una nota anclada ahi. una nota de pronunciacion
+// NO se aplica sola al diccionario del tts: queda pendiente y se le muestra a facundo para que la confirme.
+var podNotaM = null, podNotaPron = false;
+function podSeleccion(){
+  try{ return String((window.getSelection && window.getSelection().toString()) || "").trim().slice(0, 60); }
+  catch(x){ return ""; }
+}
+function podNotaAbrir(e, par){
+  var cita = podSeleccion();
+  if(!podNotaM) podNotaM = modalMolde({id: "podnotamodal", z: 44, sinServer: true});
+  podNotaPron = false;
+  var cu = document.createElement("div");
+  var f = document.createElement("div"); f.className = "rmfrase";
+  f.textContent = cita || par.texto;
+  cu.appendChild(f);
+  var ta = document.createElement("textarea");
+  ta.id = "podnotatxt";
+  ta.placeholder = cita ? "qué querés decir de «" + cita + "»" : "una nota sobre este párrafo";
+  ta.setAttribute("autocomplete", "off"); ta.setAttribute("autocapitalize", "off"); ta.setAttribute("spellcheck", "false");
+  cu.appendChild(ta);
+  var pron = moldeBoton({tipo: "caja", clase: "podpron", accion: function(){
+    podNotaPron = !podNotaPron;
+    pron.classList.toggle("on", podNotaPron);
+    pron.textContent = (podNotaPron ? "✓ " : "") + "es de pronunciación";
+  }});
+  pron.textContent = "es de pronunciación";
+  cu.appendChild(pron);
+  return podNotaM.abrir({titulo: "una nota acá", cuenta: par.id, cuerpo: cu, botones: [
+    {tipo: "term", txt: "guardar la nota", principal: true, accion: function(m){
+      var t = String(ta.value || "").trim();
+      if(!t){ m.estado("escribí la nota primero"); return; }
+      podMandar(podId(e), [{id: lidNuevo(), ep: podId(e), tipo: "nota", p: par.id, cita: cita,
+                            texto: t, pron: podNotaPron, ts: Date.now()}]).then(function(){
+        m.estado("anotada"); setTimeout(function(){ m.cerrar(false); }, 600);
+      }, function(err){ m.estado("no salió: " + (err && err.message || err)); });
+    }}]});
+}
+// ---------- el hilo del episodio: la charla asincronica, en el tema del episodio y no en el chat ----------
+function podHilo(el, e){
+  var h = e.hilo || {}, ms = h.mensajes || [];
+  if(!ms.length) return;
+  var caja = document.createElement("div"); caja.id = "podhilo"; caja.className = "podhilo";
+  el.appendChild(caja);
+  ms.forEach(function(m){
+    var d = document.createElement("div");
+    d.className = "podmsg " + (m.quien === "flaudio" ? "de-flaudio" : "de-facundo");
+    d.setAttribute("data-quien", m.quien);
+    var q = document.createElement("span"); q.className = "podquien";
+    q.textContent = (m.quien === "flaudio" ? "flaudio" : "vos") + " · " + (m.hora || "");
+    d.appendChild(q);
+    (m.audios || []).forEach(function(a){
+      var f = document.createElement("span"); f.className = "podaudio";
+      f.appendChild(reproductor(a.ruta, "escuchar lo que dejaste"));
+      var s = document.createElement("span"); s.className = "dur"; s.textContent = a.dur || "";
+      f.appendChild(s);
+      d.appendChild(f);
+    });
+    if(m.texto){ var t = document.createElement("div"); t.className = "podtexto"; t.textContent = m.texto; d.appendChild(t); }
+    if(m.proximo){ var pr = document.createElement("div"); pr.className = "podprox";
+                   pr.textContent = "en el próximo episodio: " + m.proximo; d.appendChild(pr); }
+    (m.acciones || []).forEach(function(a){
+      var x = document.createElement("div"); x.className = "podaccion"; x.textContent = a;
+      d.appendChild(x);
+    });
+    caja.appendChild(d);
+  });
+  if(h.esperando){
+    var esp = document.createElement("div"); esp.className = "podespera";
+    esp.textContent = "te contesto acá mismo, sin apuro";
+    caja.appendChild(esp);
+  }
+}
+// ---------- dejar varios audios, borrables uno por uno, y recien al `enviar` salen ----------
+var podGrabando = false;
+function podResponder(el, e){
+  var caja = document.createElement("div"); caja.id = "podresp"; caja.className = "podresp";
+  el.appendChild(caja);
+  var fila = document.createElement("div"); fila.className = "podpend"; fila.id = "podpend";
+  pod.audios.forEach(function(a, i){
+    var f = document.createElement("span"); f.className = "podaud"; f.setAttribute("data-i", String(i));
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "play"; b.textContent = "[▶]"; b.title = "escuchar";
+    b.addEventListener("click", function(){ podOir(a, b); });
+    var s = document.createElement("span"); s.className = "dur"; s.textContent = fmtTiempo(Math.round(a.ms / 1000));
+    var x = moldeBoton({tipo: "no", txt: "×", aria: "borrar este audio", clase: "podx",
+                        accion: function(){ podBorrar(i); }});
+    [b, s, x].forEach(function(y){ f.appendChild(y); });
+    fila.appendChild(f);
+  });
+  caja.appendChild(fila);
+  var ta = document.createElement("textarea");
+  ta.id = "podtxt"; ta.placeholder = "o escribilo (opcional)";
+  ta.setAttribute("autocomplete", "off"); ta.setAttribute("autocapitalize", "off"); ta.setAttribute("spellcheck", "false");
+  caja.appendChild(ta);
+  var pie = document.createElement("div"); pie.className = "podpie";
+  var gr = document.createElement("button");
+  gr.id = "podgrab"; gr.type = "button"; gr.className = "ico";
+  gr.title = "mantené apretado para dejar un audio"; gr.setAttribute("aria-label", "dejar un audio");
+  gr.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg>';
+  podApretar(gr);
+  pie.appendChild(gr);
+  var est = document.createElement("span"); est.id = "podestado"; est.className = "mestado";
+  est.setAttribute("aria-live", "polite");
+  pie.appendChild(est);
+  var env = moldeBoton({tipo: "verde", txt: "enviar", clase: "selenviar", accion: function(){ podEnviar(); }});
+  env.id = "podenviar";
+  pie.appendChild(env);
+  caja.appendChild(pie);
+}
+function podEstado(t){ var n = $("podestado"); if(n) n.textContent = t || ""; }
+// tap and hold, igual que el micro del chat (1372): cada audio abre y cierra su micro
+function podApretar(b){
+  b.addEventListener("pointerdown", function(ev){
+    ev.preventDefault();
+    if(b.setPointerCapture && ev.pointerId != null){ try{ b.setPointerCapture(ev.pointerId); }catch(x){} }
+    podGrabando = true;
+    b.classList.add("grabando");
+    empezarGrabacion();
+  });
+  function soltar(mandar){
+    return function(ev){
+      if(ev) ev.preventDefault();
+      if(!podGrabando && !grabador) return;
+      b.classList.remove("grabando");
+      terminarGrabacion(mandar !== false);
+    };
+  }
+  b.addEventListener("pointerup", soltar(true));
+  b.addEventListener("pointercancel", soltar(false));
+  b.addEventListener("pointerleave", soltar(false));
+}
+function podSumarAudio(blob, mime, ms, dicho){
+  pod.audios.push({blob: blob, mime: mime || blob.type || "audio/webm", ms: ms || 0,
+                   texto: (dicho && (dicho.texto || (typeof dicho === "string" ? dicho : ""))) || ""});
+  podVistaPintar();
+  podEstado(pod.audios.length + (pod.audios.length === 1 ? " audio, lo mandás cuando quieras" : " audios sin enviar"));
+  return null;
+}
+function podBorrar(i){
+  pod.audios.splice(i, 1);
+  podVistaPintar();
+  podEstado("borrado");
+  return pod.audios.length;
+}
+var podSon = null;
+function podOir(a, b){
+  if(podSon){ try{ podSon.pause(); }catch(x){} podSon = null; }
+  try{
+    var u = URL.createObjectURL(a.blob);
+    podSon = new Audio(u);
+    b.textContent = "[■]";
+    podSon.addEventListener("ended", function(){ b.textContent = "[▶]"; URL.revokeObjectURL(u); });
+    podSon.play();
+  }catch(x){ b.textContent = "[x]"; }
+}
+// el `enviar`: recien aca salen. cada audio se sube al mismo lugar que los del chat (`audio/<hash>.<ext>`, por la
+// lan y solo de respaldo al buzon) y despues va UN registro con todos, que el server suma al hilo del episodio.
+function podEnviar(){
+  var ep = pod.ep;
+  if(!ep) return Promise.resolve(false);
+  var ta = $("podtxt"), texto = String((ta && ta.value) || "").trim();
+  if(!pod.audios.length && !texto){ podEstado("dejá un audio o escribí algo"); return Promise.resolve(false); }
+  if(pod.enviando) return pod.enviando;
+  podEstado("enviando…");
+  var subidos = [], dichos = [];
+  pod.enviando = pod.audios.reduce(function(pr, a){
+    return pr.then(function(){
+      return podSubirAudio(a).then(function(ruta){
+        if(ruta) subidos.push({ruta: ruta, seg: Math.round(a.ms / 100) / 10});
+        if(a.texto) dichos.push(a.texto);
+      });
+    });
+  }, Promise.resolve()).then(function(){
+    var cuerpo = [texto].concat(dichos).filter(Boolean).join("\n");
+    return podMandar(ep, [{id: lidNuevo(), ep: ep, tipo: subidos.length ? "audios" : "texto",
+                           audios: subidos, texto: cuerpo, ts: Date.now()}]);
+  }).then(function(){
+    pod.audios = [];
+    if(ta) ta.value = "";
+    podVistaPintar();                      // primero se repinta (el pie es nuevo) y recien despues se escribe el estado
+    podEstado("enviado, te contesto acá");
+    return true;
+  }).catch(function(e){
+    podEstado("no salió: " + (e && e.message || e));
+    return false;
+  }).then(function(r){ pod.enviando = null; return r; });
+  return pod.enviando;
+}
+function podSubirAudio(a){
+  return a.blob.arrayBuffer().then(function(buf){
+    return sha12(buf).then(function(h){
+      var ruta = nombreAudio(h, a.mime);
+      return subirBuzon(ruta, bytesAb64(new Uint8Array(buf)), "audio", new Uint8Array(buf)).then(function(){
+        audioUrls[ruta] = URL.createObjectURL(a.blob);    // ya lo tengo: no lo bajo para reproducirlo
+        return ruta;
+      });
+    });
+  });
+}
+// lan primero (`POST /podcast/<ep>`); sin lan, al buzon como cualquier registro (`seleccion-web/podcast-hilo--<id>.json`),
+// que el daemon levanta con el mismo dedup por id
+function podMandar(ep, regs){
+  var eco = function(){ podEcoLocal(ep, regs); };
+  return votLan().then(function(base){
+    if(!base) throw new Error("sin lan");
+    return lanFetch(base + "/podcast/" + encodeURIComponent(ep), {method: "POST", cache: "no-store",
+      headers: {"authorization": "Bearer " + token, "content-type": "application/json"},
+      body: JSON.stringify({registros: regs})});
+  }).then(function(r){
+    if(!r || !r.ok) throw new Error("http " + (r && r.status));
+    eco(); return true;
+  }, function(){
+    return selBuzon("podcast-hilo", regs).then(function(){ eco(); return true; });
+  });
+}
+// lo enviado se ve ya, sin esperar los 60 s del `widgets.json` (el server lo va a mandar igual en el proximo)
+function podEcoLocal(ep, regs){
+  var e = podEps().filter(function(x){ return podId(x) === ep; })[0];
+  if(!e) return false;
+  e.hilo = e.hilo || {mensajes: [], notas: [], esperando: 0};
+  regs.forEach(function(r){
+    if(r.tipo === "nota"){
+      e.hilo.notas = (e.hilo.notas || []).concat([{id: r.id, p: r.p, cita: r.cita, texto: r.texto,
+                                                   pron: !!r.pron, estado: "pendiente", hora: ""}]);
+    }else{
+      e.hilo.mensajes = (e.hilo.mensajes || []).concat([{id: r.id, quien: "facundo", hora: "recién",
+                                                         texto: r.texto || "", audios: r.audios || []}]);
+      e.hilo.esperando = (e.hilo.esperando || 0) + 1;
+    }
+  });
+  podVistaPintar();
+  return true;
 }
 // el mismo boton de texto que los audios del chat (`reproductor`), pero con la url de pages directa
 function podPlay(v){
@@ -7608,7 +7937,7 @@ function pintarNodos(n){
   if(!nodosEl) nodosEl = $("nodos");
   if(!nodosEl) return;
   var ns = (n && n.nodos) || [];
-  if(!ns.length){ nodosEl.innerHTML = '<span class="g" style="font-size:9px">nodos…</span>'; return; }
+  if(!ns.length){ nodosEl.innerHTML = '<span class="g" style="font-size:11px">nodos…</span>'; return; }
   // el que lleva mas tiempo corriendo a la izquierda; sin `uptime_s` al final en su orden (nodos.orden_uptime)
   var orden = ns.map(function(x, i){ return i; }).sort(function(a, b){
     var ua = ns[a].uptime_s, ub = ns[b].uptime_s;
@@ -9527,9 +9856,28 @@ window.__agente = {
     cajas: [].map.call(document.querySelectorAll("#podvista [data-ep]"), function(b){ return b.getAttribute("data-ep"); }),
     titulo: $("podtitulo").textContent, cuenta: $("podcuenta").textContent,
     back: !$("podback").classList.contains("oculta"),
-    players: [].map.call(document.querySelectorAll("#podvista .play"), function(b){ return b.getAttribute("data-voz"); }),
+    players: [].map.call(document.querySelectorAll("#podvista .podvoz .play"), function(b){ return b.getAttribute("data-voz"); }),
+    // 1939 {vistapodcast}: las tarjetas del `home`, el guion leible, las notas ancladas, el hilo y la fila de audios
+    cuadradas: [].map.call(document.querySelectorAll("#podvista .podcard"), function(c){
+      var r = c.getBoundingClientRect();
+      return {ep: c.getAttribute("data-ep") || c.getAttribute("data-prog"), an: Math.round(r.width), al: Math.round(r.height)}; }),
+    prog: [].map.call(document.querySelectorAll("#podvista [data-prog]"), function(c){ return c.getAttribute("data-prog"); }),
+    parrafos: [].map.call(document.querySelectorAll("#podvista .podp"), function(x){ return x.getAttribute("data-p"); }),
+    caps: document.querySelectorAll("#podvista .podcap").length,
+    notas: [].map.call(document.querySelectorAll("#podvista .podnota"), function(x){ return x.textContent; }),
+    hilo: [].map.call(document.querySelectorAll("#podvista .podmsg"), function(x){ return x.getAttribute("data-quien"); }),
+    pend: [].map.call(document.querySelectorAll("#podvista .podaud"), function(x){ return x.querySelector(".dur").textContent; }),
+    enviar: !!document.getElementById("podenviar"), grabar: !!document.getElementById("podgrab"),
+    estado: (document.getElementById("podestado") || {}).textContent || "",
     nativo: document.querySelectorAll("#podvista audio").length}; },
-  podAbrirEp: podAbrirEp, podHomePoner: function(){ pod.ep = null; return podVistaPintar(); },
+  podAbrirEp: podAbrirEp, podHomePoner: function(){ pod.ep = null; pod.audios = []; return podVistaPintar(); },
+  // 1939: las pruebas dejan audios sin micro (un blob de mentira), los borran y mandan
+  podAudio: function(seg){ return podSumarAudio(new Blob(["x"], {type: "audio/webm"}), "audio/webm", (seg || 1) * 1000, null); },
+  podBorrar: podBorrar, podEnviar: podEnviar, podNota: function(pid){
+    var e = podEps().filter(function(x){ return podId(x) === pod.ep; })[0];
+    var g = (e && podParrafos(e)) || [];
+    var par = g.filter(function(x){ return x.id === pid; })[0];
+    return par ? podNotaAbrir(e, par) : false; },
   tjBotones: function(col){ return tjBotones({coleccion: col}); },
   // 1883: el glifo de `bajar` / `subir` ya no es texto sino un svg (en el iphone la fuente no lo dibujaba), asi que
   // `glifo` dice la FORMA del boton (`↓` / `↑` para el svg, el caracter tal cual para los ascii) y `frase` la linea
