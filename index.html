@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.359">
-<link rel="manifest" href="manifest.json?v=4.359">
+<meta name="agente-web-version" content="4.360">
+<link rel="manifest" href="manifest.json?v=4.360">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.359">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.360">
 </head>
 <body>
 
@@ -2087,6 +2087,8 @@ function modeloCorto(s){
 function nodoMsg(m){
   var div = document.createElement("div");
   div.className = "msg " + m.clase + (m.enviando ? " enviando" : "");
+  // 1963 {player}: la pestaña `audio` es un modo de charla, ahi el audio va abajo del mensaje y entero
+  var modoAud = typeof esModo === "function" && esModo(activo), auds = modoAud ? audiosDeMsg(m) : [];
   if(m.id) div.dataset.id = m.id;
   var cab = document.createElement("div");
   cab.innerHTML = '<span class="quien"></span><span class="ts"></span>';
@@ -2111,7 +2113,7 @@ function nodoMsg(m){
   }
   // el [▶] de daniela: solo en las respuestas que el daemon ya renderizo (campo `audio` de la fila).
   // el texto sale primero y el audio aparece en el poll siguiente, asi que el boton llega despues.
-  if(m.audio) cab.appendChild(reproductor(m.audio, "escuchar la respuesta"));
+  if(m.audio && !modoAud) cab.appendChild(reproductor(m.audio, "escuchar la respuesta"));
   // 1776: el hilo que facundo ya vio mientras contestaba (entendi, textos intermedios), del jsonl (`tramos`) o
   // adoptado del bloque en vuelo; arriba del cuerpo, mismo orden, nunca editado. 1850: el comando crudo y su salida
   // (`salida` de un daemon viejo) no se pintan nunca. 1868 (facundo, 2026-09-17: "cuando ya me respondiste, esta
@@ -2132,12 +2134,15 @@ function nodoMsg(m){
   var textoSinAcc = acc && acc.cuerpo !== null ? acc.cuerpo : m.texto;
   var ops = m.clase === "agente" ? cajasDe({texto: textoSinAcc, opciones: m.opciones}) : null;
   var dr = draftsDe(ops && ops.cuerpo !== null ? ops.cuerpo : textoSinAcc);
-  b.innerHTML = resaltar(m.clase === "agente" && dr.bloques.length ? dr.cuerpo : (ops && ops.cuerpo !== null ? ops.cuerpo : (m.clase === "yo" ? sinDictado(m.texto) : textoSinAcc)));
+  var cuerpoTxt = m.clase === "agente" && dr.bloques.length ? dr.cuerpo : (ops && ops.cuerpo !== null ? ops.cuerpo : (m.clase === "yo" ? sinDictado(m.texto) : textoSinAcc));
+  b.innerHTML = resaltar(modoAud && auds.length ? sinMarcaAudio(cuerpoTxt) : cuerpoTxt);
   div.appendChild(cab); if(hilo) div.appendChild(hilo); div.appendChild(b);
   if(acc && acc.lista.length) div.appendChild(nodoAcciones(m, acc.lista));
   if(ops && ops.lista.length) div.appendChild(nodoCajas(m, ops.lista));
   if(m.clase === "agente" && dr.bloques.length) div.appendChild(nodoDrafts(dr.bloques));
   div.__msg = m;          // el menu contextual (delegado) lee el mensaje del nodo
+  // el reproductor completo, uno por audio, al final del mensaje (solo en la pestaña `audio`)
+  auds.forEach(function(sa){ div.appendChild(playerAudio(sa, "escuchar")); });
   if(m.clase === "agente") ponerCopiar(b);   // 1214: `copiar` de un toque en links, claves y code
   cargarImagenes(b);
   cargarAudios(b);
@@ -2728,8 +2733,15 @@ function pintarMsg(m, arriba){
   if(!arriba && vuelo) pintarVuelo();                   // el bloque en vuelo queda siempre al final
 }
 var renderando = false;   // el render entero arma cada caja ya con todos los mensajes: no hace falta refrescar
+// 1963 {player}: la alineacion estilo whatsapp (facundo a la derecha con 5% de margen a la izquierda, flaudio a
+// la izquierda con el mismo margen del otro lado) vale SOLO en la pestaña `audio`, y es del mensaje entero, no del
+// reproductor: la marca la pone el css con esta clase, nunca un estilo por mensaje.
+function marcarModoAudio(){
+  if(lista) lista.classList.toggle("modoaudio", typeof esModo === "function" && esModo(activo));
+}
 function render(){
   var ancla = anclaMedir();          // 1805: llego mas charla y se repinta todo: la linea de arriba no se mueve
+  marcarModoAudio();
   if(lista) lista.innerHTML = "";
   renderando = true;
   try{ msgs.forEach(function(m){ pintarMsg(m, false); }); } finally { renderando = false; }
@@ -6918,6 +6930,140 @@ function reproductor(src, titulo){
   });
   return b;
 }
+// ---------- 1963 {player}: el reproductor completo de la pestaña `audio` ----------
+// facundo (orden 1963): "reemplazar el `[▶]` de texto por un reproductor completo al final de CADA mensaje que
+// tenga audio, tanto los de flaudio como los audios que manda facundo", con play/pausa, `-10s`, `+10s`, barra de
+// progreso tocable y arrastrable, y el tiempo `m:ss / m:ss`. molde de `docs/componentes-web.md` (`moldeBoton`),
+// nunca `<audio controls>` nativo, que es gris y no se puede estilar. el tiempo lo arma el cliente y no el server
+// (`mmss`): avanza con la reproduccion, como el `delta` fluido de la cola (1849), no es una hora ni una columna.
+// solo vive en la pestaña `audio`: en las demas sigue el `[▶]` de texto de la 1650.
+var PLAYER_SALTO = 10;            // segundos de `-10s` / `+10s`
+var PLAYER_ANCHO = 500;           // px: el `max-width` en desktop (en mobile es el 100% de la caja)
+function playerAudio(src, titulo){
+  var c = document.createElement("div");
+  c.className = "player";
+  c.dataset.src = src;
+  var bplay = moldeBoton({tipo: "term", txt: "▶", clase: "plbtn plplay"});
+  var batras = moldeBoton({tipo: "term", txt: "-10s", clase: "plbtn platras"});
+  var bade = moldeBoton({tipo: "term", txt: "+10s", clase: "plbtn plade"});
+  bplay.setAttribute("aria-label", "reproducir");
+  batras.setAttribute("aria-label", "atrás 10 segundos");
+  bade.setAttribute("aria-label", "adelante 10 segundos");
+  bplay.title = titulo || "escuchar";
+  var barra = document.createElement("div");
+  barra.className = "plbarra";
+  barra.setAttribute("role", "slider");
+  barra.setAttribute("aria-label", "por dónde va el audio");
+  var rell = document.createElement("div"); rell.className = "plrell";
+  var punto = document.createElement("div"); punto.className = "plpunto";
+  barra.appendChild(rell); barra.appendChild(punto);
+  var t = document.createElement("span");
+  t.className = "pltiempo"; t.textContent = "0:00 / 0:00";
+  [bplay, batras, bade, barra, t].forEach(function(x){ c.appendChild(x); });
+
+  var au = null, dur = 0, arrastre = false;
+  function poner(p, seg){
+    p = Math.max(0, Math.min(1, p || 0));
+    rell.style.width = (p * 100).toFixed(2) + "%";
+    punto.style.left = (p * 100).toFixed(2) + "%";
+    t.textContent = mmss(seg) + " / " + mmss(dur);
+    barra.setAttribute("aria-valuetext", t.textContent);
+  }
+  function pintar(){
+    var seg = au ? au.currentTime : 0;
+    poner(dur ? seg / dur : 0, seg);
+  }
+  function parar(){
+    if(au) au.pause();
+    bplay.textContent = "▶"; bplay.setAttribute("aria-label", "reproducir");
+    c.classList.remove("sonando");
+    if(sonando === c) sonando = null;
+  }
+  c.__parar = parar;
+  // el archivo se baja recien cuando facundo toca algo: un hilo de 30 audios no se descarga entero al abrir
+  function cargar(){
+    if(au) return Promise.resolve(au);
+    return bajarAudio(src).then(function(url){
+      if(au) return au;
+      au = new Audio(url);
+      au.preload = "metadata";
+      au.addEventListener("loadedmetadata", function(){
+        dur = isFinite(au.duration) ? au.duration : 0;
+        pintar();
+      });
+      au.addEventListener("durationchange", function(){
+        if(isFinite(au.duration)){ dur = au.duration; pintar(); }
+      });
+      au.addEventListener("timeupdate", function(){ if(!arrastre) pintar(); });
+      au.addEventListener("ended", function(){ parar(); au.currentTime = 0; pintar(); });
+      au.addEventListener("error", function(){ t.textContent = "no se pudo reproducir"; });
+      return au;
+    });
+  }
+  bplay.addEventListener("click", function(e){
+    e.stopPropagation();
+    if(sonando && sonando !== c && sonando.__parar) sonando.__parar();     // uno solo sonando a la vez
+    if(au && !au.paused){ parar(); return; }
+    bplay.disabled = true;
+    cargar().then(function(a){
+      sonando = c; c.classList.add("sonando");
+      bplay.textContent = "||"; bplay.setAttribute("aria-label", "pausar");
+      return a.play();
+    }).catch(function(err){
+      t.textContent = "no pude bajar el audio";
+      c.title = "no pude bajar el audio (" + (err && err.message) + ")";
+    }).then(function(){ bplay.disabled = false; });
+  });
+  function saltar(d){
+    return cargar().then(function(a){
+      var fin = dur || (isFinite(a.duration) ? a.duration : 0);
+      var seg = a.currentTime + d;
+      a.currentTime = Math.max(0, fin ? Math.min(seg, fin) : Math.max(0, seg));
+      pintar();
+    }).catch(function(){});
+  }
+  batras.addEventListener("click", function(e){ e.stopPropagation(); saltar(-PLAYER_SALTO); });
+  bade.addEventListener("click", function(e){ e.stopPropagation(); saltar(PLAYER_SALTO); });
+  // tocar o arrastrar la barra: se pinta siempre, y si el audio ya esta cargado ademas se mueve de verdad
+  function fraccion(ev){
+    var r = barra.getBoundingClientRect();
+    if(!r.width) return 0;
+    return Math.max(0, Math.min(1, ((ev.clientX === undefined ? 0 : ev.clientX) - r.left) / r.width));
+  }
+  function mover(ev){
+    var p = fraccion(ev);
+    if(au && dur) au.currentTime = p * dur;
+    poner(p, dur ? p * dur : 0);
+  }
+  barra.addEventListener("pointerdown", function(ev){
+    ev.preventDefault(); ev.stopPropagation();
+    arrastre = true;
+    try{ barra.setPointerCapture(ev.pointerId); }catch(x){}
+    mover(ev);
+    cargar().then(function(){ if(arrastre) mover(ev); }).catch(function(){});
+  });
+  barra.addEventListener("pointermove", function(ev){ if(arrastre) mover(ev); });
+  function soltar(ev){
+    if(!arrastre) return;
+    arrastre = false;
+    try{ barra.releasePointerCapture(ev.pointerId); }catch(x){}
+    mover(ev);
+  }
+  barra.addEventListener("pointerup", soltar);
+  barra.addEventListener("pointercancel", soltar);
+  // la prueba (`prueba_web_audio`, bloque 1963) mira el estado sin tocar el DOM a mano
+  c.__player = {
+    src: src,
+    estado: function(){
+      return {src: src, sonando: c.classList.contains("sonando"), cargado: !!au,
+              seg: au ? au.currentTime : 0, dur: dur, tiempo: t.textContent,
+              relleno: rell.style.width, botones: [batras, bplay, bade].length};
+    },
+    tocar: function(p){ mover({clientX: barra.getBoundingClientRect().left + p * barra.getBoundingClientRect().width}); },
+    saltar: saltar, parar: parar, cargar: cargar
+  };
+  return c;
+}
 // los audios que mando facundo viven en el cuerpo del mensaje como `[audio](audio/<hash>.webm)`:
 // `resaltar` los deja como un hueco y aca se les enchufa el reproductor.
 var RE_AUD = /!?\[([^\]\n]*)\]\(\s*(audio\/[\w][\w.@%+-]*)\s*\)/g;
@@ -6944,6 +7090,23 @@ function sinDictado(t){
   var s = t.replace(RE_DICTADO, function(m0, antes){ return antes.trim() ? antes.replace(/\s+$/, "") + "\n" : ""; })
            .replace(/\n+$/, "");
   return s.indexOf("](audio/") >= 0 ? s : (s ? s + "\n" : "") + "[audio](" + AUD_SIN + ")";
+}
+// 1963 {player}: en la pestaña `audio` el audio no se pinta adentro del texto ni al lado de la cabecera, va como
+// un reproductor completo al final del mensaje. `audiosDeMsg` junta las dos puntas (el `audio` que renderizo el
+// daemon y los `[audio](audio/x)` que mando facundo) y `sinMarcaAudio` saca del cuerpo los marcadores que ya tienen
+// su reproductor abajo; el `audio/sin-archivo` de una fila vieja se deja como estaba (etiqueta `audio`, sin play).
+function audiosDeMsg(m){
+  var l = [];
+  if(m && m.audio) l.push(m.audio);
+  var t = String((m && m.texto) || ""), x;
+  RE_AUD.lastIndex = 0;
+  while((x = RE_AUD.exec(t))) if(x[2] !== AUD_SIN && l.indexOf(x[2]) < 0) l.push(x[2]);
+  return l;
+}
+function sinMarcaAudio(t){
+  RE_AUD.lastIndex = 0;
+  return String(t || "").replace(RE_AUD, function(m0, alt, src){ return src === AUD_SIN ? m0 : ""; })
+                        .replace(/[ \t]+$/gm, "").replace(/\n{3,}/g, "\n\n").trim();
 }
 function cargarAudios(nodo){
   var spans = nodo.querySelectorAll ? nodo.querySelectorAll(".aud[data-src]") : [];
@@ -10339,6 +10502,22 @@ window.__agente = {
   // audios: `prueba_web_audio` graba sin microfono (manda el blob a mano) y chequea los [▶]
   mandarAudio: mandarAudio, nombreAudio: nombreAudio, extAudio: extAudio, mimeAudio: mimeAudio,
   conAudios: conAudios, reproductor: reproductor, audioTope: AUDIO_TOPE, audioMinMs: AUDIO_MIN_MS,
+  // 1963 {player}: el reproductor completo de la pestaña `audio`
+  playerAudio: playerAudio, audiosDeMsg: audiosDeMsg, sinMarcaAudio: sinMarcaAudio,
+  playerSalto: PLAYER_SALTO, playerAncho: PLAYER_ANCHO,
+  players: function(){        // los reproductores pintados ahora, con de que mensaje sale cada uno
+    return [].map.call(document.querySelectorAll(".player"), function(c){
+      var m = c.closest(".msg"), r = c.getBoundingClientRect();
+      return {src: c.dataset.src, clase: m ? m.className.replace("msg ", "").trim() : "",
+              ultimo: !!m && m.lastElementChild === c,
+              ancho: Math.round(r.width), izq: Math.round(r.left), der: Math.round(r.right),
+              play: !!c.querySelector(".plplay"), atras: !!c.querySelector(".platras"),
+              adelante: !!c.querySelector(".plade"), barra: !!c.querySelector(".plbarra"),
+              tiempo: (c.querySelector(".pltiempo") || {}).textContent || "",
+              estado: c.__player ? c.__player.estado() : null};
+    });
+  },
+  modoAudioPintado: function(){ return !!(lista && lista.classList.contains("modoaudio")); },
   empezarGrabacion: empezarGrabacion, terminarGrabacion: terminarGrabacion,
   // dictado en el celu (1209): la prueba enchufa un reconocedor falso y chequea los dos caminos
   hayDictado: hayDictado, prepararDictado: prepararDictado, empezarDictado: empezarDictado,
