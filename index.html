@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.367">
-<link rel="manifest" href="manifest.json?v=4.367">
+<meta name="agente-web-version" content="4.368">
+<link rel="manifest" href="manifest.json?v=4.368">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.367">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.368">
 </head>
 <body>
 
@@ -8750,6 +8750,26 @@ function notisNoLeidas(){
   return ns.filter(function(n){ return n && n.id && !avLeidos[n.id]; })
            .sort(function(a, b){ return (+b.ts || 0) - (+a.ts || 0); });
 }
+// 2022 {campana}: la clase la escribe o la infiere el server (`recetas/nivel_aviso.clase`), ortogonal al color.
+// facundo: "necesito recibir menos del 10% de las notificaciones": a la campana y a la tira entran SOLO los
+// `accion` (los que piden que decida, tipee, confirme o mire algo); lo `info` vive en la solapa `todo`.
+function claseNoti(n){ return n && n.clase === "accion" ? "accion" : "info"; }
+function familiaNoti(n){ return n && typeof n.familia === "string" ? n.familia : ""; }
+// los `accion` de una misma familia en UNA fila (seis `regla rota` le dicen lo mismo): la mas nueva manda y
+// lleva el `· N`; cerrarla cierra las N. `ns` viene ordenado de lo mas nuevo a lo mas viejo.
+function notisAccion(ns){
+  ns = ns || notisNoLeidas();
+  var por = {}, out = [];
+  ns.forEach(function(n){
+    if(claseNoti(n) !== "accion") return;
+    var f = familiaNoti(n), g = f ? por[f] : null;
+    if(g){ g.n++; g.ids.push(n.id); return; }
+    g = {noti: n, n: 1, ids: [n.id], familia: f};
+    if(f) por[f] = g;
+    out.push(g);
+  });
+  return out;
+}
 // `hh:mm` si es de hoy, `dd/mm hh:mm` si no
 function horaNoti(n){
   var f = String(n.fecha || "");
@@ -8770,10 +8790,11 @@ function pintarNotis(){
   if(!notisEl) return;
   var ns = notisNoLeidas();
   notisPor = {};
-  ns.forEach(function(n){ notisPor[n.id] = n; });
+  ns.forEach(function(n){ notisPor[n.id] = n; });   // el mapa lleva todas: la solapa `todo` abre cualquiera
   pintarCampana(ns);            // el badge y, si esta abierto, el desplegable
-  if(!ns.length){ notisEl.innerHTML = ""; notisEl.classList.add("oculta"); return; }
-  var n = ns[0];
+  var acc = notisAccion(ns);    // 2022: la tira es lo que pide una decision, nada de sistema
+  if(!acc.length){ notisEl.innerHTML = ""; notisEl.classList.add("oculta"); return; }
+  var n = acc[0].noti;
   notisEl.innerHTML = '<span class="noti" role="button" tabindex="0" data-noti="' + esc(n.id) + '" data-nivel="' + nivelNoti(n) +
       '" title="' + esc(cortoNoti(n)) + '"><span class="luz ' + nivelNoti(n) + '"></span><span class="nh">' + esc(horaNoti(n)) +
       '</span><span class="nt">' + esc(tituloNoti(n)) + "</span></span>" +
@@ -8839,33 +8860,53 @@ function peorNivel(ns){
   return NIVELES_NOTI[j];
 }
 var campanaAbierta = false;
+var campanaSolapa = "accion";   // 2022 {campana}: `accion` (lo que te pide algo) o `todo` (tambien lo de sistema)
 function pintarCampana(ns){
   ns = ns || notisNoLeidas();
+  var acc = notisAccion(ns);    // 2022: el contador cuenta SOLO las filas que piden una decision
   var b = $("badge"), c = $("campana");
   if(b){
-    b.textContent = ns.length ? (ns.length > 99 ? "99+" : String(ns.length)) : "";
-    b.className = "badge " + (ns.length ? peorNivel(ns) : "oculta");
+    b.textContent = acc.length ? (acc.length > 99 ? "99+" : String(acc.length)) : "";
+    b.className = "badge " + (acc.length ? peorNivel(acc.map(function(g){ return g.noti; })) : "oculta");
   }
-  if(c) c.title = ns.length ? "notificaciones: " + ns.length + " sin leer" : "notificaciones";
+  if(c) c.title = acc.length ? "notificaciones: " + acc.length + " para vos" : "notificaciones";
   if(campanaAbierta) pintarListaNotis(ns);
+}
+// 2022 {campana}: dos solapas en el MISMO panel (sin modal nuevo), `para vos` abierta por default y `todo` a un
+// toque, sin badge. una fila puede ser un grupo de familia (`· N`): cerrarla cierra las N de una.
+function filaNoti(g){
+  var n = g.noti, ids = g.ids.join(","), veces = g.n > 1 ? ' <span class="nn">· ' + g.n + "</span>" : "";
+  return '<div class="nfila" data-nid="' + esc(n.id) + '">' +
+    '<button class="nabrir" type="button" data-nabrir="' + esc(n.id) + '" title="' + esc(cortoNoti(n)) + '">' +
+      '<span class="luz ' + nivelNoti(n) + '"></span><span class="nh">' + esc(horaNoti(n)) + "</span>" +
+      '<span class="nt">' + esc(tituloNoti(n)) + "</span>" + veces + "</button>" +
+    '<button class="nacc" type="button" data-nresp="' + esc(n.id) + '">responder</button>' +
+    '<button class="nacc nx" type="button" data-ncerrar="' + esc(ids) + '" title="' +
+      (g.n > 1 ? "cerrar las " + g.n : "cerrar sin responder") + '" aria-label="cerrar sin responder">×</button></div>';
 }
 function pintarListaNotis(ns){
   var el = $("nlista");
-  el.innerHTML = '<div class="ntit">notificaciones · ' + (ns.length ? ns.length + " sin leer" : "al día") + "</div>" +
-    (ns.length ? ns.map(function(n){
-      return '<div class="nfila" data-nid="' + esc(n.id) + '">' +
-        '<button class="nabrir" type="button" data-nabrir="' + esc(n.id) + '" title="' + esc(cortoNoti(n)) + '">' +
-          '<span class="luz ' + nivelNoti(n) + '"></span><span class="nh">' + esc(horaNoti(n)) + "</span>" +
-          '<span class="nt">' + esc(tituloNoti(n)) + "</span></button>" +
-        '<button class="nacc" type="button" data-nresp="' + esc(n.id) + '">responder</button>' +
-        '<button class="nacc nx" type="button" data-ncerrar="' + esc(n.id) + '" title="cerrar sin responder" ' +
-          'aria-label="cerrar sin responder">×</button></div>';
-    }).join("") + '<button class="ntodas" type="button" data-ntodas="1">cerrar todas</button>'
-    : '<div class="nvacio">nada sin leer</div>');
+  ns = ns || notisNoLeidas();
+  var acc = notisAccion(ns);
+  var todo = campanaSolapa === "todo";
+  var filas = todo ? ns.map(function(n){ return {noti: n, n: 1, ids: [n.id], familia: ""}; }) : acc;
+  var tit = todo ? (ns.length ? ns.length + " sin leer" : "al día")
+                 : (acc.length ? acc.length + " para vos" : "nada para vos");
+  el.innerHTML = '<div class="nsol">' +
+      '<button class="nsolb' + (todo ? "" : " on") + '" type="button" data-nsol="accion">para vos' +
+        (acc.length ? " (" + acc.length + ")" : "") + "</button>" +
+      '<button class="nsolb' + (todo ? " on" : "") + '" type="button" data-nsol="todo">todo' +
+        (ns.length ? " (" + ns.length + ")" : "") + "</button>" +
+      '<span class="nsoltit">' + esc(tit) + "</span></div>" +
+    (filas.length ? filas.map(filaNoti).join("") +
+        '<button class="ntodas" type="button" data-ntodas="1">cerrar ' + (todo ? "todas" : "estas") + "</button>"
+     : '<div class="nvacio">' + (todo ? "nada sin leer" : "nada que necesite algo tuyo · tocá `todo` para ver el resto") +
+       "</div>");
 }
 function abrirCampana(){
   cerrarMenu();
   campanaAbierta = true;
+  campanaSolapa = "accion";   // 2022: cada vez que se abre arranca en `para vos`
   var el = $("nlista");
   pintarListaNotis(notisNoLeidas());
   el.style.top = Math.round($("cabecera").getBoundingClientRect().bottom + 4) + "px";
@@ -8884,10 +8925,17 @@ function cerrarCampana(){
 $("campana").addEventListener("click", function(){ if(campanaAbierta) cerrarCampana(); else abrirCampana(); });
 $("nfondo").addEventListener("click", cerrarCampana);
 $("nlista").addEventListener("click", function(e){
-  var t = e.target.closest("[data-ncerrar]");
-  if(t){ marcarLeidos([t.dataset.ncerrar]); return; }            // repinta la lista y baja el badge
+  var t = e.target.closest("[data-nsol]");   // 2022: cambiar de solapa no cierra ni marca nada
+  if(t){ campanaSolapa = t.dataset.nsol === "todo" ? "todo" : "accion"; pintarListaNotis(); return; }
+  t = e.target.closest("[data-ncerrar]");
+  if(t){ marcarLeidos(String(t.dataset.ncerrar).split(",")); return; }   // repinta la lista y baja el badge
   t = e.target.closest("[data-ntodas]");
-  if(t){ marcarLeidos(notisNoLeidas().map(function(n){ return n.id; })); cerrarCampana(); return; }  // y cierra el desplegable (1320)
+  if(t){                                     // 2022: en `para vos` cierra las que piden algo, en `todo` cierra todo
+    var ns = notisNoLeidas();
+    var ids = campanaSolapa === "todo" ? ns.map(function(n){ return n.id; })
+            : notisAccion(ns).reduce(function(a, g){ return a.concat(g.ids); }, []);
+    marcarLeidos(ids); cerrarCampana(); return;   // y cierra el desplegable (1320)
+  }
   t = e.target.closest("[data-nresp]");
   if(t){
     var id = t.dataset.nresp;
@@ -11105,6 +11153,7 @@ window.__agente = {
   lan: function(){ return {base: lan.base, via: lan.via, texto: viaTexto(), cartel: !!$("via")}; },
   // campana, persona y la `x` de los widgets (1166)
   abrirCampana: abrirCampana, cerrarCampana: cerrarCampana, abrirPersona: abrirPersona, peorNivel: peorNivel,
+  notisAccion: function(){ return notisAccion().map(function(g){ return {id: g.noti.id, n: g.n, familia: g.familia}; }); },
   campana: function(){
     var b = $("badge"), c = $("campana"), l = $("nlista"), rc = c.getBoundingClientRect();
     return {n: b.classList.contains("oculta") ? 0 : parseInt(b.textContent, 10) || 0, texto: b.textContent,
@@ -11113,9 +11162,15 @@ window.__agente = {
             svg: !!c.querySelector("svg"), borde: getComputedStyle(c).borderTopWidth, bg: getComputedStyle(c).backgroundColor,
             izqPersona: rc.right <= $("persona").getBoundingClientRect().left + 1,
             abierta: !l.classList.contains("oculta"), todas: !!l.querySelector("[data-ntodas]"),
+            // 2022 {campana}: la solapa puesta, las dos etiquetas y cuantas entran en cada clase
+            solapa: campanaSolapa, accion: notisAccion().length, sinLeer: notisNoLeidas().length,
+            solapas: [].map.call(l.querySelectorAll(".nsolb"), function(x){
+              return {cual: x.dataset.nsol, txt: x.textContent.trim(), on: x.classList.contains("on")}; }),
             filas: [].map.call(l.querySelectorAll(".nfila"), function(f){
               var r = f.getBoundingClientRect(), lz = f.querySelector(".luz");
               return {id: f.dataset.nid, nivel: lz ? lz.className.replace("luz", "").trim() : "",
+                      veces: (f.querySelector(".nn") || {}).textContent || "",
+                      cerrar: (f.querySelector("[data-ncerrar]") || {dataset: {}}).dataset.ncerrar || "",
                       fondo: lz ? getComputedStyle(lz).backgroundColor : "", hora: (f.querySelector(".nh") || {}).textContent,
                       texto: (f.querySelector(".nt") || {}).textContent, alto: Math.round(r.height),
                       acciones: [].map.call(f.querySelectorAll(".nacc"), function(a){ return a.title || a.textContent; })};

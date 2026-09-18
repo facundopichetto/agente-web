@@ -1182,6 +1182,17 @@
   #nlista .ntodas{background:none;border:0;border-top:1px solid var(--linea);margin-top:2px;color:var(--cian);font:inherit;
     font-size:15px;padding:6px;text-align:left;cursor:pointer}
   #nlista .nvacio{color:var(--gris);padding:8px 6px;font-size:16px}
+  /* 2022 {campana}: las dos solapas del panel (`para vos` y `todo`), con el molde de `#tabs .tab`: la puesta en
+     verde, la otra gris, y a la derecha el titulo que antes era `.ntit`. sin badge en `todo`. */
+  #nlista .nsol{display:flex;align-items:center;gap:2px;padding:1px 4px 4px 4px;
+    border-bottom:1px solid var(--linea);margin-bottom:2px}
+  #nlista .nsolb{background:#000;color:var(--gris);border:0;border-radius:4px;padding:4px 9px;font:inherit;
+    font-size:16px;cursor:pointer;white-space:nowrap;-webkit-tap-highlight-color:transparent}
+  #nlista .nsolb.on{color:var(--verde);background:var(--fondo-caja)}
+  #nlista .nsolb:hover{color:var(--blanco)}
+  #nlista .nsoltit{margin-left:auto;color:var(--gris);font-size:14px;text-transform:uppercase;letter-spacing:.06em;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #nlista .nn{color:var(--cian);flex:0 0 auto}   /* el `· N` de un grupo de familia */
   /* 1829 (facundo, 2026-09-17): el grupo de iconos (fueguito, campana, tipito, en ese orden) contra el borde
      derecho; lo empuja `#nodos` (flex 1), y sin nodos pintados la cabecera ya alinea al final. */
   /* 1930 {barra} (facundo, 2026-09-17): `chat` y `widgets` dejaron de ser botones con texto (`.bb`): son dos iconos
@@ -1352,6 +1363,7 @@
     #nlista .nabrir{font-size:18px}
     #nlista .nacc{height:40px;min-width:40px;font-size:16px}
     #nlista .ntodas{min-height:40px;font-size:16px}
+    #nlista .nsolb{min-height:40px}   /* 2022: dedo, igual que las filas */
     #ctx button{min-height:40px}
     /* dedo: los botones del header de cada widget con area tactil de 40px (facundo, 2026-09-12) */
     .caja > .tit > .wacc .wbtn{min-width:40px;min-height:40px;font-size:var(--texto-max);padding:0}
