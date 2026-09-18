@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.368">
-<link rel="manifest" href="manifest.json?v=4.368">
+<meta name="agente-web-version" content="4.369">
+<link rel="manifest" href="manifest.json?v=4.369">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.368">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.369">
 </head>
 <body>
 
@@ -8753,7 +8753,9 @@ function notisNoLeidas(){
 // 2022 {campana}: la clase la escribe o la infiere el server (`recetas/nivel_aviso.clase`), ortogonal al color.
 // facundo: "necesito recibir menos del 10% de las notificaciones": a la campana y a la tira entran SOLO los
 // `accion` (los que piden que decida, tipee, confirme o mire algo); lo `info` vive en la solapa `todo`.
-function claseNoti(n){ return n && n.clase === "accion" ? "accion" : "info"; }
+// sin el campo (un `widgets.json` viejo del cache o del buzon) vale `accion`: se ve como antes del filtro, nunca
+// una campana vacia por un json de ayer
+function claseNoti(n){ return n && n.clase === "info" ? "info" : "accion"; }
 function familiaNoti(n){ return n && typeof n.familia === "string" ? n.familia : ""; }
 // los `accion` de una misma familia en UNA fila (seis `regla rota` le dicen lo mismo): la mas nueva manda y
 // lleva el `· N`; cerrarla cierra las N. `ns` viene ordenado de lo mas nuevo a lo mas viejo.
