@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.371">
-<link rel="manifest" href="manifest.json?v=4.371">
+<meta name="agente-web-version" content="4.372">
+<link rel="manifest" href="manifest.json?v=4.372">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.371">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.372">
 </head>
 <body>
 
@@ -7067,6 +7067,57 @@ function reproductor(src, titulo){
 // nunca `<audio controls>` nativo, que es gris y no se puede estilar. el tiempo lo arma el cliente y no el server
 // (`mmss`): avanza con la reproduccion, como el `delta` fluido de la cola (1849), no es una hora ni una columna.
 // 2044 {audiotodas}: vive en TODAS las pestañas, al pie de cada mensaje con audio; el `[▶]` de texto se fue.
+// ---------- 2049 {player}: el registro global de audios por `src`, para que el player sobreviva al repintado ----------
+// facundo (orden 2049): "cuando cambio de pestaña, el player no queda reproduciendo donde estaba, sigue sonando el
+// audio pero visualmente se ve como si estuviera parado en 0". antes cada `playerAudio` se guardaba su `<audio>` en
+// una variable local: al cambiar de pestaña el chat se repinta, el nodo se tira, el `<audio>` viejo sigue sonando
+// huerfano (nadie llama `parar`, porque `parar` sale del nodo muerto) y el player nuevo nace en `0:00`. ahora el
+// `<audio>` vive aca, UNO por `src`, y el player que nace se engancha al que ya existe (`duenio`): pinta la
+// posicion de verdad, el boton en `||` si suena y el `timeupdate` cae en el player vivo. pausado en `1:20` vuelve
+// en `1:20`, nunca en `0:00`.
+var audReg = {};              // src -> {src, au, dur, duenio}
+function audRegistro(src){
+  return audReg[src] || (audReg[src] = {src: src, au: null, dur: 0, duenio: null});
+}
+function audRegAvisar(reg, que){
+  var d = reg.duenio;
+  if(d && d[que]){ try{ d[que](); }catch(e){} }
+}
+// el `<audio>` se crea UNA sola vez por `src`: sus listeners no apuntan a ningun nodo, le avisan al `duenio` de
+// ese momento, asi el repintado no deja audios ni handlers colgados.
+function audRegAudio(src, url){
+  var reg = audRegistro(src);
+  if(reg.au) return reg.au;
+  var au = new Audio(url);
+  au.preload = "metadata";
+  reg.au = au;
+  function medir(){ if(isFinite(au.duration)){ reg.dur = au.duration; audRegAvisar(reg, "pintar"); } }
+  au.addEventListener("loadedmetadata", medir);
+  au.addEventListener("durationchange", medir);
+  au.addEventListener("timeupdate", function(){ audRegAvisar(reg, "pintar"); });
+  au.addEventListener("ended", function(){ au.currentTime = 0; audRegAvisar(reg, "fin"); audRegPodar(); });
+  au.addEventListener("error", function(){ audRegAvisar(reg, "roto"); });
+  return au;
+}
+// uno solo suena a la vez, pero el nodo que quedo en `sonando` puede ser el cadaver del MISMO `src`: pararlo
+// pausaria el audio que estoy por adoptar, asi que el del mismo `src` nunca se para.
+function audPararOtros(c, src){
+  if(sonando && sonando !== c && !(sonando.dataset && sonando.dataset.src === src) && sonando.__parar)
+    sonando.__parar();
+}
+// nada huerfano: del registro se tira el audio que no tiene player pintado y esta parado en 0 (recien terminado o
+// nunca tocado). el que suena, o el pausado a la mitad, se queda: es justo el estado que hay que devolver.
+function audRegPodar(){
+  Object.keys(audReg).forEach(function(src){
+    var reg = audReg[src];
+    if(reg.au && (!reg.au.paused || reg.au.currentTime > 0)) return;
+    if(document.querySelector('.player[data-src="' + src.replace(/"/g, '\\"') + '"]')) return;
+    if(reg.au){ try{ reg.au.pause(); }catch(e){} }
+    if(sonando && sonando.dataset && sonando.dataset.src === src) sonando = null;
+    reg.duenio = null;
+    delete audReg[src];
+  });
+}
 var PLAYER_SALTO = 10;            // segundos de `-10s` / `+10s`
 var PLAYER_ANCHO = 500;           // px: el `max-width` en desktop (en mobile es el 100% de la caja)
 function playerAudio(src, titulo){
@@ -7100,21 +7151,22 @@ function playerAudio(src, titulo){
   [batras, bplay, bade].forEach(function(x){ fila2.appendChild(x); });
   c.appendChild(fila1); c.appendChild(fila2);
 
-  var au = null, dur = 0, arrastre = false;
+  var reg = audRegistro(src);        // 2049: el `<audio>` y la posicion viven en el registro, no en el nodo
+  var arrastre = false;
   function poner(p, seg){
     p = Math.max(0, Math.min(1, p || 0));
     rell.style.width = (p * 100).toFixed(2) + "%";
     punto.style.left = (p * 100).toFixed(2) + "%";
     t.textContent = mmss(seg);
-    tot.textContent = mmss(dur);
+    tot.textContent = mmss(reg.dur);
     barra.setAttribute("aria-valuetext", t.textContent + " / " + tot.textContent);
   }
   function pintar(){
-    var seg = au ? au.currentTime : 0;
-    poner(dur ? seg / dur : 0, seg);
+    var seg = reg.au ? reg.au.currentTime : 0;
+    poner(reg.dur ? seg / reg.dur : 0, seg);
   }
   function parar(){
-    if(au) au.pause();
+    if(reg.au) reg.au.pause();
     bplay.textContent = "▶"; bplay.setAttribute("aria-label", "reproducir");
     c.classList.remove("sonando");
     if(sonando === c) sonando = null;
@@ -7123,36 +7175,21 @@ function playerAudio(src, titulo){
   // 1970 {grabar}: al empezar a grabar, lo que esta sonando se PAUSA y retoma solo al terminar (no se corta):
   // `parar` deja el `currentTime` donde estaba y `__seguir` lo sigue de ahi.
   c.__seguir = function(){
-    if(!au) return;
-    if(sonando && sonando !== c && sonando.__parar) sonando.__parar();
+    if(!reg.au) return;
+    audPararOtros(c, src);
     sonando = c; c.classList.add("sonando");
     bplay.textContent = "||"; bplay.setAttribute("aria-label", "pausar");
-    try{ au.play(); }catch(e){}
+    try{ reg.au.play(); }catch(e){}
   };
   // el archivo se baja recien cuando facundo toca algo: un hilo de 30 audios no se descarga entero al abrir
   function cargar(){
-    if(au) return Promise.resolve(au);
-    return bajarAudio(src).then(function(url){
-      if(au) return au;
-      au = new Audio(url);
-      au.preload = "metadata";
-      au.addEventListener("loadedmetadata", function(){
-        dur = isFinite(au.duration) ? au.duration : 0;
-        pintar();
-      });
-      au.addEventListener("durationchange", function(){
-        if(isFinite(au.duration)){ dur = au.duration; pintar(); }
-      });
-      au.addEventListener("timeupdate", function(){ if(!arrastre) pintar(); });
-      au.addEventListener("ended", function(){ parar(); au.currentTime = 0; pintar(); });
-      au.addEventListener("error", function(){ c.classList.add("roto"); c.title = "no se pudo reproducir"; });
-      return au;
-    });
+    if(reg.au) return Promise.resolve(reg.au);
+    return bajarAudio(src).then(function(url){ return audRegAudio(src, url); });
   }
   bplay.addEventListener("click", function(e){
     e.stopPropagation();
-    if(sonando && sonando !== c && sonando.__parar) sonando.__parar();     // uno solo sonando a la vez
-    if(au && !au.paused){ parar(); return; }
+    audPararOtros(c, src);                                                 // uno solo sonando a la vez
+    if(reg.au && !reg.au.paused){ parar(); return; }
     bplay.disabled = true;
     cargar().then(function(a){
       sonando = c; c.classList.add("sonando");
@@ -7165,7 +7202,7 @@ function playerAudio(src, titulo){
   });
   function saltar(d){
     return cargar().then(function(a){
-      var fin = dur || (isFinite(a.duration) ? a.duration : 0);
+      var fin = reg.dur || (isFinite(a.duration) ? a.duration : 0);
       var seg = a.currentTime + d;
       a.currentTime = Math.max(0, fin ? Math.min(seg, fin) : Math.max(0, seg));
       pintar();
@@ -7181,8 +7218,8 @@ function playerAudio(src, titulo){
   }
   function mover(ev){
     var p = fraccion(ev);
-    if(au && dur) au.currentTime = p * dur;
-    poner(p, dur ? p * dur : 0);
+    if(reg.au && reg.dur) reg.au.currentTime = p * reg.dur;
+    poner(p, reg.dur ? p * reg.dur : 0);
   }
   barra.addEventListener("pointerdown", function(ev){
     ev.preventDefault(); ev.stopPropagation();
@@ -7204,14 +7241,29 @@ function playerAudio(src, titulo){
   c.__player = {
     src: src,
     estado: function(){
-      return {src: src, sonando: c.classList.contains("sonando"), cargado: !!au,
-              seg: au ? au.currentTime : 0, dur: dur,
+      return {src: src, sonando: c.classList.contains("sonando"), cargado: !!reg.au,
+              seg: reg.au ? reg.au.currentTime : 0, dur: reg.dur,
               tiempo: t.textContent, total: tot.textContent,
               relleno: rell.style.width, botones: [batras, bplay, bade].length};
     },
     tocar: function(p){ mover({clientX: barra.getBoundingClientRect().left + p * barra.getBoundingClientRect().width}); },
     saltar: saltar, parar: parar, cargar: cargar
   };
+  // 2049: el player que nace se adueña del audio de su `src`, asi los eventos del `<audio>` caen aca y no en el
+  // nodo muerto que dejo el repintado, y arranca pintando el estado REAL (sonando o pausado a la mitad).
+  reg.duenio = {
+    pintar: function(){ if(!arrastre) pintar(); },
+    fin: function(){ parar(); pintar(); },
+    roto: function(){ c.classList.add("roto"); c.title = "no se pudo reproducir"; }
+  };
+  if(reg.au){
+    if(!reg.au.paused){                  // seguia sonando mientras el chat estaba repintado
+      audPararOtros(c, src);
+      sonando = c; c.classList.add("sonando");
+      bplay.textContent = "||"; bplay.setAttribute("aria-label", "pausar");
+    }
+    pintar();                            // pausado en `1:20` vuelve en `1:20`, nunca en `0:00`
+  }
   return c;
 }
 // ---------- 1970 {grabar}: la barra de la pestaña `audio` son tres botones grandes ----------
@@ -11001,7 +11053,16 @@ window.__agente = {
   mandarAudio: mandarAudio, nombreAudio: nombreAudio, extAudio: extAudio, mimeAudio: mimeAudio,
   conAudios: conAudios, reproductor: reproductor, audioTope: AUDIO_TOPE, audioMinMs: AUDIO_MIN_MS,
   // 1963 {player}: el reproductor completo de la pestaña `audio`
-  playerAudio: playerAudio, audiosDeMsg: audiosDeMsg, sinMarcaAudio: sinMarcaAudio,
+  playerAudio: playerAudio,
+  audRegistro: function(){                // 2049: que hay en el registro global de audios (para la prueba)
+    return Object.keys(audReg).map(function(k){
+      var r = audReg[k];
+      return {src: k, cargado: !!r.au, seg: r.au ? r.au.currentTime : 0, dur: r.dur,
+              suena: !!(r.au && !r.au.paused), duenio: !!r.duenio,
+              listo: r.au ? r.au.readyState : -1, roto: !!(r.au && r.au.error && r.au.error.code)};
+    });
+  },
+  audRegPodar: audRegPodar, audiosDeMsg: audiosDeMsg, sinMarcaAudio: sinMarcaAudio,
   playerSalto: PLAYER_SALTO, playerAncho: PLAYER_ANCHO,
   players: function(){        // los reproductores pintados ahora, con de que mensaje sale cada uno
     return [].map.call(document.querySelectorAll(".player"), function(c){
