@@ -732,21 +732,28 @@
   /* 1963 {player}: el reproductor completo de la pestaña `audio`. molde de `docs/componentes-web.md`
      (`moldeBoton` -> `.bterm`), nunca `<audio controls>` nativo. 100% del ancho de la caja en el celu y
      `max-width` de 500 px en la compu; en 390 px entra sin scroll horizontal (la barra se estira, y si no
-     entra la fila envuelve). las fuentes respetan el tope de la 1946 (`--texto-max`, 14px). */
+     entra la fila envuelve). las fuentes respetan el tope de la 1946 (`--texto-max`, 14px).
+     1968 (facundo, audio 2026-09-18): pasa a DOS renglones, arriba los tiempos con la barra en el medio y
+     abajo los tres botones en tres columnas parejas, rectangulares y del doble de alto que antes. */
   .player{
-    display:flex;flex-wrap:wrap;align-items:center;gap:6px;
+    display:flex;flex-direction:column;gap:6px;
     width:100%;max-width:500px;box-sizing:border-box;margin:6px 0 0 0;padding:6px 8px;
     border:1px solid var(--linea);border-radius:6px;background:#050a08;
     white-space:normal;text-align:left;
   }
-  .player .plbtn{font-size:12px;padding:2px 6px;line-height:1.4}
-  .player .plplay{min-width:32px}
-  .player .plbarra{flex:1 1 80px;min-width:60px;height:16px;position:relative;cursor:pointer;touch-action:none}
+  /* 1968: dos renglones. arriba `m:ss` | barra larga | `m:ss`; abajo tres columnas parejas al 100% */
+  .player .pltiempos{display:flex;align-items:center;gap:8px;width:100%}
+  .player .plbotones{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;width:100%}
+  .player .plbtn{font-size:12px;padding:2px 6px;line-height:1.4;
+    min-height:46px;width:100%;box-sizing:border-box}
+  .player .plbarra{flex:1 1 auto;min-width:40px;height:16px;position:relative;cursor:pointer;touch-action:none}
   .player .plbarra::before{content:"";position:absolute;left:0;right:0;top:7px;height:2px;background:var(--linea)}
   .player .plrell{position:absolute;left:0;top:7px;height:2px;width:0;background:var(--verde)}
   .player .plpunto{position:absolute;top:4px;left:0;width:8px;height:8px;margin-left:-4px;border-radius:50%;
     background:var(--verde)}
-  .player .pltiempo{color:var(--gris);font-size:12px;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .player .pltiempo{color:var(--gris);font-size:12px;white-space:nowrap;font-variant-numeric:tabular-nums;
+    flex:0 0 auto}
+  .player.roto .pltiempo{color:var(--rojo)}
   .player.sonando .plrell,.player.sonando .plpunto{background:var(--amarillo)}
   /* alineacion estilo whatsapp, SOLO en la pestaña `audio` (1963): el mensaje entero, no solo el reproductor */
   #lista.modoaudio .msg.yo{margin-left:5%;text-align:right}

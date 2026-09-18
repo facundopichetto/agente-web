@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.360">
-<link rel="manifest" href="manifest.json?v=4.360">
+<meta name="agente-web-version" content="4.361">
+<link rel="manifest" href="manifest.json?v=4.361">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.360">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.361">
 </head>
 <body>
 
@@ -6933,7 +6933,10 @@ function reproductor(src, titulo){
 // ---------- 1963 {player}: el reproductor completo de la pestaña `audio` ----------
 // facundo (orden 1963): "reemplazar el `[▶]` de texto por un reproductor completo al final de CADA mensaje que
 // tenga audio, tanto los de flaudio como los audios que manda facundo", con play/pausa, `-10s`, `+10s`, barra de
-// progreso tocable y arrastrable, y el tiempo `m:ss / m:ss`. molde de `docs/componentes-web.md` (`moldeBoton`),
+// progreso tocable y arrastrable, y el tiempo. molde de `docs/componentes-web.md` (`moldeBoton`),
+// 1968 (facundo, audio 2026-09-18): DOS renglones. arriba `m:ss` transcurrido | barra larga | `m:ss` total;
+// abajo los tres botones en tres columnas parejas al 100% del ancho, rectangulares y del doble de alto,
+// con `-10s` a la izquierda, play/pausa en el medio y `+10s` a la derecha.
 // nunca `<audio controls>` nativo, que es gris y no se puede estilar. el tiempo lo arma el cliente y no el server
 // (`mmss`): avanza con la reproduccion, como el `delta` fluido de la cola (1849), no es una hora ni una columna.
 // solo vive en la pestaña `audio`: en las demas sigue el `[▶]` de texto de la 1650.
@@ -6957,17 +6960,27 @@ function playerAudio(src, titulo){
   var rell = document.createElement("div"); rell.className = "plrell";
   var punto = document.createElement("div"); punto.className = "plpunto";
   barra.appendChild(rell); barra.appendChild(punto);
+  // 1968: dos renglones. arriba, `m:ss` transcurrido a la izquierda, la barra en todo el medio y `m:ss` total
+  // a la derecha (los dos tiempos separados, ya no el `m:ss / m:ss` junto). abajo, los tres botones en tres
+  // columnas parejas al 100% del ancho: `-10s`, play/pausa, `+10s`.
   var t = document.createElement("span");
-  t.className = "pltiempo"; t.textContent = "0:00 / 0:00";
-  [bplay, batras, bade, barra, t].forEach(function(x){ c.appendChild(x); });
+  t.className = "pltiempo plahora"; t.textContent = "0:00";
+  var tot = document.createElement("span");
+  tot.className = "pltiempo pltotal"; tot.textContent = "0:00";
+  var fila1 = document.createElement("div"); fila1.className = "plfila pltiempos";
+  [t, barra, tot].forEach(function(x){ fila1.appendChild(x); });
+  var fila2 = document.createElement("div"); fila2.className = "plfila plbotones";
+  [batras, bplay, bade].forEach(function(x){ fila2.appendChild(x); });
+  c.appendChild(fila1); c.appendChild(fila2);
 
   var au = null, dur = 0, arrastre = false;
   function poner(p, seg){
     p = Math.max(0, Math.min(1, p || 0));
     rell.style.width = (p * 100).toFixed(2) + "%";
     punto.style.left = (p * 100).toFixed(2) + "%";
-    t.textContent = mmss(seg) + " / " + mmss(dur);
-    barra.setAttribute("aria-valuetext", t.textContent);
+    t.textContent = mmss(seg);
+    tot.textContent = mmss(dur);
+    barra.setAttribute("aria-valuetext", t.textContent + " / " + tot.textContent);
   }
   function pintar(){
     var seg = au ? au.currentTime : 0;
@@ -6996,7 +7009,7 @@ function playerAudio(src, titulo){
       });
       au.addEventListener("timeupdate", function(){ if(!arrastre) pintar(); });
       au.addEventListener("ended", function(){ parar(); au.currentTime = 0; pintar(); });
-      au.addEventListener("error", function(){ t.textContent = "no se pudo reproducir"; });
+      au.addEventListener("error", function(){ c.classList.add("roto"); c.title = "no se pudo reproducir"; });
       return au;
     });
   }
@@ -7010,7 +7023,7 @@ function playerAudio(src, titulo){
       bplay.textContent = "||"; bplay.setAttribute("aria-label", "pausar");
       return a.play();
     }).catch(function(err){
-      t.textContent = "no pude bajar el audio";
+      c.classList.add("roto");
       c.title = "no pude bajar el audio (" + (err && err.message) + ")";
     }).then(function(){ bplay.disabled = false; });
   });
@@ -7056,7 +7069,8 @@ function playerAudio(src, titulo){
     src: src,
     estado: function(){
       return {src: src, sonando: c.classList.contains("sonando"), cargado: !!au,
-              seg: au ? au.currentTime : 0, dur: dur, tiempo: t.textContent,
+              seg: au ? au.currentTime : 0, dur: dur,
+              tiempo: t.textContent, total: tot.textContent,
               relleno: rell.style.width, botones: [batras, bplay, bade].length};
     },
     tocar: function(p){ mover({clientX: barra.getBoundingClientRect().left + p * barra.getBoundingClientRect().width}); },
@@ -10513,7 +10527,25 @@ window.__agente = {
               ancho: Math.round(r.width), izq: Math.round(r.left), der: Math.round(r.right),
               play: !!c.querySelector(".plplay"), atras: !!c.querySelector(".platras"),
               adelante: !!c.querySelector(".plade"), barra: !!c.querySelector(".plbarra"),
-              tiempo: (c.querySelector(".pltiempo") || {}).textContent || "",
+              tiempo: (c.querySelector(".plahora") || {}).textContent || "",
+              total: (c.querySelector(".pltotal") || {}).textContent || "",
+              // 1968: los dos renglones, el orden de los tres botones y como los mide el css
+              filas: [].map.call(c.children, function(f){ return f.className.replace("plfila ", ""); }),
+              // arriba: hora a la izquierda, barra en el medio, total a la derecha
+              orden1: [].map.call((c.querySelector(".pltiempos") || {children: []}).children,
+                                  function(x){ return x.className.split(" ").pop(); }),
+              orden2: [].map.call((c.querySelector(".plbotones") || {children: []}).children,
+                                  function(b){ return b.textContent; }),
+              cols: (c.querySelector(".plbotones") ?
+                     getComputedStyle(c.querySelector(".plbotones")).gridTemplateColumns : ""),
+              filaBtn: (c.querySelector(".plbotones") ?
+                        Math.round(c.querySelector(".plbotones").getBoundingClientRect().width) : 0),
+              filaTmp: (c.querySelector(".pltiempos") ?
+                        Math.round(c.querySelector(".pltiempos").getBoundingClientRect().width) : 0),
+              btns: [].map.call(c.querySelectorAll(".plbotones .plbtn"), function(b){
+                      var r = b.getBoundingClientRect();
+                      return {w: Math.round(r.width), h: Math.round(r.height),
+                              izq: Math.round(r.left), clase: b.className.split(" ").pop()}; }),
               estado: c.__player ? c.__player.estado() : null};
     });
   },
