@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.357">
-<link rel="manifest" href="manifest.json?v=4.357">
+<meta name="agente-web-version" content="4.358">
+<link rel="manifest" href="manifest.json?v=4.358">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.357">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.358">
 </head>
 <body>
 
@@ -375,8 +375,9 @@ var alfinal = $("alfinal"), envoltorio = $("envoltorio");
 // una copia GENERADA de esa receta: se actualiza con `python3 -m recetas.clasificar_tema --sync-web`
 // y `recetas/prueba_web` falla si quedo vieja. no editarla a mano.
 /* TEMAS-JS: generado por `python3 -m recetas.clasificar_tema --sync-web`, no editar a mano */
-var TEMAS = ["tools", "awtomic", "awtomic/qa", "flabs", "fuzzer", "juegos", "plata", "server", "personal", "podcast", "flaudio"];
+var TEMAS = ["tools", "awtomic", "awtomic/qa", "flabs", "fuzzer", "juegos", "plata", "server", "personal", "podcast", "flaudio", "audio"];
 var PRIORIDAD = ["awtomic/qa", "flabs", "podcast", "server", "juegos", "plata", "fuzzer", "awtomic", "flaudio", "tools"];
+var MODOS = ["audio"];
 var ALIAS = {"awtomic-qa": "awtomic/qa", "claudio": "flaudio"};
 var RE_CORTE_SRC = "(\\n+)|([.;!?]\\s+)|(^|[\\s,;:])(?:y\\s+otra\\s+cosa|otra\\s+cosa|aparte|adem[a\u00e1]s|tambi[e\u00e9]n)(?!\\w)";
 var PALABRAS = {
@@ -401,6 +402,10 @@ var RE_TEMA = /^\s*tema\s+([\w\/-]+)\s*:\s*/i;
 function normTema(t){ t = (t || "").trim().toLowerCase(); return (ALIAS && ALIAS[t]) || t; }
 function padreTema(t){ return normTema(t).split("/")[0]; }
 function esTema(t){ return TEMAS.indexOf(normTema(t)) >= 0; }
+// 1959 {audio}: un **modo** es una pestaña que existe pero no clasifica nada (`MODOS`, generado con
+// el resto del bloque). `porPalabras` no lo puede devolver (no tiene palabras) y el daemon tampoco lo
+// recuerda como ultimo tema: entra solo lo que facundo escribe ahi, con su `tema audio:` explicito.
+function esModo(t){ return (typeof MODOS !== "undefined" ? MODOS : []).indexOf(normTema(t)) >= 0; }
 // lo que el daemon atiende por texto exacto (sin modelo): sale crudo, sin `tema x:` adelante
 var RE_CRUDO = /^(status|estado|pausa|segu[ií]|log|cola|[oó]rdenes|ordenes|propuestas|avisos|reinicia|reiniciar|cuenta(\s+\S+)?|op\s+\d+\s+[a-dA-D]|dale\s+\d+)$/i;
 
