@@ -13,6 +13,10 @@
     --capa-fondo:rgba(0,0,0,.9);
     /* 1652 (facundo, 2026-09-15): modales sin borde de color, solo una sombra suave clara que los despega del fondo negro */
     --modal-sombra:0 2px 12px rgba(255,255,255,.06),0 14px 44px rgba(255,255,255,.09);
+    /* 2002 {back} (facundo, 2026-09-18): "hacelo mucho mas grande el boton de back, es minimo" / "igual de grande,
+       arriba a la derecha una X". las dos esquinas de la cabecera de un modal miden lo mismo y de una sola vez: mas
+       que los 46 px de los votos de la tarjeta (1841) y que los 38 px que tenia el back. */
+    --modal-esquina:52px;
     /* ---------- tonos de fondo (facundo, 2026-09-13, orden 1190) ----------
        look plano: chat, panel de widgets y cajas casi del mismo tono, la diferencia justa para
        distinguir el panel. se ajusta en un solo lugar: `--tono-paso` es cuanto aclara cada nivel
@@ -147,7 +151,8 @@
   .capa.oculta{display:none!important}
   /* 1652: sin borde de color; el 1px queda transparente para no mover medidas (tarjeta, lista) y despega la sombra */
   .mcaja{background:#000;border:1px solid transparent;border-radius:4px;box-shadow:var(--modal-sombra)}
-  .mhead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;color:var(--verde);font-size:14px}
+  /* 2002 {back}: con una esquina de 52 px a cada lado el `baseline` dejaba el titulo pegado al borde de arriba */
+  .mhead{display:flex;justify-content:space-between;align-items:center;gap:8px;color:var(--verde);font-size:14px}
   .mcuenta,.mestado{color:var(--gris);font-size:12.5px}
   .mestado{min-height:1em}
   .mfila{display:flex;gap:8px}
@@ -203,6 +208,19 @@
   .bglifo.b-igual{color:#e8e8e8;color:var(--blanco)}
   .bglifo.b-atras{color:#e8e8e8;color:var(--blanco)}
   .bglifo.b-atras.apagado{color:#666;color:var(--gris)}
+  /* 2002 {back} (facundo, 2026-09-18): "1- hacelo boton grande [...] 2- hacelo mucho mas grande el boton de back, es
+     minimo. 3- igual de grande, arriba a la derecha una X [...] todos los modales tienen que tener estas cosas".
+     las dos esquinas de la cabecera de TODO modal (el `←` a la izquierda y la `✕` a la derecha) salen de aca: mismo
+     porte (`--modal-esquina`, 52 px), centradas de verdad como los botones del player (1974: flex center y
+     `line-height:1`, nunca `text-align` heredado ni un `margin:auto` en el svg) y el glifo del back escalado como el
+     de los votos (1841) para que no sea una flechita perdida en una caja grande. la `✕` es un svg con
+     `currentColor`, nunca un glifo de fuente ni un emoji (1883: el iphone no los dibuja). */
+  .mesquina{min-width:var(--modal-esquina);min-height:var(--modal-esquina);padding:6px;flex:0 0 auto;
+    display:flex;align-items:center;justify-content:center;text-align:center;line-height:1}
+  .mesquina svg{width:24px;height:24px;display:block}
+  .mesquina .mglf{display:inline-block;transform:scale(1.6);transform-origin:center}
+  .bglifo.b-x{color:#e8e8e8;color:var(--blanco)}
+  .mhead .b-x,.mhead .mx2{margin-left:auto}   /* la `✕` siempre pegada a la derecha, pase lo que pase en el medio */
   /* interruptor de N posiciones (1659, el modo de modelo del widget CLAUDE): una sola fila, la puesta en verde y
      las otras en gris. sin fondo, sin borde de color y sin nada mas grande que --texto-max, como el resto. */
   .msw{display:flex;align-items:stretch;gap:0;border:1px solid var(--linea);border-radius:6px;overflow:hidden}
@@ -348,7 +366,8 @@
      derecha (queda). el back (`←`) nunca va en esta fila: vive en la cabecera del modal (`#selback`) */
   /* 1657: la flecha de back, arriba a la izquierda del modal, en otro contexto que los votos */
   #selmodal .seltit{align-items:center}
-  #selback{flex:0 0 auto;margin-right:2px;padding:5px 7px;min-width:38px;min-height:38px}   /* 38 px tocables, como los votos */
+  /* 2002 {back}: el back pasa de 38 px al porte del molde (`.mesquina`, 52 px), el mismo que la `✕` de al lado */
+  #selback{margin-right:2px}
   #selacciones{display:flex;flex-wrap:wrap;gap:6px}
   #selacciones.oculta,#selmodal #seltxt.oculta{display:none!important}
   /* 1922 {vistatinder}: en el `home` de la vista no hay tarjeta que deshacer ni texto que enviar */
@@ -930,7 +949,7 @@
   .ub.n-mal .ub-lleno{background:var(--rojo);box-shadow:0 0 7px var(--rojo)}
   .ub.n-mal .ub-p{color:var(--rojo);font-weight:700}
   .usage.off{opacity:.45}
-  /* usage en dos columnas (facundo, 2026-09-14): arriba la proyeccion general, abajo facu | orugote con las
+  /* usage en dos columnas (facundo, 2026-09-14): arriba la proyeccion general, abajo faacuu | orugote con las
      tres barras a la misma altura, mismo alto y mismo ancho. un numero por barra, nada mas. */
   .usage .uproy{margin:0 0 7px 0;padding-bottom:6px;border-bottom:1px solid var(--linea)}
   .usage .uproy .ub{margin-bottom:3px}

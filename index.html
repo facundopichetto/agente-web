@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.363">
-<link rel="manifest" href="manifest.json?v=4.363">
+<meta name="agente-web-version" content="4.364">
+<link rel="manifest" href="manifest.json?v=4.364">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.363">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.364">
 </head>
 <body>
 
@@ -120,7 +120,7 @@
 
 <div id="votar" class="capa oculta" role="dialog" aria-modal="true" aria-labelledby="vttitulo">
   <div class="vtcaja mcaja">
-    <div class="vttit mhead"><span id="vttitulo">cuál te gusta más</span><span id="vtcuenta" class="mcuenta"></span></div>
+    <div class="vttit mhead"><span id="vttitulo">cuál te gusta más</span><span id="vtcuenta" class="mcuenta"></span><button id="vtx" class="bglifo mesquina b-x" type="button" aria-label="cerrar" title="cerrar"></button></div>
     <div id="vtpar" class="vtpar">
       <div class="vtlado"><div class="vtanim"><span class="anim"></span></div><div class="vtchico">en el chat: <span class="anim"></span> opus: pensando...</div><div class="vtnom"></div><button class="vtbtn bverde b52 llena vtesta" data-lado="0" type="button">esta</button></div>
       <div class="vtlado"><div class="vtanim"><span class="anim"></span></div><div class="vtchico">en el chat: <span class="anim"></span> opus: pensando...</div><div class="vtnom"></div><button class="vtbtn bverde b52 llena vtesta" data-lado="1" type="button">esta</button></div>
@@ -150,12 +150,12 @@
      de la 1801 queda todo lo demas: los seis items con su total (`total_sin_votar` del server), el que esta en cero
      en gris y no clickeable, y que recien al elegir uno se ve una tarjeta. la vista `podcast` es la misma idea. -->
 <div id="vista-podcast"><div class="selcaja mcaja">
-  <div class="seltit mhead"><button id="podback" class="bglifo b-atras oculta" type="button" data-q="atras" aria-label="back" title="back">←</button><span id="podtitulo"></span><span id="podcuenta" class="mcuenta"></span></div>
+  <div class="seltit mhead"><button id="podback" class="bglifo mesquina b-atras oculta" type="button" data-q="atras" aria-label="back" title="back"><span class="mglf">←</span></button><span id="podtitulo"></span><span id="podcuenta" class="mcuenta"></span><button id="podx" class="bglifo mesquina b-x" type="button" aria-label="cerrar" title="cerrar"></button></div>
   <div id="podvista"></div>
 </div></div>
 <div id="selmodal" class="capa oculta" role="dialog" aria-modal="true" aria-labelledby="seltitulo">
   <div class="selcaja mcaja">
-    <div class="seltit mhead"><button id="selback" class="bglifo b-atras apagado oculta" type="button" data-q="atras" aria-label="back" title="back">←</button><span id="seltitulo"></span><span id="selcuenta" class="mcuenta"></span><button id="selsub" class="bglifo selsub oculta" type="button" aria-label="cambiar de sub-vista"></button></div>
+    <div class="seltit mhead"><button id="selback" class="bglifo mesquina b-atras apagado oculta" type="button" data-q="atras" aria-label="back" title="back"><span class="mglf">←</span></button><span id="seltitulo"></span><span id="selcuenta" class="mcuenta"></span><button id="selsub" class="bglifo selsub oculta" type="button" aria-label="cambiar de sub-vista"></button><button id="selx" class="bglifo mesquina b-x" type="button" aria-label="cerrar sin enviar" title="cerrar sin enviar"></button></div>
     <div id="selcont" class="oculta" aria-live="polite"></div>
     <div id="sellista"></div>
     <!-- 1879 {listas}: la otra sub-vista de la vista `tinder`. lo arma entero el server (`recetas/ig_listas.py`):
@@ -265,10 +265,25 @@ function capaOcultar(id, fondo){ $(id).classList.add("oculta"); if(fondo) $(fond
 // verde hacia arriba a la derecha (sube de lista). que lista es cada una la decide el server (`ig_embudo.PROCESOS`)
 var GLIFOS = {no: ["✕", "no va"], maybe: ["-_-", "maybe"], queda: ["🔥", "queda"], atras: ["←", "back"],
   bajar: ["↓", "baja de lista"], igual: ["=", "queda igual"], subir: ["↑", "sube de lista"]};
+// 2002 {back} (facundo, 2026-09-18): "igual de grande, arriba a la derecha una X. esa X en votar significa cerrar
+// ese modal sin enviar los votos actuales. FACIL. todos los modales tienen que tener estas cosas". la `✕` (y el `←`)
+// son parte del molde: svg con `currentColor` y nunca un glifo de fuente ni un emoji (1883: el iphone no los dibuja),
+// del porte de los votos de la tarjeta (`--modal-esquina`, 52 px) y siempre en el mismo lugar: el back arriba a la
+// IZQUIERDA, la `✕` arriba a la DERECHA.
+var SVG_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" ' +
+  'stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 6 18 18"/><path d="M18 6 6 18"/></svg>';
+// las `✕` que ya estan en el html (votador, podcast, votar) salen del mismo string: un solo svg en todo el board
+[].forEach.call(document.querySelectorAll("button.b-x"), function(b){ if(!b.innerHTML.trim()) b.innerHTML = SVG_X; });
 function moldeBoton(o){
   var b = document.createElement("button");
   b.type = "button";
-  if(o.tipo === "term"){
+  if(o.tipo === "x"){   // 2002 {back}: la `✕` de la esquina de arriba a la derecha, la tiene todo modal
+    var nom = o.aria || "cerrar";
+    b.className = "bglifo mesquina b-x";
+    b.innerHTML = SVG_X;
+    b.setAttribute("aria-label", nom);
+    b.title = nom;
+  } else if(o.tipo === "term"){
     b.className = "bterm" + (o.principal ? " principal" : "");
     b.innerHTML = (o.letra ? '<span class="let">' + esc(o.letra) + ")</span>" : "") + esc(o.txt || "");
   } else if(GLIFOS[o.tipo]){
@@ -320,7 +335,8 @@ function modalMolde(o){
     capa.id = id; capa.className = "capa oculta";
     capa.setAttribute("role", "dialog"); capa.setAttribute("aria-modal", "true");
     capa.style.zIndex = String(o.z || 42);   // arriba de selmodal (41), abajo del visor (60)
-    capa.innerHTML = '<div class="mcaja mmolde"><div class="mhead"><span class="mtitulo"></span><span class="mcuenta"></span></div>' +
+    capa.innerHTML = '<div class="mcaja mmolde"><div class="mhead"><span class="mtitulo"></span><span class="mcuenta"></span>' +
+      '<button class="mx2 bglifo mesquina b-x" type="button" aria-label="cerrar" title="cerrar">' + SVG_X + '</button></div>' +
       '<div class="mcuerpo2"></div><div class="mfila mbotones"></div>' +
       '<div class="mpie"><span class="mestado" aria-live="polite"></span><button class="mcerrar" type="button">cerrar</button></div></div>';
     document.body.appendChild(capa);
@@ -365,6 +381,8 @@ function modalMolde(o){
     return true;
   };
   q(".mcerrar").addEventListener("click", function(){ m.cerrar(false); });
+  // 2002 {back}: en un modal cualquiera la `✕` es cerrar y no hacer nada (lo mismo que `esc`)
+  q(".mx2").addEventListener("click", function(){ m.cerrar(false); });
   capaRegistrar({nombre: id, el: id, abierta: function(){ return m.abierto; }, cerrar: function(){ m.cerrar(true); }});
   return m;
 }
@@ -4009,6 +4027,13 @@ function selModoLista(lista){
 // queda abierto esperando (`al día`) y nunca manda `fin`. el boton `votar` cuenta tarjetas, no colecciones. un dato
 // que no confirmo el server (widgets.json viejo) solo puede sacar tarjetas, nunca sumar.
 var TJ_TOQUE_MS = 350;   // 1567: dos toques en menos de esto son un voto (si no, el segundo votaba la tarjeta siguiente)
+// 2002 {back} (facundo, 2026-09-18): "tocar ahi vaya inmediatamente a la carta anterior y se quede ahi. dos clicks
+// seguidos no deberian tirar dos atras seguidos. tiene que haber un espacio para el back, la idea es ir a la
+// anterior, y si estoy en la anterior y quiero ir 2 atras, puedo tambien". o sea: el back tiene su PROPIA ventana
+// anti-rebote, cortita, y solo contra el doble disparo del MISMO toque (pointer + click). dos toques separados van
+// dos tarjetas atras, y asi hasta el principio de la sesion. la ventana de los votos (`TJ_TOQUE_MS`, 350 ms) ya no
+// lo frena, y un back tampoco frena al voto que viene despues: son dos relojes distintos.
+var TJ_BACK_MS = 120;
 // correccion de facundo 18:12: la votada sale de la fila tambien en el `localStorage` (`agente_sel_fila`), asi cerrar
 // y reabrir (o recargar) no la vuelve a mostrar aunque el server tarde en sacarla. se olvida a los 7 dias.
 var FILA_RECUERDA_MS = 7 * 86400000;
@@ -4254,8 +4279,11 @@ function tjAbrir(e){
   e = Object.assign({}, e, {candidatas: e.candidatas.filter(function(c){ return !v[c.id] && tjConFoto(c); })});
   if(!e.candidatas.length) return false;
   if(e.continua) e.mas = typeof e.pendientes === "number" && e.pendientes > e.candidatas.length;
-  sel.tjUlt = 0;   // 1567: el freno del doble toque es de esta apertura (si no, se come el primer toque de la siguiente)
+  sel.tjUlt = 0; sel.tjAtrasUlt = 0;   // 1567: el freno del doble toque es de esta apertura (si no, se come el primer toque de la siguiente)
   sel.actual = e; sel.tj = 0; sel.tjVotos = 0; sel.tjFallidas = [];   // 1524: decisiones reales de esta apertura
+  // 2002 {back}: cada apertura del modal es una SESION con su id. va en cada voto que sube, y es lo que la `✕`
+  // manda al server para deshacer exactamente los de ESTA apertura (ni los de una anterior ni los de otra coleccion)
+  sel.sesion = lidNuevo(); sel.sesionVotos = [];
   selModoLista(false);
   $("seltitulo").textContent = e.titulo || e.coleccion;
   $("seltxt").value = ""; $("selestado").textContent = "";
@@ -4400,13 +4428,15 @@ function tjVoto(e, c, q, txt){
   if(Date.now() - (sel.tjUlt || 0) < TJ_TOQUE_MS) return false;   // 1567: el doble toque cuenta una vez
   sel.tjUlt = Date.now();
   if(e.continua) filaMarcar(e.coleccion, c.id);
-  var r ={id: lidNuevo(), tipo: "tarjeta", ts: Date.now(), candidata_id: c.id, cuenta: c.cuenta || "", decision: q, texto: txt};
+  var r ={id: lidNuevo(), tipo: "tarjeta", ts: Date.now(), candidata_id: c.id, cuenta: c.cuenta || "", decision: q, texto: txt,
+          sesion: sel.sesion || ""};   // 2002 {back}: para que la `✕` sepa cuales deshacer
   var pend = selLeer("pend", []); pend.push({col: e.coleccion, r: r}); selEscribir("pend", pend);
   // 1657, 1801: el nombre de la decision sale del aria del boton del proceso (`no va`, `dejar de seguir`, `maybe`...)
   var bq = tjProc(e.coleccion).botones.filter(function(x){ return x.q === q; })[0];
   $("selestado").textContent = ((bq && bq.aria) || q) + " @" + (c.cuenta || c.id);
   sel.tjVotos = (sel.tjVotos || 0) + 1;   // 1524: sin al menos una, `tjFin` no manda `fin`
   (sel.tjHistorial = sel.tjHistorial || []).push({col: e.coleccion, c: c, q: q});   // 1640: lo que el back deshace
+  (sel.sesionVotos = sel.sesionVotos || []).push(c.id);   // 2002 {back}: lo que la `✕` devuelve a la vista
   sel.tj += 1;
   tjPintar();
   selSubirPronto();   // 1666: los votos de la tanda se juntan y suben en un archivo (1836: throttle, no debounce)
@@ -4425,20 +4455,23 @@ function tjAtras(){
   if(!e) return false;
   while(i >= 0 && hs[i].col !== e.coleccion) i--;
   if(i < 0) return false;
-  if(Date.now() - (sel.tjUlt || 0) < TJ_TOQUE_MS) return false;   // el doble toque cuenta una vez, igual que un voto
-  sel.tjUlt = Date.now();
+  // 2002 {back}: SOLO el doble disparo del mismo toque (120 ms); dos toques de facundo son dos tarjetas atras
+  if(Date.now() - (sel.tjAtrasUlt || 0) < TJ_BACK_MS) return false;
+  sel.tjAtrasUlt = Date.now();
   var h = hs.splice(i, 1)[0], c = h.c;
   if(e.continua){
     var f = selLeer("fila", {});
     if(f[e.coleccion]){ delete f[e.coleccion][c.id]; selEscribir("fila", f); }
   }
-  var r = {id: lidNuevo(), tipo: "deshacer", ts: Date.now(), candidata_id: c.id, cuenta: c.cuenta || "", texto: ""};
+  var r = {id: lidNuevo(), tipo: "deshacer", ts: Date.now(), candidata_id: c.id, cuenta: c.cuenta || "", texto: "",
+           sesion: sel.sesion || ""};
   var pend = selLeer("pend", []); pend.push({col: e.coleccion, r: r}); selEscribir("pend", pend);
   var k = -1;
   e.candidatas.forEach(function(x, j){ if(x.id === c.id && k < 0) k = j; });
   if(k >= 0){ e.candidatas.splice(k, 1); if(k < sel.tj) sel.tj -= 1; }
   e.candidatas.splice(sel.tj, 0, c);
   sel.tjVotos = Math.max(0, (sel.tjVotos || 0) - 1);
+  sel.sesionVotos = (sel.sesionVotos || []).filter(function(x){ return x !== c.id; });   // 2002 {back}
   $("selestado").textContent = "back @" + (c.cuenta || c.id);
   tjPintar();
   selSubirPronto();
@@ -4501,6 +4534,46 @@ function tjFin(){
   selSalir();   // 1922: terminar la tanda vuelve al `home`, no cierra la vista
   selBoton();
   selSubir();
+}
+// 2002 {back} (facundo, 2026-09-18): la `✕` del votador es "cerrar ese modal sin enviar los votos actuales", y
+// "los votos subidos al server, depende. si se hicieron en el contexto del modal que esta abierto, si, deshacerlos".
+// o sea un rollback por SESION, no solo descartar lo que no salio todavia: (1) lo pendiente de esta sesion no sube
+// nunca, (2) las tarjetas votadas vuelven a verse en el equipo y (3) un registro `cancelar` con el id de la sesion
+// le dice al server que deshaga los que ya aplico (cada persona vuelve a su lista y el follow/unfollow que ese voto
+// haya programado en `ig_cola` se cancela mientras siga `pendiente`). nada de una sesion anterior ni de otra
+// coleccion se toca. no manda `fin` ni `aceptar`: la fila queda como estaba.
+function selCancelar(){
+  var e = sel.actual, ses = sel.sesion || "";
+  if(!e) return false;
+  var pend = selLeer("pend", []).filter(function(p){ return !(p.col === e.coleccion && p.r && p.r.sesion === ses); });
+  var f = selLeer("fila", {});
+  if(f[e.coleccion]){
+    (sel.sesionVotos || []).forEach(function(id){ delete f[e.coleccion][id]; });
+    selEscribir("fila", f);
+  }
+  if(ses && (sel.sesionVotos || []).length){
+    pend.push({col: e.coleccion, r: {id: lidNuevo(), tipo: "cancelar", ts: Date.now(), sesion: ses, texto: "", marcadas: []}});
+  }
+  selEscribir("pend", pend);
+  sel.tjHistorial = (sel.tjHistorial || []).filter(function(h){ return h.col !== e.coleccion; });
+  sel.ignorada[e.coleccion] = e.abrir_ts;
+  sel.actual = null; sel.sesion = null; sel.sesionVotos = [];
+  selModoLista(true);
+  selSalir();   // 1922: vuelve al `home` de la vista, no cierra la vista
+  selBoton();
+  selSubir();
+  return true;
+}
+// la `✕` de la cabecera del votador. con tarjetas a la vista es el rollback de arriba; en la lista de checkboxes es
+// cerrar sin mandar nada; en el `home` o en `listas` es salir de la vista, que es "cerrar y no hacer nada"
+function selX(){
+  if(sel.actual) return tjPantalla() ? selCancelar() : (selCerrar(), true);
+  lis.sub = "home";
+  $("votmenu").classList.add("oculta");
+  capaOcultar("selmodal");
+  vistaVolver();
+  selBoton();
+  return true;
 }
 function selCerrar(){
   try{ (window.__cierres = window.__cierres || []).push("selCerrar " + new Error().stack.split("\n").slice(1,4).join(" | ")); }catch(x){}
@@ -5280,6 +5353,10 @@ $("selacciones").addEventListener("click", function(ev){
 });
 // 1657: el back (`←`) esta aparte, en la cabecera del modal, y deshace el ultimo voto
 $("selback").addEventListener("click", function(){ tjAtras(); });
+// 2002 {back}: la `✕` arriba a la derecha, en los tres modales que no salen del molde `modalMolde`
+$("selx").addEventListener("click", selX);
+$("podx").addEventListener("click", function(){ podAbrirEp(null); vistaVolver(); });
+$("vtx").addEventListener("click", function(){ votCerrar(); });
 // 1883 {teclado}: las flechas votan (`tjTecla`) y enter manda. va en `keydown` de la ventana, en captura no: `esc`
 // lo sigue atendiendo la pila de capas y shift+enter dentro del campo sigue siendo un salto de linea.
 window.addEventListener("keydown", function(ev){
@@ -7721,7 +7798,7 @@ function cajaSalud(s){
 
 // facundo (2026-09-14, orden 1218): el widget usage rehecho. menos informacion: arriba UNA barra de proyeccion
 // general (las dos cuentas como un solo tanque, `u.proyeccion.combinada`, con su lectura corta), una linea por
-// modelo (a que cuenta va y por que, corto) y abajo las dos cuentas en DOS COLUMNAS (facu izquierda, orugote
+// modelo (a que cuenta va y por que, corto) y abajo las dos cuentas en DOS COLUMNAS (faacuu izquierda, orugote
 // derecha) con `5h`, `week` y `fable` a la misma altura. un numero por barra; el tick de la linea sigue igual.
 // caidas de hoy quedan en el dato esencial del header. todo lo calcula python (`proyeccion_uso`, `reparto_cuentas`).
 // interruptor del modo de modelo (facundo, 2026-09-15, orden 1659): `reparto` (lo decide el script cada 5 min mirando
@@ -8733,7 +8810,7 @@ $("nlista").addEventListener("click", function(e){
 // ---------- persona: menu de cuenta (facundo, 2026-09-13, orden 1166) ----------
 // reemplaza al `[⚙]` de arriba a la derecha: settings del board, `reinicia` con confirmacion y abajo de todo
 // `salir`. 1806 (facundo, 2026-09-16): las opciones de cuenta se fueron de aca: la cuenta se cambia desde el
-// widget `usage` (tocar `facu` u `orugote` abre su modal con el boton verde). el titulo sigue diciendo cual usa.
+// widget `usage` (tocar `faacuu` u `orugote` abre su modal con el boton verde). el titulo sigue diciendo cual usa.
 function cuentaEnUso(){
   var rep = ((widDatos || {}).usage || {}).reparto || {};
   // 1915 {widgets}: `agente.cuenta` puede ser `sin cuenta hasta ...`; para el menu del tipito vale `cuenta_activa`
@@ -10409,7 +10486,9 @@ window.__agente = {
   tjPintarCon: function(e, i){ sel.actual = e; sel.tj = i || 0; if(!i){ sel.tjVotos = 0; sel.tjFallidas = []; } tjPintar(); return sel.tj; },   // 1515: `prueba_ig_embudo_tarjetas`
   tjIndice: function(){ return sel.tj; },
   tjAtras: tjAtras, tjHistorial: function(){ return (sel.tjHistorial || []).map(function(h){ return h.col + ":" + h.c.id + ":" + h.q; }); },   // 1640: el back
-  filaFaltan: filaFaltan, filaSumar: filaSumar, tjToqueMs: function(ms){ TJ_TOQUE_MS = ms; },   // 1567: fila continua
+  filaFaltan: filaFaltan, filaSumar: filaSumar, tjToqueMs: function(ms){ TJ_TOQUE_MS = ms; TJ_BACK_MS = ms ? Math.min(ms, 120) : 0; },   // 1567: fila continua; 2002: el back tiene su propia ventana
+  tjBackMs: function(ms){ if(ms !== undefined) TJ_BACK_MS = ms; return TJ_BACK_MS; },   // 2002 {back}
+  selCancelar: selCancelar, selX: selX, selSesion: function(){ return sel.sesion || null; },   // 2002 {back}
   // 1794: voto continuo (`prueba_ig_embudo_tarjetas`, `prueba_web_votar`)
   selPedir: selPedir, filaAplicar: filaAplicar, tjResumen: tjResumen, selTrasSubir: selTrasSubir,
   selAgotadas: function(a){ sel.agotadas = a || []; }, selTotales: function(t){ sel.totales = t || {}; },   // 1836

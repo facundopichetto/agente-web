@@ -283,7 +283,7 @@ compu).
 ## widget usage: barras contra la linea (facundo, 2026-09-11)
 
 "quiero ver cada uno de los parametros 5h week fable de cada cuenta como esta en relacion a la linea".
-El widget `usage` muestra **solo barras**: tres por cuenta (`facu` y `orugote`), `5h`, `week` y `fable`.
+El widget `usage` muestra **solo barras**: tres por cuenta (`faacuu` y `orugote`), `5h`, `week` y `fable`.
 Nada de presupuesto, horario laboral ni costo (los datos siguen en el json, no se pintan aca).
 
 - **la linea** es la fraccion de la ventana que ya transcurrio, sacada de `resets_at`:

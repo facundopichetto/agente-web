@@ -9,12 +9,12 @@
 
   // orden 1806 (facundo, 2026-09-16): se fue el switch del modo de modelo y la linea del reparto: abajo del
   // titulo van directo las dos cuentas. el modo se cambia por el chat (`modelos reparto|tareas|opus|fable`).
-  // tocar `facu` u `orugote` abre un modal con el molde (`modalMolde`, esc cierra) con el detalle de esa cuenta
+  // tocar `faacuu` u `orugote` abre un modal con el molde (`modalMolde`, esc cierra) con el detalle de esa cuenta
   // y, solo si no es la activa, un boton verde que manda `cuenta <nombre>` (el daemon lo atiende sin modelo).
   var cuModal = null, cuUltimo = null, cuAbierta = null;
   function cuEstado(){ return {ultimo: cuUltimo, abierta: cuAbierta}; }
   function activa(cu){ return cu.elegida !== undefined && cu.elegida !== null ? !!cu.elegida : !!cu.activa; }
-  // orden 1861 {claude} (facundo, 2026-09-17): "sacame week y fable abajo de facu y orugote. a la derecha del
+  // orden 1861 {claude} (facundo, 2026-09-17): "sacame week y fable abajo de faacuu y orugote. a la derecha del
   // titulo, ahi pone `xd xh xm to renew`". una sola linea, al lado del nombre de la cuenta, con el texto ENTERO
   // como vino del server (`renueva_txt`, de `widgets_json.w_usage`): la web no arma ni recorta ningun tiempo.
   function renuevaHtml(cu){
@@ -67,7 +67,7 @@
     if(cu) cuentaAbrir(cu);
   }
   document.addEventListener("click", alTocar, true);
-  var USAGE_ORDEN = ["facu", "orugote"];
+  var USAGE_ORDEN = ["faacuu", "orugote", "facundo"];
   var USAGE_BARRAS = [["five_hour", "5h"], ["seven_day", "week"], ["fable", "fable"]];
   // orden 1808 (facundo, 2026-09-16): una cuenta sin limite que cuente (ninguna barra `week` ni `fable`
   // con numero: sin plan, sin login, sin datos de uso) se pinta en gris apagado y NO es tocable: no abre
