@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.364">
-<link rel="manifest" href="manifest.json?v=4.364">
+<meta name="agente-web-version" content="4.365">
+<link rel="manifest" href="manifest.json?v=4.365">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,12 +27,16 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.364">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.365">
 </head>
 <body>
 
 <div id="cabecera" title="el board habla por: buzón">
   <div id="nodos"></div>
+  <!-- 2008 {ahorro} paso 10: el `home` del board, una vista de SOLO LECTURA que dice que esta pasando (la cola,
+       las ordenes que esperan el dale, instagram, el podcast, la plata de hoy, las reglas). el json lo arma
+       entero el server (`recetas/home_board.py`): la web no calcula ni una hora. -->
+  <button id="ver-home" class="ib" type="button" title="home" aria-label="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10.5L12 4l8 6.5"/><path d="M6 10v10h12V10"/><path d="M10 20v-5h4v5"/></svg></button>
   <div id="vistas">
     <button id="ver-chat" class="ib" type="button" title="chat" aria-label="chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5h16v10.5H8.5L4 20z"/><path d="M8 9.5h8"/><path d="M8 12.5h5"/></svg></button>
     <button id="ver-widgets" class="ib" type="button" title="widgets" aria-label="widgets"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg></button>
@@ -149,6 +153,10 @@
      1801 es ahora el CONTENIDO a pantalla completa de esa vista, su `home` (abajo, adentro de la `.selcaja`).
      de la 1801 queda todo lo demas: los seis items con su total (`total_sin_votar` del server), el que esta en cero
      en gris y no clickeable, y que recien al elegir uno se ve una tarjeta. la vista `podcast` es la misma idea. -->
+<div id="vista-home"><div class="selcaja mcaja">
+  <div class="seltit mhead"><span id="hometitulo">home</span><span id="homecuenta" class="mcuenta"></span><button id="homex" class="bglifo mesquina b-x" type="button" aria-label="cerrar" title="cerrar"></button></div>
+  <div id="homevista"></div>
+</div></div>
 <div id="vista-podcast"><div class="selcaja mcaja">
   <div class="seltit mhead"><button id="podback" class="bglifo mesquina b-atras oculta" type="button" data-q="atras" aria-label="back" title="back"><span class="mglf">←</span></button><span id="podtitulo"></span><span id="podcuenta" class="mcuenta"></span><button id="podx" class="bglifo mesquina b-x" type="button" aria-label="cerrar" title="cerrar"></button></div>
   <div id="podvista"></div>
@@ -7958,6 +7966,82 @@ function podAbrirEp(id){
   pod.ep = id || null;
   return podVistaPintar();
 }
+// ---------- 2008 {ahorro} paso 10: la vista `home` ----------
+// una vista de SOLO LECTURA: una fila por frente (la cola, las ordenes que esperan el `dale`, instagram, el
+// podcast, la plata de hoy, las reglas), con la linea que dice como viene y el numero que importa. cada fila
+// lleva a SU vista. todo lo que dice lo arma el server (`recetas/home_board.py`, widget `home`): la web no
+// calcula ni redacta nada, ni una hora (1843). molde de `docs/componentes-web.md` (`moldeBoton`).
+function homePintar(){
+  var el = $("homevista");
+  if(!el) return "";
+  var h = (widDatos || {}).home || {}, filas = h.filas || [];
+  el.textContent = "";
+  $("homecuenta").textContent = h.hora || "";
+  if(!filas.length){
+    var v = document.createElement("div"); v.className = "homevacio";
+    v.textContent = "todavía no llegó el estado del server";
+    el.appendChild(v);
+    return el.innerHTML;
+  }
+  filas.forEach(function(f){
+    var b = moldeBoton({tipo: "caja"});
+    b.className += " homefila est-" + (f.estado || "ok");
+    b.setAttribute("data-clave", f.clave || "");
+    var t = document.createElement("span"); t.className = "hometit"; t.textContent = f.titulo || "";
+    var l = document.createElement("span"); l.className = "homelin"; l.textContent = f.linea || "";
+    b.appendChild(t); b.appendChild(l);
+    if(f.n) { var n = document.createElement("span"); n.className = "homen"; n.textContent = f.n; b.appendChild(n); }
+    b.addEventListener("click", function(){ vistaPoner(f.vista || "widgets"); });
+    el.appendChild(b);
+  });
+  homeDrafts(el);
+  return el.innerHTML;
+}
+// 2008 {ahorro} paso 4: el texto EXACTO de la orden que el chat dejo en draft, editable, con UNA caja verde
+// `dale` (nunca caja `no`: no tocarla es no confirmar, 1762) y la `✕` para descartarla.
+function homeDrafts(el){
+  var ds = (((widDatos || {}).ordenes || {}).drafts) || [];
+  if(!ds.length) return;
+  var cab = document.createElement("div"); cab.className = "hometit homedcab";
+  cab.textContent = "estas órdenes esperan tu dale";
+  el.appendChild(cab);
+  ds.forEach(function(d){
+    var c = document.createElement("div"); c.className = "homedraft"; c.setAttribute("data-draft", d.id);
+    var t = document.createElement("div"); t.className = "homelin"; t.textContent = "tema " + (d.tema || "tools");
+    var ta = document.createElement("textarea"); ta.className = "homedtxt"; ta.value = d.cuerpo || "";
+    ta.setAttribute("aria-label", "el texto de la orden");
+    var fila = document.createElement("div"); fila.className = "homedbtns";
+    var ok = moldeBoton({txt: "dale"});
+    ok.className += " homedale";
+    ok.addEventListener("click", function(){ homeDraftMandar(d.id, "dale", ta.value); });
+    var no = moldeBoton({tipo: "x", aria: "descartar la orden"});
+    no.addEventListener("click", function(){ homeDraftMandar(d.id, "no"); });
+    fila.appendChild(ok); fila.appendChild(no);
+    c.appendChild(t); c.appendChild(ta); c.appendChild(fila);
+    el.appendChild(c);
+  });
+}
+function homeDraftMandar(id, accion, texto){
+  var reg = {id: id, accion: accion};
+  if(texto != null) reg.texto = texto;
+  var c = document.querySelector('[data-draft="' + id + '"]');
+  if(c) c.classList.add("yendo");
+  // lan primero (`POST /ordenes/draft`); sin lan, al buzon (`seleccion-web/orden-draft--<id>.json`), el mismo
+  // carril y el mismo dedup por id que los votos
+  votLan().then(function(base){
+    if(!base) throw new Error("sin lan");
+    return lanFetch(base + "/ordenes/draft", {method: "POST", cache: "no-store",
+      headers: {"authorization": "Bearer " + token, "content-type": "application/json"},
+      body: JSON.stringify({registros: [reg]})});
+  }).then(function(r){
+    if(!r || !r.ok) throw new Error("http " + (r && r.status));
+    return true;
+  }, function(){ return selBuzon("orden-draft", [reg]); }).then(function(){
+    if(c) c.remove();
+    var d = (widDatos || {}).ordenes;
+    if(d) d.drafts = (d.drafts || []).filter(function(x){ return x.id !== id; });
+  }, function(){ if(c) c.classList.remove("yendo"); });
+}
 function podVistaPintar(){
   var el = $("podvista");
   if(!el) return "";
@@ -10112,8 +10196,8 @@ document.addEventListener("scroll", function(){ if(menuAbierto) cerrarMenu(); },
 // 1933 {instatinder} (facundo, 2026-09-17): la vista del votador de instagram se llama `instatinder` en todo lo
 // que ve facundo (la clave interna sigue siendo `tinder`) y `votar` es una vista propia: las votaciones puntuales
 // que NO son instagram (checkboxes: animaciones, tandas), con su icono fucsia en la barra.
-var VISTAS_TODAS = ["chat", "widgets", "tinder", "votar", "podcast"];
-var VISTA_SOLAS = ["tinder", "votar", "podcast"];       // ocupan la pantalla entera, nunca conviven con otra
+var VISTAS_TODAS = ["chat", "widgets", "tinder", "votar", "podcast", "home"];
+var VISTA_SOLAS = ["tinder", "votar", "podcast", "home"];       // ocupan la pantalla entera, nunca conviven con otra
 var VISTA_LS = "agente_vista";
 // 1930 {barra} (facundo, 2026-09-17): "lo que vos tenes que guardar es, en el caso de que yo me haya ido de la vista
 // de chat, lo que sea que este viendo de las dos opciones en el celular; y si es en el desktop queda por default chat".
@@ -10160,6 +10244,7 @@ function vistaPoner(n){
   vistaPintar();
   if(vistaEs("widgets") && Date.now() - widUlt > 15000) cargarWidgets().catch(function(){});
   if(vistaEs("podcast")) podVistaPintar();
+  if(vistaEs("home")) homePintar();   // 2008 paso 10
   if(vistaEs("chat")){
     var a = vistaAnclas.chat;
     if(a && anclaPoner(a)){
@@ -10189,6 +10274,8 @@ function verWidgets(si){ return verPanel(si ? "widgets" : "chat"); }
 $("ver-chat").addEventListener("click", function(){ vistaPoner("chat"); });
 $("ver-widgets").addEventListener("click", function(){ vistaPoner("widgets"); });
 $("ver-podcast").addEventListener("click", function(){ vistaPoner("podcast"); });
+$("ver-home").addEventListener("click", function(){ vistaPoner("home"); });   // 2008 paso 10
+$("homex").addEventListener("click", function(){ vistaVolver(); });
 $("ver-votacion").addEventListener("click", votacionAbrir);   // 1933 {instatinder}
 vistaOn = vistaInicial();
 vistaPintar();

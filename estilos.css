@@ -1221,6 +1221,34 @@
      tinder (facundo: "NO ME PONGAS EL WIDGET DE MIERDA, HACEME UNA VISTA PARA EL PODCAST, POR AHORA IGUAL A LA
      OTRA PERO CON EL DISENIO DE ESTO"): la misma `.selcaja`, la misma cabecera con el `←`, el `home` con los
      episodios como cajas tocables y el detalle de uno adentro de la misma vista. */
+  /* 2008 {ahorro} paso 10: la vista `home`, misma estructura y mismo molde que el podcast y el tinder */
+  #vista-home{display:none}
+  body.v-home #vista-home{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;
+    background:var(--fondo-chat);padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom) 0}
+  body.v-home #vista-home .selcaja{max-width:none;width:100%;flex:1 1 auto;min-height:0;
+    box-sizing:border-box;display:flex;flex-direction:column;gap:6px;padding:8px 10px;
+    border-radius:0;box-shadow:none}
+  body.v-home #vista-home .seltit{width:100%;max-width:760px;margin:0 auto}
+  body.v-home #ver-home{display:none}
+  body.v-home #cuerpo,body.v-home #panel-chat,body.v-home #panel-widgets,body.v-home #sep{display:none}
+  #homevista{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    display:flex;flex-direction:column;gap:8px;width:100%;max-width:760px;margin:0 auto}
+  #homevista .homefila{display:flex;align-items:center;gap:8px;min-height:52px;flex-wrap:wrap}
+  #homevista .hometit{flex:0 0 auto;color:var(--blanco)}
+  #homevista .homelin{flex:1 1 auto;min-width:0;color:var(--gris);font-size:13px}
+  #homevista .homen{flex:0 0 auto;color:var(--verde)}
+  #homevista .est-mal .homelin{color:var(--rojo)}
+  #homevista .est-espera .homelin{color:var(--amarillo,#d8b25a)}
+  #homevista .homevacio{color:var(--gris);font-size:13.5px}
+  #homevista .homedcab{margin-top:6px}
+  #homevista .homedraft{display:flex;flex-direction:column;gap:6px;
+    border:1px solid var(--linea);border-radius:4px;padding:8px}
+  #homevista .homedraft.yendo{opacity:.5}
+  #homevista .homedtxt{width:100%;box-sizing:border-box;min-height:88px;resize:vertical;
+    background:var(--fondo-chat);color:var(--blanco);border:1px solid var(--linea);border-radius:4px;
+    padding:6px;font:inherit;font-size:13px}
+  #homevista .homedbtns{display:flex;align-items:center;gap:8px}
+  #homevista .homedale{flex:1 1 auto}
   #vista-podcast{display:none}
   body.v-podcast #vista-podcast{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;
     background:var(--fondo-chat);padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom) 0}
@@ -1284,7 +1312,7 @@
   #podvista #podgrab.grabando{color:var(--rojo)}
   /* el toggle `es de pronunciacion` vive en el modal de la nota, fuera de `#podvista` */
   .podpron.on{border-color:var(--verde);color:var(--verde)}
-  body.sinlogin #vista-podcast{display:none!important}
+  body.sinlogin #vista-podcast,body.sinlogin #vista-home{display:none!important}
   /* vista mobile: una vista a la vez, la elige la barra de arriba. puro css, sin js de layout.
      entra cuando la ventana es angosta (celu) O cuando es mas alta que ancha (facundo, 2026-09-11:
      una ventana vertical en la compu, o el celu de pie, tambien quieren el toggle chat | widgets).
