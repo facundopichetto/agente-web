@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.354">
-<link rel="manifest" href="manifest.json?v=4.354">
+<meta name="agente-web-version" content="4.355">
+<link rel="manifest" href="manifest.json?v=4.355">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.354">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.355">
 </head>
 <body>
 
@@ -4752,6 +4752,18 @@ function lisCaja(f){
 function lisFila(p){
   var fila = document.createElement("div"); fila.className = "lisfila";
   fila.setAttribute("data-persona", p.id);
+  // 1948 {cartita}: la fila entera es tocable y abre SU cartita. no es un `<button>` porque adentro vive el boton
+  // de la accion recomendada (botones anidados no son html valido): es un `role=button` con teclado
+  if(p.ficha){
+    fila.classList.add("toca");
+    fila.setAttribute("role", "button");
+    fila.setAttribute("tabindex", "0");
+    fila.addEventListener("click", function(){ lisFicha(p); });
+    fila.addEventListener("keydown", function(ev){
+      if(ev.key !== "Enter" && ev.key !== " " && ev.key !== "Spacebar") return;
+      ev.preventDefault(); lisFicha(p);
+    });
+  }
   var fo = document.createElement("div"); fo.className = "lisfoto";
   if(p.foto) bajarImagen(p.foto).then(function(url){
     var im = document.createElement("img"); im.alt = ""; im.src = url; fo.appendChild(im);
@@ -4776,7 +4788,7 @@ function lisFila(p){
     ac.type = "button";
     ac.className = "lisacc" + (a.confirma === "dale" ? " toca" : "");
     ac.textContent = a.texto;
-    ac.addEventListener("click", function(){ lisAccionModal(p); });
+    ac.addEventListener("click", function(ev){ ev.stopPropagation(); lisAccionModal(p); });
     col.appendChild(ac);
   }
   fila.appendChild(col);
@@ -4827,6 +4839,138 @@ function lisHablar(p){
   guardarBorrador(temaActivo(), txt.value, true);
   vistaPoner("chat");
   try{ txt.focus(); }catch(x){}
+}
+
+// ---------- 1948 {cartita}: la cartita de una persona (facundo, 2026-09-17) ----------
+// "hacer que cada persona de una lista sea tocable y abra SU cartita completa, y que toda persona tenga acciones".
+// la ficha es la MISMA tarjeta del votador (foto grande con `object-fit:contain`, chips, datos, bio, por que esta,
+// `te dejo de seguir`, historial y el hilo de dm) y la arma ENTERA el server (`ig_listas.ficha`): aca no se calcula
+// ni se redacta nada, ni una hora. el molde no cambia: `.capa` + `.mcaja` + la `.selcaja` de la 1874 a pantalla
+// completa, `moldeBoton` en cada accion y `esc` por la pila de capas (arriba del votador, asi el teclado no vota).
+var lisFic = null, lisCmdModal = null;
+function lisFicMolde(){
+  if(lisFic) return lisFic;
+  lisFic = modalMolde({id: "lisficha", z: 45, sinServer: true});
+  lisFic.el.classList.add("pantalla");
+  var c = lisFic.el.querySelector(".mcaja");
+  if(c) c.classList.add("selcaja");
+  return lisFic;
+}
+function lisLinea(clase, txt){
+  if(!txt) return null;
+  var d = document.createElement("div"); d.className = clase; d.textContent = txt;
+  return d;
+}
+function lisFicha(p){
+  var f = p && p.ficha;
+  if(!f) return false;
+  var m = lisFicMolde();
+  var cu = document.createElement("div"); cu.className = "fic";
+  // bloque 1: la foto lo mas grande que entre (el cuadro lo mide la grilla, la imagen entra con `contain`)
+  var fo = document.createElement("div"); fo.className = "ficfoto";
+  // el `<img>` entra YA (vacio) y la foto le llega despues: el cuadro lo mide la grilla, asi la cartita no salta
+  // cuando la imagen baja (1874) y el `object-fit:contain` ya esta puesto aunque todavia no haya nada que mostrar
+  var im = document.createElement("img"); im.alt = "";
+  fo.appendChild(im);
+  if(f.foto) bajarImagen(f.foto).then(function(url){ im.src = url; }).catch(function(){});
+  cu.appendChild(fo);
+  // bloque 2: todo lo que ya se sabe, en el orden en que lo lee facundo
+  var inf = document.createElement("div"); inf.className = "ficinfo";
+  var chips = document.createElement("div"); chips.className = "ficchips";
+  (f.chips || []).forEach(function(x){
+    var c = document.createElement("span"); c.className = "ficchip"; c.textContent = x; chips.appendChild(c);
+  });
+  if(chips.childNodes.length) inf.appendChild(chips);
+  [["lisdatos", (f.datos || []).join(" · ")], ["ficlista", f.titulo_lista ? "está en `" + f.titulo_lista + "`" : ""],
+   ["lispq", f.porque_lista], ["ficbio", f.bio], ["lispq", f.porque], ["ficdm", f.dm]].forEach(function(x){
+    var n = lisLinea(x[0], x[1]); if(n) inf.appendChild(n);
+  });
+  // `por que esta aca`: la linea de trazabilidad, armada por el server desde el embudo y los snapshots
+  if(f.trazabilidad){
+    var tz = document.createElement("div"); tz.className = "fictraza";
+    var tt = document.createElement("span"); tt.className = "fictrazatit"; tt.textContent = "por qué está acá: ";
+    tz.appendChild(tt);
+    tz.appendChild(document.createTextNode(f.trazabilidad));
+    inf.appendChild(tz);
+  }
+  (f.historial || []).forEach(function(h){ inf.appendChild(lisLinea("fichist", h)); });
+  // bloque 3: las acciones, cada una del molde (`moldeBoton`), abajo de la ficha
+  var acc = document.createElement("div"); acc.className = "ficacc";
+  (p.acciones || []).forEach(function(a){ var n = lisAccBoton(p, a); if(n) acc.appendChild(n); });
+  inf.appendChild(acc);
+  cu.appendChild(inf);
+  return m.abrir({titulo: f.nombre || f.cuenta, cuenta: "@" + f.cuenta, cuerpo: cu, botones: []});
+}
+// una accion = una caja del molde. la que abre el perfil o el ultimo post es un `<a target="_blank">` de verdad
+// (1791: nada de `window.open` en la pwa) con la misma pinta de caja
+function lisAccBoton(p, a){
+  if(!a || !a.texto) return null;
+  var clase = "ficbtn fic-" + (a.clave || a.tipo || "").replace(/[^a-z]/g, "") + (a.confirma === "dale" ? " toca" : "");
+  if(a.tipo === "link" && a.link){
+    var lk = document.createElement("a");
+    lk.className = "bcaja " + clase; lk.href = a.link; lk.target = "_blank"; lk.rel = "noopener";
+    lk.textContent = a.texto;
+    lk.setAttribute("data-accion", a.clave || "");
+    // "y armar el pie de charla sin mandar nada": el texto queda escrito en `personal`, no se manda
+    lk.addEventListener("click", function(){ if(a.chat) lisEscribir(a.chat, false); });
+    return lk;
+  }
+  var b = moldeBoton({tipo: "caja", txt: a.texto, clase: clase, accion: function(){ lisAccionar(p, a); }});
+  b.setAttribute("data-accion", a.clave || "");
+  if(a.tipo === "info") b.disabled = true;
+  return b;
+}
+// lo de lectura sale directo; lo que escribe estado o toca instagram pide UNA caja verde `dale`, sin caja `no`
+function lisAccionar(p, a){
+  if(a.confirma === "dale") return lisConfirmar(p, a);
+  if(a.tipo === "draft") return lisDraftModal(p, a);
+  if(a.tipo === "chat"){ lisEscribir(a.chat || ("sobre @" + p.cuenta + ": "), true); return true; }
+  return false;
+}
+function lisCmdMolde(){
+  if(!lisCmdModal) lisCmdModal = modalMolde({id: "liscmd", z: 46, sinServer: true});
+  return lisCmdModal;
+}
+function lisConfirmar(p, a){
+  var m = lisCmdMolde();
+  var cu = document.createElement("div"); cu.className = "lisdet";
+  cu.appendChild(lisLinea("lisdetacc", a.texto));
+  if(a.comando){
+    var pre = document.createElement("pre"); pre.className = "liscmd"; pre.textContent = a.comando;
+    cu.appendChild(pre);
+  }
+  // UNA sola caja verde: no tocarla es no confirmar (2026-09-16), por eso no hay caja `no`
+  return m.abrir({titulo: p.nombre || p.cuenta, cuenta: "@" + p.cuenta, cuerpo: cu, botones: [
+    {txt: "dale", clase: "lisdale", accion: function(mm){
+      if(a.comando) (accMandarFn || mandar)(a.comando, "personal", true);
+      mm.cerrar();
+    }}]});
+}
+// el draft de dm queda A LA VISTA y no se manda: el ok de facundo sobre el draft es lo que autoriza (nunca esto)
+function lisDraftModal(p, a){
+  var m = lisCmdMolde();
+  var cu = document.createElement("div"); cu.className = "lisdet";
+  cu.appendChild(lisLinea("lisdetacc", "draft de dm, no se manda solo"));
+  var pre = document.createElement("pre"); pre.className = "lisdraft"; pre.textContent = a.draft || "";
+  cu.appendChild(pre);
+  return m.abrir({titulo: p.nombre || p.cuenta, cuenta: "@" + p.cuenta, cuerpo: cu, botones: [
+    {txt: "pasarlo al chat", clase: "lisachat", accion: function(mm){
+      mm.cerrar();
+      lisEscribir(a.chat || a.draft || "", true);
+    }}]});
+}
+// deja el texto escrito en la pestaña `personal` SIN mandar nada; `irse` cierra la cartita y va al chat
+function lisEscribir(texto, irse){
+  if(temaActivo() !== "personal") abrirTab("personal");
+  ponerCaja(String(texto || "") + " ");
+  guardarBorrador(temaActivo(), txt.value, true);
+  if(!irse) return true;
+  if(lisCmdModal) lisCmdModal.cerrar();
+  if(lisFic) lisFic.cerrar();
+  selCerrar();
+  vistaPoner("chat");
+  try{ txt.focus(); }catch(x){}
+  return true;
 }
 
 // ---------- 1801: el dropdown del fueguito (facundo, 2026-09-16) ----------
@@ -9844,6 +9988,7 @@ window.__agente = {
   selPoner: selPoner, selVotar: selVotar, selAbrirCol: selAbrirCol, selBoton: selBoton, selPendientes: selPendientes,
   // 1879 {listas}: la sub-vista `listas` de la vista `tinder`
   lisAbrir: lisAbrir, lisPoner: lisPoner, lisToggle: lisToggle, lisPintar: lisPintar, lisAccionModal: lisAccionModal,
+  lisFicha: lisFicha, lisAccionar: lisAccionar,   // 1948 {cartita}
   lisSub: function(){ return lis.sub; },
   lisDatos: function(d){ if(d){ lis.datos = d; lis.ts = Date.now(); } return lis.datos; },
   // 1801: el dropdown de los tres procesos y la fila de botones de cada uno

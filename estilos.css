@@ -449,6 +449,49 @@
   #lismodal .liscmd{margin:0;padding:6px 8px;border:1px solid var(--linea);border-radius:4px;background:#111;
     color:var(--cian);font-size:13px;white-space:pre-wrap;word-break:break-all}
   #lismodal .lisperfil{align-self:flex-start;color:var(--verde);font-size:13.5px;text-decoration:none}
+  /* 1948 {cartita} (facundo, 2026-09-17): "cada persona de una lista es tocable y abre SU cartita completa, y toda
+     persona tiene acciones". la fila se ve tocable (1808) y la cartita usa el molde de siempre: `.capa` + `.mcaja` +
+     la `.selcaja` a pantalla completa de la 1874, la foto lo mas grande que entre con `object-fit:contain` (el cuadro
+     lo mide la grilla, la imagen no lo estira) y los datos al lado en wide, abajo en el celu. */
+  #sellistas .lisfila.toca{cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+    border-radius:4px;padding-left:2px;padding-right:2px}
+  #sellistas .lisfila.toca:active{background:#111}
+  #lisficha{z-index:45;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom) 0;justify-content:stretch}
+  #lisficha::after{display:none}
+  #lisficha .mcaja{max-width:none;width:100%;height:100%;max-height:100%;flex:1 1 auto;min-height:0;
+    border-radius:0;box-shadow:none;overflow:hidden}
+  #lisficha .mcuerpo2{flex:1 1 auto;min-height:0;white-space:normal;overflow:hidden;display:flex}
+  #lisficha .mbotones:empty{display:none}
+  #lisficha .fic{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:minmax(0,1fr);
+    grid-template-rows:minmax(0,1fr) minmax(0,auto);gap:10px;width:100%}
+  #lisficha .ficfoto{min-height:0;height:100%;border:1px solid var(--linea);border-radius:4px;background:#111;
+    display:flex;align-items:center;justify-content:center;overflow:hidden}
+  #lisficha .ficfoto img{max-width:100%;max-height:100%;width:100%;height:100%;object-fit:contain;display:block}
+  #lisficha .ficfoto img:not([src]){visibility:hidden}
+  #lisficha .ficinfo{min-height:0;max-height:45%;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    display:flex;flex-direction:column;gap:5px}
+  #lisficha .ficchips{display:flex;flex-wrap:wrap;gap:5px}
+  #lisficha .ficchip{padding:1px 7px;border:1px solid var(--linea);border-radius:999px;color:var(--gris);font-size:12.5px}
+  #lisficha .lisdatos{color:var(--cian);font-size:13px;word-break:break-word}
+  #lisficha .ficlista{color:var(--blanco);font-size:13.5px;word-break:break-word}
+  #lisficha .lispq,#lisficha .ficbio{color:var(--gris);font-size:13px;word-break:break-word}
+  #lisficha .ficdm{color:var(--verde);font-size:13px}
+  #lisficha .fictraza{color:var(--gris);font-size:13px;word-break:break-word}
+  #lisficha .fictrazatit{color:var(--cian)}
+  #lisficha .fichist{color:var(--gris);font-size:12px;opacity:.8;word-break:break-word}
+  #lisficha .ficacc{display:flex;flex-direction:column;gap:6px;margin-top:4px}
+  #lisficha .ficacc .bcaja{width:100%;box-sizing:border-box;text-decoration:none;display:flex;align-items:center}
+  #lisficha .ficacc .bcaja.toca{border-color:var(--amarillo,#d8b25a);color:var(--amarillo,#d8b25a)}
+  @media (min-width:700px){
+    #lisficha .fic{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr)}
+    #lisficha .ficinfo{max-height:100%}
+  }
+  #liscmd .lisdraft{margin:0;padding:6px 8px;border:1px solid var(--linea);border-radius:4px;background:#111;
+    color:var(--blanco);font-size:13px;white-space:pre-wrap;word-break:break-word}
+  #liscmd .liscmd{margin:0;padding:6px 8px;border:1px solid var(--linea);border-radius:4px;background:#111;
+    color:var(--cian);font-size:13px;white-space:pre-wrap;word-break:break-all}
+  #liscmd .lisdet{display:flex;flex-direction:column;gap:6px}
+  #liscmd .lisdetacc{color:var(--blanco);font-size:var(--texto-max);word-break:break-word}
   /* 1556 (facundo, desde el iphone): "abajo los botones no tienen borde. izquierda en rojo una X, en el medio en blanco
      un guion, derecha un tick verde, tamaño 12px". sin borde ni caja, glifo de 14px (1938: era 12) y 38 px tocables; el nombre va en aria-label */
   /* el glifo, el color y el toque (opacidad) viven en el molde: `.bglifo.b-no` · `.b-queda` */
