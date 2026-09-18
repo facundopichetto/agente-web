@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.365">
-<link rel="manifest" href="manifest.json?v=4.365">
+<meta name="agente-web-version" content="4.366">
+<link rel="manifest" href="manifest.json?v=4.366">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.365">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.366">
 </head>
 <body>
 
@@ -1207,7 +1207,13 @@ function anclaPoner(a){
   if(!a.id) return false;
   var n = lista.querySelector('.msg[data-id="' + String(a.id).replace(/"/g, "") + '"]');
   if(!n) return false;
-  var d = n.getBoundingClientRect().top - hist.getBoundingClientRect().top - (+a.delta || 0);
+  // 2014 {fuentes}: con las fuentes al 125% un `delta` medido en portrait (423 px) puede ser mas grande que el
+  // scroller de ahora (girar el iphone deja 240 px de chat). aplicado tal cual, el mensaje anclado queda entero
+  // abajo del borde y arriba de todo aparece OTRO mensaje, que es justo lo que la 1813 promete que no pasa: con el
+  // recorte, el que ocupa la primera linea sigue siendo el mismo. el ancla guardada no se toca, asi que al volver a
+  // portrait la linea vuelve exactamente a sus 423 px.
+  var dmax = Math.max(0, hist.clientHeight - 24);
+  var d = n.getBoundingClientRect().top - hist.getBoundingClientRect().top - Math.min(+a.delta || 0, dmax);
   if(Math.abs(d) >= 0.5){
     aplicandoVista = true;
     try{ hist.scrollTop = Math.max(0, Math.round(hist.scrollTop + d)); }finally{ aplicandoVista = false; }
@@ -4180,13 +4186,13 @@ function tjProc(col){ return TJ_PROCS[col] || TJ_PROCS["ig-embudo"]; }
 // negro sobre negro). van como svg de 18 px con `currentColor`: no las pinta ninguna fuente, no las escala ningun
 // transform y se ven igual en los tres tamaños. `=` y `-_-` son ascii y siguen siendo texto.
 var TJ_SVG = {
-  bajar: '<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false">' +
+  bajar: '<svg viewBox="0 0 20 20" width="23" height="23" aria-hidden="true" focusable="false">' +
     '<path d="M10 3.2v12M4.6 10.4 10 15.8l5.4-5.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-  subir: '<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false">' +
+  subir: '<svg viewBox="0 0 20 20" width="23" height="23" aria-hidden="true" focusable="false">' +
     '<path d="M10 16.8v-12M4.6 9.6 10 4.2l5.4 5.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   // 1928 {arrepenti}: la `✕` del corte, por el mismo motivo que las flechas: ninguna fuente la dibuja igual en los
   // tres tamaños (el iphone es el que falla). el color sigue siendo del molde (`.bglifo.b-no`, rojo)
-  no: '<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false">' +
+  no: '<svg viewBox="0 0 20 20" width="23" height="23" aria-hidden="true" focusable="false">' +
     '<path d="M5 5l10 10M15 5 5 15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>'
 };
 // 1883: el orden, el glifo y la frase de cada boton los manda el server (`seleccion.BOTONES_COL`, que viaja en
@@ -8667,7 +8673,7 @@ function pintarNodos(n){
   if(!nodosEl) nodosEl = $("nodos");
   if(!nodosEl) return;
   var ns = (n && n.nodos) || [];
-  if(!ns.length){ nodosEl.innerHTML = '<span class="g" style="font-size:11px">nodos…</span>'; return; }
+  if(!ns.length){ nodosEl.innerHTML = '<span class="g" style="font-size:14px">nodos…</span>'; return; }
   // el que lleva mas tiempo corriendo a la izquierda; sin `uptime_s` al final en su orden (nodos.orden_uptime)
   var orden = ns.map(function(x, i){ return i; }).sort(function(a, b){
     var ua = ns[a].uptime_s, ub = ns[b].uptime_s;
@@ -10792,9 +10798,10 @@ window.__agente = {
     return {on: vistaSet(), elegida: vistaOn, previa: vistaPrevia, mobile: esVistaMobile(), doble: vistaDoble,
             clases: VISTAS_TODAS.filter(function(n){ return document.body.classList.contains("v-" + n); }),
             iconos: {chat: vis("ver-chat"), widgets: vis("ver-widgets"), tinder: vis("ver-votar"),
-                     votar: vis("ver-votacion"), podcast: vis("ver-podcast")},
+                     votar: vis("ver-votacion"), podcast: vis("ver-podcast"), home: vis("ver-home")},
             paneles: {chat: vis("panel-chat"), widgets: vis("panel-widgets"), tinder: vis("selmodal"),
-                      votar: vis("selmodal") || vis("votar"), podcast: vis("vista-podcast")},
+                      votar: vis("selmodal") || vis("votar"), podcast: vis("vista-podcast"),
+                      home: vis("vista-home")},
             guardada: (function(){ try{ return sessionStorage.getItem(VISTA_LS); }catch(x){ return null; } })()};
   },
   estado: function(){ return {tabs: tabs, activo: activo, ts: layoutTs,
