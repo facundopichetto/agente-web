@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.362">
-<link rel="manifest" href="manifest.json?v=4.362">
+<meta name="agente-web-version" content="4.363">
+<link rel="manifest" href="manifest.json?v=4.363">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.362">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.363">
 </head>
 <body>
 
@@ -4068,10 +4068,17 @@ function tjResumen(e){
 // 1794: el estado de UNA fila por lan (`GET /seleccion/<col>`): trae `agotada` y el lote que `ejecutar` repuso
 // (`ig_ritmo.repone`: la web no inventa ningun numero, pide y pinta lo que el server ya armo)
 var SEL_PEDIR_MS = 2500, selPedirT = null;
-function selPedir(col){
+// 1975 {arranque}: `arranque` = lo pidio facundo ABRIENDO el proceso. va al server como `?arranque=1` (el que rearma
+// desde el principio descarta su fila y la vuelve a armar con el orden de ahora) y borra la memoria local de lo
+// votado de ESA coleccion, que si no escondia 7 dias a la que el server acaba de volver a servir
+function selPedir(col, arranque){
+  if(arranque){
+    var f = selLeer("fila", {});
+    if(f[col]){ delete f[col]; selEscribir("fila", f); }
+  }
   return votLan().then(function(base){
     if(!base) return false;
-    return lanFetch(selUrl(base, col), {method: "GET", cache: "no-store", headers: {"authorization": "Bearer " + token}})
+    return lanFetch(selUrl(base, col) + (arranque ? "?arranque=1" : ""), {method: "GET", cache: "no-store", headers: {"authorization": "Bearer " + token}})
       .then(function(r){ if(!r || !r.ok) throw new Error("http " + (r && r.status)); return r.json(); })
       .then(function(j){ return filaAplicar(col, j); });
   }).catch(function(){ return false; });
@@ -5093,11 +5100,23 @@ function votMenuAbierto(){
 }
 // tocar un item: recien aca se ve una tarjeta. el titulo de arriba lo manda el server (`candidatas` / `dejar de
 // seguir` / ...). si esa fila no tiene nada listo, la vista se queda en el `home` en vez de cerrarse sola
+// 1975 {arranque}: lo dice el server (`arranque` de la fila abierta), la web no tiene una lista de procesos propia
+function selArranca(col){
+  return sel.abiertas.some(function(a){ return a.coleccion === col && a.arranque; });
+}
 function votMenuElegir(col){
   var ok;
   $("votmenu").classList.add("oculta");
   lis.sub = "votar";
   if(col === "listas") return lisAbrir();   // 1879: la sub-vista `listas`, sin votacion abierta
+  // 1975 {arranque}: en `dejar de seguir` la primera tarjeta tiene que ser la de menos seguidores de la lista
+  // ENTERA, asi que la fila se pide de nuevo antes de pintar nada; sin lan se abre con lo que ya hay
+  if(selArranca(col)){
+    selPedir(col, true).then(function(){
+      if(!selAbrirCol(col) && vistaEs("tinder") && !sel.actual) tinderHome();
+    });
+    return true;
+  }
   // 1933 {instatinder}: lo que no es instagram (animaciones, una tanda de checkboxes) no vive en esta vista:
   // se abre en la vista `votar`, la del icono fucsia, y la pone `votAbrir` / `selAbrir`
   if(col === "animaciones"){
@@ -10350,7 +10369,25 @@ prepararDictado();     // 1209: preguntar una vez si el celu puede transcribir o
   try{ history.replaceState(null, "", location.pathname + (q.toString() ? "?" + q.toString() : "")); }catch(x){}
 })();
 
+// 1974 {centrado}: cuanto se corre el contenido de un boton (glifo o svg) respecto del centro de su caja.
+// lo miden las pruebas en chrome: `dx`/`dy` en px, `0` = centrado de verdad. no lo usa la interfaz.
+function medirCentro(b){
+  var r = b.getBoundingClientRect(), cajas = [];
+  [].forEach.call(b.childNodes, function(n){
+    var q = null;
+    if(n.nodeType === 3 && (n.textContent || "").trim()){
+      var rg = document.createRange(); rg.selectNodeContents(n); q = rg.getBoundingClientRect();
+    }else if(n.nodeType === 1){ q = n.getBoundingClientRect(); }
+    if(q && (q.width || q.height)) cajas.push(q);
+  });
+  if(!cajas.length) return null;
+  function m(k, f){ return Math[f].apply(null, cajas.map(function(q){ return q[k]; })); }
+  return {dx: Math.round(((m("left", "min") + m("right", "max")) / 2 - (r.left + r.right) / 2) * 10) / 10,
+          dy: Math.round(((m("top", "min") + m("bottom", "max")) / 2 - (r.top + r.bottom) / 2) * 10) / 10};
+}
+
 window.__agente = {
+  medirCentro: medirCentro,
   fmtTiempo: fmtTiempo,
   // 1631: glifo `/` de comandos (`prueba_web_comandos`)
   cmdAbrir: cmdAbrir, cmdLocal: cmdLocal, cmdCargar: cmdCargar,
@@ -10391,7 +10428,7 @@ window.__agente = {
   tjEstado: function(){ return {votos: sel.tjVotos || 0, fallidas: sel.tjFallidas || [], n: sel.actual ? sel.actual.candidatas.length : null}; },
   selEnviarTexto: selEnviarTexto, selCerrar: selCerrar, selEnviar: selEnviar, tjTecla: tjTecla,
   // 1407: boton `votar` y respaldo por el buzon (`prueba_web_votar`)
-  selPoner: selPoner, selVotar: selVotar, selAbrirCol: selAbrirCol, selBoton: selBoton, selPendientes: selPendientes,
+  selPoner: selPoner, selVotar: selVotar, selAbrirCol: selAbrirCol, selArranca: selArranca, selPedir: selPedir, selBoton: selBoton, selPendientes: selPendientes,
   // 1879 {listas}: la sub-vista `listas` de la vista `tinder`
   lisAbrir: lisAbrir, lisPoner: lisPoner, lisToggle: lisToggle, lisPintar: lisPintar, lisAccionModal: lisAccionModal,
   lisFicha: lisFicha, lisAccionar: lisAccionar,   // 1948 {cartita}
@@ -10764,9 +10801,10 @@ window.__agente = {
               filaTmp: (c.querySelector(".pltiempos") ?
                         Math.round(c.querySelector(".pltiempos").getBoundingClientRect().width) : 0),
               btns: [].map.call(c.querySelectorAll(".plbotones .plbtn"), function(b){
-                      var r = b.getBoundingClientRect();
+                      var r = b.getBoundingClientRect(), ce = medirCentro(b);
                       return {w: Math.round(r.width), h: Math.round(r.height),
-                              izq: Math.round(r.left), clase: b.className.split(" ").pop()}; }),
+                              izq: Math.round(r.left), clase: b.className.split(" ").pop(),
+                              dx: ce ? ce.dx : null, dy: ce ? ce.dy : null}; }),
               estado: c.__player ? c.__player.estado() : null};
     });
   },
@@ -10783,9 +10821,10 @@ window.__agente = {
       fila: !!($("fila").offsetWidth || $("fila").offsetHeight), txton: pie.classList.contains("txton"),
       enviarOn: !audBtn("der") || !audBtn("der").disabled,
       botones: [].map.call(caja.children, function(b){
-        var x = b.getBoundingClientRect();
+        var x = b.getBoundingClientRect(), ce = medirCentro(b);   // 1974: el icono, centrado en la caja
         return {clase: b.className.split(" ").filter(function(k){ return /^aud(izq|cen|der)$/.test(k); })[0] || "",
                 w: Math.round(x.width), h: Math.round(x.height), izq: Math.round(x.left),
+                dx: ce ? ce.dx : null, dy: ce ? ce.dy : null,
                 svg: !!b.querySelector("svg"), txt: (b.textContent || "").trim(),
                 circulo: !!b.querySelector("circle"), palitos: b.querySelectorAll("rect").length,
                 color: getComputedStyle(b).color, apagado: !!b.disabled,
@@ -10802,6 +10841,10 @@ window.__agente = {
               dur: n ? (n.querySelector(".audcdur") || {}).textContent : null,
               play: !!(n && n.querySelector(".audcplay")), barra: !!(n && n.querySelector(".audcbarra")),
               x: !!(n && n.querySelector(".audcx")),
+              // 1974: los dos botones de la tarjeta (play y `×`) tambien van centrados
+              btns: [].map.call((n || document.createElement("div")).querySelectorAll(".audcbtn"), function(b){
+                      var ce = medirCentro(b);
+                      return {clase: b.className.split(" ").pop(), dx: ce ? ce.dx : null, dy: ce ? ce.dy : null}; }),
               fondo: n ? getComputedStyle(n).backgroundColor : ""};
     });
   },

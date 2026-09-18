@@ -744,8 +744,15 @@
   /* 1968: dos renglones. arriba `m:ss` | barra larga | `m:ss`; abajo tres columnas parejas al 100% */
   .player .pltiempos{display:flex;align-items:center;gap:8px;width:100%}
   .player .plbotones{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;width:100%}
-  .player .plbtn{font-size:12px;padding:2px 6px;line-height:1.4;
+  /* 1974 {centrado}: el glifo va centrado de verdad, vertical y horizontal, en cualquier ancho. `.bterm`
+     trae `text-align:left`, y desde que la fila es alta y rectangular (1968) el `-10s`/`▶`/`+10s` quedaba
+     corrido arriba y a la izquierda. flex center en el boton, padding parejo y sin line-height heredado. */
+  .player .plbtn{font-size:12px;padding:2px 6px;line-height:1;
+    display:flex;align-items:center;justify-content:center;text-align:center;
     min-height:46px;width:100%;box-sizing:border-box}
+  /* ojo: `margin:auto` NO va aca. en un flex column un `margin:auto` se come el espacio libre y rompe
+     el `justify-content:center` (el icono se va 3 px para abajo): el centrado lo hace el flex del boton. */
+  .player .plbtn svg{display:block;pointer-events:none}
   .player .plbarra{flex:1 1 auto;min-width:40px;height:16px;position:relative;cursor:pointer;touch-action:none}
   .player .plbarra::before{content:"";position:absolute;left:0;right:0;top:7px;height:2px;background:var(--linea)}
   .player .plrell{position:absolute;left:0;top:7px;height:2px;width:0;background:var(--verde)}
@@ -768,11 +775,12 @@
     gap:4px;flex-direction:column;font-size:var(--texto-max);padding:4px 6px;line-height:1.3;
   }
   #audbarra .audbtn svg{width:26px;height:26px;display:block;pointer-events:none}
+  #audbarra .audbtn{text-align:center}                      /* 1974: `.bterm` viene con `text-align:left` */
   #audbarra .audizq{color:var(--gris)}
   #audbarra .audizq.descartar{color:var(--rojo)}
   #audbarra .audcen{color:var(--rojo)}
   #audbarra .audcen.grabando{animation:lat 1s steps(2,start) infinite}
-  #audbarra .audcen .audreloj{font-size:12px;color:var(--rojo);font-variant-numeric:tabular-nums}
+  #audbarra .audcen .audreloj{font-size:12px;line-height:1;color:var(--rojo);font-variant-numeric:tabular-nums}
   #audbarra .audder{color:var(--gris)}
   #audbarra .audder.prendido{color:var(--verde)}
   #audbarra .audbtn:disabled{color:var(--gris);cursor:default}
@@ -790,6 +798,7 @@
   #audpend .audcplay{color:var(--verde)}
   #audpend .audcx{color:var(--rojo)}
   #audpend .audcbtn svg{width:18px;height:18px;display:block;pointer-events:none}
+  #audpend .audcbtn{text-align:center;line-height:1;padding:2px 4px}   /* 1974: centrado, igual que el player */
   #audpend .audcbarra{flex:1 1 auto;min-width:30px;height:4px;border-radius:2px;background:var(--linea);
     position:relative;overflow:hidden}
   #audpend .audcrell{position:absolute;left:0;top:0;height:4px;width:0;background:var(--verde)}
