@@ -962,10 +962,12 @@
   /* 1832: la escalera de modelos del widget `models`: grid de 7 columnas, entra en el celu sin scroll horizontal */
   .esctab{display:grid;grid-template-columns:minmax(0,8fr) 3fr 12fr 3fr 3fr 6fr 8fr;width:100%;column-gap:6px;row-gap:1px;
           font-variant-numeric:tabular-nums;max-width:100%;overflow:hidden;white-space:nowrap}   /* 1843: `fr`, ver .qtab */
-  .esctab .eth{color:var(--gris);font-size:11px;letter-spacing:.3px;opacity:.75}
-  .esctab .enom{min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .esctab .eth{color:var(--gris);font-size:13px;letter-spacing:.3px;opacity:.75}
+  /* 1946: con la fuente +2 px las siete columnas se pasaban del ancho de la caja y el nombre de la tarea quedaba
+     en 0 px: ahora TODA celda achica y corta con `…`, asi el reparto `fr` manda y la tabla entra siempre */
+  .esctab .enom,.esctab .eth,.esctab .ecel{min-width:0;overflow:hidden;text-overflow:ellipsis}
   .esctab .ecel{text-align:right}
-  @media (max-width:480px){ .esctab{column-gap:3px;font-size:12px} }   /* 1938: 12px y 3px (era 10px); asi las 7 columnas siguen entrando en 390px */
+  @media (max-width:480px){ .esctab{column-gap:2px;font-size:12px} }   /* 1938: 12px (1946: +2) y el gap a 2px: asi las 7 columnas siguen entrando en 390px */
   .qtab .qpaso.qh,.qtab .qcola.qh{opacity:.6} .qtab .qcorre.qh{color:#8fcf7f}
   /* 1862: con la sexta columna (`delay`) las cinco horas ocupan mas: la tabla baja a 11.5px (1938: era 9.5) y 4px de gap tambien
      en la compu (antes 10.5/7, solo el celu bajaba), asi el nombre sigue teniendo lugar y no se corta con `…`;
