@@ -743,19 +743,19 @@
     flex:0 0 auto;color:var(--rojo);font-size:16px;user-select:none;display:none;
   }
   #grabinfo.viendo{display:block}
-  /* el [▶] de daniela al lado del [tema] de cada respuesta, y el player de los audios de facundo.
-     look terminal: un boton de texto, nada de controles nativos grises. */
+  /* el [▶] de texto: 2044 {audiotodas} ya no va en la cabecera de las respuestas (se fue el audio chiquito);
+     queda para los audios pre mandados, el podcast y las voces. look terminal, nada de controles nativos. */
   .play{
     background:#000;color:var(--verde);border:1px solid transparent;border-radius:4px;
     font:inherit;font-size:15px;line-height:1.3;padding:0 3px;cursor:pointer;letter-spacing:0;
   }
   .play:disabled{color:var(--gris);cursor:default}
   .play.sonando{color:var(--amarillo)}
-  .msg .play{margin-left:6px}
   .cuerpo .aud{display:inline-flex;align-items:center;gap:6px;color:var(--cian)}
   .cuerpo .aud .play{color:var(--cian)}
   .cuerpo .aud .dur{color:var(--gris);font-size:15px}
-  /* 1963 {player}: el reproductor completo de la pestaña `audio`. molde de `docs/componentes-web.md`
+  /* 1963 {player}: el reproductor completo al pie de cada mensaje con audio (2044: en todas las pestañas).
+     molde de `docs/componentes-web.md`
      (`moldeBoton` -> `.bterm`), nunca `<audio controls>` nativo. 100% del ancho de la caja en el celu y
      `max-width` de 500 px en la compu; en 390 px entra sin scroll horizontal (la barra se estira, y si no
      entra la fila envuelve). las fuentes respetan el tope de la 1946 (`--texto-max`, 14px).
@@ -788,8 +788,8 @@
     flex:0 0 auto}
   .player.roto .pltiempo{color:var(--rojo)}
   .player.sonando .plrell,.player.sonando .plpunto{background:var(--amarillo)}
-  /* 1970 {grabar}: en la pestaña `audio` la barra de entrada se reemplaza por tres botones grandes (el resto de
-     las pestañas no cambia ni un pixel). tres columnas iguales al 100% del ancho, altas pero NUNCA cuadradas
+  /* 1970 {grabar} + 2044 {audiotodas}: en el celu (todas las pestañas) la barra de entrada se reemplaza por tres
+     botones grandes; en la mac queda la barra de siempre. tres columnas iguales al 100% del ancho, altas pero NUNCA cuadradas
      (nada de `aspect-ratio:1/1`): en 390 px cada una mide ~119x64. molde `moldeBoton` -> `.bterm`, svg con
      `currentColor`, y las fuentes respetan el tope de la 1946 (`--texto-max`, 14 px). */
   #pie.audio #fila{display:none}
@@ -829,7 +829,7 @@
     position:relative;overflow:hidden}
   #audpend .audcrell{position:absolute;left:0;top:0;height:4px;width:0;background:var(--verde)}
   #audpend .audcdur{flex:0 0 auto;color:var(--gris);font-size:16px;font-variant-numeric:tabular-nums}
-  /* alineacion estilo whatsapp, SOLO en la pestaña `audio` (1963): el mensaje entero, no solo el reproductor */
+  /* alineacion estilo whatsapp (1963), en todas las pestañas solo en el celu (2044): el mensaje entero */
   #lista.modoaudio .msg.yo{margin-left:5%;text-align:right}
   #lista.modoaudio .msg.agente{margin-right:5%}
   #lista.modoaudio .msg.yo .player{margin-left:auto}

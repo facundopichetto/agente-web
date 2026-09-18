@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.370">
-<link rel="manifest" href="manifest.json?v=4.370">
+<meta name="agente-web-version" content="4.371">
+<link rel="manifest" href="manifest.json?v=4.371">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.370">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.371">
 </head>
 <body>
 
@@ -405,9 +405,9 @@ var alfinal = $("alfinal"), envoltorio = $("envoltorio");
 // una copia GENERADA de esa receta: se actualiza con `python3 -m recetas.clasificar_tema --sync-web`
 // y `recetas/prueba_web` falla si quedo vieja. no editarla a mano.
 /* TEMAS-JS: generado por `python3 -m recetas.clasificar_tema --sync-web`, no editar a mano */
-var TEMAS = ["tools", "awtomic", "awtomic/qa", "flabs", "fuzzer", "juegos", "plata", "server", "personal", "podcast", "flaudio", "audio"];
+var TEMAS = ["tools", "awtomic", "awtomic/qa", "flabs", "fuzzer", "juegos", "plata", "server", "personal", "podcast", "flaudio"];
 var PRIORIDAD = ["awtomic/qa", "flabs", "podcast", "server", "juegos", "plata", "fuzzer", "awtomic", "flaudio", "tools"];
-var MODOS_TAB = ["audio"];
+var MODOS_TAB = [];
 var ALIAS = {"awtomic-qa": "awtomic/qa", "claudio": "flaudio"};
 var RE_CORTE_SRC = "(\\n+)|([.;!?]\\s+)|(^|[\\s,;:])(?:y\\s+otra\\s+cosa|otra\\s+cosa|aparte|adem[a\u00e1]s|tambi[e\u00e9]n)(?!\\w)";
 var PALABRAS = {
@@ -433,8 +433,8 @@ function normTema(t){ t = (t || "").trim().toLowerCase(); return (ALIAS && ALIAS
 function padreTema(t){ return normTema(t).split("/")[0]; }
 function esTema(t){ return TEMAS.indexOf(normTema(t)) >= 0; }
 // 1959 {audio}: un **modo** es una pestaña que existe pero no clasifica nada (`MODOS_TAB`, generado con
-// el resto del bloque). `porPalabras` no lo puede devolver (no tiene palabras) y el daemon tampoco lo
-// recuerda como ultimo tema: entra solo lo que facundo escribe ahi, con su `tema audio:` explicito.
+// el resto del bloque). 2044 {audiotodas}: `audio` dejo de ser pestaña y tema (facundo, 2026-09-18), la
+// lista queda vacia y esto es siempre false; el audio es un modo de TODAS las pestañas (ver `audModo`).
 function esModo(t){ return (typeof MODOS_TAB !== "undefined" ? MODOS_TAB : []).indexOf(normTema(t)) >= 0; }
 // lo que el daemon atiende por texto exacto (sin modelo): sale crudo, sin `tema x:` adelante
 var RE_CRUDO = /^(status|estado|pausa|segu[ií]|log|cola|[oó]rdenes|ordenes|propuestas|avisos|reinicia|reiniciar|cuenta(\s+\S+)?|op\s+\d+\s+[a-dA-D]|dale\s+\d+)$/i;
@@ -474,7 +474,7 @@ function clasificar(txt){
 // resolucion de conflictos: **el ultimo que escribe gana**, por el `ts` de cada layout.
 // el chat es un panel UNICO (facundo, 2026-09-12: "las pestañas del chat no tienen que poder ser
 // dragandropeables"): no hay segundo panel ni arrastre, solo la pestaña activa.
-var tabs = ["tools", "audio", AUTO], activo = "tools";   // 1959: `audio` es un modo fijo, como la general
+var tabs = ["tools", AUTO], activo = "tools";   // 2044: la pestaña `audio` se fue; la general sigue fija
 var layoutTs = 0;                 // cuando se escribio el layout que estoy mostrando
 var shaTabs = null;               // sha del tabs.json remoto (para el PUT)
 var etagTabs = null, tabsUlt = 0; // poll con etag, como los widgets
@@ -1002,6 +1002,10 @@ document.addEventListener("keydown", tecladoMirarTecla, true);
 // un atributo, no un estado, y tiene que decir siempre lo que enter va a hacer de verdad
 window.addEventListener("resize", tecladoHint);
 try{ window.matchMedia("(pointer: coarse)").addEventListener("change", tecladoHint); }catch(x){}
+// 2044 {audiotodas}: si cambia el hardware (un ipad que enchufa mouse, o la emulacion de las pruebas), el pie
+// de tres botones y la alineacion whatsapp se recalculan sin esperar un render
+try{ window.matchMedia("(pointer: coarse)").addEventListener("change", function(){
+  if(typeof marcarModoAudio === "function") marcarModoAudio(); }); }catch(x){}
 // pwa: agregada a la pantalla de inicio, ios corre la pagina SIN la barra de safari (y sin su
 // barra de accesorios). `navigator.standalone` es lo que dice ios; `display-mode: standalone` es
 // lo que dicen android y desktop. queda como clase en el body para el css y para las pruebas.
@@ -2123,8 +2127,9 @@ function modeloCorto(s){
 function nodoMsg(m){
   var div = document.createElement("div");
   div.className = "msg " + m.clase + (m.enviando ? " enviando" : "");
-  // 1963 {player}: la pestaña `audio` es un modo de charla, ahi el audio va abajo del mensaje y entero
-  var modoAud = typeof esModo === "function" && esModo(activo), auds = modoAud ? audiosDeMsg(m) : [];
+  // 1963 {player} + 2044 {audiotodas}: en TODAS las pestañas el audio va abajo del mensaje y entero, como
+  // reproductor de dos renglones (`playerAudio`): el de flaudio (`m.audio`, daniela) y los que manda facundo
+  var auds = audiosDeMsg(m);
   if(m.id) div.dataset.id = m.id;
   var cab = document.createElement("div");
   cab.innerHTML = '<span class="quien"></span><span class="ts"></span>';
@@ -2147,9 +2152,9 @@ function nodoMsg(m){
     mi.textContent = fmtTiempo(m.duracion_s) + (m.cuello ? " · " + m.cuello : "");
     cab.appendChild(mi);
   }
-  // el [▶] de daniela: solo en las respuestas que el daemon ya renderizo (campo `audio` de la fila).
-  // el texto sale primero y el audio aparece en el poll siguiente, asi que el boton llega despues.
-  if(m.audio && !modoAud) cab.appendChild(reproductor(m.audio, "escuchar la respuesta"));
+  // 2044 {audiotodas}: el `[▶]` chico de daniela en la cabecera se fue ("saca tambien el audio chiquito que
+  // hay ahora"); el audio de la respuesta (campo `audio` de la fila, que llega en el poll siguiente al texto)
+  // se pinta abajo del mensaje, entero, con `playerAudio`.
   // 1776: el hilo que facundo ya vio mientras contestaba (entendi, textos intermedios), del jsonl (`tramos`) o
   // adoptado del bloque en vuelo; arriba del cuerpo, mismo orden, nunca editado. 1850: el comando crudo y su salida
   // (`salida` de un daemon viejo) no se pintan nunca. 1868 (facundo, 2026-09-17: "cuando ya me respondiste, esta
@@ -2171,13 +2176,13 @@ function nodoMsg(m){
   var ops = m.clase === "agente" ? cajasDe({texto: textoSinAcc, opciones: m.opciones}) : null;
   var dr = draftsDe(ops && ops.cuerpo !== null ? ops.cuerpo : textoSinAcc);
   var cuerpoTxt = m.clase === "agente" && dr.bloques.length ? dr.cuerpo : (ops && ops.cuerpo !== null ? ops.cuerpo : (m.clase === "yo" ? sinDictado(m.texto) : textoSinAcc));
-  b.innerHTML = resaltar(modoAud && auds.length ? sinMarcaAudio(cuerpoTxt) : cuerpoTxt);
+  b.innerHTML = resaltar(auds.length ? sinMarcaAudio(cuerpoTxt) : cuerpoTxt);
   div.appendChild(cab); if(hilo) div.appendChild(hilo); div.appendChild(b);
   if(acc && acc.lista.length) div.appendChild(nodoAcciones(m, acc.lista));
   if(ops && ops.lista.length) div.appendChild(nodoCajas(m, ops.lista));
   if(m.clase === "agente" && dr.bloques.length) div.appendChild(nodoDrafts(dr.bloques));
   div.__msg = m;          // el menu contextual (delegado) lee el mensaje del nodo
-  // el reproductor completo, uno por audio, al final del mensaje (solo en la pestaña `audio`)
+  // el reproductor completo, uno por audio, al final del mensaje (2044: en todas las pestañas)
   auds.forEach(function(sa){ div.appendChild(playerAudio(sa, "escuchar")); });
   if(m.clase === "agente") ponerCopiar(b);   // 1214: `copiar` de un toque en links, claves y code
   cargarImagenes(b);
@@ -2770,11 +2775,12 @@ function pintarMsg(m, arriba){
 }
 var renderando = false;   // el render entero arma cada caja ya con todos los mensajes: no hace falta refrescar
 // 1963 {player}: la alineacion estilo whatsapp (facundo a la derecha con 5% de margen a la izquierda, flaudio a
-// la izquierda con el mismo margen del otro lado) vale SOLO en la pestaña `audio`, y es del mensaje entero, no del
-// reproductor: la marca la pone el css con esta clase, nunca un estilo por mensaje.
+// la izquierda con el mismo margen del otro lado) es del mensaje entero, no del reproductor: la marca la pone
+// el css con esta clase, nunca un estilo por mensaje. 2044 {audiotodas}: vale en TODAS las pestañas, solo en
+// el celu (`audModo`, la misma vista mobile de `esVistaMobile`); en la mac el chat queda como siempre.
 function marcarModoAudio(){
-  if(lista) lista.classList.toggle("modoaudio", typeof esModo === "function" && esModo(activo));
-  // 1970 {grabar}: y el pie de esa pestaña son tres botones grandes en vez de la barra de siempre
+  if(lista) lista.classList.toggle("modoaudio", typeof audModo === "function" && audModo());
+  // 1970 {grabar}: y el pie del celu son tres botones grandes en vez de la barra de siempre
   if(typeof audPintar === "function") audPintar(true);
 }
 function render(){
@@ -6342,8 +6348,7 @@ function pintarOirNoti(c, leer){
   pararHablaNoti();
   o.innerHTML = "";
   if(c.m && c.m.audio){                 // la respuesta ya tiene su m4a (`recetas/audio_respuesta`): ese mismo
-    o.appendChild(reproductor(c.m.audio, "escuchar"));
-    o.appendChild(document.createTextNode("escuchar"));
+    o.appendChild(playerAudio(c.m.audio, "escuchar"));   // 2044: el reproductor completo, no el `escuchar` chico
     return;
   }
   if(!window.speechSynthesis || !window.SpeechSynthesisUtterance) return;   // un aviso no tiene m4a: la voz del equipo
@@ -6998,6 +7003,8 @@ window.addEventListener("pagehide", function(){
 });
 
 // ---------- reproducir: un [▶] con look terminal, uno solo sonando a la vez ----------
+// 2044: ya no es el audio de las respuestas (eso es `playerAudio`); queda para los audios pre mandados, el
+// podcast y las voces.
 var audioUrls = {};          // ruta del buzon -> object url (una sola bajada por archivo)
 var sonando = null;
 function bajarAudio(src){
@@ -7050,7 +7057,7 @@ function reproductor(src, titulo){
   });
   return b;
 }
-// ---------- 1963 {player}: el reproductor completo de la pestaña `audio` ----------
+// ---------- 1963 {player}: el reproductor completo de cada mensaje con audio (2044: en todas las pestañas) ----------
 // facundo (orden 1963): "reemplazar el `[▶]` de texto por un reproductor completo al final de CADA mensaje que
 // tenga audio, tanto los de flaudio como los audios que manda facundo", con play/pausa, `-10s`, `+10s`, barra de
 // progreso tocable y arrastrable, y el tiempo. molde de `docs/componentes-web.md` (`moldeBoton`),
@@ -7059,7 +7066,7 @@ function reproductor(src, titulo){
 // con `-10s` a la izquierda, play/pausa en el medio y `+10s` a la derecha.
 // nunca `<audio controls>` nativo, que es gris y no se puede estilar. el tiempo lo arma el cliente y no el server
 // (`mmss`): avanza con la reproduccion, como el `delta` fluido de la cola (1849), no es una hora ni una columna.
-// solo vive en la pestaña `audio`: en las demas sigue el `[▶]` de texto de la 1650.
+// 2044 {audiotodas}: vive en TODAS las pestañas, al pie de cada mensaje con audio; el `[▶]` de texto se fue.
 var PLAYER_SALTO = 10;            // segundos de `-10s` / `+10s`
 var PLAYER_ANCHO = 500;           // px: el `max-width` en desktop (en mobile es el 100% de la caja)
 function playerAudio(src, titulo){
@@ -7237,7 +7244,11 @@ var audPend = [];          // los audios pre mandados: {id, blob, mime, ms, dich
 var audEnviando = false;
 var audPausado = null;     // lo que estaba sonando cuando arranco la grabacion, para retomarlo
 var audSeq = 0;
-function audModo(){ return typeof esModo === "function" && esModo(activo); }
+// 2044 {audiotodas} (facundo, 2026-09-18: "que el teclado del celu sea audio en todas las pestañas"): el modo
+// audio ya no es una pestaña, es el celu. celu o compu se decide por HARDWARE (`esTactil()`, el mismo que
+// decide si enter manda y el `celu`/`compu` del `[desde:]`), nunca por el ancho de la ventana (facundo,
+// 2026-09-12); en la mac, aunque la ventana sea angosta, queda la barra de siempre con su boton de grabar.
+function audModo(){ return typeof esTactil === "function" && esTactil(); }
 function audBtn(k){ return $("audbarra").querySelector(".aud" + k); }
 function audBarraArmar(){
   var caja = $("audbarra");
@@ -7426,7 +7437,7 @@ function sinDictado(t){
            .replace(/\n+$/, "");
   return s.indexOf("](audio/") >= 0 ? s : (s ? s + "\n" : "") + "[audio](" + AUD_SIN + ")";
 }
-// 1963 {player}: en la pestaña `audio` el audio no se pinta adentro del texto ni al lado de la cabecera, va como
+// 1963 {player} + 2044: el audio no se pinta adentro del texto ni al lado de la cabecera, va como
 // un reproductor completo al final del mensaje. `audiosDeMsg` junta las dos puntas (el `audio` que renderizo el
 // daemon y los `[audio](audio/x)` que mando facundo) y `sinMarcaAudio` saca del cuerpo los marcadores que ya tienen
 // su reproductor abajo; el `audio/sin-archivo` de una fila vieja se deja como estaba (etiqueta `audio`, sin play).
@@ -10349,6 +10360,8 @@ function sincronizarVista(){
   // (y en la vista mobile el separador desaparece y mandan los anchos de siempre)
   if(splitPct() !== null){ var p = limitarPct(splitPct()); if(p !== null) split.pct = p; }
   aplicarSplit();
+  // 2044 {audiotodas}: el modo audio (pie de tres botones + alineacion whatsapp) se recalcula con la vista
+  if(typeof marcarModoAudio === "function") marcarModoAudio();
   anclaRelayout();
 }
 window.addEventListener("resize", sincronizarVista);
@@ -11022,7 +11035,7 @@ window.__agente = {
     });
   },
   modoAudioPintado: function(){ return !!(lista && lista.classList.contains("modoaudio")); },
-  // 1970 {grabar}: la barra de tres botones de la pestaña `audio` y los audios pre mandados
+  // 1970 {grabar} + 2044: la barra de tres botones del celu (todas las pestañas) y los audios pre mandados
   audGrabar: audGrabar, audSumar: audSumar, audBorrar: audBorrar, audEnviar: audEnviar,
   audTeclado: audTeclado, audPintar: audPintar, audSvg: AUD_SVG,
   audBarra: function(){
