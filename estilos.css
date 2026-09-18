@@ -13,6 +13,7 @@
     --capa-fondo:rgba(0,0,0,.9);
     /* 1652 (facundo, 2026-09-15): modales sin borde de color, solo una sombra suave clara que los despega del fondo negro */
     --modal-sombra:0 2px 12px rgba(255,255,255,.06),0 14px 44px rgba(255,255,255,.09);
+    --caja-sombra:0 1px 4px rgba(255,255,255,.05),0 6px 16px rgba(255,255,255,.05);
     /* 2002 {back} (facundo, 2026-09-18): "hacelo mucho mas grande el boton de back, es minimo" / "igual de grande,
        arriba a la derecha una X". las dos esquinas de la cabecera de un modal miden lo mismo y de una sola vez: mas
        que los 46 px de los votos de la tarjeta (1841) y que los 38 px que tenia el back. */
@@ -437,31 +438,37 @@
      frase de accion tocable. lo arma todo el server (`recetas/ig_listas.py`): aca solo se pinta. */
   #selsub{flex:0 0 auto;margin-left:auto;padding:5px 9px;min-height:38px;font-size:17px;color:var(--verde)}
   #selsub.oculta{display:none!important}
+  /* 2035 {columnas} (facundo, 2026-09-18): `listas` tambien es una GRILLA de dos columnas (una por lista), y la
+     gente de una lista chica deja de ser una fila por persona: es una tira de fotitos REDONDAS con el `@` abajo
+     (`.listira` + `.lischip`), y tocar una abre su cartita de la 1948. una columna en el celu angosto (abajo). */
   #sellistas{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
-    display:flex;flex-direction:column;gap:10px;width:100%;max-width:760px;margin:0 auto}
+    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-content:start;
+    width:100%;max-width:980px;margin:0 auto}
   #sellistas.oculta{display:none!important}
-  #sellistas .lisvacio{color:var(--gris);font-size:17px}
-  #sellistas .liscaja{border:1px solid var(--linea);border-radius:4px;padding:8px;display:flex;flex-direction:column;gap:6px}
+  #sellistas .lisvacio{color:var(--gris);font-size:17px;grid-column:1 / -1}
+  /* sin borde de color: fondo un paso mas claro y la sombra suave de los modales (1652) */
+  #sellistas .liscaja{border:1px solid transparent;border-radius:4px;padding:10px;height:100%;
+    background:var(--fondo-caja);box-shadow:var(--caja-sombra);display:flex;flex-direction:column;gap:6px}
   #sellistas .listit{display:flex;align-items:baseline;gap:8px}
   #sellistas .lisnom{color:var(--blanco);font-size:var(--texto-max)}
-  #sellistas .lisn{color:var(--cian);font-size:var(--texto-max)}
+  /* la cantidad resalta por peso y color, nunca por tamaño (1541) */
+  #sellistas .lisn{color:var(--cian);font-size:var(--texto-max);font-weight:600}
+  /* la tira de fotitos de una lista chica: cada chip es una persona tocable (`.lisfila`, el mismo dato de antes) */
+  #sellistas .listira{display:flex;flex-wrap:wrap;gap:10px;padding-top:6px;margin-top:auto}
+  #sellistas .lisfila.lischip{display:flex;flex-direction:column;align-items:center;gap:3px;width:64px;
+    padding-top:0;border-top:0;text-align:center}
+  #sellistas .lischip .lisfoto{width:56px;height:56px;border-radius:50%}
+  #sellistas .lischip .liscuenta{margin-left:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;
+    white-space:nowrap;font-size:15px}
+  #sellistas .lischip.toca{cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+  #sellistas .lischip.toca:active{opacity:.6}
   #sellistas .lisporque{color:var(--gris);font-size:17px;word-break:break-word}
   #sellistas .lisgrande{color:var(--gris);font-size:16px;opacity:.85}
-  #sellistas .lisfila{display:flex;gap:8px;align-items:flex-start;padding-top:6px;border-top:1px solid var(--linea)}
-  #sellistas .lisfoto{flex:0 0 auto;width:44px;height:44px;border-radius:4px;overflow:hidden;border:1px solid var(--linea);background:#111}
+  /* 2035 {columnas}: la fotito de la tira es REDONDA (la de la lista siempre lo fue, 1404) y el `@` va abajo.
+     lo que antes era una fila con nombre, datos, por que y la frase de accion vive ahora en la cartita (1948). */
+  #sellistas .lisfoto{flex:0 0 auto;overflow:hidden;border:1px solid var(--linea);background:#111}
   #sellistas .lisfoto img{width:100%;height:100%;object-fit:cover;display:block}
-  #sellistas .liscol{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px}
-  #sellistas .lisquien{color:var(--blanco);font-size:17px;word-break:break-word}
-  #sellistas .liscuenta{color:var(--gris);margin-left:6px;word-break:break-all}
-  #sellistas .lisdatos{color:var(--cian);font-size:16px;word-break:break-word}
-  #sellistas .lispq{color:var(--gris);font-size:16px;font-style:italic;word-break:break-word}
-  /* la frase de accion es lo unico tocable de la fila: se ve tocable (1808) y la que toca afuera va en amarillo */
-  #sellistas .lisacc{align-self:flex-start;max-width:100%;text-align:left;margin-top:3px;min-height:34px;
-    padding:4px 9px;border:1px solid var(--verde);border-radius:999px;background:none;color:var(--verde);
-    font:inherit;font-size:16px;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
-    word-break:break-word;white-space:normal}
-  #sellistas .lisacc.toca{border-color:var(--amarillo,#d8b25a);color:var(--amarillo,#d8b25a)}
-  #sellistas .lisacc:active{opacity:.6}
+  #sellistas .liscuenta{color:var(--gris);word-break:break-all}
   #lismodal .lisdet{display:flex;flex-direction:column;gap:6px}
   #lismodal .lisdetacc{color:var(--blanco);font-size:var(--texto-max);word-break:break-word}
   #lismodal .lisdatos{color:var(--cian);font-size:16px;word-break:break-word}
@@ -1144,19 +1151,46 @@
      disponible repartidos, con espaciado de verdad: nunca seis cajitas de 44 px apiladas arriba. cada item es un
      item flexible de la columna (`flex:1 1 0`) con el piso del molde (44 px), asi en una pantalla alta crecen y en
      una baja se apoyan en el piso y la columna scrollea. el molde (`.bcaja`) y el total en gris no cambian. */
+  /* 2035 {columnas} (facundo, 2026-09-18: "el insta tinder tiene que tener 2 columnas en la vista de lista y en la
+     vista principal!! se puede hacer algo para que se vea mas lindo eso? es medio horrible"): el `home` deja de ser
+     una columna de cajitas de 44 px y pasa a ser una GRILLA de dos columnas de tarjetas casi cuadradas, el molde de
+     `.podcard` del podcast (1939) que ya le gusto: `grid` y no `flex` a proposito, porque el `aspect-ratio` de un
+     item flex no lo dibuja bien el safari del iphone (1655). cada proceso es una tarjeta con el nombre arriba y el
+     total abajo en cian; `ver listas` ocupa las dos columnas al pie y no es cuadrada. en el celu angosto, UNA sola
+     columna (media query del final). el look va sin borde de color: fondo un paso mas claro (`--fondo-caja`) y la
+     sombra suave de los modales (1652), con el `1px` transparente para no mover medidas. */
   #votmenu{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
-    display:flex;flex-direction:column;justify-content:center;gap:10px;
-    width:100%;max-width:520px;margin:0 auto;padding:6px 0}
-  #votmenu .vmfila{flex:1 1 0}
-  #selmodal.pantalla.home .seltit{justify-content:center}
+    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-content:start;
+    width:100%;max-width:620px;margin:0 auto;padding:6px 0;scroll-snap-type:y proximity}
+  #selmodal.pantalla.home .seltit{justify-content:center;max-width:620px}
   #votmenu .ntit{color:var(--gris);font-size:14px;text-transform:uppercase;letter-spacing:.06em;padding:0 0 2px 0}
-  #votmenu .vmfila{display:flex;align-items:center;gap:8px}
-  #votmenu .vmfila.apagado{color:var(--gris);border-color:var(--linea);cursor:default}
-  #votmenu .vmnom{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  #votmenu .vmbadge{flex:0 0 auto;min-width:16px;padding:0 5px;border-radius:8px;background:var(--cian);color:#000;
-    font-size:14px;line-height:16px;text-align:center}
-  #votmenu .vmfila.apagado .vmbadge{background:var(--gris)}
+  #votmenu .vmfila{flex:none;width:100%;aspect-ratio:1/1;height:auto;min-height:44px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:12px;text-align:center;
+    background:var(--fondo-caja);border-color:transparent;box-shadow:var(--caja-sombra);scroll-snap-align:center}
+  #votmenu .vmfila.apagado{color:var(--gris);border-color:transparent;cursor:default}
+  /* `ver listas` no es un proceso: va al pie, cruzando las dos columnas y sin aspecto cuadrado */
+  #votmenu .vmfila[data-col="listas"]{grid-column:1 / -1;aspect-ratio:auto;min-height:52px;
+    flex-direction:row;align-items:center;justify-content:space-between;text-align:left}
+  #votmenu .vmnom{flex:0 0 auto;min-width:0;overflow:hidden;white-space:normal;
+    font-size:var(--texto-max);line-height:1.3}
+  /* el badge es el numero de pendientes, abajo a la izquierda y en cian (peso y color, nunca tamaño: 1541) */
+  #votmenu .vmbadge{flex:0 0 auto;min-width:0;padding:0;background:none;color:var(--cian);
+    font-size:var(--texto-max);font-weight:600;line-height:1.2;text-align:left}
+  #votmenu .vmfila.apagado .vmbadge{background:none;color:var(--gris)}
   #votmenu .vmbadge.oculta{display:none}
+  /* 2035 {columnas}: en el celu angosto (vertical) las DOS pantallas de `instatinder` vuelven a UNA columna
+     (facundo: "celu 1 columna"); en ipad y desktop siguen las dos. la tarjeta del `home` sigue cuadrada, que es
+     justo el molde del podcast que ya le gustaba en 390 px. */
+  @media (max-width:599px){
+    #votmenu,#sellistas{grid-template-columns:minmax(0,1fr)}
+    #votmenu .vmfila{aspect-ratio:2.6/1}
+  }
+  /* de 600 px para arriba, las tres filas de tarjetas cuadradas mas `ver listas` tienen que entrar SIN scrollear:
+     el ancho de la grilla sale del alto que hay (tres filas de lado `ancho/2`), con tope en 620 px */
+  @media (min-width:600px){
+    #votmenu{max-width:min(620px, calc((100dvh - 210px) / 3 * 2))}
+    #selmodal.pantalla.home .seltit{max-width:min(620px, calc((100dvh - 210px) / 3 * 2))}
+  }
 
   /* el desplegable de la campana: solo las no leidas, la mas nueva arriba */
   #nfondo{position:fixed;inset:0;z-index:33}

@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.369">
-<link rel="manifest" href="manifest.json?v=4.369">
+<meta name="agente-web-version" content="4.370">
+<link rel="manifest" href="manifest.json?v=4.370">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.369">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.370">
 </head>
 <body>
 
@@ -4822,8 +4822,10 @@ function lisPoner(cual, fresco){
   $("selmodal").classList.add("pantalla");
   $("selmodal").classList.remove("home");
   $("votmenu").classList.add("oculta");   // 1922 {vistatinder}
+  // 2035 {columnas}: en `listas` no hay nada que enviar, asi que el pie con el boton verde `enviar` NO se pinta
+  // (igual que en el `home`); la salida es el back grande y la `✕` de la 2002
   var pie0 = document.querySelector("#selmodal .selpie");
-  if(pie0) pie0.classList.remove("oculta");
+  if(pie0) pie0.classList.add("oculta");
   $("sellista").classList.add("oculta");
   $("seltarjeta").classList.add("oculta");
   $("selacciones").classList.add("oculta");
@@ -4868,52 +4870,38 @@ function lisCaja(f){
     caja.appendChild(g);
     return caja;
   }
-  (f.gente || []).forEach(function(p){ caja.appendChild(lisFila(p)); });
+  // 2035 {columnas}: la gente de una lista chica va como una TIRA de fotitos redondas con el `@` abajo, no una
+  // fila por persona; lo que se puede hacer con ella vive adentro de su cartita (1948), que es lo que abre el toque
+  var gente = f.gente || [];
+  if(gente.length){
+    var tira = document.createElement("div"); tira.className = "listira";
+    gente.forEach(function(p){ tira.appendChild(lisFila(p)); });
+    caja.appendChild(tira);
+  }
   return caja;
 }
 function lisFila(p){
-  var fila = document.createElement("div"); fila.className = "lisfila";
+  var fila = document.createElement("div"); fila.className = "lisfila lischip";
   fila.setAttribute("data-persona", p.id);
-  // 1948 {cartita}: la fila entera es tocable y abre SU cartita. no es un `<button>` porque adentro vive el boton
-  // de la accion recomendada (botones anidados no son html valido): es un `role=button` con teclado
-  if(p.ficha){
-    fila.classList.add("toca");
-    fila.setAttribute("role", "button");
-    fila.setAttribute("tabindex", "0");
-    fila.addEventListener("click", function(){ lisFicha(p); });
-    fila.addEventListener("keydown", function(ev){
-      if(ev.key !== "Enter" && ev.key !== " " && ev.key !== "Spacebar") return;
-      ev.preventDefault(); lisFicha(p);
-    });
-  }
+  // 1948 {cartita} / 2035 {columnas}: el chip entero es tocable y abre SU cartita; si el server todavia no manda la
+  // ficha, el toque abre el modal de la accion recomendada, que es lo unico que sabe de esa persona
+  fila.classList.add("toca");
+  fila.setAttribute("role", "button");
+  fila.setAttribute("tabindex", "0");
+  fila.setAttribute("title", "@" + p.cuenta);
+  var abrir = function(){ if(p.ficha) lisFicha(p); else if((p.accion || {}).texto) lisAccionModal(p); };
+  fila.addEventListener("click", abrir);
+  fila.addEventListener("keydown", function(ev){
+    if(ev.key !== "Enter" && ev.key !== " " && ev.key !== "Spacebar") return;
+    ev.preventDefault(); abrir();
+  });
   var fo = document.createElement("div"); fo.className = "lisfoto";
   if(p.foto) bajarImagen(p.foto).then(function(url){
     var im = document.createElement("img"); im.alt = ""; im.src = url; fo.appendChild(im);
   }).catch(function(){});
   fila.appendChild(fo);
-  var col = document.createElement("div"); col.className = "liscol";
-  var nom = document.createElement("div"); nom.className = "lisquien";
-  nom.textContent = p.nombre || p.cuenta;
   var cu = document.createElement("span"); cu.className = "liscuenta"; cu.textContent = "@" + p.cuenta;
-  nom.appendChild(cu);
-  col.appendChild(nom);
-  var dt = document.createElement("div"); dt.className = "lisdatos";
-  dt.textContent = (p.datos || []).join(" · ");
-  col.appendChild(dt);
-  if(p.porque){
-    var pq = document.createElement("div"); pq.className = "lispq"; pq.textContent = p.porque;
-    col.appendChild(pq);
-  }
-  var a = p.accion || {};
-  if(a.texto){
-    var ac = document.createElement("button");
-    ac.type = "button";
-    ac.className = "lisacc" + (a.confirma === "dale" ? " toca" : "");
-    ac.textContent = a.texto;
-    ac.addEventListener("click", function(ev){ ev.stopPropagation(); lisAccionModal(p); });
-    col.appendChild(ac);
-  }
-  fila.appendChild(col);
+  fila.appendChild(cu);
   return fila;
 }
 // el modal de la accion: el molde de siempre (`modalMolde` + `moldeBoton`), nunca un diseño nuevo. lo de lectura
