@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.361">
-<link rel="manifest" href="manifest.json?v=4.361">
+<meta name="agente-web-version" content="4.362">
+<link rel="manifest" href="manifest.json?v=4.362">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.361">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.362">
 </head>
 <body>
 
@@ -70,6 +70,8 @@
 <div id="pie">
   <div id="adjunto" class="oculta" aria-live="polite"></div>
   <div id="chips" class="oculta"></div>
+  <!-- 1970 {grabar}: los audios pre mandados de la pestaña `audio`, pegados a la barra de tres botones -->
+  <div id="audpend" class="oculta" aria-live="polite"></div>
   <div id="fila">
     <button id="prompt" class="bglifo" type="button" title="comandos" aria-label="comandos" aria-haspopup="dialog">/</button>
     <textarea id="txt" rows="1" placeholder="" enterkeyhint="enter" inputmode="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
@@ -79,6 +81,8 @@
     <input id="foto" type="file" accept="image/*">
     <button id="mandar" class="ico" type="button" title="mandar" aria-label="mandar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 3 10 14"/><path d="M21 3 14 21l-4-7-7-4z"/></svg></button>
   </div>
+  <!-- 1970 {grabar}: tres botones grandes en lugar de la barra, SOLO en la pestaña `audio` -->
+  <div id="audbarra" class="oculta"></div>
 </div>
 </div><!-- /panel-chat -->
 <div id="sep" title="arrastrar para cambiar el ancho" aria-label="separador" role="separator" aria-orientation="vertical"></div>
@@ -2738,6 +2742,8 @@ var renderando = false;   // el render entero arma cada caja ya con todos los me
 // reproductor: la marca la pone el css con esta clase, nunca un estilo por mensaje.
 function marcarModoAudio(){
   if(lista) lista.classList.toggle("modoaudio", typeof esModo === "function" && esModo(activo));
+  // 1970 {grabar}: y el pie de esa pestaña son tres botones grandes en vez de la barra de siempre
+  if(typeof audPintar === "function") audPintar(true);
 }
 function render(){
   var ancla = anclaMedir();          // 1805: llego mas charla y se repinta todo: la linea de arriba no se mueve
@@ -6703,6 +6709,9 @@ function soltarMicro(){
   $("grabar").classList.remove("grabando");
   $("grabinfo").classList.remove("viendo");
   $("grabinfo").textContent = "";
+  // 1970: el micro se cerro (pausa, descarte, error o irse de la pagina): la barra vuelve a reposo y lo que
+  // estaba sonando cuando arranco la grabacion retoma donde quedo
+  if(typeof audPintar === "function"){ audPintar(); audSeguirSonando(); }
 }
 function relojTexto(ms){
   var s = Math.floor(ms / 1000);
@@ -6724,7 +6733,11 @@ function empezarGrabacion(){
     $("grabar").classList.add("grabando");
     $("grabinfo").classList.add("viendo");
     $("grabinfo").textContent = relojTexto(0);
-    relojGrab = setInterval(function(){ $("grabinfo").textContent = relojTexto(Date.now() - desdeGrab); }, 500);
+    relojGrab = setInterval(function(){
+      $("grabinfo").textContent = relojTexto(Date.now() - desdeGrab);
+      var r = $("audbarra").querySelector(".audreloj");   // 1970: el reloj tambien adentro del boton del medio
+      if(r) r.textContent = mmss(Math.round((Date.now() - desdeGrab) / 1000));
+    }, 500);
     cortarGrab = setTimeout(function(){ terminarGrabacion(true); }, AUDIO_MAX_MS);
     return true;
   }).catch(function(e){
@@ -6764,6 +6777,8 @@ function terminarGrabacion(enviar){
     return terminarDictado().then(function(d){
       // 1939: el audio de la vista `podcast` no sale: queda en la fila del episodio, borrable, hasta el `enviar`
       if(pg) return podSumarAudio(blob, mime, ms, d);
+      // 1970: en la pestaña `audio` el audio queda pre mandado arriba de la barra hasta el `enviar`
+      if(audModo() && !audioDestino) return audSumar(blob, mime, ms, d);
       // 1350: la voz del modal de una push sale ya, a su tema y con la cita (no hay adjunto que revisar)
       if(audioDestino){
         var ad = audioDestino; audioDestino = null;
@@ -6910,6 +6925,11 @@ function reproductor(src, titulo){
     if(sonando === b) sonando = null;
   }
   b.__parar = parar;
+  b.__seguir = function(){        // 1970: retoma donde quedo cuando termina la grabacion
+    if(!au) return;
+    sonando = b; b.classList.add("sonando"); b.textContent = "[■]";
+    try{ au.play(); }catch(e){}
+  };
   b.addEventListener("click", function(e){
     e.stopPropagation();
     if(sonando && sonando !== b && sonando.__parar) sonando.__parar();
@@ -6993,6 +7013,15 @@ function playerAudio(src, titulo){
     if(sonando === c) sonando = null;
   }
   c.__parar = parar;
+  // 1970 {grabar}: al empezar a grabar, lo que esta sonando se PAUSA y retoma solo al terminar (no se corta):
+  // `parar` deja el `currentTime` donde estaba y `__seguir` lo sigue de ahi.
+  c.__seguir = function(){
+    if(!au) return;
+    if(sonando && sonando !== c && sonando.__parar) sonando.__parar();
+    sonando = c; c.classList.add("sonando");
+    bplay.textContent = "||"; bplay.setAttribute("aria-label", "pausar");
+    try{ au.play(); }catch(e){}
+  };
   // el archivo se baja recien cuando facundo toca algo: un hilo de 30 audios no se descarga entero al abrir
   function cargar(){
     if(au) return Promise.resolve(au);
@@ -7077,6 +7106,198 @@ function playerAudio(src, titulo){
     saltar: saltar, parar: parar, cargar: cargar
   };
   return c;
+}
+// ---------- 1970 {grabar}: la barra de la pestaña `audio` son tres botones grandes ----------
+// facundo (orden 1970): "reemplazar la barra de entrada de abajo por tres botones grandes, SOLO en esa pestaña".
+// reposo: izquierda el teclado (abre el campo de texto de siempre), centro el circulo rojo de grabar, derecha
+// `enviar` (gris apagado sin audios esperando, encendido con por lo menos uno). grabando: el centro se
+// transforma en los dos palitos de pausa (que deja el audio pre mandado, como hoy), la izquierda descarta **el
+// que se esta grabando** (no los anteriores) y la derecha manda todo, el que esta en curso y los de arriba, sin
+// pasar por pausa. la posicion de cada boton nunca cambia de significado: izquierda lo que saca, centro el
+// micro, derecha mandar. molde de `docs/componentes-web.md` (`moldeBoton` -> `.bterm`) y svg con `currentColor`,
+// nunca un glifo de fuente ni un emoji (el iphone no los dibuja, 1883).
+var AUD_SVG = {
+  teclado: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
+    'stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"/>' +
+    '<path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/></svg>',
+  descartar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
+    'stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M9 7V5h6v2"/>' +
+    '<path d="M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/></svg>',
+  grabar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">' +
+    '<circle cx="12" cy="12" r="7" fill="currentColor" stroke="none"/></svg>',
+  pausa: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" ' +
+    'aria-hidden="true"><rect x="8" y="5" width="3.2" height="14" rx="1" fill="currentColor" stroke="none"/>' +
+    '<rect x="13" y="5" width="3.2" height="14" rx="1" fill="currentColor" stroke="none"/></svg>',
+  play: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" ' +
+    'aria-hidden="true"><path d="M8 5l11 7-11 7z" fill="currentColor" stroke="none"/></svg>',
+  parar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" ' +
+    'aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.5" fill="currentColor" stroke="none"/></svg>'
+};
+var audPend = [];          // los audios pre mandados: {id, blob, mime, ms, dicho, url}
+var audEnviando = false;
+var audPausado = null;     // lo que estaba sonando cuando arranco la grabacion, para retomarlo
+var audSeq = 0;
+function audModo(){ return typeof esModo === "function" && esModo(activo); }
+function audBtn(k){ return $("audbarra").querySelector(".aud" + k); }
+function audBarraArmar(){
+  var caja = $("audbarra");
+  if(caja.firstChild) return caja;
+  var izq = moldeBoton({tipo: "term", clase: "audbtn audizq"});
+  var cen = moldeBoton({tipo: "term", clase: "audbtn audcen"});
+  var der = moldeBoton({tipo: "term", txt: "enviar", clase: "audbtn audder"});
+  izq.addEventListener("click", function(){ if(grabador) terminarGrabacion(false); else audTeclado(); });
+  cen.addEventListener("click", function(){ if(grabador) terminarGrabacion(true); else audGrabar(); });
+  der.addEventListener("click", function(){ audEnviar(); });
+  [izq, cen, der].forEach(function(b){ caja.appendChild(b); });
+  return caja;
+}
+// el teclado abre (y cierra) el campo de texto de siempre: la barra vieja no se ve hasta que facundo lo pide
+function audTeclado(){
+  var pie = $("pie"), on = !pie.classList.contains("txton");
+  anclaClavar(true);
+  pie.classList.toggle("txton", on);
+  if(on){ try{ $("txt").focus(); }catch(e){} }
+  anclaSoltar();
+}
+function audPausarSonando(){
+  var n = sonando;
+  if(n && n.__parar && n.__seguir){ n.__parar(); audPausado = n; }
+}
+function audSeguirSonando(){
+  var n = audPausado; audPausado = null;
+  if(n && n.__seguir && document.contains(n)) n.__seguir();
+}
+function audGrabar(){
+  audPausarSonando();                     // lo que suena se pausa y retoma al terminar, no se corta
+  return empezarGrabacion().then(function(listo){
+    audPintar();
+    if(!listo) audSeguirSonando();
+    return listo;
+  });
+}
+// pausa (o el `enviar` con el micro abierto) deja el audio pre mandado arriba de la barra, como hoy el adjunto
+function audSumar(blob, mime, ms, dicho){
+  var a = {id: "ap" + (++audSeq), blob: blob, mime: mime || blob.type || "audio/webm", ms: ms || 0,
+           dicho: dicho || null, url: null};
+  try{ a.url = URL.createObjectURL(blob); }catch(e){}
+  audPend.push(a);
+  audPintar();
+  return null;                            // no sale solo: espera al `enviar`
+}
+function audBorrar(id){
+  for(var i = 0; i < audPend.length; i++) if(audPend[i].id === id){
+    try{ if(audPend[i].url) URL.revokeObjectURL(audPend[i].url); }catch(e){}
+    audPend.splice(i, 1); break;
+  }
+  audPintar();
+  return audPend.length;
+}
+// manda todo lo que haya: el que se esta grabando (sin pasar por pausa) y los que ya quedaron arriba
+function audEnviar(){
+  if(audEnviando) return Promise.resolve(0);
+  var antes = grabador ? terminarGrabacion(true) : Promise.resolve(null);
+  return Promise.resolve(antes).then(function(){
+    if(!audPend.length) return 0;
+    var fila = audPend.slice(), pie = ($("txt").value || "").trim();
+    audPend = []; audEnviando = true;
+    ponerCaja("");
+    audPintar();
+    return fila.reduce(function(p, a, i){
+      return p.then(function(n){
+        return mandarAudio(a.blob, a.mime, i === 0 ? pie : "", Date.now(), a.dicho).then(function(ruta){
+          if(!ruta) audPend.push(a);       // no salio: vuelve a la fila, no se pierde
+          return n + (ruta ? 1 : 0);
+        });
+      });
+    }, Promise.resolve(0));
+  }).then(function(n){
+    audEnviando = false;
+    audPintar();
+    return n;
+  }, function(){ audEnviando = false; audPintar(); return 0; });
+}
+// una tarjeta por audio pre mandado: gris, grande, casi un player (play/pausa y barra), con la duracion a la
+// vista y su `×`. se rearma solo cuando cambia la fila, asi el que esta sonando no se corta.
+function audCarta(a){
+  var c = document.createElement("div");
+  c.className = "audcard"; c.dataset.id = a.id;
+  var b = moldeBoton({tipo: "term", clase: "audcbtn audcplay"});
+  b.innerHTML = AUD_SVG.play;
+  b.setAttribute("aria-label", "escuchar este audio"); b.title = "escuchar este audio";
+  var barra = document.createElement("div"); barra.className = "audcbarra";
+  var rell = document.createElement("div"); rell.className = "audcrell";
+  barra.appendChild(rell);
+  var dur = document.createElement("span");
+  dur.className = "audcdur"; dur.textContent = mmss(Math.round((a.ms || 0) / 1000));
+  var x = moldeBoton({tipo: "term", txt: "×", clase: "audcbtn audcx"});
+  x.setAttribute("aria-label", "borrar este audio"); x.title = "borrar este audio";
+  x.addEventListener("click", function(e){ e.stopPropagation(); audBorrar(a.id); });
+  [b, barra, dur, x].forEach(function(n){ c.appendChild(n); });
+  var au = null;
+  function parar(){
+    if(au) au.pause();
+    b.innerHTML = AUD_SVG.play; c.classList.remove("sonando");
+    if(sonando === c) sonando = null;
+  }
+  c.__parar = parar;
+  c.__seguir = function(){
+    if(!au) return;
+    sonando = c; c.classList.add("sonando"); b.innerHTML = AUD_SVG.parar;
+    try{ au.play(); }catch(e){}
+  };
+  b.addEventListener("click", function(e){
+    e.stopPropagation();
+    if(sonando && sonando !== c && sonando.__parar) sonando.__parar();
+    if(au && !au.paused){ parar(); return; }
+    if(!au && a.url){
+      au = new Audio(a.url);
+      au.addEventListener("timeupdate", function(){
+        var d = isFinite(au.duration) && au.duration ? au.duration : (a.ms || 0) / 1000;
+        rell.style.width = (d ? Math.min(100, au.currentTime / d * 100) : 0).toFixed(1) + "%";
+      });
+      au.addEventListener("ended", function(){ parar(); au.currentTime = 0; rell.style.width = "0%"; });
+    }
+    if(!au) return;
+    sonando = c; c.classList.add("sonando"); b.innerHTML = AUD_SVG.parar;
+    try{ au.play(); }catch(err){}
+  });
+  return c;
+}
+function audCartas(){
+  var caja = $("audpend"), hay = audPend.map(function(a){ return a.id; }).join(",");
+  if(caja.dataset.fila === hay) return;
+  caja.dataset.fila = hay;
+  caja.innerHTML = "";
+  audPend.forEach(function(a){ caja.appendChild(audCarta(a)); });
+}
+// el estado entero de la barra en un solo lugar: que icono lleva cada boton y si `enviar` esta encendido
+function audPintar(sinAncla){
+  var pie = $("pie"), enAudio = audModo(), ancla = null;
+  if(!sinAncla) ancla = anclaClavar(true);
+  pie.classList.toggle("audio", enAudio);
+  $("audbarra").classList.toggle("oculta", !enAudio);
+  $("audpend").classList.toggle("oculta", !enAudio || !audPend.length);
+  if(enAudio){
+    audBarraArmar();
+    var grab = !!grabador, izq = audBtn("izq"), cen = audBtn("cen"), der = audBtn("der");
+    izq.innerHTML = grab ? AUD_SVG.descartar : AUD_SVG.teclado;
+    izq.classList.toggle("descartar", grab);
+    izq.setAttribute("aria-label", grab ? "descartar el audio que estás grabando" : "escribir");
+    izq.title = izq.getAttribute("aria-label");
+    cen.innerHTML = grab ? AUD_SVG.pausa + '<span class="audreloj">' +
+                             mmss(Math.round((Date.now() - desdeGrab) / 1000)) + "</span>" : AUD_SVG.grabar;
+    cen.classList.toggle("grabando", grab);
+    cen.setAttribute("aria-label", grab ? "pausar: el audio queda acá arriba" : "grabar un audio");
+    cen.title = cen.getAttribute("aria-label");
+    der.disabled = audEnviando || (!grab && !audPend.length);
+    der.classList.toggle("prendido", !der.disabled);
+    der.setAttribute("aria-label", "enviar" + (audPend.length ? " (" + audPend.length + ")" : ""));
+    der.title = der.getAttribute("aria-label");
+    audCartas();
+  }else{
+    pie.classList.remove("txton");
+  }
+  if(ancla) anclaSoltar();
 }
 // los audios que mando facundo viven en el cuerpo del mensaje como `[audio](audio/<hash>.webm)`:
 // `resaltar` los deja como un hueco y aca se les enchufa el reproductor.
@@ -10550,6 +10771,48 @@ window.__agente = {
     });
   },
   modoAudioPintado: function(){ return !!(lista && lista.classList.contains("modoaudio")); },
+  // 1970 {grabar}: la barra de tres botones de la pestaña `audio` y los audios pre mandados
+  audGrabar: audGrabar, audSumar: audSumar, audBorrar: audBorrar, audEnviar: audEnviar,
+  audTeclado: audTeclado, audPintar: audPintar, audSvg: AUD_SVG,
+  audBarra: function(){
+    var caja = $("audbarra"), pie = $("pie"), r = caja.getBoundingClientRect();
+    return {
+      visible: !caja.classList.contains("oculta"), modo: audModo(),
+      ancho: Math.round(r.width), cols: getComputedStyle(caja).gridTemplateColumns,
+      // la barra vieja (`#fila`) no se ve hasta que facundo toca el teclado; el `[▶]` chico tampoco
+      fila: !!($("fila").offsetWidth || $("fila").offsetHeight), txton: pie.classList.contains("txton"),
+      enviarOn: !audBtn("der") || !audBtn("der").disabled,
+      botones: [].map.call(caja.children, function(b){
+        var x = b.getBoundingClientRect();
+        return {clase: b.className.split(" ").filter(function(k){ return /^aud(izq|cen|der)$/.test(k); })[0] || "",
+                w: Math.round(x.width), h: Math.round(x.height), izq: Math.round(x.left),
+                svg: !!b.querySelector("svg"), txt: (b.textContent || "").trim(),
+                circulo: !!b.querySelector("circle"), palitos: b.querySelectorAll("rect").length,
+                color: getComputedStyle(b).color, apagado: !!b.disabled,
+                fuente: parseFloat(getComputedStyle(b).fontSize),
+                aria: b.getAttribute("aria-label") || ""};
+      })
+    };
+  },
+  audPendientes: function(){
+    return audPend.map(function(a){
+      var n = $("audpend").querySelector('.audcard[data-id="' + a.id + '"]');
+      var r = n ? n.getBoundingClientRect() : {width: 0, height: 0};
+      return {id: a.id, ms: a.ms, pintada: !!n, alto: Math.round(r.height), ancho: Math.round(r.width),
+              dur: n ? (n.querySelector(".audcdur") || {}).textContent : null,
+              play: !!(n && n.querySelector(".audcplay")), barra: !!(n && n.querySelector(".audcbarra")),
+              x: !!(n && n.querySelector(".audcx")),
+              fondo: n ? getComputedStyle(n).backgroundColor : ""};
+    });
+  },
+  audTocar: function(k){ var b = audBtn(k); if(!b || b.disabled) return false; b.click(); return true; },
+  audBorrarTocando: function(id){
+    var b = $("audpend").querySelector('.audcard[data-id="' + id + '"] .audcx');
+    if(!b) return false; b.click(); return true;
+  },
+  audSonando: function(){ return sonando ? (sonando.dataset && sonando.dataset.src) ||
+                                            (sonando.dataset && sonando.dataset.id) || "algo" : null; },
+  audPausadoPorGrab: function(){ return !!audPausado; },
   empezarGrabacion: empezarGrabacion, terminarGrabacion: terminarGrabacion,
   // dictado en el celu (1209): la prueba enchufa un reconocedor falso y chequea los dos caminos
   hayDictado: hayDictado, prepararDictado: prepararDictado, empezarDictado: empezarDictado,
