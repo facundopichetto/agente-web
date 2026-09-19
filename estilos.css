@@ -475,6 +475,9 @@
     width:100%;max-width:none;margin:0}
   #sellistas.oculta{display:none!important}
   #sellistas .lisvacio{color:var(--gris);font-size:17px;grid-column:1 / -1}
+  /* 2143 {cache}: el pedido fresco no salio y se ve lo ultimo que bajo. una linea, en el amarillo de aviso,
+     arriba de la grilla (nunca una lista en blanco ni un cartel que tape lo que facundo quiere mirar). */
+  #sellistas .lisaviso{color:var(--amarillo);font-size:15px;grid-column:1 / -1;opacity:.85}
   /* 2095 {instatinder} pasos 5 y 6: la sub-vista `una` (UNA lista abierta) usa el MISMO contenedor y los mismos
      chips de la 2035; lo unico distinto es que la grilla es de una sola columna (la cabecera de la lista arriba,
      la tira de gente abajo) y que arriba va el boton `votar esta lista`, con el molde de caja de siempre. */

@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.392">
-<link rel="manifest" href="manifest.json?v=4.392">
+<meta name="agente-web-version" content="4.393">
+<link rel="manifest" href="manifest.json?v=4.393">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.392">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.393">
 </head>
 <body>
 
@@ -4248,6 +4248,12 @@ function cacheGuardar(e, lista){
 }
 function cacheTraer(col, lista){ return (filaCache[cacheClave(col, lista)] || []).slice(); }
 function cacheTiene(col, lista){ return cacheTraer(col, lista).length > 0; }
+// 2143 {cache} (facundo, 2026-09-19: "vote las 38 de super candidatas y veo la lista de `interesan` igual que
+// antes"): la cache (esta, la de `listas.json` en el equipo y la fila que dejo el poll) PINTA el primer frame,
+// pero nunca decide lo que facundo termina viendo. abrir CUALQUIER lista dispara siempre el pedido fresco al
+// server y repinta con lo que vuelve; si ese pedido falla, queda lo cacheado y se avisa, nunca una lista en
+// blanco. vale igual despues de un reinicio del daemon, que es lo que disparo el sintoma.
+function cacheOlvidar(col, lista){ delete filaCache[cacheClave(col, lista === undefined ? sel.filtro : lista)]; }
 function filaMarcar(col, id){
   var f = selLeer("fila", {}), ahora = Date.now(), m = f[col] = f[col] || {};
   m[id] = ahora;
@@ -4348,6 +4354,57 @@ function filaAplicar(col, j){
   var ok = sel.actual && sel.actual.coleccion === col && sel.actual.continua ? filaSumar(j, false) : false;
   selBoton();
   return ok;
+}
+// 2143 {cache}: el pedido de APERTURA de una lista. a diferencia de `selPedir` no manda `saltear` (queremos lo que
+// el server tiene HOY en esa lista, no lo que a la cache le falta) y lo que vuelve REEMPLAZA la fila en vez de
+// apendearse. si no hay lan o el server no contesta, no se toca nada: queda lo cacheado y el pie lo dice.
+function selFresco(col){
+  var lista = sel.filtro || null;
+  return votLan().then(function(base){
+    if(!base) throw new Error("sin lan");
+    var qs = lista ? "?lista=" + encodeURIComponent(lista) : "";
+    return lanFetch(selUrl(base, col) + qs, {method: "GET", cache: "no-store", headers: {"authorization": "Bearer " + token}})
+      .then(function(r){ if(!r || !r.ok) throw new Error("http " + (r && r.status)); return r.json(); })
+      .then(function(j){ return filaFresca(col, lista, j); });
+  }).catch(function(){
+    // punto 3: nunca una lista en blanco. lo cacheado sigue en pantalla y el pie avisa que es lo ultimo que bajo
+    if(sel.actual && sel.actual.coleccion === col && tjPantalla())
+      $("selestado").textContent = "no pude actualizar: ves lo último que bajó";
+    lis.aviso = LIS_AVISO;
+    return false;
+  });
+}
+// lo que vuelve del pedido de apertura: la fila pasa a ser la del server (lo que salio de la lista se va, lo que
+// entro aparece). solo reemplaza si todavia no se voto nada en esta tirada: con votos locales encima (el `←` de la
+// 2137) una respuesta no puede mover la fila, asi que ahi se comporta como cualquier lote y solo apendea.
+function filaFresca(col, lista, j){
+  if(!j || j.coleccion !== col) return false;
+  filaAplicar(col, j);   // el estado de las abiertas se actualiza igual (`selBoton`, el dropdown)
+  var a = sel.actual;
+  if(!a || a.coleccion !== col || !a.continua || (sel.filtro || null) !== (lista || null)) return false;
+  var votando = (sel.tjHistorial || []).some(function(h){ return h.col === col; }) || sel.tj > 0;
+  if(votando) return false;   // `filaAplicar` ya apendeo lo que faltaba (2137)
+  var v = j.circular === false || !a.circular ? filaVotadas(col) : {};
+  var fuera = salioSet(col, lista), fall = sel.tjFallidas || [], ya = {}, cs = [];
+  (j.candidatas || []).forEach(function(c){
+    if(ya[c.id] || v[c.id] || fuera[c.id] || fall.indexOf(c.id) >= 0) return;
+    if(!tjConFoto(c) || !tjEnFiltro(c)) return;
+    ya[c.id] = true; cs.push(c);
+  });
+  if(!cs.length) return false;   // el server no tiene nada que mostrar: queda lo cacheado (punto 3)
+  var cur = tjActual();
+  cacheOlvidar(col, lista);      // lo viejo de esa lista no vuelve a colarse por la cache
+  a.candidatas = tjOrdenSuper(cs);
+  a.pendientes = j.pendientes;
+  a.mas = typeof j.pendientes === "number" && j.pendientes > (j.candidatas || []).length;
+  if(typeof j.agotada === "boolean") a.agotada = j.agotada;
+  if(typeof j.circular === "boolean") a.circular = j.circular;
+  if(j.destinos) a.destinos = j.destinos;
+  if(j.resumen) a.resumen = j.resumen;
+  sel.tj = 0;
+  cacheGuardar(a, lista);
+  if(!(cur && tjIr(cur.id))) tjPintar();   // la tarjeta que estaba a la vista sigue siendo la primera si esta
+  return true;
 }
 // sin tarjeta a la vista y sin `agotada`: pide el lote cada SEL_PEDIR_MS hasta que entre o el server diga que no hay mas
 function selEsperar(col){
@@ -5173,8 +5230,11 @@ var LIS_ARCH = "listas.json", LIS_TTL = 120000;
 // refresco entra por atras, sin cartel y sin pantalla vacia. paso 4: con la vista abierta se refresca sola cada
 // `LIS_REFRESCO`, y cada vez que se entra a la home o a una lista se pide fresco.
 var LIS_LS = "agente_listas", LIS_REFRESCO = 60000;
+// 2143 {cache}: lo que se ve cuando el pedido fresco no sale (sin lan, el daemon reiniciando). la vista NUNCA queda
+// en blanco por eso: se pinta lo cacheado con esta linea arriba, que se va sola apenas entra un json de verdad
+var LIS_AVISO = "no pude actualizar: esto es lo último que bajó";
 var lis = {sub: "listas", datos: null, ts: 0, bajando: null, etag: null, scroll: 0, origen: null,
-           una: null, unaScroll: 0, refT: null};
+           una: null, unaScroll: 0, refT: null, aviso: ""};
 function lisCacheLeer(){
   if(lis.datos) return lis.datos;
   try{
@@ -5193,8 +5253,10 @@ function lisBajar(fresco){
   lis.bajando = api("GET", "/repos/" + REPO + "/contents/" + LIS_ARCH, null, null,
                     "application/vnd.github.raw+json").then(function(r){
     if(r.json && r.json.listas){ lis.datos = r.json; lis.ts = Date.now(); lisCacheGuardar(r.json); }
+    lis.aviso = "";   // 2143: contesto el server (aunque sea un 304): lo que se ve es de ahora
     return lis.datos;
-  }).catch(function(){ return lis.datos; }).then(function(d){ lis.bajando = null; return d; });
+  }).catch(function(){ lis.aviso = LIS_AVISO; return lis.datos; })   // 2143: queda lo cacheado, con el aviso
+    .then(function(d){ lis.bajando = null; return d; });
   return lis.bajando;
 }
 // paso 4: mientras la vista esta a la vista, las listas se mantienen solas (una pasada por minuto, la misma que
@@ -5268,6 +5330,7 @@ function lisPintar(){
     c.appendChild(v);
     return;
   }
+  if(lis.aviso) c.appendChild(lisLinea("lisaviso", lis.aviso));   // 2143: nunca una lista en blanco, pero se avisa
   d.listas.forEach(function(f){ c.appendChild(lisCaja(f)); });
   // 2078 {home} paso 4: volver del votador cae en la MISMA posicion de scroll de la que salio (`lis.scroll`, de un
   // solo uso); un repintado de rutina (el poll de `selBoton`) no mueve el scroll de donde esta
@@ -5396,6 +5459,9 @@ function lisEntrar(f, fresco){
   lisModoUna();
   lisUnaPintar();
   lisUnaBajar(f.clave);
+  // 2143: abrir una lista pide fresco (lo cacheado ya esta pintado): los conteos y el `porque` se repintan con lo
+  // que conteste el server, sin que facundo tenga que hacer un refresco duro
+  lisBajar(true).then(function(){ if(lis.sub === "una") lisUnaPintar(); });
   lisRefrescar();
   selBoton();
   return true;
@@ -5435,6 +5501,7 @@ function lisUnaPintar(){
   $("seltitulo").textContent = f.titulo || f.clave;
   $("selcuenta").textContent = String(f.n || 0);
   var cab = document.createElement("div"); cab.className = "lisunacab";
+  if(lis.aviso) cab.appendChild(lisLinea("lisaviso", lis.aviso));   // 2143
   if(f.porque) cab.appendChild(lisLinea("lisporque", f.porque));
   // 2095 paso 5: el votador sale de ACA, y abre la fila de ESTA lista (`f.clave`), no la del proceso entero
   if(f.proceso){
@@ -5934,7 +6001,7 @@ function tinderAbrirCol(col, desde, falla, lista, titulo){
   // 2095 paso 5: si la fila de esa lista no tiene a nadie cargado todavia, se vuelve a la LISTA (de donde salio el
   // toque), nunca a otro proceso (eso era el bug) ni a la home. 2113: si el toque trajo su plan B, ese manda
   if(!ok && vistaEs("tinder") && !sel.actual) (falla || lisVolver)();
-  else if(ok) tjIr(desde);
+  else if(ok){ tjIr(desde); selFresco(col); }   // 2143: lo cacheado pinto el primer frame, el server manda
   return ok;
 }
 // salir de una votacion (terminar la tanda, `enviar`, `esc`): vuelve al `home`, no cierra la vista (1922)
@@ -11522,6 +11589,10 @@ window.__agente = {
   tjSwipe: function(dx, ancho){ if(!tjSwGuard()) return false; return tjSwSoltar(dx, ancho || ($("seltarjeta").offsetWidth || 1), true); },
   lisUna: function(){ return lis.una ? {clave: lis.una.clave, n: lis.una.n, gente: (lis.una.gente || []).length} : null; },
   lisCache: function(){ try{ return JSON.parse(localStorage.getItem(LIS_LS) || "null"); }catch(x){ return null; } },
+  // 2143 {cache}: el pedido fresco de apertura, el aviso del pedido que no salio y la cache de fila (para plantarla vieja)
+  selFresco: selFresco, lisAviso: function(){ return lis.aviso || ""; },
+  filaCachePoner: function(col, lista, cs){ filaCache[cacheClave(col, lista)] = (cs || []).slice(); },
+  filaCacheVer: function(col, lista){ return cacheTraer(col, lista).map(function(c){ return c.id; }); },
   lisOlvidar: function(){ lis.datos = null; lis.ts = 0; try{ localStorage.removeItem(LIS_LS); }catch(x){} },
   selFiltro: function(){ return {lista: sel.filtro || null, titulo: sel.filtroTitulo || null}; },
   lisOrigen: function(){ return lis.origen; }, lisScroll: function(){ return lis.scroll; },
