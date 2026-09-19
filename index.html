@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.377">
-<link rel="manifest" href="manifest.json?v=4.377">
+<meta name="agente-web-version" content="4.378">
+<link rel="manifest" href="manifest.json?v=4.378">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.377">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.378">
 </head>
 <body>
 
@@ -312,6 +312,23 @@ function moldeBoton(o){
   if(o.clase) String(o.clase).split(/\s+/).forEach(function(k){ if(k) b.classList.add(k); });
   if(o.accion) b.addEventListener("click", o.accion);
   return b;
+}
+// un checkbox de una fila (2086 {notificaciones}, correccion de facundo de las 11:21 pm: "que sea un CHECKBOX, un
+// solo control marcable/desmarcable, reusando el molde de los que ya existen"). mismo tamaño de caja y mismo verde
+// que los de la seleccion (`#sellista .selitem input`, 18 px, `accent-color`), y la fila entera centrada vertical:
+// 2080 dice que ninguna fila mezcla texto con un icono en `baseline`. devuelve el `<label>` armado.
+function moldeCheck(o){
+  var l = document.createElement("label"), i = document.createElement("input"), t = document.createElement("span");
+  l.className = "mchk" + (o.clase ? " " + o.clase : "");
+  i.type = "checkbox";
+  i.checked = !!o.valor;
+  if(o.nombre) i.setAttribute("data-chk", o.nombre);
+  if(o.aria) i.setAttribute("aria-label", o.aria);
+  t.className = "mchktxt";
+  t.textContent = o.txt || "";
+  l.appendChild(i); l.appendChild(t);
+  if(o.accion) i.addEventListener("change", function(){ o.accion(i.checked, i, l); });
+  return l;
 }
 // interruptor de N posiciones (1659): se pinta como HTML (los widgets se arman en string, no en DOM) y el click lo
 // atiende un solo listener delegado contra `MOLDE_SW`. `nombre` es la clave del registro; `accion(valor)` corre solo
@@ -9297,14 +9314,18 @@ function cuentaEnUso(){
   var ag = (widDatos || {}).agente || {};
   return {elegida: rep.elegida || ag.cuenta_activa || ag.cuenta || "", modo: rep.modo || ""};
 }
-// ---------- 2086 {notificaciones}: el switch del modo notificaciones (facundo, 2026-09-18, por audio) ----------
-// "el setting de notificaciones tiene que ser algo GLOBAL que se setea en el dropdown de la personita".
+// ---------- 2086 {notificaciones}: el checkbox del modo notificaciones (facundo, 2026-09-18, por audio) ----------
+// "el setting de notificaciones tiene que ser algo GLOBAL que se setea en el dropdown de la personita", y en la
+// correccion de las 11:21 pm: "que deje de ser un switch de dos botones y pase a ser un CHECKBOX, un solo control
+// marcable/desmarcable, con el molde de los que ya existen", y la etiqueta **`notificaciones de audio enviado`**,
+// nunca "notificaciones" a secas: el board ya tiene otros avisos del sistema y se confunden.
 // global de verdad: el estado no vive en este telefono (`tabs.json` es de este dispositivo, lo dice el propio
 // `settings del board`), vive en el server (`widgets.json` -> `agente.notificaciones`, archivo
 // `tmp/push-notificaciones.json`), asi que un reload no lo pierde y el celu y la compu ven lo mismo.
-// tocarlo manda `notificaciones on|off` a la pestaña `tools` sin pasar por la caja del chat, y la posicion
-// tocada queda puesta AL TOQUE (1659: un switch que espera al server parece roto): `notiPuesto` la sostiene
-// hasta que el `widgets.json` siguiente confirme lo mismo.
+// marcarlo manda `notificaciones on|off` a la pestaña `tools` sin pasar por la caja del chat, y queda marcado AL
+// TOQUE (1659: un control que espera al server parece roto): `notiPuesto` lo sostiene hasta que el `widgets.json`
+// siguiente diga lo mismo.
+var NOTI_ETIQUETA = "notificaciones de audio enviado";
 var notiPuesto = null;        // lo que acabo de tocar, mientras el server no conteste
 function notiModo(){
   var v = ((widDatos || {}).agente || {}).notificaciones;
@@ -9319,29 +9340,26 @@ function notiPoner(on){
   finally{ mandarAparte = false; }
 }
 function notiFila(){
-  return '<div class="cswf"><span class="cswl">modo notificaciones</span>' +
-    moldeSwitch({nombre: "notiglobal", valor: notiModo() ? "on" : "off", aria: "modo notificaciones",
-                 opciones: [{valor: "on", txt: "prendido", title: "cada respuesta te suena cuando sale el audio"},
-                            {valor: "off", txt: "apagado", title: "las respuestas no suenan"}]}) +
-    '<span class="cswg">suena cuando el audio está listo, acá y en el celu</span></div>';
+  var f = document.createElement("div");
+  f.className = "cswf";
+  f.appendChild(moldeCheck({nombre: "notiglobal", txt: NOTI_ETIQUETA, valor: notiModo(),
+                            aria: NOTI_ETIQUETA, clase: "cchk",
+                            accion: function(marcado, i, l){
+                              notiPoner(marcado);
+                              var g = l.parentNode && l.parentNode.querySelector(".cswg");
+                              if(g) g.textContent = "mandando…";
+                            }}));
+  var g = document.createElement("span");
+  g.className = "cswg";
+  g.textContent = "te suena cuando el audio de una respuesta ya se puede escuchar";
+  f.appendChild(g);
+  return f;
 }
-moldeSwitchReg("notiglobal", function(v, b){
-  notiPoner(v === "on");
-  var f = b.closest(".cswf");
-  if(f){
-    [].forEach.call(f.querySelectorAll(".mswb"), function(x){
-      x.classList.toggle("puesto", x === b);
-      x.setAttribute("aria-pressed", x === b ? "true" : "false");
-    });
-    var g = f.querySelector(".cswg");
-    if(g) g.textContent = "mandando…";
-  }
-});
 function abrirPersona(){
   cerrarCampana();
   var r = $("persona").getBoundingClientRect(), cu = cuentaEnUso(), auto = cu.modo === "auto";
   var ops = [];
-  ops.push({html: notiFila(), nombre: "modo notificaciones"});
+  ops.push({nodo: notiFila(), nombre: NOTI_ETIQUETA});
   ops.push(["settings del board", function(){ pintarModal(modalBoard()); }]);
   ops.push(["reinicia", function(){ pintarModal(modalReinicia()); }]);
   ops.push(["salir", function(){ pintarModal(modalSalir()); }]);

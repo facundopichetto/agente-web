@@ -447,17 +447,6 @@
    ]
   },
   {
-   "grupo": "cambiar cómo trabajo",
-   "comandos": [
-    {
-     "cmd": "notificaciones",
-     "que": "cada respuesta te suena en el celu cuando sale el audio (notificaciones off lo saca)",
-     "escribe": "notificaciones ",
-     "offline": "cola"
-    }
-   ]
-  },
-  {
    "grupo": "cómo mandar",
    "comandos": [
     {
@@ -500,6 +489,13 @@
   {
    "grupo": "nuevos",
    "comandos": [
+    {
+     "cmd": "RE_NOTI_CMD",
+     "que": "detector nuevo en daemon.py, sin descripción todavía",
+     "escribe": null,
+     "offline": "cola",
+     "detector": true
+    },
     {
      "cmd": "atajo_cmd",
      "que": "detector nuevo en daemon.py, sin descripción todavía",
