@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.387">
-<link rel="manifest" href="manifest.json?v=4.387">
+<meta name="agente-web-version" content="4.388">
+<link rel="manifest" href="manifest.json?v=4.388">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.387">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.388">
 </head>
 <body>
 
@@ -4269,7 +4269,7 @@ function filaSumar(e, soloSacar){
     if(e.resumen) a.resumen = e.resumen;
   }
   var agAntes = !!antesAg;
-  a.candidatas = hechas.concat(resto);
+  a.candidatas = hechas.concat(tjOrdenSuper(resto));   // 2134: la lista virtual se camina por puntaje
   if(a.candidatas.length > sel.tj) a.agotada = false;   // 1794: entro algo: la sesion sigue
   var nuevo = tjActual();
   if(!cur || !nuevo || cur.id !== nuevo.id || agAntes !== !!a.agotada) tjPintar(); else tjContar();
@@ -4500,15 +4500,27 @@ function tjContar(){
 }
 // 2095 paso 5: esta tarjeta es de la lista que facundo abrio? sin filtro puesto, todas lo son. una tarjeta vieja
 // que el server manda sin `lista` no se tira (un server que todavia no la manda no puede dejar el votador vacio).
+// 2134 {supervirtual}: `super candidatas` no es una lista del embudo, es el ranking de `ig_super` usado como
+// filtro: su gente sigue siendo `candidata`. la tarjeta que entra es la que trae puntaje (`sup`), lo pone el server.
+var SUPER_LISTA = "super";
+function tjEsSuper(){ return String(sel.filtro || "") === SUPER_LISTA; }
 function tjEnFiltro(c){
   if(!sel.filtro) return true;
+  if(tjEsSuper()) return !!(c && c.sup);
   var l = c && c.lista;
   return !l || String(l) === String(sel.filtro);
+}
+// 2134 paso 4: en la lista virtual la fila va por puntaje descendente (el `puesto` lo calcula el server)
+function tjOrdenSuper(cs){
+  if(!tjEsSuper()) return cs;
+  return cs.slice().sort(function(a, b){
+    return ((a.sup || {}).puesto || 9999) - ((b.sup || {}).puesto || 9999);
+  });
 }
 function tjAbrir(e){
   // 1495: la tarjeta sin foto de perfil no se muestra (el server ya las saca; esto es la red de abajo)
   var v = e.continua ? filaVotadas(e.coleccion) : {};   // 1567: lo votado aca que el server todavia no saco
-  e = Object.assign({}, e, {candidatas: e.candidatas.filter(function(c){ return !v[c.id] && tjConFoto(c) && tjEnFiltro(c); })});
+  e = Object.assign({}, e, {candidatas: tjOrdenSuper(e.candidatas.filter(function(c){ return !v[c.id] && tjConFoto(c) && tjEnFiltro(c); }))});
   if(!e.candidatas.length) return false;
   if(e.continua) e.mas = typeof e.pendientes === "number" && e.pendientes > e.candidatas.length;
   sel.tjUlt = 0; sel.tjAtrasUlt = 0;   // 1567: el freno del doble toque es de esta apertura (si no, se come el primer toque de la siguiente)
@@ -4660,6 +4672,12 @@ function tjPintar(){
   // 1665: la bio tiene su renglon siempre, vacio mientras no haya dato (lo llena la lectura de perfiles); `following`
   // entra solo en `datos` cuando existe
   var bio = document.createElement("div"); bio.className = "tjbio"; bio.textContent = c.bio || ""; info.appendChild(bio);
+  // 2134 {supervirtual} paso 4: en `super candidatas` la tarjeta dice cuanto puntuo y POR QUE (lo redacta el
+  // server, `ig_super.puntuar`); el resto de los procesos no lo pinta aunque la tarjeta lo traiga
+  if(c.sup && tjEsSuper()){
+    renglon("puntaje " + c.sup.puntaje + " de " + (c.sup.de || 100) + " · #" + c.sup.puesto, "tjsuper");
+    if(c.sup.motivo) renglon(c.sup.motivo, "tjsupmot");
+  }
   if(c.motivo) renglon(c.motivo, "tjmot");
   if(c.desde) renglon("desde " + c.desde + (c.lista ? " · " + c.lista : ""), "tjdesde");
   if((c.historial || []).length){   // 1665: de donde salio, cada voto y cada mudanza, lo mas nuevo abajo
@@ -5148,6 +5166,9 @@ function lisPintar(){
 function lisCaja(f){
   var caja = document.createElement("div"); caja.className = "liscaja";
   caja.setAttribute("data-lista", f.clave);
+  // 2134 {supervirtual}: la lista VIRTUAL (`super candidatas`) es una tarjeta mas de la home, con el mismo molde
+  // de la 2087 y la 2035; el amarillo del nombre es lo unico que la distingue (su gente no se movio del embudo)
+  if(f.virtual){ caja.classList.add("virt"); caja.setAttribute("data-virtual", "1"); }
   var h = document.createElement("div"); h.className = "listit";
   var t = document.createElement("span"); t.className = "lisnom"; t.textContent = f.titulo || f.clave;
   var n = document.createElement("span"); n.className = "lisn"; n.textContent = String(f.n || 0);
@@ -11447,7 +11468,9 @@ window.__agente = {
             color: cs.color, txt: b.textContent.trim()}; },
   tjAbrir: tjAbrir, tjReintentos: function(a){ TJ_REINTENTOS = a; },   // 1524: fotos que no bajan
   tjPrecargar: tjPrecargar, tjPrecargadas: function(){ return Object.keys(tjPre); },   // 1772: precarga de las siguientes
-  tjEstado: function(){ return {votos: sel.tjVotos || 0, fallidas: sel.tjFallidas || [], n: sel.actual ? sel.actual.candidatas.length : null}; },
+  tjEstado: function(){ return {votos: sel.tjVotos || 0, fallidas: sel.tjFallidas || [], n: sel.actual ? sel.actual.candidatas.length : null,
+    // 2134 {supervirtual}: los ids de la fila a la vista, en su orden (la lista virtual va por puntaje)
+    fila: sel.actual ? sel.actual.candidatas.map(function(c){ return c.id; }) : []}; },
   selEnviarTexto: selEnviarTexto, selCerrar: selCerrar, selEnviar: selEnviar, tjTecla: tjTecla,
   // 1407: boton `votar` y respaldo por el buzon (`prueba_web_votar`)
   selPoner: selPoner, selVotar: selVotar, selAbrirCol: selAbrirCol, selArranca: selArranca, selPedir: selPedir, selBoton: selBoton, selPendientes: selPendientes,

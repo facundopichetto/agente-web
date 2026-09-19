@@ -375,6 +375,9 @@
   #seltarjeta .tjdet,#seltarjeta .tjmot{color:var(--gris);font-size:17px;word-break:break-word}
   #seltarjeta .tjcierre{color:var(--amarillo)}   /* 1794: el cierre de la sesion de voto continuo (`votaste N: ...`) */
   #seltarjeta .tjmot{font-style:italic}
+  /* 2134 {supervirtual}: el puntaje de una super candidata (amarillo, la señal fuerte) y su por que */
+  #seltarjeta .tjsuper{color:var(--amarillo);font-size:17px;font-weight:bold}
+  #seltarjeta .tjsupmot{color:var(--gris);font-size:17px;word-break:break-word}
   /* 1642: seguidores, en comun y reacciones en una fila de texto (sin caja), la bio abajo en blanco apagado */
   #seltarjeta .tjdatos{display:flex;flex-wrap:wrap;gap:2px 10px;color:var(--cian);font-size:17px}
   #seltarjeta .tjbio{color:#cfcfcf;font-size:17px;white-space:pre-line;word-break:break-word}
@@ -502,6 +505,8 @@
   #sellistas .liscaja.toca{cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
     outline:none}
   #sellistas .liscaja.toca:active{background:#111}
+  /* 2134 {supervirtual}: la lista virtual se reconoce por el nombre en amarillo, nada de un molde propio */
+  #sellistas .liscaja.virt .lisnom{color:var(--amarillo)}
   #sellistas .liscaja.toca:focus-visible{border-color:var(--verde)}
   #sellistas .lischip .lisfic{min-height:0;padding:1px 6px;font-size:12px;color:var(--gris);
     border-color:transparent;background:none;line-height:1.2}
@@ -1262,11 +1267,21 @@
      propia linea, que este en el mismo lugar donde estan las listas"): en la home la cabecera no ocupa renglon: es
      una capa de alto 0 encima de la grilla, y lo unico que se ve de ella es la `✕` arriba a la derecha (el back de
      la 2002 sigue oculto en la home). el hueco lo tapa la grilla, que empieza arriba de todo. */
+  /* 2133 {tapada} (facundo, 2026-09-19: "las vistas de tinder tienen cortada la parte superior, queda por detras
+     de la barra superior"): la capa de alto 0 heredaba el `align-items:center` de `#selmodal .seltit`, asi que la
+     `✕` (52 px, `--modal-esquina`) se centraba en la linea de alto 0 y se iba 26 px ARRIBA de la vista, encima de
+     la barra de iconos; y la grilla, con `padding-top:0`, arrancaba justo debajo de ella. ahora la `✕` cuelga hacia
+     ABAJO desde el borde de arriba (`flex-start`: queda entera adentro de la vista, sin moverse de su esquina) y la
+     grilla arranca DESPUES de ese alto, asi la primera fila de tarjetas no queda tapada. la cabecera sigue sin
+     renglon propio (2087) y la `✕` sigue superpuesta a la grilla. el `safe-area` del celu no se suma aca porque ya
+     esta reservado antes: en la vista lo pone `#cabecera` (`padding-top:calc(8px + env(safe-area-inset-top))`, y
+     `body.v-tinder #selmodal.pantalla` va `position:static` abajo de ella) y como capa flotante lo pone el padding
+     de `#selmodal.pantalla`; sumarlo de nuevo deja un hueco negro del porte del notch. */
   #selmodal.pantalla.home.sintit .selcaja{position:relative}
   #selmodal.pantalla.home.sintit .seltit{position:absolute;top:0;left:0;right:0;height:0;min-height:0;
-    margin:0 auto;padding:0;z-index:3;pointer-events:none}
+    align-items:flex-start;margin:0 auto;padding:0;z-index:3;pointer-events:none}
   #selmodal.pantalla.home.sintit .seltit > *{pointer-events:auto}
-  #selmodal.pantalla.home.sintit #sellistas{padding-top:0}
+  #selmodal.pantalla.home.sintit #sellistas{padding-top:calc(var(--modal-esquina) + 4px)}
 
   /* el desplegable de la campana: solo las no leidas, la mas nueva arriba */
   #nfondo{position:fixed;inset:0;z-index:33}
