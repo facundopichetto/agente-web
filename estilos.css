@@ -178,11 +178,13 @@
   .accion .acctxt{flex:1;min-width:140px;color:var(--gris);font-size:18px}
   .accion .acccuenta{color:var(--verde);font-size:16px;opacity:.8}
   .accion .accdale{position:relative;min-width:74px}
-  .accion .accdale.hecho{opacity:.45;border-color:var(--gris);color:var(--gris)}
+  /* 2080 {diseno} punto 5: la mandada se apaga con el gris del borde y del texto, NO con `opacity` sobre toda
+     la caja: la opacidad del padre tambien apagaba el cuadradito blanco del checkmark, que tiene que leerse. */
+  .accion .accdale.hecho{border-color:var(--gris);color:var(--gris)}
   /* 2080 {diseno} punto 5: la caja `dale` con la misma gramatica que las `OPCION`. `.selec` = elegida y sin
      mandar (borde mas grueso); `.hecho` = ya salio, y ahi se ve el cuadradito blanco con el checkmark. */
   .accion .accdale.selec{border-width:2px;padding:5px 9px}
-  .accion .accdale.hecho .chkenv{display:block;opacity:1}
+  .accion .accdale.hecho .chkenv{display:block}
   .bverde.llena.rojo:active{background:var(--rojo)}
   /* 1922 {vistatinder}: caja tocable de una fila (el `home` del votador y el del podcast). borde fino, texto a la
      izquierda, 44 px de alto: lo que es tocable tiene que parecerlo (1808) sin gritar como un boton verde lleno */

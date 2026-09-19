@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.374">
-<link rel="manifest" href="manifest.json?v=4.374">
+<meta name="agente-web-version" content="4.375">
+<link rel="manifest" href="manifest.json?v=4.375">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.374">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.375">
 </head>
 <body>
 
@@ -4108,13 +4108,26 @@ function filaFaltan(e){
   cs.forEach(function(c){ if(v[c.id]) ya++; });
   return Math.max(0, (typeof e.pendientes === "number" ? e.pendientes : cs.length) - ya);
 }
+// 2073 {back}: las tarjetas que volvieron por el back de ESTA carga y que el server todavia no repuso en la fila.
+// ningun refresco (`filaSumar`, la respuesta del POST, `selPedir` a los 2 y 6 s) puede sacarlas ni correr la posicion.
+function tjProt(col){
+  var p = sel.tjDeshechas = sel.tjDeshechas || {};
+  return (p[col] = p[col] || {});
+}
 function filaSumar(e, soloSacar){
   var a = sel.actual;
   if(!a || !a.continua) return false;
   var v = filaVotadas(a.coleccion), vivas = {}, cur = tjActual(), fall = sel.tjFallidas || [], antesAg = a.agotada;
+  // 2073 {back} (facundo, 2026-09-18: "toco back, llego a la 5 y en unos milisegundos vuelve a la 6"): el lote que
+  // llega es de ANTES del deshacer (el server la devuelve a la fila recien cuando `ejecutar` aplica el `deshacer`),
+  // asi que sin esto la tarjeta que acaba de volver por el back no esta en `vivas`, este filtro la tira, la vista
+  // salta a la siguiente y la tarjeta queda inalcanzable (su entrada del historial ya se consumio).
+  var prot = tjProt(a.coleccion);
   (e.candidatas || []).forEach(function(c){ vivas[c.id] = true; });
   var hechas = a.candidatas.slice(0, sel.tj);
-  var resto = a.candidatas.slice(sel.tj).filter(function(c){ return vivas[c.id] && !v[c.id]; });
+  var resto = a.candidatas.slice(sel.tj).filter(function(c){ return prot[c.id] || (vivas[c.id] && !v[c.id]); });
+  // la proteccion dura hasta que el server la confirma (la fila que llega ya la trae) o hasta que se vuelve a votar
+  Object.keys(prot).forEach(function(id){ if(vivas[id]) delete prot[id]; });
   if(!soloSacar){
     var ya = {};
     hechas.concat(resto).forEach(function(c){ ya[c.id] = true; });
@@ -4360,6 +4373,7 @@ function tjAbrir(e){
   if(!e.candidatas.length) return false;
   if(e.continua) e.mas = typeof e.pendientes === "number" && e.pendientes > e.candidatas.length;
   sel.tjUlt = 0; sel.tjAtrasUlt = 0;   // 1567: el freno del doble toque es de esta apertura (si no, se come el primer toque de la siguiente)
+  if(sel.tjDeshechas) delete sel.tjDeshechas[e.coleccion];   // 2073 {back}: la fila se rearma, el back de antes ya no manda
   sel.actual = e; sel.tj = 0; sel.tjVotos = 0; sel.tjFallidas = [];   // 1524: decisiones reales de esta apertura
   // 2002 {back}: cada apertura del modal es una SESION con su id. va en cada voto que sube, y es lo que la `✕`
   // manda al server para deshacer exactamente los de ESTA apertura (ni los de una anterior ni los de otra coleccion)
@@ -4533,6 +4547,7 @@ function tjVoto(e, c, q, txt){
   $("selestado").textContent = ((bq && bq.aria) || q) + " @" + (c.cuenta || c.id);
   sel.tjVotos = (sel.tjVotos || 0) + 1;   // 1524: sin al menos una, `tjFin` no manda `fin`
   (sel.tjHistorial = sel.tjHistorial || []).push({col: e.coleccion, c: c, q: q});   // 1640: lo que el back deshace
+  delete tjProt(e.coleccion)[c.id];   // 2073 {back}: decidida otra vez, el lote del server ya manda
   (sel.sesionVotos = sel.sesionVotos || []).push(c.id);   // 2002 {back}: lo que la `✕` devuelve a la vista
   sel.tj += 1;
   tjPintar();
@@ -4564,6 +4579,7 @@ function tjAtras(){
   if(Date.now() - (sel.tjAtrasUlt || 0) < TJ_BACK_MS) return false;
   sel.tjAtrasUlt = Date.now();
   var h = hs.splice(i, 1)[0], c = h.c;
+  tjProt(e.coleccion)[c.id] = Date.now();   // 2073 {back}: el deshacer es autoritativo hasta que el server confirme
   if(e.continua){
     var f = selLeer("fila", {});
     if(f[e.coleccion]){ delete f[e.coleccion][c.id]; selEscribir("fila", f); }
@@ -10781,7 +10797,9 @@ window.__agente = {
   selEsTarjetas: selEsTarjetas,   // 1440: modo tarjetas y su fallback sin `modo` del server
   tjPintarCon: function(e, i){ sel.actual = e; sel.tj = i || 0; if(!i){ sel.tjVotos = 0; sel.tjFallidas = []; } tjPintar(); return sel.tj; },   // 1515: `prueba_ig_embudo_tarjetas`
   tjIndice: function(){ return sel.tj; },
-  tjAtras: tjAtras, tjHistorial: function(){ return (sel.tjHistorial || []).map(function(h){ return h.col + ":" + h.c.id + ":" + h.q; }); },   // 1640: el back
+  tjAtras: tjAtras, tjProtegidas: function(col){ return Object.keys(tjProt(col)); },   // 2073 {back}
+  tjFila: function(){ return ((sel.actual || {}).candidatas || []).map(function(c){ return c.id; }); },   // 2073 {back}
+  tjHistorial: function(){ return (sel.tjHistorial || []).map(function(h){ return h.col + ":" + h.c.id + ":" + h.q; }); },   // 1640: el back
   filaFaltan: filaFaltan, filaSumar: filaSumar, tjToqueMs: function(ms){ TJ_TOQUE_MS = ms; TJ_BACK_MS = ms ? Math.min(ms, 120) : 0; },   // 1567: fila continua; 2002: el back tiene su propia ventana
   tjBackMs: function(ms){ if(ms !== undefined) TJ_BACK_MS = ms; return TJ_BACK_MS; },   // 2002 {back}
   selCancelar: selCancelar, selX: selX, selSesion: function(){ return sel.sesion || null; },   // 2002 {back}
@@ -10870,7 +10888,7 @@ window.__agente = {
   selEstado: function(){ return {abierto: !!sel.actual, col: sel.actual && sel.actual.coleccion, pend: selLeer("pend", []), fuente: sel.fuente,
                                  marcadas: selMarcadas(), abiertas: sel.abiertas.map(function(a){ return a.coleccion; })}; },
   selFlushMin: function(){ return SEL_FLUSH_MIN; },   // 1836
-  selReset: function(){ sel.actual = null; sel.abiertas = []; sel.ignorada = {}; sel.tjHistorial = []; selTs = 0; sel.agotadas = []; sel.totales = {};
+  selReset: function(){ sel.actual = null; sel.abiertas = []; sel.ignorada = {}; sel.tjHistorial = []; selTs = 0; sel.agotadas = []; sel.totales = {}; sel.tjDeshechas = {};
                         ["pend", "hechas", "fila"].forEach(function(s){ try{ localStorage.removeItem("agente_sel_" + s); }catch(x){} }); },
   selFila: function(){ return selLeer("fila", {}); },   // correccion 18:12
   animRanking: animRanking, animSpinner: animSpinner, animSinVer: animSinVer, animValida: animValida,
