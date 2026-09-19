@@ -64,7 +64,12 @@
     w = w || {};
     if(w.error) return caja("ig cola", "", vacio(w.error), false, "igcola");
     var verHechas = wset("igcola", "hechas");
+    // lo ya salido que llega del server ya viene cortado a las ultimas 24 h corridas (2148 {igcola24},
+    // `ig_cola._en_ventana`); aca solo queda el filtro de la setting `mostrar las que ya salieron`
     var vis = (w.tabla || []).filter(function(f){ return verHechas || f.estado === "pendiente" || f.estado === "corriendo" || f.estado === "frenado"; });
+    // las que de verdad se pintan: `limFilas` corta por la setting `filas` y agrega el `+N más` (que no es una fila)
+    var lim = +wset("igcola", "filas") || 0;
+    var pint = (lim && vis.length > lim) ? vis.slice(0, lim) : vis;
     var filas = B.limFilas("igcola", vis.map(fila));
     var cols = [vis.map(function(f){ return f.que; }), vis.map(function(f){ return f.quien; }),
                 vis.map(function(f){ return f.pedido; }), vis.map(function(f){ return f.sale; }),
@@ -78,9 +83,11 @@
     cuerpo += '<div class="g igpie">' + esc(w.linea || "") +
               (falta ? ' <span class="c">· próximo en <span class="igfalta">' + esc(falta) + "</span></span>" : "") +
               "</div>";
-    var ese = (w.pendientes ? '<span class="v b">' + w.pendientes + "</span> " +
-                              '<span class="g">programad' + (w.pendientes === 1 ? "o" : "os") + "</span>"
-                            : '<span class="g">sin programar</span>') +
+    // 2148 {igcola24}: el contador del titulo cuenta lo que REALMENTE se pinta, no lo que hay en la cola entera
+    var prog = pint.filter(function(f){ return f.estado === "pendiente" || f.estado === "frenado"; }).length;
+    var ese = (prog ? '<span class="v b">' + prog + "</span> " +
+                      '<span class="g">programad' + (prog === 1 ? "o" : "os") + "</span>"
+                    : '<span class="g">sin programar</span>') +
               ((w.frenos || []).length ? ' <span class="r b">' + esc(w.frenos.join(" ")) + " frenado</span>" : "");
     return caja("ig cola", ese, cuerpo, false, "igcola");
   }
