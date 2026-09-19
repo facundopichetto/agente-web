@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.381">
-<link rel="manifest" href="manifest.json?v=4.381">
+<meta name="agente-web-version" content="4.382">
+<link rel="manifest" href="manifest.json?v=4.382">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.381">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.382">
 </head>
 <body>
 
@@ -2431,6 +2431,21 @@ function respuestaA(m){
 }
 var RE_ELEGIDAS = /^([ABC](?:\s*(?:y|,)\s*[ABC]){0,2})\s*(?::|$)/;
 var RE_ARREPENTI = /^me\s+arrepent[ií]\s*:\s*([ABC](?:\s*(?:y|,)\s*[ABC]){0,2})\s*:/i;
+// 2096 {codigocaja}: el toque de una caja manda el codigo corto de su respuesta (`opc_id`, 4 caracteres que
+// pone el daemon al guardar la fila) y la letra: `#k7f2A`, varias `#k7f2A+C`, arrepentimiento `#k7f2-A`.
+// no viaja el texto de la opcion ni la cita: el daemon lo resuelve contra las `opciones` de ESA fila, sin
+// modelo. una respuesta vieja (sin `opc_id`) sigue mandando `A: <texto>` como siempre.
+var RE_CAJA_COD = /^#([a-z0-9]{4})(-?)([ABC](?:\s*\+\s*[ABC])*)$/i;
+function codigoCaja(texto){
+  var pc = partirCita(texto), mm = RE_CAJA_COD.exec(String(pc.cuerpo || "").trim());
+  if(!mm) return null;
+  return {id: mm[1].toLowerCase(), letras: letrasDe(mm[3]), arrepentir: mm[2] === "-"};
+}
+// un mensaje de facundo que es SOLO un codigo de caja no se pinta como burbuja: la marca es la caja tocada
+function esCodigoCaja(texto){ return !!codigoCaja(texto); }
+function cajaCod(m, letras, arrepentir){
+  return m && m.opc_id ? "#" + m.opc_id + (arrepentir ? "-" : "") + letrasDe(letras).split("").join("+") : null;
+}
 function hhmmDe(m){ return hhmmBA(fecha(m && m.iso || "")); }   // 1553: la de buenos aires, como la cabecera
 // 1553 (facundo, 2026-09-15): cada respuesta de flaudio muestra la hora en que LLEGO y se dibujo en el cliente,
 // no la de inicio ni la de escritura en el daemon. el primer dispositivo que la dibuja fresca (hasta
@@ -2587,6 +2602,18 @@ function estadoDeducido(m){
     var x = msgs[j];
     if(x.clase !== "yo" || !deEstaTab(x.tema, tema)) continue;
     var pc = partirCita(x.texto), ts = fecha(x.iso) || j, mm;
+    // 2096 {codigocaja}: si el mensaje es un codigo, el id dice de que caja es y no se adivina nada
+    var cc = codigoCaja(x.texto);
+    if(cc){
+      if(!m.opc_id || cc.id !== String(m.opc_id).toLowerCase()) continue;
+      if(cc.arrepentir){
+        var qd = est.l.replace(new RegExp("[" + cc.letras + "]", "g"), "");
+        est = {l: qd, ts: ts, h: conHoras(est, qd, ts)};
+      }else{
+        est = {l: cc.letras, ts: ts, h: conHoras(est, cc.letras, ts)};
+      }
+      continue;
+    }
     // 1211: sin cita, la letra es de la caja mas reciente SOLO si esa caja ya existia cuando f mando
     // (el orden es por hora de envio: una respuesta que llego despues no hereda la eleccion)
     var mia = pc.cita ? citaEsDe(pc.cita, m) : cajaAlMandar(j, tema, fecha(x.iso)) === m;
@@ -2792,6 +2819,10 @@ function mandarCaja(m, caja, lista_, marcar, decir){
     (accMandarFn || mandar)(ops.map(function(o){ return o.cmd || (o.letra + ": " + o.texto); }).join("\n"), tema, true);
     return;
   }
+  // 2096 {codigocaja}: con `opc_id` sale el codigo pelado (sin texto y sin cita: el id ya dice de que
+  // respuesta es). sin el (una caja vieja ya pintada, o el celu con el html de antes), el formato de siempre.
+  var cod = cajaCod(m, decir, false);
+  if(cod){ (accMandarFn || mandar)(cod, tema, false); return; }
   var txt = decir.split("").join(" y ") + ": " + ops.map(function(o){ return o.texto; }).join(" / ");
   // 2080: el mismo enganche de `accMandar` que las cajas `dale`, para que la prueba mire lo que saldria
   (accMandarFn || mandar)((vieja ? citaCaja(m) : "") + txt, tema, false);
@@ -2805,7 +2836,9 @@ function arrepentirse(m, caja, lista_, letra){
   var horas = conHoras(estadoCaja(m), quedan, Date.now());   // 1203: la desmarcada pierde su hora
   guardarOpc(k, quedan, horas);
   marcarHecho(caja, quedan, horas);
-  (accMandarFn || mandar)(citaCaja(m) + "me arrepentí: " + letra + ": " + op.texto, m.tema || temaActivo(), false);
+  var codA = cajaCod(m, letra, true);   // 2096: `#k7f2-A`
+  (accMandarFn || mandar)(codA || (citaCaja(m) + "me arrepentí: " + letra + ": " + op.texto),
+                          m.tema || temaActivo(), false);
 }
 function pintarMsg(m, arriba){
   // 1776: la respuesta que cierra el bloque en vuelo se lleva su hilo (lo pintado no desaparece ni se repite)
@@ -2813,7 +2846,11 @@ function pintarMsg(m, arriba){
      fecha(m.iso) >= vuelo.ref - 2000 && deEstaTab(m.tema, vuelo.tema)) m.tramos = tramosSinFinal(vuelo.tramos, m.texto);
   // 1212: respuesta nueva con cajas -> se limpia el estado viejo antes de pintarla (no se hereda una marca)
   if(m.clase === "agente" && tieneCajas(m) && purgarOpc() && !renderando) refrescarCajas();
-  if(deEstaTab(m.tema, temaActivo()) && lista){
+  // 2096 {codigocaja}: un mensaje de f que es SOLO el codigo de una caja no se pinta como burbuja (la
+  // marca visual es la caja tocada: letra, hora y el checkmark `enviada` de la 2080). sigue en `msgs`,
+  // asi los otros dispositivos deducen de el que esa opcion ya salio.
+  var oculto = m.clase === "yo" && esCodigoCaja(m.texto);
+  if(deEstaTab(m.tema, temaActivo()) && lista && !oculto){
     if(arriba) lista.insertBefore(nodoMsg(m), lista.firstChild); else lista.appendChild(nodoMsg(m));
   }
   // f contesto (1168): ya no se cierran todas las cajas; cada una se deduce de lo que dijo (letra sola = la mas
@@ -3285,7 +3322,7 @@ function recibirChat(tema, d){
                 audios_seg: f.audios_seg || null,
                 modelo: f.nodo && f.modelo ? modeloCorto(f.modelo) : null,
                 duracion_s: f.duracion_s !== undefined ? f.duracion_s : null, cuello: f.cuello || null,
-                opciones: f.opciones || null, tramos: Array.isArray(f.tramos) && f.tramos.length ? f.tramos : null});
+                opciones: f.opciones || null, opc_id: f.opc_id || null, tramos: Array.isArray(f.tramos) && f.tramos.length ? f.tramos : null});
     }
   });
   msgsHist[t] = out;
@@ -4152,7 +4189,8 @@ function filaSumar(e, soloSacar){
     var ya = {};
     hechas.concat(resto).forEach(function(c){ ya[c.id] = true; });
     (e.candidatas || []).forEach(function(c){
-      if(!ya[c.id] && !v[c.id] && fall.indexOf(c.id) < 0 && tjConFoto(c)){ resto.push(c); ya[c.id] = true; }
+      // 2095 paso 5: lo que repone el server entra solo si es de la lista abierta (`tjEnFiltro`)
+      if(!ya[c.id] && !v[c.id] && fall.indexOf(c.id) < 0 && tjConFoto(c) && tjEnFiltro(c)){ resto.push(c); ya[c.id] = true; }
     });
     a.pendientes = e.pendientes;
     a.mas = typeof e.pendientes === "number" && e.pendientes > (e.candidatas || []).length;
@@ -4187,7 +4225,9 @@ function selPedir(col, arranque){
   }
   return votLan().then(function(base){
     if(!base) return false;
-    return lanFetch(selUrl(base, col) + (arranque ? "?arranque=1" : ""), {method: "GET", cache: "no-store", headers: {"authorization": "Bearer " + token}})
+    // 2095 paso 5: con una lista abierta, el server manda SOLO la gente de esa lista (`?lista=`)
+    var qs = (arranque ? "?arranque=1" : "") + (sel.filtro ? (arranque ? "&" : "?") + "lista=" + encodeURIComponent(sel.filtro) : "");
+    return lanFetch(selUrl(base, col) + qs, {method: "GET", cache: "no-store", headers: {"authorization": "Bearer " + token}})
       .then(function(r){ if(!r || !r.ok) throw new Error("http " + (r && r.status)); return r.json(); })
       .then(function(j){ return filaAplicar(col, j); });
   }).catch(function(){ return false; });
@@ -4387,10 +4427,17 @@ function tjContar(){
     $("selcuenta").textContent = "";
   } else $("selcuenta").textContent = c ? (sel.tj + 1) + " de " + e.candidatas.length : "listo";
 }
+// 2095 paso 5: esta tarjeta es de la lista que facundo abrio? sin filtro puesto, todas lo son. una tarjeta vieja
+// que el server manda sin `lista` no se tira (un server que todavia no la manda no puede dejar el votador vacio).
+function tjEnFiltro(c){
+  if(!sel.filtro) return true;
+  var l = c && c.lista;
+  return !l || String(l) === String(sel.filtro);
+}
 function tjAbrir(e){
   // 1495: la tarjeta sin foto de perfil no se muestra (el server ya las saca; esto es la red de abajo)
   var v = e.continua ? filaVotadas(e.coleccion) : {};   // 1567: lo votado aca que el server todavia no saco
-  e = Object.assign({}, e, {candidatas: e.candidatas.filter(function(c){ return !v[c.id] && tjConFoto(c); })});
+  e = Object.assign({}, e, {candidatas: e.candidatas.filter(function(c){ return !v[c.id] && tjConFoto(c) && tjEnFiltro(c); })});
   if(!e.candidatas.length) return false;
   if(e.continua) e.mas = typeof e.pendientes === "number" && e.pendientes > e.candidatas.length;
   sel.tjUlt = 0; sel.tjAtrasUlt = 0;   // 1567: el freno del doble toque es de esta apertura (si no, se come el primer toque de la siguiente)
@@ -4400,7 +4447,9 @@ function tjAbrir(e){
   // manda al server para deshacer exactamente los de ESTA apertura (ni los de una anterior ni los de otra coleccion)
   sel.sesion = lidNuevo(); sel.sesionVotos = [];
   selModoLista(false);
-  $("seltitulo").textContent = e.titulo || e.coleccion;
+  // 2095 paso 5: con filtro, arriba va el nombre de la LISTA que se esta votando (es lo que facundo toco), no el
+  // del proceso, que puede juntar tres listas
+  $("seltitulo").textContent = sel.filtroTitulo || e.titulo || e.coleccion;
   $("seltxt").value = ""; $("selestado").textContent = "";
   tjPintar();
   vistaPoner("tinder");   // 1875: el votador es una vista entera, no un modal encima del chat
@@ -4724,7 +4773,8 @@ function selCerrar(){
   selModoLista(true);   // 1440: la proxima puede ser una de checkboxes
   // 1922 {vistatinder} + 2078 {home}: `esc` o el `enviar` de una votacion vuelven a la home de la vista, que son
   // las listas; la vista se cierra recien con el segundo `esc` (desde las listas) o tocando otro icono de la barra
-  if(tj && sub !== "listas"){ tinderHome(); selBoton(); return; }
+  // 2095 paso 5: volver es volver a la LISTA de la que salio el votador (la sub-vista `una`); sin origen, la home
+  if(tj && sub !== "listas" && sub !== "una"){ lisVolver(); selBoton(); return; }
   capaOcultar("selmodal");
   if(tj || (vistaEs("votar") && !votacionHay())) vistaVolver();   // 1875: sale de la vista; 1933: tambien `votar`
   selBoton();
@@ -4849,7 +4899,7 @@ function selBoton(){
   // 1879 {listas}: la otra sub-vista de esta vista no necesita ninguna votacion abierta: ahi la vista se queda
   // 1922 {vistatinder} + 2078 {home}: la home (`listas`) vive sin ninguna votacion abierta: solo se sale si la
   // vista no esta ni en las listas ni en una tarjeta
-  if(vistaEs("tinder") && !sel.actual && lis.sub !== "listas"){ vistaVolver(); return; }
+  if(vistaEs("tinder") && !sel.actual && lis.sub !== "listas" && lis.sub !== "una"){ vistaVolver(); return; }
   // 1933 {instatinder}: la vista `votar` vive mientras haya una votacion puntual abierta o esperando
   if(vistaEs("votar") && !votacionHay()){ vistaVolver(); return; }
   // 1567/1788: como nada se abre solo, el boton es lo unico que avisa que hay algo esperando; tambien cuenta el
@@ -4864,6 +4914,7 @@ function selBoton(){
   b.classList.toggle("oculta", vistaEs("tinder") || !!sel.actual || !$("votar").classList.contains("oculta"));
   // 2078 {home}: con las listas a la vista, lo que se repinta cuando el server manda otra cosa son las listas
   if(vistaEs("tinder") && lis.sub === "listas" && !sel.actual) lisPintar();
+  else if(vistaEs("tinder") && lis.sub === "una" && !sel.actual) lisUnaPintar();   // 2095
   votacionBoton();   // 1933 {instatinder}: el icono fucsia de las votaciones puntuales
 }
 // ---------- 1933 {instatinder}: la vista `votar`, las votaciones puntuales que NO son instagram ----------
@@ -4915,16 +4966,50 @@ function votacionSalir(){
 // sale el votador: tocar una fila lo abre arrancando por esa persona (`lisVotar`), tocar el titulo de una lista lo
 // abre desde el principio, y la cartita de la 1948 se abre con su propio boton `ficha`.
 var LIS_ARCH = "listas.json", LIS_TTL = 120000;
-var lis = {sub: "listas", datos: null, ts: 0, bajando: null, etag: null, scroll: 0, origen: null};
+// 2095 {instatinder} paso 1 (facundo, 2026-09-18: "saca el mensaje `todavia no cargaron las listas`. no puede haber
+// algo medio precargado? no puede quedar la ultima vez que vi algo y refrescar?"): las listas que bajaron ALGUNA
+// vez quedan en el equipo (`localStorage`), asi que la vista abre pintada con lo ultimo que vio facundo y el
+// refresco entra por atras, sin cartel y sin pantalla vacia. paso 4: con la vista abierta se refresca sola cada
+// `LIS_REFRESCO`, y cada vez que se entra a la home o a una lista se pide fresco.
+var LIS_LS = "agente_listas", LIS_REFRESCO = 60000;
+var lis = {sub: "listas", datos: null, ts: 0, bajando: null, etag: null, scroll: 0, origen: null,
+           una: null, unaScroll: 0, refT: null};
+function lisCacheLeer(){
+  if(lis.datos) return lis.datos;
+  try{
+    var j = JSON.parse(localStorage.getItem(LIS_LS) || "null");
+    if(j && j.d && j.d.listas){ lis.datos = j.d; lis.ts = 0; }   // `ts: 0`: el cache nunca frena un refresco
+  }catch(x){}
+  return lis.datos;
+}
+function lisCacheGuardar(d){
+  try{ localStorage.setItem(LIS_LS, JSON.stringify({ts: Date.now(), d: d})); }catch(x){}
+}
 function lisBajar(fresco){
-  if(!fresco && lis.datos && Date.now() - lis.ts < LIS_TTL) return Promise.resolve(lis.datos);
+  lisCacheLeer();
+  if(!fresco && lis.datos && lis.ts && Date.now() - lis.ts < LIS_TTL) return Promise.resolve(lis.datos);
   if(lis.bajando) return lis.bajando;
   lis.bajando = api("GET", "/repos/" + REPO + "/contents/" + LIS_ARCH, null, null,
                     "application/vnd.github.raw+json").then(function(r){
-    if(r.json && r.json.listas){ lis.datos = r.json; lis.ts = Date.now(); }
+    if(r.json && r.json.listas){ lis.datos = r.json; lis.ts = Date.now(); lisCacheGuardar(r.json); }
     return lis.datos;
   }).catch(function(){ return lis.datos; }).then(function(d){ lis.bajando = null; return d; });
   return lis.bajando;
+}
+// paso 4: mientras la vista esta a la vista, las listas se mantienen solas (una pasada por minuto, la misma que
+// deja el server con su script de 10 min: pedir mas seguido no trae nada nuevo)
+function lisRefrescar(){
+  lisRefrescoParar();
+  lis.refT = setInterval(function(){
+    if(!vistaEs("tinder") || sel.actual || (lis.sub !== "listas" && lis.sub !== "una")) return lisRefrescoParar();
+    lisBajar(true).then(function(){
+      if(lis.sub === "listas") lisPintar();
+      else if(lis.sub === "una") lisUnaPintar();
+    });
+  }, LIS_REFRESCO);
+}
+function lisRefrescoParar(){
+  if(lis.refT){ clearInterval(lis.refT); lis.refT = null; }
 }
 // entrar a la home de la vista: la vista `tinder` entera, sin votacion abierta (no hace falta ninguna)
 function lisAbrir(fresco){
@@ -4935,6 +5020,7 @@ function lisAbrir(fresco){
 }
 function lisPoner(cual, fresco){
   lis.sub = cual === "listas" ? "listas" : "votar";
+  if(lis.sub === "listas") lis.una = null;   // 2095: la home no es ninguna lista abierta
   if(lis.sub === "votar"){
     $("sellistas").classList.add("oculta");
     $("selmodal").classList.remove("sintit");   // 2087: el renglon de titulo vuelve fuera de la home
@@ -4964,15 +5050,20 @@ function lisPoner(cual, fresco){
   $("seltitulo").textContent = "";
   $("selcuenta").textContent = "";
   lisPintar();
-  lisBajar(fresco).then(function(){ if(lis.sub === "listas") lisPintar(); });
+  // paso 4: entrar a la home SIEMPRE pide fresco (el cache ya esta pintado abajo) y deja el refresco corriendo
+  lisBajar(true).then(function(){ if(lis.sub === "listas") lisPintar(); });
+  lisRefrescar();
   return true;
 }
 function lisPintar(){
-  var c = $("sellistas"), d = lis.datos, prev = c.scrollTop;
+  var c = $("sellistas"), d = lisCacheLeer(), prev = c.scrollTop;
   c.textContent = "";
+  c.classList.remove("una");
   if(!d || !d.listas || !d.listas.length){
+    // 2095 paso 1: se fue el cartel `todavía no bajaron las listas`. sin cache (la primera vez en este equipo) no
+    // hay nada que mostrar todavia: queda la linea de actividad, que se va sola cuando entra el primer json
     var v = document.createElement("div"); v.className = "lisvacio";
-    v.textContent = "todavía no bajaron las listas";
+    v.textContent = "bajando las listas…";
     c.appendChild(v);
     return;
   }
@@ -4990,10 +5081,14 @@ function lisCaja(f){
   var t = document.createElement("span"); t.className = "lisnom"; t.textContent = f.titulo || f.clave;
   var n = document.createElement("span"); n.className = "lisn"; n.textContent = String(f.n || 0);
   h.appendChild(t); h.appendChild(n); caja.appendChild(h);
-  // 2078 {home}: el titulo de la lista abre el votador de SU proceso (el que dice el server, `proceso`) desde el
-  // principio: es el unico camino que queda para una lista grande, que no nombra a nadie. una lista que no se vota
-  // (`activa`, `ignorada`) no es tocable: ahi no hay nada que abrir.
-  if(f.proceso){
+  // 2095 {instatinder} pasos 5, 6 y 7 (facundo, 2026-09-18: "toco following y lo primero que veo es una que es de
+  // `follow request sent`, asi que aca hay algo mal"): tocar una lista YA NO abre el votador de su proceso. varias
+  // listas comparten proceso (`following`, `follow request sent` y `activar` son las tres `me arrepentí`), asi que
+  // abrir el proceso mostraba gente de OTRA lista, y una lista sin fila abierta caia en `selVotar` (el votador de
+  // otro proceso: tocar `candidata` abria `dejar de seguir`). ahora tocar una lista abre SU PROPIA LISTA (la
+  // sub-vista `una`, con su gente y nada mas) y de ahi sale el votador, filtrado a esa lista. asi TODAS las listas
+  // se abren, tambien las que no se votan (`activa`, `ignorada`), que es de donde se saca gente del ignore (paso 6).
+  if(true){
     // 2087 {resume-3} (facundo, 2026-09-18: "quiero poder tocar en cualquier lugar del cuadrado, no solo el
     // titulo"): el `toca` y el click pasan del renglon `h` al CUADRADO ENTERO, asi el titulo, el `lisporque`, el
     // `lisgrande` y el fondo abren el mismo votador. lo de adentro que tiene su propia accion (un chip, la `ficha`,
@@ -5001,9 +5096,9 @@ function lisCaja(f){
     caja.classList.add("toca");
     caja.setAttribute("role", "button");
     caja.setAttribute("tabindex", "0");
-    caja.setAttribute("title", "votar " + (f.proceso_titulo || f.titulo || ""));
-    caja.setAttribute("data-proceso", f.proceso);
-    var abrirCaja = function(){ lisVotar(f, null); };
+    caja.setAttribute("title", "abrir `" + (f.titulo || f.clave) + "`");
+    if(f.proceso) caja.setAttribute("data-proceso", f.proceso);
+    var abrirCaja = function(){ lisEntrar(f); };
     caja.addEventListener("click", abrirCaja);
     caja.addEventListener("keydown", function(ev){
       if(ev.target !== caja) return;   // el enter de un chip es del chip
@@ -5033,16 +5128,16 @@ function lisCaja(f){
 function lisFila(p, f){
   var fila = document.createElement("div"); fila.className = "lisfila lischip";
   fila.setAttribute("data-persona", p.id);
-  // 2078 {home} paso 3 y 5: el chip entero abre el VOTADOR arrancando por ESA persona (la cartita de la 1948 pasa a
-  // su propio boton `ficha`, abajo, que corta la burbuja). una persona que no esta en la fila cargada del proceso, o
-  // una lista que no se vota, caen en la cartita: nunca en un callejon (1948).
+  // 2095 paso 7 (facundo, 2026-09-18: "ya cambiamos el modo, asi que cada lista abre lo suyo"): el chip de una
+  // persona abre SU CARTITA (1948), no el votador. el votador se abre desde la lista (el boton `votar`), que es lo
+  // que garantiza que la fila sea la de ESA lista. reemplaza el toque de la 2078 (paso 3 y 5) y su boton `ficha`.
   fila.classList.add("toca");
   fila.setAttribute("role", "button");
   fila.setAttribute("tabindex", "0");
-  fila.setAttribute("title", "@" + p.cuenta + (f && f.proceso ? ": votarla en " + (f.proceso_titulo || "") : ""));
+  fila.setAttribute("title", "@" + p.cuenta + ": su ficha entera");
   var abrir = function(ev){
-    if(ev && ev.stopPropagation) ev.stopPropagation();   // 2087: el cuadrado entero abre la lista desde el principio
-    lisVotar(f, p);
+    if(ev && ev.stopPropagation) ev.stopPropagation();   // 2087: el cuadrado entero abre la lista
+    lisCartita(p);
   };
   fila.addEventListener("click", abrir);
   fila.addEventListener("keydown", function(ev){
@@ -5059,17 +5154,6 @@ function lisFila(p, f){
   fila.appendChild(fo);
   var cu = document.createElement("span"); cu.className = "liscuenta"; cu.textContent = "@" + p.cuenta;
   fila.appendChild(cu);
-  // 2078 {home} paso 5: la cartita sigue a UN toque de distancia, con su propia area que dice que hace (1883: cada
-  // boton dice que hace). corta la burbuja para no abrir el votador al mismo tiempo
-  if(p.ficha || (p.accion || {}).texto){
-    var fi = moldeBoton({tipo: "term", clase: "lisfic", txt: "ficha", accion: function(ev){
-      if(ev && ev.stopPropagation) ev.stopPropagation();
-      lisCartita(p);
-    }});
-    fi.setAttribute("aria-label", "ficha de @" + p.cuenta);
-    fi.setAttribute("title", "su ficha entera");
-    fila.appendChild(fi);
-  }
   return fila;
 }
 // 2078 {home}: tocar en las listas. `p` es la persona tocada (o `null` si se toco el titulo de la lista) y `f` la
@@ -5081,18 +5165,133 @@ function lisCartita(p){
   if(p && (p.accion || {}).texto) return lisAccionModal(p);
   return false;
 }
+// ---------- 2095 {instatinder} pasos 5, 6 y 7: la sub-vista `una`, UNA lista con SU gente ----------
+// la home (2078) sigue siendo la grilla de listas; tocar una entra ACA: el titulo de la lista arriba, su gente en
+// la misma grilla de chips de la 2035 (tocar una abre su cartita, paso 7) y, si la lista se vota, el boton
+// `votar esta lista`, que abre el votador FILTRADO a esta lista (nunca la fila entera del proceso, que mezcla
+// varias). la gente entera de una lista grande no viaja en `listas.json` (serian megas de fichas): la trae la lan
+// en el momento (`listas/<clave>.json`, cero tokens). sin lan queda lo que ya vino en el json.
+var LIS_UNA_MAX = 120;
+function lisEntrar(f, fresco){
+  if(!f) return false;
+  try{ lis.scroll = $("sellistas").scrollTop; }catch(x){ lis.scroll = 0; }
+  lis.sub = "una";
+  lis.una = {clave: f.clave, f: f, gente: (f.gente || []).slice(), n: f.n, entera: !f.grande, bajando: false};
+  lisModoUna();
+  lisUnaPintar();
+  lisUnaBajar(f.clave);
+  lisRefrescar();
+  selBoton();
+  return true;
+}
+// el molde de la home, con UNA diferencia: la cabecera vuelve a su renglon (el titulo dice en que lista estas) y
+// el back grande de la 2002 esta a la vista, para volver a la grilla de listas
+function lisModoUna(){
+  $("selmodal").classList.add("pantalla", "home");
+  $("selmodal").classList.remove("sintit");
+  var pie = document.querySelector("#selmodal .selpie");
+  if(pie) pie.classList.add("oculta");
+  $("sellista").classList.add("oculta");
+  $("seltarjeta").classList.add("oculta");
+  $("selacciones").classList.add("oculta");
+  $("seltxt").classList.add("oculta");
+  var b = document.querySelector("#selmodal .selbtns");
+  if(b) b.classList.add("oculta");
+  $("sellistas").classList.remove("oculta");
+  var bk = $("selback");
+  bk.classList.remove("oculta"); bk.classList.remove("apagado");
+  capaMostrar("selmodal");
+  vistaPoner("tinder");
+}
+function lisUnaFila(){
+  var u = lis.una;
+  if(!u) return null;
+  var d = lisCacheLeer();
+  // la fila fresca del json (el refresco de atras pudo cambiar el numero); si no esta mas, la ultima que se vio
+  var f = ((d || {}).listas || []).filter(function(x){ return x.clave === u.clave; })[0];
+  return f || u.f;
+}
+function lisUnaPintar(){
+  var c = $("sellistas"), u = lis.una, f = lisUnaFila();
+  if(!u || !f) return false;
+  c.textContent = "";
+  c.classList.add("una");
+  $("seltitulo").textContent = f.titulo || f.clave;
+  $("selcuenta").textContent = String(f.n || 0);
+  var cab = document.createElement("div"); cab.className = "lisunacab";
+  if(f.porque) cab.appendChild(lisLinea("lisporque", f.porque));
+  // 2095 paso 5: el votador sale de ACA, y abre la fila de ESTA lista (`f.clave`), no la del proceso entero
+  if(f.proceso){
+    var vb = moldeBoton({tipo: "caja", clase: "lisvotar", txt: "votar esta lista", accion: function(){ lisVotar(f, null); }});
+    vb.setAttribute("data-proceso", f.proceso);
+    vb.setAttribute("title", "abrir el votador con la gente de `" + (f.titulo || f.clave) + "`");
+    cab.appendChild(vb);
+  }
+  c.appendChild(cab);
+  var gente = u.gente || [];
+  if(!gente.length){
+    // sin gente todavia: la trae la lan. una lista grande sin lan se queda con lo que diga el server
+    c.appendChild(lisLinea("lisvacio", u.bajando ? "buscando la gente de la lista…" :
+                           (f.n ? "son " + f.n + ": no pude traer la lista entera (sin lan)" : "no hay nadie acá")));
+    return true;
+  }
+  var tira = document.createElement("div"); tira.className = "listira lisunatira";
+  gente.forEach(function(p){ tira.appendChild(lisFila(p, f)); });
+  c.appendChild(tira);
+  if((f.n || 0) > gente.length) c.appendChild(lisLinea("lisgrande", "son " + f.n + ": te muestro " + gente.length));
+  var y = lis.unaScroll || 0; lis.unaScroll = 0;
+  if(y) try{ c.scrollTop = y; }catch(x){}
+  return true;
+}
+// la gente entera de una lista, por la lan (`listas/<clave>.json`, lo arma `ig_listas.una`, cero tokens). el buzon
+// no la tiene: ahi el 404 deja lo que ya habia, sin cartel de error
+function lisUnaBajar(clave){
+  var u = lis.una;
+  if(!u || u.clave !== clave) return Promise.resolve(false);
+  u.bajando = true;
+  return api("GET", "/repos/" + REPO + "/contents/listas/" + encodeURIComponent(clave) + ".json", null, null,
+             "application/vnd.github.raw+json").then(function(r){
+    var j = r && r.json;
+    if(!j || !j.gente || !lis.una || lis.una.clave !== clave) return false;
+    lis.una.gente = j.gente; lis.una.entera = !!j.entera; lis.una.bajando = false;
+    if(lis.sub === "una") lisUnaPintar();
+    return true;
+  }).catch(function(){ return false; }).then(function(r){
+    if(lis.una && lis.una.clave === clave){
+      lis.una.bajando = false;
+      if(lis.sub === "una" && !lis.una.gente.length) lisUnaPintar();
+    }
+    return r;
+  });
+}
+// volver de una lista a la grilla de listas (el back grande de la 2002 y el `esc`)
+function lisAHome(){
+  lis.una = null;
+  return lisAbrir();
+}
+// volver del votador: a la lista de la que salio (paso 5), y si no salio de ninguna, a la home
+function lisVolver(){
+  var o = lis.origen;
+  if(o && o.lista){
+    var d = lisCacheLeer(), f = ((d || {}).listas || []).filter(function(x){ return x.clave === o.lista; })[0];
+    lis.origen = null;
+    if(f){ lis.unaScroll = o.scroll || 0; return lisEntrar(f); }
+  }
+  return tinderHome();
+}
 function lisVotar(f, p){
   try{ lis.scroll = $("sellistas").scrollTop; }catch(x){ lis.scroll = 0; }
   var col = f && f.proceso;
   // paso 4: de donde salio el votador, para que el back grande vuelva a ESA lista en la misma posicion de scroll
-  lis.origen = col ? {col: col, lista: f.clave, scroll: lis.scroll} : null;
+  lis.origen = col ? {col: col, lista: f.clave, scroll: lis.unaScroll || lis.scroll} : null;
   if(!col) return p ? lisCartita(p) : false;   // una lista que no se vota: la cartita es lo que hay
   // si el votador no puede abrirse en ella, el toque no deja un origen colgado: no salio de ninguna lista
   var carta = p ? function(){ lis.origen = null; return lisCartita(p); } : null;
   // 1975 {arranque}: en `dejar de seguir` la fila se pide de nuevo, asi que el chequeo va DESPUES (adentro de
   // `tinderAbrirCol`); en el resto alcanza con la fila que ya esta cargada
   if(p && !selArranca(col) && !lisEnFila(col, p.id)) return carta();
-  return tinderAbrirCol(col, p && p.id, carta);
+  // 2095 paso 5: el votador se abre FILTRADO a esta lista (`f.clave`): la fila del proceso mezcla varias
+  return tinderAbrirCol(col, p && p.id, carta, f.clave, f.titulo || f.clave);
 }
 // esta esa persona en la fila que el server tiene abierta para ese proceso, y con foto (1495)?
 function lisEnFila(col, id){
@@ -5451,6 +5650,8 @@ function votItems(){
 // el nombre `tinderHome` queda: sigue siendo "la home de la vista", lo que cambio es que la home son las listas.
 function tinderHome(fresco){
   lis.origen = null;   // ya estamos en la lista: el proximo votador dira de donde sale
+  lis.una = null;      // 2095: la home es la grilla de listas, no una lista abierta
+  sel.filtro = null; sel.filtroTitulo = null;
   return lisAbrir(fresco);
 }
 // el fueguito: entra DIRECTO a la vista `tinder`, en su home, que son las listas (2078; 1922 abria el selector)
@@ -5466,17 +5667,22 @@ function selArranca(col){
 }
 // 2078 {home}: `desde` es el id de la persona tocada en la lista: la fila se rota para que sea la PRIMERA y el
 // resto queda atras (nadie se pierde). sin `desde`, arranca donde arranca el proceso.
-function tinderAbrirCol(col, desde, falla){
+function tinderAbrirCol(col, desde, falla, lista, titulo){
   var ok;
   lis.sub = "votar";
+  // 2095 paso 5: de que lista es la fila que se va a ver. lo pone el toque en la lista y lo respetan `tjAbrir` (la
+  // apertura) y `filaSumar` (todo lo que el server manda despues): en el votador de `following` no entra nunca
+  // nadie de `follow request sent`, aunque el server sirva las dos en la misma coleccion.
+  sel.filtro = lista || null;
+  sel.filtroTitulo = lista ? (titulo || lista) : null;
   // 1975 {arranque}: en `dejar de seguir` la primera tarjeta tiene que ser la de menos seguidores de la lista
   // ENTERA, asi que la fila se pide de nuevo antes de pintar nada; sin lan se abre con lo que ya hay
   if(selArranca(col)){
     selPedir(col, true).then(function(){
       // la fila recien pedida puede no traer a la persona tocada (la 1960 exige `seguidores`, la 1495 foto): ahi no
       // se abre el votador en otra persona, se cae al plan B del toque (su cartita)
-      if(desde && !lisEnFila(col, desde)) return falla ? falla() : tinderHome();
-      if(!selAbrirCol(col) && vistaEs("tinder") && !sel.actual) tinderHome();
+      if(desde && !lisEnFila(col, desde)) return falla ? falla() : lisVolver();
+      if(!selAbrirCol(col) && vistaEs("tinder") && !sel.actual) lisVolver();
       else tjIr(desde);
     });
     return true;
@@ -5488,13 +5694,15 @@ function tinderAbrirCol(col, desde, falla){
   } else {
     ok = selAbrirCol(col);
   }
-  if(!ok && vistaEs("tinder") && !sel.actual) tinderHome();
+  // 2095 paso 5: si la fila de esa lista no tiene a nadie cargado todavia, se vuelve a la LISTA (de donde salio el
+  // toque), nunca a otro proceso (eso era el bug) ni a la home
+  if(!ok && vistaEs("tinder") && !sel.actual) lisVolver();
   else if(ok) tjIr(desde);
   return ok;
 }
 // salir de una votacion (terminar la tanda, `enviar`, `esc`): vuelve al `home`, no cierra la vista (1922)
 function selSalir(){
-  if(vistaEs("tinder")) return tinderHome();
+  if(vistaEs("tinder")) return lisVolver();
   capaOcultar("selmodal");
   // 1933 {instatinder}: la vista `votar` se deja solo si no queda nada abierto ni esperando (el votador de
   // animaciones puede estar debajo de una seleccion: cerrar la de arriba no cierra la vista)
@@ -5511,6 +5719,8 @@ function tinderSalir(){
   sel.actual = null;
   selModoLista(true);
   lis.sub = "listas";
+  lis.una = null; sel.filtro = null; sel.filtroTitulo = null;   // 2095
+  lisRefrescoParar();
   capaOcultar("selmodal");
 }
 // 1788: SIEMPRE lo toca facundo (el boton `votar` o el push). abre la primera que no cerraste; si cerraste todas,
@@ -5527,9 +5737,13 @@ function selVotar(){
   return ok;
 }
 // 1788: el push `votar-<col>` abre ESA votacion (es un toque de facundo), nunca otra
+// 2095 paso 5 (el bug de `candidata` -> `dejar de seguir`): si esa coleccion no tiene fila abierta, NO se abre otra
+// en su lugar. el `selVotar()` de antes abria "la primera pendiente", que es de otro proceso y de otra lista: el
+// que pide una coleccion puntual (el push `votar-<col>`, el boton de una lista) se queda sin votador y sigue su
+// plan B (la lista, la cartita), nunca con gente que no pidio.
 function selAbrirCol(col){
   var e = sel.abiertas.filter(function(a){ return a.coleccion === col; })[0];
-  if(!e) return selVotar();
+  if(!e) return false;
   try{ delete sel.ignorada[col]; }catch(x){}
   var ok = selAbrir(e);
   selBoton();
@@ -5644,7 +5858,8 @@ $("selacciones").addEventListener("click", function(ev){
   if(b) tjDecidir(b.getAttribute("data-q"));   // 1657: en esta fila solo hay votos
 });
 // 1657: el back (`←`) esta aparte, en la cabecera del modal, y deshace el ultimo voto
-$("selback").addEventListener("click", function(){ tjAtras(); });   // 2078: sin nada que deshacer, vuelve a la lista
+// 2078: sin nada que deshacer, vuelve a la lista; 2095: en la sub-vista `una` el back grande vuelve a la home
+$("selback").addEventListener("click", function(){ if(lis.sub === "una") return lisAHome(); tjAtras(); });
 // 2002 {back}: la `✕` arriba a la derecha, en los tres modales que no salen del molde `modalMolde`
 $("selx").addEventListener("click", selX);
 $("podx").addEventListener("click", function(){ podAbrirEp(null); vistaVolver(); });
@@ -11072,6 +11287,12 @@ window.__agente = {
   stDatos: function(d){ if(d){ stParar(); st.datos = d; st.i = 0; st.msg = ""; stPintar(); } return st.datos; },
   tjMover: tjMover,   // 2079 {votador}: navegar la fila sin votar
   lisVotar: lisVotar, lisEnFila: lisEnFila, tjIr: tjIr,   // 2078 {home}: el toque en una fila abre el votador
+  // 2095 {instatinder}: la sub-vista `una` (UNA lista con su gente) y el filtro por lista del votador
+  lisEntrar: lisEntrar, lisAHome: lisAHome, lisVolver: lisVolver, lisUnaPintar: lisUnaPintar,
+  lisUna: function(){ return lis.una ? {clave: lis.una.clave, n: lis.una.n, gente: (lis.una.gente || []).length} : null; },
+  lisCache: function(){ try{ return JSON.parse(localStorage.getItem(LIS_LS) || "null"); }catch(x){ return null; } },
+  lisOlvidar: function(){ lis.datos = null; lis.ts = 0; try{ localStorage.removeItem(LIS_LS); }catch(x){} },
+  selFiltro: function(){ return {lista: sel.filtro || null, titulo: sel.filtroTitulo || null}; },
   lisOrigen: function(){ return lis.origen; }, lisScroll: function(){ return lis.scroll; },
   lisSub: function(){ return lis.sub; },
   lisDatos: function(d){ if(d){ lis.datos = d; lis.ts = Date.now(); } return lis.datos; },
@@ -11169,6 +11390,8 @@ window.__agente = {
   qvOcultos: qvOcultos, qvUmbral: QV_UMBRAL,   // 1229: swipe de `que ver`
   // cajas a/b/c: `prueba_web_tabs` las pinta, elige, manda y chequea que un drag no elija
   opcionesDe: opcionesDe,
+  // 2096 {codigocaja}: el codigo corto que manda una caja (`prueba_caja_codigo`)
+  codigoCaja: codigoCaja, esCodigoCaja: esCodigoCaja, cajaCod: cajaCod,
   hhmmDe: hhmmDe, citaCaja: citaCaja, hhmmBA: hhmmBA,
   hora12: hora12, norm12: norm12, horaNoti: horaNoti,   // 1660: 12 h con am/pm en todo lo que ve facundo   // 1203: hora de envio de cada caja marcada
   // 1212: purga de `agente_opciones` (24 h y claves invalidas)

@@ -455,11 +455,22 @@
   /* 2035 {columnas} (facundo, 2026-09-18): `listas` tambien es una GRILLA de dos columnas (una por lista), y la
      gente de una lista chica deja de ser una fila por persona: es una tira de fotitos REDONDAS con el `@` abajo
      (`.listira` + `.lischip`), y tocar una abre su cartita de la 1948. una columna en el celu angosto (abajo). */
+  /* 2095 {instatinder} paso 2 (facundo, 2026-09-18: "hacelo 100% ancho en desktop. hay bordes en los costados"):
+     la grilla deja de tener ancho maximo. las dos columnas de la 2035 se reparten TODO el ancho de la pantalla
+     (el unico margen que queda es el padding de la caja, 10 px), y en el celu no cambia nada. */
   #sellistas{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
     display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-content:start;
-    width:100%;max-width:980px;margin:0 auto}
+    width:100%;max-width:none;margin:0}
   #sellistas.oculta{display:none!important}
   #sellistas .lisvacio{color:var(--gris);font-size:17px;grid-column:1 / -1}
+  /* 2095 {instatinder} pasos 5 y 6: la sub-vista `una` (UNA lista abierta) usa el MISMO contenedor y los mismos
+     chips de la 2035; lo unico distinto es que la grilla es de una sola columna (la cabecera de la lista arriba,
+     la tira de gente abajo) y que arriba va el boton `votar esta lista`, con el molde de caja de siempre. */
+  #sellistas.una{grid-template-columns:minmax(0,1fr)}
+  #sellistas.una .lisunacab{display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+  #sellistas.una .lisvotar{min-height:46px;align-self:flex-start}
+  #sellistas.una .lisunatira{padding-top:2px;margin-top:0}
+  #sellistas.una .lisgrande{padding-top:4px}
   /* sin borde de color: fondo un paso mas claro y la sombra suave de los modales (1652) */
   #sellistas .liscaja{border:1px solid transparent;border-radius:4px;padding:10px;height:100%;
     background:var(--fondo-caja);box-shadow:var(--caja-sombra);display:flex;flex-direction:column;gap:6px}
@@ -776,7 +787,9 @@
      el id solo pone lo propio: color verde y el ancho, asi la caja no se corre. */
   #prompt{color:var(--verde);flex:0 0 auto;user-select:none;min-width:30px;padding:5px 6px}
   /* el modal de comandos (`cmdAbrir`, molde `modalMolde`): grupos por tema, una fila tocable por comando */
-  #cmdmodal .mmolde{max-width:420px}
+  /* 2095 {instatinder} paso 9 (facundo: "la vista de comandos tambien esta angosta en desktop"): el modal del
+     glifo `/` deja de tener el ancho de un celu y ocupa el ancho de la pantalla, como el resto de las vistas */
+  #cmdmodal .mmolde{max-width:none;width:100%}
   #cmdmodal .mcuerpo2{display:flex;flex-direction:column;gap:2px}
   .cmdgrupo{color:var(--amarillo);font-weight:bold;margin:8px 0 2px}
   .cmdgrupo:first-child{margin-top:0}
@@ -1234,7 +1247,8 @@
   body.v-podcast #vista-podcast .seltit{width:100%;max-width:760px;margin:0 auto}
   /* la clase `.home` de `#selmodal` sigue siendo "la home de la vista" (2078: son las listas): lo unico que hace es
      alinear la cabecera con la grilla, no con el borde de la pantalla */
-  #selmodal.pantalla.home .seltit{width:100%;max-width:980px;margin:0 auto}
+  /* 2095 paso 2: la cabecera se alinea con la grilla, que ahora es la pantalla entera */
+  #selmodal.pantalla.home .seltit{width:100%;max-width:none;margin:0}
   /* 2087 {resume-3} (facundo, 2026-09-18: "saca el titulo, dejame solo la cruz arriba, pero que la cruz no tenga su
      propia linea, que este en el mismo lugar donde estan las listas"): en la home la cabecera no ocupa renglon: es
      una capa de alto 0 encima de la grilla, y lo unico que se ve de ella es la `✕` arriba a la derecha (el back de
@@ -1490,12 +1504,16 @@
   }
   #tabs::-webkit-scrollbar{display:none}
   /* 2080 {diseno} punto 2 (facundo, 2026-09-18: "las pestañas, agrandale un poquito el padding superior y de
-     abajo, izquierda de hecho esta bien"): el ancho y el padding LATERAL no se tocan (siguen en 9 px, asi la
-     fila de pestañas entra igual en 390 px); sube solo el vertical, de 4 a 8 px, y el texto queda centrado
-     vertical con el flex del propio boton (punto 3), nunca con un `line-height` a mano. la letra no cambia. */
+     abajo, izquierda de hecho esta bien"), corregido por la 2097 {pestanas} y la 2098 {pestanas2} (facundo,
+     2026-09-19: "el padding vertical, doble de que es ahora"): el ancho y el padding LATERAL no se tocan
+     (siguen en 9 px, asi la fila entra igual en 390 px) y la letra tampoco; sube solo el vertical, de 4 a 8
+     y ahora a 16 px. el porque del numero: con la letra en 16 px, 8 px daban 40.8 px de alto y a ojo la
+     pestaña no se veia mas alta que antes, asi que en un control de 16 px "un poquito mas" no son +4 px por
+     lado; facundo lo pidio como el DOBLE del que hay, 8 -> 16, y la pestaña queda en 56.8 px. el texto sigue
+     centrado vertical con el flex del propio boton (punto 3), nunca con un `line-height` a mano. */
   #tabs .tab{
     flex:0 0 auto;background:#000;color:var(--gris);border:0;
-    border-radius:4px 4px 0 0;padding:8px 9px;font:inherit;font-size:16px;cursor:pointer;
+    border-radius:4px 4px 0 0;padding:16px 9px;font:inherit;font-size:16px;cursor:pointer;
     white-space:nowrap;display:inline-flex;align-items:center;
   }
   #tabs .tab.enpanel{color:var(--cian)}
@@ -1503,10 +1521,14 @@
     color:var(--verde);background:var(--fondo-caja);
   }
   #tabs .tab .x{color:#555;margin-left:7px}
+  /* 2097 {pestanas}: con la pestaña en 52.8 px un boton de 27.7 px flotando 3 px arriba del piso quedaba
+     descolgado. el boton no fija su alto: se estira al de la fila (`align-self:stretch`) y centra su glifo,
+     asi queda del mismo alto que las pestañas y apoyado abajo, sin numeros a mano que haya que recalcular
+     cada vez que cambia el padding de `.tab`. */
   #tabs .barrabtn{
-    flex:0 0 auto;background:#000;color:var(--gris);border:1px solid var(--linea);border-radius:4px;
-    padding:2px 7px;font:inherit;font-size:14px;cursor:pointer;white-space:nowrap;
-    margin:0 0 3px 5px;
+    flex:0 0 auto;align-self:stretch;background:#000;color:var(--gris);border:1px solid var(--linea);
+    border-radius:4px;padding:2px 7px;font:inherit;font-size:14px;cursor:pointer;white-space:nowrap;
+    margin:0 0 0 5px;display:inline-flex;align-items:center;
   }
   #tabs .barrabtn:active{background:#111}
   /* + de pestaña nueva sin borde (facundo, 2026-09-15, orden 1557): el 1px vuelve al padding, mismo alto */
