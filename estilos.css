@@ -230,6 +230,12 @@
   .mhead .b-x,.mhead .mx2{margin-left:auto}   /* la `✕` siempre pegada a la derecha, pase lo que pase en el medio */
   /* interruptor de N posiciones (1659, el modo de modelo del widget CLAUDE): una sola fila, la puesta en verde y
      las otras en gris. sin fondo, sin borde de color y sin nada mas grande que --texto-max, como el resto. */
+  /* 2086 {notificaciones}: el checkbox de una fila. mismos numeros que el de la seleccion (`#sellista .selitem
+     input`): caja de 18 px, verde de la paleta y la fila entera centrada vertical (2080). el texto entra en el
+     tope de siempre (`--texto-max`), que es lo que se agranda, nunca el glifo a mano. */
+  .mchk{display:flex;align-items:center;gap:8px;min-height:38px;cursor:pointer}
+  .mchk input{flex:0 0 auto;width:18px;height:18px;margin:0;accent-color:var(--verde);cursor:pointer}
+  .mchktxt{color:var(--cian);font-size:17px;line-height:1.2}
   .msw{display:flex;align-items:stretch;gap:0;border:1px solid var(--linea);border-radius:6px;overflow:hidden}
   .msw .mswb{flex:1 1 0;min-height:30px;padding:4px 6px;background:#000;color:#8a8a8a;color:var(--gris);border:0;
     border-left:1px solid var(--linea);font:inherit;font-size:16px;line-height:1.2;cursor:pointer;
@@ -1235,7 +1241,7 @@
      la 2002 sigue oculto en la home). el hueco lo tapa la grilla, que empieza arriba de todo. */
   #selmodal.pantalla.home.sintit .selcaja{position:relative}
   #selmodal.pantalla.home.sintit .seltit{position:absolute;top:0;left:0;right:0;height:0;min-height:0;
-    margin:0;padding:0 10px;z-index:3;pointer-events:none}
+    margin:0 auto;padding:0;z-index:3;pointer-events:none}
   #selmodal.pantalla.home.sintit .seltit > *{pointer-events:auto}
   #selmodal.pantalla.home.sintit #sellistas{padding-top:0}
 
@@ -1665,14 +1671,13 @@
   }
   #ctx button:hover{border-color:var(--linea);background:#0d1410}
   #ctx button:active{background:#111}
-  /* 2086 {notificaciones}: una fila del dropdown que no es un boton sino un setting con su interruptor
-     (molde `moldeSwitch`, docs/componentes-web.md): etiqueta arriba, el switch abajo y una linea gris de
-     que hace. el `#ctx button` de arriba no la toca: adentro solo hay `.mswb`, que trae su propio estilo. */
-  #ctx .cswf{display:flex;flex-direction:column;gap:5px;padding:6px 6px 8px 6px;
+  /* 2086 {notificaciones}: una fila del dropdown que no es un boton sino un setting con su CHECKBOX (molde
+     `moldeCheck`, docs/componentes-web.md): el check y su etiqueta en una linea, centrados vertical (2080: nada
+     de texto e icono en `baseline`), y abajo una linea gris de que hace. */
+  #ctx .cswf{display:flex;flex-direction:column;gap:4px;padding:6px 6px 8px 6px;
     border-bottom:1px solid var(--linea);margin-bottom:2px}
-  #ctx .cswl{color:var(--cian);font-size:17px}
-  #ctx .cswg{color:var(--gris);font-size:13px;line-height:1.25}
-  #ctx .cswf .msw .mswb{font-size:13px}
+  #ctx .cswg{color:var(--gris);font-size:13px;line-height:1.25;padding-left:26px}
+  #ctx .mchk{min-height:38px}
   /* lo que se toco queda marcado mientras el menu esta abierto */
   .msg.marcado,#widgets .it.marcado,#tabs .tab.marcado{outline:0;background:#0d1410;border-radius:3px}
   /* el hold no tiene que disparar el menu de ios ("copiar / buscar"): el nuestro lo reemplaza */

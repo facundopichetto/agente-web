@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.378">
-<link rel="manifest" href="manifest.json?v=4.378">
+<meta name="agente-web-version" content="4.379">
+<link rel="manifest" href="manifest.json?v=4.379">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.378">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.379">
 </head>
 <body>
 
@@ -10397,12 +10397,12 @@ function menu(x, y, titulo, opciones, nodo){
     d.appendChild(t);
   }
   opciones.forEach(function(o){
-    // 2086 {notificaciones}: una opcion puede ser una fila propia (`{html, nombre}`) y no un boton: es lo que
-    // deja meter el switch del modo notificaciones adentro del dropdown, con el molde de `moldeSwitch`. la
-    // fila NO cierra el menu al tocarla (un switch que se cierra encima parece que no guardo nada).
-    if(o && o.html !== undefined){
-      var f = document.createElement("div");
-      f.className = "cfila"; f.innerHTML = o.html;
+    // 2086 {notificaciones}: una opcion puede ser una fila propia (`{nodo}` ya armado, o `{html}`) y no un boton:
+    // es lo que deja meter el checkbox `notificaciones de audio enviado` adentro del dropdown, con el molde
+    // `moldeCheck`. la fila NO cierra el menu al tocarla (un control que se cierra encima parece que no guardo).
+    if(o && (o.nodo || o.html !== undefined)){
+      var f = o.nodo;
+      if(!f){ f = document.createElement("div"); f.className = "cfila"; f.innerHTML = o.html; }
       d.appendChild(f);
       return;
     }
@@ -10411,7 +10411,8 @@ function menu(x, y, titulo, opciones, nodo){
     b.addEventListener("click", function(){ cerrarMenu(); o[1](); });
     d.appendChild(b);
   });
-  menuAbierto = {titulo: titulo || "", opciones: opciones.map(function(o){ return o && o.html !== undefined ? (o.nombre || "") : o[0]; })};
+  menuAbierto = {titulo: titulo || "", opciones: opciones.map(function(o){
+    return o && (o.nodo || o.html !== undefined) ? (o.nombre || "") : o[0]; })};
   menuTs = Date.now();
   d.classList.remove("oculta");
   $("ctxfondo").classList.remove("oculta");
@@ -11589,20 +11590,28 @@ window.__agente = {
   abrirCampana: abrirCampana, cerrarCampana: cerrarCampana, abrirPersona: abrirPersona, peorNivel: peorNivel,
   // 2086 {notificaciones}: el switch global del dropdown de la personita y la duracion que manda el server
   notiModo: notiModo, notiPoner: notiPoner,
-  notiSwitch: function(){
-    var f = document.querySelector("#ctx .cswf");
-    if(!f) return null;
-    var ps = [].map.call(f.querySelectorAll(".mswb"), function(b){
-      return {v: b.getAttribute("data-swv"), txt: b.textContent, puesto: b.classList.contains("puesto")}; });
-    var b0 = f.querySelector(".mswb");
-    return {etiqueta: (f.querySelector(".cswl") || {}).textContent, opciones: ps,
-            nombre: b0 ? b0.getAttribute("data-sw") : null,
+  notiCheck: function(){
+    var f = document.querySelector("#ctx .cswf"), i = f && f.querySelector("input[data-chk]");
+    if(!f || !i) return null;
+    var l = i.closest(".mchk"), t = f.querySelector(".mchktxt"), r = l.getBoundingClientRect(), ri = i.getBoundingClientRect();
+    var cs = getComputedStyle(i), ct = getComputedStyle(t);
+    return {etiqueta: t.textContent, nombre: i.getAttribute("data-chk"), tipo: i.type,
+            marcado: i.checked, n: f.querySelectorAll("input").length,
+            molde: l.className.split(" ").indexOf("mchk") >= 0,
+            caja: [Math.round(ri.width), Math.round(ri.height)], acento: cs.accentColor,
+            // el mismo verde de la paleta que usan los checkboxes de la seleccion (`#sellista input`)
+            verde: getComputedStyle(document.documentElement).getPropertyValue("--verde").trim(),
+            fuente: parseFloat(ct.fontSize), alineado: getComputedStyle(l).alignItems,
+            // centrado vertical de verdad: el medio del check y el medio del texto, en la misma linea
+            dy: Math.round((ri.top + ri.bottom) / 2 - (r.top + r.bottom) / 2),
             pie: (f.querySelector(".cswg") || {}).textContent};
   },
   notiTocar: function(v){
-    var b = document.querySelector('#ctx .cswf .mswb[data-swv="' + v + '"]');
-    if(b) b.click();
-    return !!b;
+    var i = document.querySelector("#ctx .cswf input[data-chk]");
+    if(!i) return false;
+    i.checked = !!v;
+    i.dispatchEvent(new Event("change", {bubbles: true}));
+    return true;
   },
   audSegPoner: audSegPoner, audSegs: function(){ return audSegs; },
   notisAccion: function(){ return notisAccion().map(function(g){ return {id: g.noti.id, n: g.n, familia: g.familia}; }); },
