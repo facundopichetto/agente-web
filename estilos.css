@@ -338,6 +338,10 @@
      marca publica/privada y las etiquetas, y cuatro botones grandes abajo. nada de grillas ni de listas largas. */
   #seltarjeta{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:8px}
   #seltarjeta.oculta,#sellista.oculta{display:none!important}
+  /* 2113 {listavotador}: el swipe del votador. mientras el dedo la lleva la tarjeta va sin transicion (pegada al
+     dedo) y al soltar vuelve sola a su lugar: la clase `tjsw` es "agarrada", sacarla es lo que anima la vuelta */
+  #seltarjeta{transition:transform .18s ease;touch-action:pan-y}
+  #seltarjeta.tjsw{transition:none}
   #seltarjeta .tjestado{display:flex;align-items:center;gap:6px;flex-wrap:wrap;color:var(--gris);font-size:16px}
   #seltarjeta .tjchip{padding:2px 7px;border:1px solid var(--linea);border-radius:999px;font-size:16px;color:var(--gris)}
   #seltarjeta .tjchip.priv{color:var(--amarillo,#d8b25a);border-color:currentColor}

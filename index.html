@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.385">
-<link rel="manifest" href="manifest.json?v=4.385">
+<meta name="agente-web-version" content="4.386">
+<link rel="manifest" href="manifest.json?v=4.386">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.385">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.386">
 </head>
 <body>
 
@@ -5094,6 +5094,12 @@ function lisCaja(f){
   // otro proceso: tocar `candidata` abria `dejar de seguir`). ahora tocar una lista abre SU PROPIA LISTA (la
   // sub-vista `una`, con su gente y nada mas) y de ahi sale el votador, filtrado a esa lista. asi TODAS las listas
   // se abren, tambien las que no se votan (`activa`, `ignorada`), que es de donde se saca gente del ignore (paso 6).
+  // 2113 {listavotador} paso 1 (facundo, 2026-09-19: "el votador de la lista no es continuo! tiene que poder mover
+  // de derecha a izquierda y enviar o cancelar si toco en votar la lista. la vista que hay ahora esta ok si toco en
+  // una persona en particular"): el toque en la LISTA vuelve a abrir el votador continuo, pero con lo que arreglo la
+  // 2095 intacto: la fila va FILTRADA a esa lista (`f.clave`), nunca la del proceso entero. la sub-vista `una` (la
+  // grilla de gente) sigue existiendo y es el plan B: la lista que no se vota (`activa`, `ignorada`, sin `proceso`)
+  // y la que todavia no tiene fila armada abren su gente, y desde ahi cada persona abre su cartita (paso 5).
   if(true){
     // 2087 {resume-3} (facundo, 2026-09-18: "quiero poder tocar en cualquier lugar del cuadrado, no solo el
     // titulo"): el `toca` y el click pasan del renglon `h` al CUADRADO ENTERO, asi el titulo, el `lisporque`, el
@@ -5104,7 +5110,7 @@ function lisCaja(f){
     caja.setAttribute("tabindex", "0");
     caja.setAttribute("title", "abrir `" + (f.titulo || f.clave) + "`");
     if(f.proceso) caja.setAttribute("data-proceso", f.proceso);
-    var abrirCaja = function(){ lisEntrar(f); };
+    var abrirCaja = function(){ lisTocar(f); };   // 2113: el votador de ESA lista, y si no se puede, su gente
     caja.addEventListener("click", abrirCaja);
     caja.addEventListener("keydown", function(ev){
       if(ev.target !== caja) return;   // el enter de un chip es del chip
@@ -5281,9 +5287,20 @@ function lisAHome(){
   lis.una = null;
   return lisAbrir();
 }
+// 2113 {listavotador} paso 1: el toque en una lista de la home. lo que facundo quiere ver es el TINDER de esa
+// lista; la grilla de gente queda como plan B de la lista que no se vota o que todavia no tiene fila armada.
+// `lisVotar` es el unico camino al votador (pone el filtro de la 2095 y el origen del back), asi que este toque
+// no duplica nada: le pasa `desde: "home"` para que el `←` sin nada que deshacer vuelva a la home, no a la grilla.
+function lisTocar(f){
+  if(!f) return false;
+  if(!f.proceso) return lisEntrar(f);   // `activa`, `ignorada`: no se votan, se miran (paso 5)
+  return lisVotar(f, null, "home");
+}
 // volver del votador: a la lista de la que salio (paso 5), y si no salio de ninguna, a la home
+// 2113: si el votador salio del toque en la home (no de la grilla de gente), volver es volver a la home
 function lisVolver(){
   var o = lis.origen;
+  if(o && o.desde === "home"){ lis.origen = null; return tinderHome(); }
   if(o && o.lista){
     var d = lisCacheLeer(), f = ((d || {}).listas || []).filter(function(x){ return x.clave === o.lista; })[0];
     lis.origen = null;
@@ -5291,14 +5308,19 @@ function lisVolver(){
   }
   return tinderHome();
 }
-function lisVotar(f, p){
+// `desde` (2113): `"home"` si el votador lo abrio el toque en la tarjeta de la lista, `"una"` (el default) si lo
+// abrio el boton `votar esta lista` de la grilla de gente. es lo que decide a donde vuelve el back del final.
+function lisVotar(f, p, desde){
   try{ lis.scroll = $("sellistas").scrollTop; }catch(x){ lis.scroll = 0; }
   var col = f && f.proceso;
   // paso 4: de donde salio el votador, para que el back grande vuelva a ESA lista en la misma posicion de scroll
-  lis.origen = col ? {col: col, lista: f.clave, scroll: lis.unaScroll || lis.scroll} : null;
+  lis.origen = col ? {col: col, lista: f.clave, scroll: lis.unaScroll || lis.scroll,
+                      desde: desde === "home" ? "home" : "una"} : null;
   if(!col) return p ? lisCartita(p) : false;   // una lista que no se vota: la cartita es lo que hay
   // si el votador no puede abrirse en ella, el toque no deja un origen colgado: no salio de ninguna lista
-  var carta = p ? function(){ lis.origen = null; return lisCartita(p); } : null;
+  // 2113: sin persona tocada el plan B es la grilla de gente de ESA lista (antes no habia plan B: el toque moria)
+  var carta = p ? function(){ lis.origen = null; return lisCartita(p); }
+                : function(){ lis.origen = null; return lisEntrar(f); };
   // 1975 {arranque}: en `dejar de seguir` la fila se pide de nuevo, asi que el chequeo va DESPUES (adentro de
   // `tinderAbrirCol`); en el resto alcanza con la fila que ya esta cargada
   if(p && !selArranca(col) && !lisEnFila(col, p.id)) return carta();
@@ -5695,7 +5717,9 @@ function tinderAbrirCol(col, desde, falla, lista, titulo){
       // la fila recien pedida puede no traer a la persona tocada (la 1960 exige `seguidores`, la 1495 foto): ahi no
       // se abre el votador en otra persona, se cae al plan B del toque (su cartita)
       if(desde && !lisEnFila(col, desde)) return falla ? falla() : lisVolver();
-      if(!selAbrirCol(col) && vistaEs("tinder") && !sel.actual) lisVolver();
+      // 2113: sin fila para esa lista el plan B es el `falla` del toque (la grilla de gente, la cartita), y solo
+      // sin plan B se vuelve de donde salio: el toque en la lista nunca rebota a la home con las manos vacias
+      if(!selAbrirCol(col) && vistaEs("tinder") && !sel.actual) (falla || lisVolver)();
       else tjIr(desde);
     });
     return true;
@@ -5708,8 +5732,8 @@ function tinderAbrirCol(col, desde, falla, lista, titulo){
     ok = selAbrirCol(col);
   }
   // 2095 paso 5: si la fila de esa lista no tiene a nadie cargado todavia, se vuelve a la LISTA (de donde salio el
-  // toque), nunca a otro proceso (eso era el bug) ni a la home
-  if(!ok && vistaEs("tinder") && !sel.actual) lisVolver();
+  // toque), nunca a otro proceso (eso era el bug) ni a la home. 2113: si el toque trajo su plan B, ese manda
+  if(!ok && vistaEs("tinder") && !sel.actual) (falla || lisVolver)();
   else if(ok) tjIr(desde);
   return ok;
 }
@@ -5870,6 +5894,69 @@ $("selacciones").addEventListener("click", function(ev){
   var b = ev.target.closest && ev.target.closest(".tjbtn[data-q]");
   if(b) tjDecidir(b.getAttribute("data-q"));   // 1657: en esta fila solo hay votos
 });
+// ---------- 2113 {listavotador} paso 2: el swipe del votador (facundo, 2026-09-19) ----------
+// "tiene que poder mover de derecha a izquierda". el dedo de costado hace lo MISMO que las flechas de la 2079
+// (`tjMover`): camina la fila sin votar y sin dejar rastro en el pie. de derecha a izquierda es la siguiente, de
+// izquierda a derecha la anterior; en los bordes la tarjeta vuelve sola a su lugar. el voto sigue siendo lo de
+// siempre (los tres botones del pie y `a`/`s`/`d`), asi que la gramatica de la 1657 no la toca nadie: un gesto
+// largo y ambiguo no puede mandar a nadie a `ignorada`.
+// el umbral es el 18% del ancho, pero acotado a una franja de dedo: nunca menos de 44 px (un roce no cuenta) ni
+// mas de 120 px (en el desktop la vista va al 100% del ancho, y pedir 230 px de arrastre no es un swipe)
+var TJ_SW_UMBRAL = 0.18, TJ_SW_MIN = 44, TJ_SW_MAX = 120;
+var tjSw = null, tjSwUlt = 0;
+function tjSwGuard(){
+  if(!sel.actual || !tjActual()) return false;
+  if(!vistaEs("tinder") || $("selmodal").classList.contains("oculta")) return false;
+  if($("selacciones").classList.contains("oculta")) return false;   // modo lista / sin tarjeta: no hay fila que caminar
+  var tope = capaTope();
+  return !!tope && tope.nombre === "seleccion";   // un modal arriba (cartita, story): el gesto es de el
+}
+function tjSwPoner(dx){
+  var t = $("seltarjeta");
+  t.classList.toggle("tjsw", !!dx);
+  t.style.transform = dx ? "translateX(" + dx + "px)" : "";
+}
+function tjSwSoltar(dx, ancho, ok){
+  var u = Math.max(TJ_SW_MIN, Math.min(ancho * TJ_SW_UMBRAL, TJ_SW_MAX));
+  var d = ok && Math.abs(dx) >= u ? (dx > 0 ? -1 : 1) : 0;
+  tjSwPoner(0);
+  if(d) tjMover(d);   // izquierda = la siguiente; en el borde `tjMover` no hace nada y la tarjeta ya volvio
+  return !!d;
+}
+$("seltarjeta").addEventListener("touchstart", function(e){
+  tjSw = null;
+  if(e.touches.length !== 1 || !tjSwGuard()) return;
+  // la foto grande ES un `<a>` al perfil (1665/1791) y ocupa casi toda la tarjeta: si el link se quedara con el
+  // gesto no habria de donde agarrarla. el swipe arranca en cualquier parte y lo que cuida al link es el click de
+  // abajo, que se come el que viene atras del gesto (un swipe no abre instagram)
+  tjSw = {x: e.touches[0].clientX, y: e.touches[0].clientY, dx: 0, lado: false,
+          ancho: $("seltarjeta").offsetWidth || 1};
+}, {passive: true});
+$("seltarjeta").addEventListener("touchmove", function(e){
+  var s = tjSw, p = e.touches[0];
+  if(!s || !p) return;
+  var dx = p.clientX - s.x, dy = p.clientY - s.y;
+  if(!s.lado){
+    if(Math.abs(dy) > 10 && Math.abs(dy) >= Math.abs(dx)){ tjSw = null; return; }   // era el scroll de la tarjeta
+    if(Math.abs(dx) < 10) return;
+    s.lado = true;
+  }
+  e.preventDefault();   // agarrado de costado, el dedo mueve la tarjeta y ya no scrollea
+  s.dx = dx;
+  tjSwPoner(dx);
+}, {passive: false});
+["touchend", "touchcancel"].forEach(function(ev){
+  $("seltarjeta").addEventListener(ev, function(){
+    var s = tjSw; tjSw = null;
+    if(!s || !s.lado) return;
+    tjSwUlt = Date.now();
+    tjSwSoltar(s.dx, s.ancho, ev === "touchend");
+  }, {passive: true});
+});
+// el click que viene atras de un swipe no es un toque: no abre el perfil ni la story de la tarjeta
+$("seltarjeta").addEventListener("click", function(e){
+  if(Date.now() - tjSwUlt < 400){ e.stopPropagation(); e.preventDefault(); }
+}, true);
 // 1657: el back (`←`) esta aparte, en la cabecera del modal, y deshace el ultimo voto
 // 2078: sin nada que deshacer, vuelve a la lista; 2095: en la sub-vista `una` el back grande vuelve a la home
 $("selback").addEventListener("click", function(){ if(lis.sub === "una") return lisAHome(); tjAtras(); });
@@ -11302,6 +11389,9 @@ window.__agente = {
   lisVotar: lisVotar, lisEnFila: lisEnFila, tjIr: tjIr,   // 2078 {home}: el toque en una fila abre el votador
   // 2095 {instatinder}: la sub-vista `una` (UNA lista con su gente) y el filtro por lista del votador
   lisEntrar: lisEntrar, lisAHome: lisAHome, lisVolver: lisVolver, lisUnaPintar: lisUnaPintar,
+  // 2113 {listavotador}: el toque en una lista abre su votador, y el swipe camina la fila como las flechas
+  lisTocar: lisTocar, tjSwGuard: tjSwGuard,
+  tjSwipe: function(dx, ancho){ if(!tjSwGuard()) return false; return tjSwSoltar(dx, ancho || ($("seltarjeta").offsetWidth || 1), true); },
   lisUna: function(){ return lis.una ? {clave: lis.una.clave, n: lis.una.n, gente: (lis.una.gente || []).length} : null; },
   lisCache: function(){ try{ return JSON.parse(localStorage.getItem(LIS_LS) || "null"); }catch(x){ return null; } },
   lisOlvidar: function(){ lis.datos = null; lis.ts = 0; try{ localStorage.removeItem(LIS_LS); }catch(x){} },
