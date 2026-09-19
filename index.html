@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.375">
-<link rel="manifest" href="manifest.json?v=4.375">
+<meta name="agente-web-version" content="4.376">
+<link rel="manifest" href="manifest.json?v=4.376">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.375">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.376">
 </head>
 <body>
 
@@ -5020,6 +5020,9 @@ function lisFila(p, f){
   if(p.foto) bajarImagen(p.foto).then(function(url){
     var im = document.createElement("img"); im.alt = ""; im.src = url; fo.appendChild(im);
   }).catch(function(){});
+  // 2081 {stories}: el anillo (solo si el server mando `story`, o sea solo `activar` y `activa`). tocarlo abre la
+  // story adentro del board y corta la burbuja: el toque de la foto es la story, el del chip sigue siendo el votador
+  stAnillo(fo, p);
   fila.appendChild(fo);
   var cu = document.createElement("span"); cu.className = "liscuenta"; cu.textContent = "@" + p.cuenta;
   fila.appendChild(cu);
@@ -5111,6 +5114,136 @@ function lisHablar(p){
   try{ txt.focus(); }catch(x){}
 }
 
+// ---------- 2081 {stories}: el anillo de story y el visor adentro del board (facundo, 2026-09-18) ----------
+// "solo para las cuentas de `activar` y `activa` [...] degrade clasico si es story normal, verde solido si es close
+// friends [...] tocar el anillo abre la story DENTRO del board, a pantalla completa". quien tiene story y de que
+// tipo lo dice el SERVER (`ig_listas` -> campo `story`, que sale de la bandeja de `recetas/ig_stories.py`): la web
+// no sabe pedirle nada a instagram. y NADA se baja ni se abre hasta que facundo toca el aro: recien ahi sale el
+// comando `ig story @cuenta` y el visor espera el json que deja el server.
+var ST_POLL = 2000, ST_TOPE = 20;
+var st = {modal: null, pk: null, cuenta: "", i: 0, datos: null, pedido: 0, timer: null, cu: null, msg: ""};
+function stAnillo(fo, p){
+  var s = p && p.story;
+  if(!fo || !s || (s.tipo !== "normal" && s.tipo !== "close")) return false;
+  fo.classList.add("staro", s.tipo === "close" ? "staro-close" : "staro-normal");
+  if(s.visto) fo.classList.add("stvisto");   // ya la viste: el aro queda apagado, como en instagram
+  fo.setAttribute("role", "button");
+  fo.setAttribute("tabindex", "0");
+  fo.setAttribute("data-story", s.tipo);
+  fo.setAttribute("aria-label", "ver la story de @" + p.cuenta);
+  fo.setAttribute("title", (s.tipo === "close" ? "story de close friends" : "story") + " de @" + p.cuenta);
+  var abrir = function(ev){ if(ev && ev.stopPropagation) ev.stopPropagation(); stAbrir(p); };
+  fo.addEventListener("click", abrir);
+  fo.addEventListener("keydown", function(ev){
+    if(ev.key !== "Enter" && ev.key !== " " && ev.key !== "Spacebar") return;
+    ev.preventDefault(); abrir(ev);
+  });
+  return true;
+}
+// el molde de siempre a pantalla completa (1874) con las dos esquinas de la 2002: el back grande a la izquierda
+// (un cuadro atras, y en el primero cierra) y la `✕` a la derecha, que cierra el visor
+function stMolde(){
+  if(st.modal) return st.modal;
+  st.modal = modalMolde({id: "stvisor", z: 47, sinServer: true, alCerrar: function(){ stParar(); }});
+  st.modal.el.classList.add("pantalla");
+  var caja = st.modal.el.querySelector(".mcaja");
+  if(caja) caja.classList.add("selcaja");
+  var h = st.modal.el.querySelector(".mhead");
+  if(h && !h.querySelector(".stback")){
+    var b = document.createElement("button");
+    b.className = "stback bglifo mesquina b-atras"; b.type = "button";
+    b.setAttribute("aria-label", "back"); b.setAttribute("title", "back");
+    b.innerHTML = '<span class="mglf">←</span>';
+    b.addEventListener("click", function(){ stAtras(); });
+    h.insertBefore(b, h.firstChild);
+  }
+  return st.modal;
+}
+function stParar(){ if(st.timer){ clearTimeout(st.timer); st.timer = null; } }
+function stAtras(){
+  if(st.datos && st.i > 0){ st.i--; stPintar(); return true; }
+  stParar();
+  if(st.modal) st.modal.cerrar();
+  return true;
+}
+function stIr(paso){
+  if(!st.datos) return false;
+  var n = st.i + paso;
+  if(n < 0) return stAtras();
+  if(n >= (st.datos.items || []).length) return false;
+  st.i = n; stPintar();
+  return true;
+}
+// el toque en el aro: ACA (y solo acá) se abre la story de verdad. el comando lo atiende el daemon sin modelo y
+// deja el json donde el visor lo espera; el visto queda a nombre de facundo, que es lo que él aceptó
+function stAbrir(p){
+  var m = stMolde();
+  stParar();
+  st.pk = String(p.id); st.cuenta = String(p.cuenta || ""); st.i = 0; st.datos = null;
+  st.pedido = Date.now() / 1000;
+  st.msg = "abriendo la story de @" + st.cuenta + "...";
+  st.cu = document.createElement("div"); st.cu.className = "stvis";
+  (accMandarFn || mandar)("ig story @" + st.cuenta, "personal", true);
+  stEsperar(0);
+  var r = m.abrir({titulo: "@" + st.cuenta, cuenta: "", cuerpo: st.cu, botones: [
+    {tipo: "term", txt: "anterior", clase: "stprev", accion: function(){ stIr(-1); }},
+    {tipo: "term", txt: "siguiente", clase: "stnext", accion: function(){ stIr(1); }}]});
+  stPintar();
+  return r;
+}
+function stEsperar(n){
+  stParar();
+  st.timer = setTimeout(function(){
+    st.timer = null;
+    // el visor cerrado no sigue preguntando: lo que abrio facundo ya esta guardado del lado del server
+    if(!st.modal || !st.modal.abierto || st.datos) return;
+    api("GET", "/repos/" + REPO + "/contents/stories/" + st.pk + ".json", null, null,
+        "application/vnd.github.raw+json").then(function(r){
+      var d = r && r.json;
+      if(d && d.items && d.items.length && Number(d.ts || 0) >= st.pedido - 2){
+        stParar(); st.datos = d; st.i = 0; st.msg = ""; stPintar(); return;
+      }
+      throw new Error("todavía no");
+    }).catch(function(){
+      if(n + 1 >= ST_TOPE){ st.msg = "no pude abrir la story: probá de nuevo en un rato"; stPintar(); return; }
+      stEsperar(n + 1);
+    });
+  }, ST_POLL);
+}
+function stPintar(){
+  var cu = st.cu;
+  if(!cu) return false;
+  cu.textContent = "";
+  var m = st.modal, items = (st.datos || {}).items || [], it = items[st.i];
+  if(m) m.el.querySelector(".mcuenta").textContent = items.length
+    ? (st.i + 1) + "/" + items.length + (it && it.hora ? " · " + it.hora : "")
+    : ((st.datos || {}).tipo === "close" ? "close friends" : "");
+  if(!it){
+    var v = document.createElement("div"); v.className = "stmsg"; v.textContent = st.msg || "";
+    cu.appendChild(v);
+  } else {
+    var fo = document.createElement("div"); fo.className = "stfoto";
+    var im = document.createElement("img"); im.alt = "";
+    fo.appendChild(im);
+    if(it.foto) bajarImagen(it.foto).then(function(url){ im.src = url; }).catch(function(){});
+    cu.appendChild(fo);
+    var pie = document.createElement("div"); pie.className = "stpie";
+    if(it.tipo === "video") pie.appendChild(stLinea("stvideo", "video" + (it.dura ? " de " + it.dura + " s" : "")));
+    if(it.texto) pie.appendChild(stLinea("sttexto", it.texto));
+    if(pie.childNodes.length) cu.appendChild(pie);
+  }
+  if(m){
+    var prev = m.el.querySelector(".stprev"), next = m.el.querySelector(".stnext");
+    if(prev) prev.disabled = !items.length;
+    if(next) next.disabled = st.i + 1 >= items.length;
+  }
+  return true;
+}
+function stLinea(clase, txt){
+  var d = document.createElement("div"); d.className = clase; d.textContent = txt;
+  return d;
+}
+
 // ---------- 1948 {cartita}: la cartita de una persona (facundo, 2026-09-17) ----------
 // "hacer que cada persona de una lista sea tocable y abra SU cartita completa, y que toda persona tenga acciones".
 // la ficha es la MISMA tarjeta del votador (foto grande con `object-fit:contain`, chips, datos, bio, por que esta,
@@ -5143,6 +5276,7 @@ function lisFicha(p){
   var im = document.createElement("img"); im.alt = "";
   fo.appendChild(im);
   if(f.foto) bajarImagen(f.foto).then(function(url){ im.src = url; }).catch(function(){});
+  stAnillo(fo, {id: f.id, cuenta: f.cuenta, story: f.story});   // 2081 {stories}: el mismo aro en la cartita
   cu.appendChild(fo);
   // bloque 2: todo lo que ya se sabe, en el orden en que lo lee facundo
   var inf = document.createElement("div"); inf.className = "ficinfo";
@@ -10825,6 +10959,11 @@ window.__agente = {
   // 1879 {listas} + 2078 {home}: `listas` es la home de la vista y de donde sale el votador
   lisAbrir: lisAbrir, lisPoner: lisPoner, lisPintar: lisPintar, lisAccionModal: lisAccionModal,
   lisFicha: lisFicha, lisAccionar: lisAccionar,   // 1948 {cartita}
+  // 2081 {stories}: el aro y el visor (la prueba toca el aro y mira que ANTES no salga nada)
+  stAbrir: stAbrir, stIr: stIr, stAtras: stAtras,
+  stEstado: function(){ return {pk: st.pk, cuenta: st.cuenta, i: st.i, n: ((st.datos || {}).items || []).length,
+    pedido: st.pedido, abierto: !!(st.modal && st.modal.abierto)}; },
+  stDatos: function(d){ if(d){ stParar(); st.datos = d; st.i = 0; st.msg = ""; stPintar(); } return st.datos; },
   tjMover: tjMover,   // 2079 {votador}: navegar la fila sin votar
   lisVotar: lisVotar, lisEnFila: lisEnFila, tjIr: tjIr,   // 2078 {home}: el toque en una fila abre el votador
   lisOrigen: function(){ return lis.origen; }, lisScroll: function(){ return lis.scroll; },

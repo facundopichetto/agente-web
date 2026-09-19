@@ -540,6 +540,35 @@
     #lisficha .fic{flex-direction:row}
     #lisficha .ficfoto,#lisficha .ficinfo{flex:1 1 0;min-width:0;max-height:100%}
   }
+  /* 2081 {stories} (facundo, 2026-09-18): el anillo de story con el codigo de color de instagram, SOLO en las
+     fotos que el server marca con `story` (las de `activar` y `activa`). degrade clasico naranja/rosa/violeta si es
+     story normal, verde solido si es close friends, y el aro apagado si ya la viste. el anillo es el `padding` de
+     la propia foto con el fondo pintado: nada de un nodo extra ni de un borde de color (1652). */
+  #sellistas .lisfoto.staro,#lisficha .ficfoto.staro{border-color:transparent;padding:3px;box-sizing:border-box;
+    cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+  #sellistas .lisfoto.staro img{border-radius:50%}
+  #lisficha .ficfoto.staro img{border-radius:3px}
+  #sellistas .lisfoto.staro:active,#lisficha .ficfoto.staro:active{opacity:.6}
+  #sellistas .lisfoto.staro-normal,#lisficha .ficfoto.staro-normal{
+    background:conic-gradient(from 0deg,#f9ce34,#ee2a7b,#6228d7,#f9ce34)}
+  #sellistas .lisfoto.staro-close,#lisficha .ficfoto.staro-close{background:#3ad168}
+  #sellistas .lisfoto.staro.stvisto,#lisficha .ficfoto.staro.stvisto{opacity:.5}
+  /* el visor: el mismo molde a pantalla completa de la cartita (1874 + 2002), la foto se lleva todo el alto y el
+     texto de la story va abajo. de un video se ve la tapa y cuanto dura: el board nunca reproduce nada. */
+  #stvisor{z-index:47;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom) 0;justify-content:stretch}
+  #stvisor::after{display:none}
+  #stvisor .mcaja{max-width:none;width:100%;height:100%;max-height:100%;flex:1 1 auto;min-height:0;
+    border-radius:0;box-shadow:none;overflow:hidden}
+  #stvisor .mcuerpo2{flex:1 1 auto;min-height:0;white-space:normal;overflow:hidden;display:flex;flex-direction:column}
+  #stvisor .stvis{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:8px;width:100%}
+  #stvisor .stfoto{flex:1 1 auto;min-height:60px;border:1px solid var(--linea);border-radius:4px;background:#111;
+    display:flex;align-items:center;justify-content:center;overflow:hidden}
+  #stvisor .stfoto img{width:100%;height:100%;object-fit:contain;display:block}
+  #stvisor .stfoto img:not([src]){visibility:hidden}
+  #stvisor .stpie{flex:0 0 auto;max-height:35%;overflow-y:auto;display:flex;flex-direction:column;gap:4px}
+  #stvisor .sttexto{color:var(--blanco);font-size:16px;word-break:break-word}
+  #stvisor .stvideo{color:var(--cian);font-size:16px}
+  #stvisor .stmsg{color:var(--gris);font-size:17px}
   #liscmd .lisdraft{margin:0;padding:6px 8px;border:1px solid var(--linea);border-radius:4px;background:#111;
     color:var(--blanco);font-size:16px;white-space:pre-wrap;word-break:break-word}
   #liscmd .liscmd{margin:0;padding:6px 8px;border:1px solid var(--linea);border-radius:4px;background:#111;
