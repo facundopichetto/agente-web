@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.379">
-<link rel="manifest" href="manifest.json?v=4.379">
+<meta name="agente-web-version" content="4.380">
+<link rel="manifest" href="manifest.json?v=4.380">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.379">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.380">
 </head>
 <body>
 
@@ -4241,7 +4241,8 @@ var TJ_PROCS = {
   // 2019 {solicitudes}: `follow` son dos listas, `follow_request_sent` y `following` (mas `activar`); la cartita de
   // `follow request sent` trae la accion `cancelar solicitud e ignorar` (`ig cancelar @x`), armada por el server.
   // los DOS de los costados sacan gente, asi que el de la derecha no es la flecha verde que sube: es la `✕` roja
-  // del corte (`dejo de seguirla`, que ademas programa el unfollow de madrugada). el que no mueve a nadie, al medio
+  // del corte (`dejo de seguirla`, que ademas programa el unfollow en la cola: 2092 {franja}, con el ritmo unico
+  // de todo lo de instagram, no de madrugada). el que no mueve a nadie, al medio
   "ig-arrepentir": {nombre: "me arrepentí", botones: [
     {q: "bajar", tipo: "bajar", aria: "la ignoro"},
     {q: "igual", tipo: "igual", aria: "no hago nada"},
