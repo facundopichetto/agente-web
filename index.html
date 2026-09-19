@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.383">
-<link rel="manifest" href="manifest.json?v=4.383">
+<meta name="agente-web-version" content="4.384">
+<link rel="manifest" href="manifest.json?v=4.384">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.383">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.384">
 </head>
 <body>
 
@@ -4165,8 +4165,9 @@ function filaFaltan(e){
   cs.forEach(function(c){ if(v[c.id]) ya++; });
   return Math.max(0, (typeof e.pendientes === "number" ? e.pendientes : cs.length) - ya);
 }
-// 2073 {back}: las tarjetas que volvieron por el back de ESTA carga y que el server todavia no repuso en la fila.
-// ningun refresco (`filaSumar`, la respuesta del POST, `selPedir` a los 2 y 6 s) puede sacarlas ni correr la posicion.
+// 2073 {back} + 2112 {misma}: las tarjetas que volvieron por el back de ESTA carga. ningun refresco (`filaSumar`,
+// la respuesta del POST, `selPedir` a los 2 y 6 s, `selEsperar`) puede sacarlas ni correr la posicion, ni siquiera
+// despues de que un lote las traiga: la marca se suelta SOLO al votarlas de nuevo o al reabrir el proceso (2112).
 function tjProt(col){
   var p = sel.tjDeshechas = sel.tjDeshechas || {};
   return (p[col] = p[col] || {});
@@ -4183,8 +4184,13 @@ function filaSumar(e, soloSacar){
   (e.candidatas || []).forEach(function(c){ vivas[c.id] = true; });
   var hechas = a.candidatas.slice(0, sel.tj);
   var resto = a.candidatas.slice(sel.tj).filter(function(c){ return prot[c.id] || (vivas[c.id] && !v[c.id]); });
-  // la proteccion dura hasta que el server la confirma (la fila que llega ya la trae) o hasta que se vuelve a votar
-  Object.keys(prot).forEach(function(id){ if(vivas[id]) delete prot[id]; });
+  // 2112 {misma} (facundo, septimo intento: "vuelve a la anterior y a los milisegundos salta sola a la siguiente"):
+  // la proteccion NO se suelta cuando el lote del server la trae. soltarla ahi dejaba la tarjeta a merced del lote
+  // siguiente, y como los lotes llegan fuera de orden (la respuesta del POST, `selPedir` a los 2 y 6 s, `selEsperar`),
+  // alcanzaba con que uno VIEJO -de antes del deshacer- llegara despues del bueno para que la sacara de la fila y la
+  // vista saltara sola adelante, con la tarjeta ya inalcanzable (reproducido en `tmp/repro2112.py`: back q5 -> lote
+  // con q5 -> lote sin q5 -> q6 y la fila sin la 5). ahora el deshacer manda hasta que facundo la vuelve a votar
+  // (`tjVoto`) o hasta que el proceso se reabre y la fila se rearma (`tjDeshechas` de esa coleccion, 1975).
   if(!soloSacar){
     var ya = {};
     hechas.concat(resto).forEach(function(c){ ya[c.id] = true; });
@@ -5161,9 +5167,15 @@ function lisFila(p, f){
 // la cartita entera (1948) si el server la mando; si no, el modal de la accion recomendada, que es lo unico que
 // se sabe de esa persona. nunca un callejon (1948: "toda persona tiene acciones")
 function lisCartita(p){
-  if(p && p.ficha) return lisFicha(p);
-  if(p && (p.accion || {}).texto) return lisAccionModal(p);
-  return false;
+  if(!p) return false;
+  if(p.ficha) return lisFicha(p);
+  if((p.accion || {}).texto) return lisAccionModal(p);
+  // 2095 paso 8: desde que el chip ES la cartita (paso 7), una persona sin ficha ni accion seria un toque que no
+  // hace nada (1948: "toda persona tiene acciones"). con lo que ya vino en la lista alcanza para su ficha minima
+  return lisFicha(Object.assign({}, p, {ficha: {id: p.id, cuenta: p.cuenta, nombre: p.nombre || p.cuenta,
+    foto: p.foto || "", chips: [], datos: p.datos || [], bio: "", porque: p.porque || "",
+    titulo_lista: p.titulo_lista || p.lista || "", porque_lista: "", historial: [], dm: "",
+    trazabilidad: "", story: p.story, link: p.link || ""}}));
 }
 // ---------- 2095 {instatinder} pasos 5, 6 y 7: la sub-vista `una`, UNA lista con SU gente ----------
 // la home (2078) sigue siendo la grilla de listas; tocar una entra ACA: el titulo de la lista arriba, su gente en
