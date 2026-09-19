@@ -472,9 +472,11 @@
   #sellistas .lischip.toca:active{opacity:.6}
   /* 2078 {home}: el titulo de la lista abre el votador de su proceso desde el principio (lo tocable parece
      tocable, 1808); y cada chip lleva su propio `ficha`, que es lo que abre la cartita de la 1948 */
-  #sellistas .listit.toca{cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
-    border-radius:4px;margin:-2px -4px;padding:2px 4px}
-  #sellistas .listit.toca:active{background:#111}
+  /* 2087 {resume-3}: lo tocable es el CUADRADO ENTERO de la lista, no el renglon del titulo */
+  #sellistas .liscaja.toca{cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+    outline:none}
+  #sellistas .liscaja.toca:active{background:#111}
+  #sellistas .liscaja.toca:focus-visible{border-color:var(--verde)}
   #sellistas .lischip .lisfic{min-height:0;padding:1px 6px;font-size:12px;color:var(--gris);
     border-color:transparent;background:none;line-height:1.2}
   #sellistas .lischip .lisfic:active{color:var(--verde)}
@@ -1227,6 +1229,15 @@
   /* la clase `.home` de `#selmodal` sigue siendo "la home de la vista" (2078: son las listas): lo unico que hace es
      alinear la cabecera con la grilla, no con el borde de la pantalla */
   #selmodal.pantalla.home .seltit{width:100%;max-width:980px;margin:0 auto}
+  /* 2087 {resume-3} (facundo, 2026-09-18: "saca el titulo, dejame solo la cruz arriba, pero que la cruz no tenga su
+     propia linea, que este en el mismo lugar donde estan las listas"): en la home la cabecera no ocupa renglon: es
+     una capa de alto 0 encima de la grilla, y lo unico que se ve de ella es la `✕` arriba a la derecha (el back de
+     la 2002 sigue oculto en la home). el hueco lo tapa la grilla, que empieza arriba de todo. */
+  #selmodal.pantalla.home.sintit .selcaja{position:relative}
+  #selmodal.pantalla.home.sintit .seltit{position:absolute;top:0;left:0;right:0;height:0;min-height:0;
+    margin:0;padding:0 10px;z-index:3;pointer-events:none}
+  #selmodal.pantalla.home.sintit .seltit > *{pointer-events:auto}
+  #selmodal.pantalla.home.sintit #sellistas{padding-top:0}
 
   /* el desplegable de la campana: solo las no leidas, la mas nueva arriba */
   #nfondo{position:fixed;inset:0;z-index:33}
@@ -1654,6 +1665,14 @@
   }
   #ctx button:hover{border-color:var(--linea);background:#0d1410}
   #ctx button:active{background:#111}
+  /* 2086 {notificaciones}: una fila del dropdown que no es un boton sino un setting con su interruptor
+     (molde `moldeSwitch`, docs/componentes-web.md): etiqueta arriba, el switch abajo y una linea gris de
+     que hace. el `#ctx button` de arriba no la toca: adentro solo hay `.mswb`, que trae su propio estilo. */
+  #ctx .cswf{display:flex;flex-direction:column;gap:5px;padding:6px 6px 8px 6px;
+    border-bottom:1px solid var(--linea);margin-bottom:2px}
+  #ctx .cswl{color:var(--cian);font-size:17px}
+  #ctx .cswg{color:var(--gris);font-size:13px;line-height:1.25}
+  #ctx .cswf .msw .mswb{font-size:13px}
   /* lo que se toco queda marcado mientras el menu esta abierto */
   .msg.marcado,#widgets .it.marcado,#tabs .tab.marcado{outline:0;background:#0d1410;border-radius:3px}
   /* el hold no tiene que disparar el menu de ios ("copiar / buscar"): el nuestro lo reemplaza */

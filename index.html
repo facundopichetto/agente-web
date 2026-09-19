@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.376">
-<link rel="manifest" href="manifest.json?v=4.376">
+<meta name="agente-web-version" content="4.377">
+<link rel="manifest" href="manifest.json?v=4.377">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.376">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.377">
 </head>
 <body>
 
@@ -3240,6 +3240,7 @@ function recibirChat(tema, d){
   filas.sort(function(a, b){ return fecha(a.ts) - fecha(b.ts); });
   filas.forEach(function(f, i){
     var base = t + "-" + i;
+    audSegsPoner(f.audios_seg);   // 2086: la duracion de cada audio de la fila, medida por el server
     // `(aviso de claudio)`, `(tarea 12: ...)`, `(menu de claudio)`: filas que escribe el agente solo, no son de f
     // 1237: el fin de tarea ahora dice `(tarea <nombre>: ...)` y trae `fuente: tarea`; la linea queda en el jsonl
     // como contexto del chat pero no se pinta como mensaje de f
@@ -3264,6 +3265,7 @@ function recibirChat(tema, d){
                 srv: fecha(f.ts_llegada || f.ts),
                 clave: "r:" + t + "|" + (f.ts_llegada || f.ts || "") + "|" + hashTexto(r),   // 1211: no por posicion
                 tema: t, explicito: true, tag: t, audio: f.audio || null, nodo: nodo, tarea: f.tarea || null,
+                audios_seg: f.audios_seg || null,
                 modelo: f.nodo && f.modelo ? modeloCorto(f.modelo) : null,
                 duracion_s: f.duracion_s !== undefined ? f.duracion_s : null, cuello: f.cuello || null,
                 opciones: f.opciones || null, tramos: Array.isArray(f.tramos) && f.tramos.length ? f.tramos : null});
@@ -4060,6 +4062,7 @@ function selModoLista(lista){
   // siendo el modal de siempre. lo unico que cambia es la clase: el molde (`.capa`, `esc`, la pila) es el mismo
   $("selmodal").classList.toggle("pantalla", !lista);
   $("selmodal").classList.remove("home");          // 2078 {home}: la clase `home` quedo sin uso (1922)
+  $("selmodal").classList.remove("sintit");        // 2087: fuera de la home la cabecera vuelve a su renglon
   $("sellistas").classList.add("oculta");          // 1879 {listas}: el votador apaga la home de la vista
   var pie = document.querySelector("#selmodal .selpie");
   if(pie) pie.classList.remove("oculta");
@@ -4916,6 +4919,7 @@ function lisPoner(cual, fresco){
   lis.sub = cual === "listas" ? "listas" : "votar";
   if(lis.sub === "votar"){
     $("sellistas").classList.add("oculta");
+    $("selmodal").classList.remove("sintit");   // 2087: el renglon de titulo vuelve fuera de la home
     if(sel.actual){ selModoLista(false); tjPintar(); }
     else return tinderHome();   // 1922/2078: sin votacion abierta, la vista vuelve a su home (las listas)
     return true;
@@ -4934,8 +4938,12 @@ function lisPoner(cual, fresco){
   var b = document.querySelector("#selmodal .selbtns");
   if(b) b.classList.add("oculta");
   $("sellistas").classList.remove("oculta");
-  // 1933 {instatinder}: el nombre que ve facundo. la home de la vista es la lista de listas, asi que el titulo lo dice
-  $("seltitulo").textContent = "instatinder · listas";
+  // 2087 {resume-3} (facundo, 2026-09-18: "saca el titulo, dejame solo la cruz arriba, pero que no tenga su propia
+  // linea"): la home de la vista no tiene NINGUN renglon de titulo (se fue el titulo de la 1933 y
+  // con el la cuenta de al lado). la cabecera queda como una capa encima del area de las listas y de ella se ve
+  // solo la `✕`, arriba a la derecha, con el molde de la 2002 intacto (back grande a la izquierda, oculto en la home)
+  $("selmodal").classList.add("sintit");
+  $("seltitulo").textContent = "";
   $("selcuenta").textContent = "";
   lisPintar();
   lisBajar(fresco).then(function(){ if(lis.sub === "listas") lisPintar(); });
@@ -4950,7 +4958,6 @@ function lisPintar(){
     c.appendChild(v);
     return;
   }
-  $("selcuenta").textContent = d.total ? d.total + " en total" : "";
   d.listas.forEach(function(f){ c.appendChild(lisCaja(f)); });
   // 2078 {home} paso 4: volver del votador cae en la MISMA posicion de scroll de la que salio (`lis.scroll`, de un
   // solo uso); un repintado de rutina (el poll de `selBoton`) no mueve el scroll de donde esta
@@ -4969,14 +4976,19 @@ function lisCaja(f){
   // principio: es el unico camino que queda para una lista grande, que no nombra a nadie. una lista que no se vota
   // (`activa`, `ignorada`) no es tocable: ahi no hay nada que abrir.
   if(f.proceso){
-    h.classList.add("toca");
-    h.setAttribute("role", "button");
-    h.setAttribute("tabindex", "0");
-    h.setAttribute("title", "votar " + (f.proceso_titulo || f.titulo || ""));
-    h.setAttribute("data-proceso", f.proceso);
+    // 2087 {resume-3} (facundo, 2026-09-18: "quiero poder tocar en cualquier lugar del cuadrado, no solo el
+    // titulo"): el `toca` y el click pasan del renglon `h` al CUADRADO ENTERO, asi el titulo, el `lisporque`, el
+    // `lisgrande` y el fondo abren el mismo votador. lo de adentro que tiene su propia accion (un chip, la `ficha`,
+    // el anillo de story) corta la burbuja
+    caja.classList.add("toca");
+    caja.setAttribute("role", "button");
+    caja.setAttribute("tabindex", "0");
+    caja.setAttribute("title", "votar " + (f.proceso_titulo || f.titulo || ""));
+    caja.setAttribute("data-proceso", f.proceso);
     var abrirCaja = function(){ lisVotar(f, null); };
-    h.addEventListener("click", abrirCaja);
-    h.addEventListener("keydown", function(ev){
+    caja.addEventListener("click", abrirCaja);
+    caja.addEventListener("keydown", function(ev){
+      if(ev.target !== caja) return;   // el enter de un chip es del chip
       if(ev.key !== "Enter" && ev.key !== " " && ev.key !== "Spacebar") return;
       ev.preventDefault(); abrirCaja();
     });
@@ -5010,11 +5022,14 @@ function lisFila(p, f){
   fila.setAttribute("role", "button");
   fila.setAttribute("tabindex", "0");
   fila.setAttribute("title", "@" + p.cuenta + (f && f.proceso ? ": votarla en " + (f.proceso_titulo || "") : ""));
-  var abrir = function(){ lisVotar(f, p); };
+  var abrir = function(ev){
+    if(ev && ev.stopPropagation) ev.stopPropagation();   // 2087: el cuadrado entero abre la lista desde el principio
+    lisVotar(f, p);
+  };
   fila.addEventListener("click", abrir);
   fila.addEventListener("keydown", function(ev){
     if(ev.key !== "Enter" && ev.key !== " " && ev.key !== "Spacebar") return;
-    ev.preventDefault(); abrir();
+    ev.preventDefault(); abrir(ev);
   });
   var fo = document.createElement("div"); fo.className = "lisfoto";
   if(p.foto) bajarImagen(p.foto).then(function(url){
@@ -7327,8 +7342,28 @@ function reproductor(src, titulo){
 // posicion de verdad, el boton en `||` si suena y el `timeupdate` cae en el player vivo. pausado en `1:20` vuelve
 // en `1:20`, nunca en `0:00`.
 var audReg = {};              // src -> {src, au, dur, duenio}
+// ---------- 2086 {notificaciones}: la duracion la manda el SERVER (facundo, 2026-09-18) ----------
+// "los audios, antes de que los reproduzca, a la izquierda dicen 0:00, pero tambien dicen 0:00 a la derecha:
+// deberia decir la duracion del audio". el de la izquierda es el transcurrido y arranca en `0:00` como debe;
+// el de la derecha es el total, y hasta ahora salia de `au.duration`, que no existe hasta bajarse el archivo
+// (un hilo de 30 audios no se descarga entero al abrir). ahora cada fila de `chat/<tema>.json` trae
+// `audios_seg` (`daemon.audios_seg_de` + `audio_respuesta.segundos_de`, un ffprobe por archivo en toda su
+// vida) y el player pinta ese total desde el primer render. si el server no la sabe, se sigue como antes:
+// `0:00` hasta que el `<audio>` cargue sus metadatos.
+var audSegs = {};             // src -> segundos, lo que dijo el server
+function audSegPoner(src, seg){
+  seg = +seg || 0;
+  if(src && seg > 0){
+    audSegs[src] = seg;
+    if(audReg[src] && !audReg[src].dur) audReg[src].dur = seg;
+  }
+}
+function audSegsPoner(mapa){
+  if(mapa) Object.keys(mapa).forEach(function(k){ audSegPoner(k, mapa[k]); });
+}
+function audSegDe(src){ return audSegs[src] || 0; }
 function audRegistro(src){
-  return audReg[src] || (audReg[src] = {src: src, au: null, dur: 0, duenio: null});
+  return audReg[src] || (audReg[src] = {src: src, au: null, dur: audSegDe(src), duenio: null});
 }
 function audRegAvisar(reg, que){
   var d = reg.duenio;
@@ -7403,6 +7438,7 @@ function playerAudio(src, titulo){
   c.appendChild(fila1); c.appendChild(fila2);
 
   var reg = audRegistro(src);        // 2049: el `<audio>` y la posicion viven en el registro, no en el nodo
+  if(!reg.dur) reg.dur = audSegDe(src);   // 2086: el total que mando el server, sin bajar el archivo
   var arrastre = false;
   function poner(p, seg){
     p = Math.max(0, Math.min(1, p || 0));
@@ -7507,14 +7543,14 @@ function playerAudio(src, titulo){
     fin: function(){ parar(); pintar(); },
     roto: function(){ c.classList.add("roto"); c.title = "no se pudo reproducir"; }
   };
-  if(reg.au){
-    if(!reg.au.paused){                  // seguia sonando mientras el chat estaba repintado
-      audPararOtros(c, src);
-      sonando = c; c.classList.add("sonando");
-      bplay.textContent = "||"; bplay.setAttribute("aria-label", "pausar");
-    }
-    pintar();                            // pausado en `1:20` vuelve en `1:20`, nunca en `0:00`
+  if(reg.au && !reg.au.paused){         // seguia sonando mientras el chat estaba repintado
+    audPararOtros(c, src);
+    sonando = c; c.classList.add("sonando");
+    bplay.textContent = "||"; bplay.setAttribute("aria-label", "pausar");
   }
+  // 2049: pausado en `1:20` vuelve en `1:20`, nunca en `0:00`. 2086: y sin haberlo tocado nunca, el total de
+  // la derecha ya dice cuanto dura (el transcurrido de la izquierda sigue en `0:00`, que es lo correcto).
+  pintar();
   return c;
 }
 // ---------- 1970 {grabar}: la barra de la pestaña `audio` son tres botones grandes ----------
@@ -9261,10 +9297,51 @@ function cuentaEnUso(){
   var ag = (widDatos || {}).agente || {};
   return {elegida: rep.elegida || ag.cuenta_activa || ag.cuenta || "", modo: rep.modo || ""};
 }
+// ---------- 2086 {notificaciones}: el switch del modo notificaciones (facundo, 2026-09-18, por audio) ----------
+// "el setting de notificaciones tiene que ser algo GLOBAL que se setea en el dropdown de la personita".
+// global de verdad: el estado no vive en este telefono (`tabs.json` es de este dispositivo, lo dice el propio
+// `settings del board`), vive en el server (`widgets.json` -> `agente.notificaciones`, archivo
+// `tmp/push-notificaciones.json`), asi que un reload no lo pierde y el celu y la compu ven lo mismo.
+// tocarlo manda `notificaciones on|off` a la pestaña `tools` sin pasar por la caja del chat, y la posicion
+// tocada queda puesta AL TOQUE (1659: un switch que espera al server parece roto): `notiPuesto` la sostiene
+// hasta que el `widgets.json` siguiente confirme lo mismo.
+var notiPuesto = null;        // lo que acabo de tocar, mientras el server no conteste
+function notiModo(){
+  var v = ((widDatos || {}).agente || {}).notificaciones;
+  if(notiPuesto !== null && notiPuesto.v !== !!v && Date.now() - notiPuesto.ts < 20000) return notiPuesto.v;
+  notiPuesto = null;
+  return !!v;
+}
+function notiPoner(on){
+  notiPuesto = {v: !!on, ts: Date.now()};
+  mandarAparte = true;
+  try{ mandar("notificaciones " + (on ? "on" : "off"), "tools", true); }
+  finally{ mandarAparte = false; }
+}
+function notiFila(){
+  return '<div class="cswf"><span class="cswl">modo notificaciones</span>' +
+    moldeSwitch({nombre: "notiglobal", valor: notiModo() ? "on" : "off", aria: "modo notificaciones",
+                 opciones: [{valor: "on", txt: "prendido", title: "cada respuesta te suena cuando sale el audio"},
+                            {valor: "off", txt: "apagado", title: "las respuestas no suenan"}]}) +
+    '<span class="cswg">suena cuando el audio está listo, acá y en el celu</span></div>';
+}
+moldeSwitchReg("notiglobal", function(v, b){
+  notiPoner(v === "on");
+  var f = b.closest(".cswf");
+  if(f){
+    [].forEach.call(f.querySelectorAll(".mswb"), function(x){
+      x.classList.toggle("puesto", x === b);
+      x.setAttribute("aria-pressed", x === b ? "true" : "false");
+    });
+    var g = f.querySelector(".cswg");
+    if(g) g.textContent = "mandando…";
+  }
+});
 function abrirPersona(){
   cerrarCampana();
   var r = $("persona").getBoundingClientRect(), cu = cuentaEnUso(), auto = cu.modo === "auto";
   var ops = [];
+  ops.push({html: notiFila(), nombre: "modo notificaciones"});
   ops.push(["settings del board", function(){ pintarModal(modalBoard()); }]);
   ops.push(["reinicia", function(){ pintarModal(modalReinicia()); }]);
   ops.push(["salir", function(){ pintarModal(modalSalir()); }]);
@@ -10302,12 +10379,21 @@ function menu(x, y, titulo, opciones, nodo){
     d.appendChild(t);
   }
   opciones.forEach(function(o){
+    // 2086 {notificaciones}: una opcion puede ser una fila propia (`{html, nombre}`) y no un boton: es lo que
+    // deja meter el switch del modo notificaciones adentro del dropdown, con el molde de `moldeSwitch`. la
+    // fila NO cierra el menu al tocarla (un switch que se cierra encima parece que no guardo nada).
+    if(o && o.html !== undefined){
+      var f = document.createElement("div");
+      f.className = "cfila"; f.innerHTML = o.html;
+      d.appendChild(f);
+      return;
+    }
     var b = document.createElement("button");
     b.type = "button"; b.textContent = o[0];
     b.addEventListener("click", function(){ cerrarMenu(); o[1](); });
     d.appendChild(b);
   });
-  menuAbierto = {titulo: titulo || "", opciones: opciones.map(function(o){ return o[0]; })};
+  menuAbierto = {titulo: titulo || "", opciones: opciones.map(function(o){ return o && o.html !== undefined ? (o.nombre || "") : o[0]; })};
   menuTs = Date.now();
   d.classList.remove("oculta");
   $("ctxfondo").classList.remove("oculta");
@@ -11483,6 +11569,24 @@ window.__agente = {
   lan: function(){ return {base: lan.base, via: lan.via, texto: viaTexto(), cartel: !!$("via")}; },
   // campana, persona y la `x` de los widgets (1166)
   abrirCampana: abrirCampana, cerrarCampana: cerrarCampana, abrirPersona: abrirPersona, peorNivel: peorNivel,
+  // 2086 {notificaciones}: el switch global del dropdown de la personita y la duracion que manda el server
+  notiModo: notiModo, notiPoner: notiPoner,
+  notiSwitch: function(){
+    var f = document.querySelector("#ctx .cswf");
+    if(!f) return null;
+    var ps = [].map.call(f.querySelectorAll(".mswb"), function(b){
+      return {v: b.getAttribute("data-swv"), txt: b.textContent, puesto: b.classList.contains("puesto")}; });
+    var b0 = f.querySelector(".mswb");
+    return {etiqueta: (f.querySelector(".cswl") || {}).textContent, opciones: ps,
+            nombre: b0 ? b0.getAttribute("data-sw") : null,
+            pie: (f.querySelector(".cswg") || {}).textContent};
+  },
+  notiTocar: function(v){
+    var b = document.querySelector('#ctx .cswf .mswb[data-swv="' + v + '"]');
+    if(b) b.click();
+    return !!b;
+  },
+  audSegPoner: audSegPoner, audSegs: function(){ return audSegs; },
   notisAccion: function(){ return notisAccion().map(function(g){ return {id: g.noti.id, n: g.n, familia: g.familia}; }); },
   campana: function(){
     var b = $("badge"), c = $("campana"), l = $("nlista"), rc = c.getBoundingClientRect();
@@ -11594,7 +11698,7 @@ window.__agente = {
     return {cargados: MODULOS.filter(function(k){ return !!mods[k]; }), cargas: modsCargas,
             ver: modsVer, error: modsError, cargando: modCargando,
             timers: MODULOS.reduce(function(n, k){ return n + (modsTimers[k] || []).length; }, 0),
-            switches: Object.keys(MOLDE_SW).length,
+            switches: Object.keys(MOLDE_SW).length, nombresSw: Object.keys(MOLDE_SW),
             links: document.querySelectorAll('link[rel="stylesheet"][href*="estilos.css"]').length,
             css: (($("cssppal") || {}).href || "").split("?v=")[1] || null,
             scripts: document.querySelectorAll('script[src*="widgets/"]').length};
