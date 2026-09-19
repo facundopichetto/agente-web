@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.391">
-<link rel="manifest" href="manifest.json?v=4.391">
+<meta name="agente-web-version" content="4.392">
+<link rel="manifest" href="manifest.json?v=4.392">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.391">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.392">
 </head>
 <body>
 
@@ -764,7 +764,6 @@ var WSETS = {
   usage:       [{k: "cuentas", et: "cuentas", tipo: "opciones", def: "todas", ops: ["todas"]}],
   agent:       [{k: "cola", et: "mostrar la cola", tipo: "bool", def: true}],
   tickets:     [{k: "estado", et: "filtro de estado", tipo: "opciones", def: "todos", ops: ["todos"]}],
-  oportunidades: [{k: "ocultar_decididas", et: "ocultar las decididas", tipo: "bool", def: false}],
   propuestas:  [{k: "tema", et: "filtro de tema", tipo: "opciones", def: "todos", ops: ["todos"]}],
   podcast:     [{k: "abierto", et: "abierto por default", tipo: "bool", def: false}],
   dj:          [{k: "cola", et: "mostrar la cola", tipo: "bool", def: true}],
@@ -774,8 +773,13 @@ var WSETS = {
                 {k: "solo_nuevos", et: "solo lo nuevo", tipo: "bool", def: false},
                 {k: "falta_login", et: "avisar que fuente falta", tipo: "bool", def: true}],
   igcola:      [{k: "hechas", et: "mostrar las que ya salieron", tipo: "bool", def: true}],
-  verificaciones: [], decided: [], sombra: []
+  verificaciones: [], sombra: []
 };
+// 2144 {oportunidades}: widgets retirados del board. la clave puede seguir en el `tabs.json` del buzon
+// (o en el cache de localStorage) de cuando existian: se filtra al leer y al publicar, asi la config
+// guardada queda limpia sola en la primera pasada y nada la vuelve a resucitar.
+var WIDGETS_FUERA = {oportunidades: 1, decided: 1};
+function widgetFuera(c){ return !!WIDGETS_FUERA[c]; }
 var WSETS_COMUNES = [{k: "plegado", et: "plegado por default", tipo: "bool", def: false},
                      {k: "filas", et: "filas visibles", tipo: "opciones", def: 0, ops: [0, 3, 5, 8, 12]},
                      {k: "oculto", et: "ocultar este widget", tipo: "bool", def: false}];
@@ -813,6 +817,7 @@ function repintarWidgets(){ if(typeof widgetsEl !== "undefined" && widgetsEl) pi
 function wsetsLimpias(){
   var o = {};
   Object.keys(wsets).forEach(function(c){
+    if(widgetFuera(c)) return;
     var w = wsets[c], n = {};
     Object.keys(w).forEach(function(k){ if(k !== "ts" && w[k] !== undefined) n[k] = w[k]; });
     if(Object.keys(n).length){ n.ts = +w.ts || 0; o[c] = n; }
@@ -824,6 +829,7 @@ function recibirWsets(rem){
   if(!rem || typeof rem !== "object") return false;
   var cambio = false;
   Object.keys(rem).forEach(function(c){
+    if(widgetFuera(c)){ if(wsets[c]){ delete wsets[c]; cambio = true; } return; }
     var r = rem[c] || {}, mio = wsets[c] || {};
     if((+r.ts || 0) <= (+mio.ts || 0)) return;
     wsets[c] = r; cambio = true;
@@ -839,7 +845,10 @@ function recibirWsets(rem){
 // las pestañas del chat NO se arrastran (regla del 2026-09-12: el chat es un panel unico).
 var ordenW = {ids: [], ts: 0};
 var clavesW = [];                 // las claves del ultimo repintado, ya ordenadas (incluye las ocultas)
-function ordenLimpio(){ return ordenW.ids.length ? {ids: ordenW.ids.slice(), ts: +ordenW.ts || 0} : null; }
+function ordenLimpio(){
+  var ids = ordenW.ids.filter(function(c){ return !widgetFuera(c); });
+  return ids.length ? {ids: ids, ts: +ordenW.ts || 0} : null;
+}
 function guardarOrden(ids, ya){
   ordenW = {ids: ids.slice(), ts: Math.max(Date.now(), (+ordenW.ts || 0) + 1)};
   guardarCache();
@@ -854,7 +863,9 @@ function recibirOrden(rem){
   if(!Array.isArray(rem.ids)) return false;
   if((+rem.ts || 0) <= (+ordenW.ts || 0)) return false;
   var ids = [];
-  rem.ids.forEach(function(c){ if(typeof c === "string" && c && ids.indexOf(c) < 0) ids.push(c); });
+  rem.ids.forEach(function(c){
+    if(typeof c === "string" && c && !widgetFuera(c) && ids.indexOf(c) < 0) ids.push(c);
+  });
   ordenW = {ids: ids, ts: +rem.ts || 0};
   guardarCache(); repintarWidgets();
   return true;
@@ -8732,55 +8743,9 @@ function cajaTickets(t){
   return caja("my tickets", ese, filas.join("\n"), false, "tickets");
 }
 
-function cajaOportunidades(o){
-  if(o.error)
-    return caja("opportunities", "", '<span class="r">' + esc(o.error) + "</span>", false, "oportunidades");
-  // solo las pendientes: apenas facundo decide una, sale de aca y pasa a la caja `decided`
-  var pend = o.pendientes || o.items || [];
-  if(!pend.length)
-    return caja("opportunities", '<span class="g">0 pendientes</span>',
-      vacio("nada pendiente · se rellena solo") +
-      (o.hechas ? ' <span class="g">' + o.hechas + " hechas</span>" : ""), false, "oportunidades");
-  var filas = [];
-  pend.forEach(function(i){
-    var sello = i.valor + "/" + i.esfuerzo + (i.dias ? " " + i.dias + "d" : "");
-    filas.push(it({tipo: "oportunidad", tema: "tools", d: i},
-               '<span class="' + (i.limbo ? "r" : "a") + ' b">' + i.id + '</span> <span class="g">' +
-               sello + "</span> " + esc(i.titulo)));
-    (i.opciones || []).forEach(function(op){
-      var voto = op.letra === i.voto;
-      filas.push("  " + boton(op.letra, "op " + i.id + " " + op.letra, voto ? "voto" : "") +
-                 (voto ? '<span class="v">' : '<span class="g">') + esc(op.texto) +
-                 (op.tiempo ? " (" + esc(op.tiempo) + ")" : "") + "</span>");
-    });
-  });
-  filas = limFilas("oportunidades", filas);
-  filas.push('<span class="g">toca una letra para elegir' + (o.hechas ? " · " + o.hechas + " hechas" : "") + "</span>" +
-             (o.refill_pausado ? ' <span class="r">refill en pausa</span>' : ""));
-  var ese = '<span class="a b">' + pend.length + "</span> " +
-            '<span class="g">pendiente' + (pend.length === 1 ? "" : "s") + "</span>";
-  return caja("opportunities", ese, filas.join("\n"), false, "oportunidades");
-}
-
-// las oportunidades que ya decidio facundo (facundo, 2026-09-11: "cuando una opportunity tiene decision
-// mia tiene que salir de ese widget e ir a otro lado"). muestra la letra elegida y como viene la orden.
-var ORD_ESTADO = {" ": ["en cola", "g"], ">": ["corriendo", "a"], "x": ["hecha", "v"], "!": ["fallo", "r"]};
-function cajaDecididas(o){
-  var ds = (o || {}).decididas || [];
-  // setting de `opportunities`: ocultar las decididas saca esta caja entera
-  if(wset("oportunidades", "ocultar_decididas")) return "";
-  if(!ds.length) return "";
-  var filas = ds.map(function(d){
-    var e = ORD_ESTADO[d.orden_estado] || (d.estado === "descartada" ? ["descartada", "g"] : ["sin orden", "g"]);
-    return it({tipo: "decidida", tema: "tools", d: d},
-      '<span class="g b">' + d.id + "</span> " +
-      (d.letra ? '<span class="c b">' + esc(d.letra) + "</span> " : "") +
-      esc(corto(d.titulo, 60)) + ' <span class="' + e[1] + '">' + e[0] + "</span>" +
-      (d.decidida ? ' <span class="g">' + esc(String(d.decidida).slice(5, 16)) + "</span>" : ""));
-  });
-  return caja("decided", '<span class="g">' + ds.length + " decidida" + (ds.length === 1 ? "" : "s") +
-              "</span>", limFilas("decided", filas).join("\n"), false, "decided");
-}
+// 2144 {oportunidades}: el widget `opportunities` (y su caja `decided`) se fueron del board a pedido
+// de facundo ("saca el widget oportunidades es feo y no tiene sentido"). `oportunidades.py` y el
+// dato de widgets.json siguen: de ahi salen los chips `op N X` del chat.
 
 // 1832: `cajaSombra` (el widget `models`) vive en `web/widgets/sombra.js` (la clave del setting y el id siguen `sombra`)
 
@@ -10065,8 +10030,6 @@ function pintarWidgets(d, err){
     ["agent", modHtml("agent")],
     ["verificaciones", cajaVerif(d.verificaciones || {})],
     ["tickets", cajaTickets(d.tickets || {})],
-    ["oportunidades", cajaOportunidades(d.oportunidades || {})],
-    ["decided", cajaDecididas(d.oportunidades || {})],
     ["sombra", modHtml("sombra")],
     ["propuestas", cajaPropuestas(d.propuestas || [])],
     ["podcast", cajaPodcast(d.podcast || {})],
@@ -10417,7 +10380,7 @@ function accHablar(o, contexto){
 // del widget y deja una cita `> widget <nombre>: ...` + linea vacia en el input, sin mandar nada. el
 // daemon la separa del pedido con `marcas_chat` (igual que `responder`) y se la pasa al modelo.
 var TEMA_WIDGET = {server: "server", salud: "tools", usage: "tools", agent: "tools", cola: "tools", verificaciones: "awtomic/qa",
-                   tickets: "awtomic", oportunidades: "tools", decided: "tools", sombra: "tools",
+                   tickets: "awtomic", sombra: "tools",
                    propuestas: "tools", podcast: "podcast", dj: "fuzzer", mail: "fuzzer",
                    que_ver: "personal", salud_personal: "personal"};
 var ESC_CHARS = 300;
@@ -10513,44 +10476,6 @@ function modalDe(o){
     else
       m.acciones.push(["ver la cola entera", function(){ actuar(tema, "cola", true); }]);
     m.acciones.push(accHablar(o, "la tarea «" + corto(d.texto, 70) + "»"));
-  } else if(o.tipo === "oportunidad"){
-    m.titulo = "oportunidad " + d.id;
-    m.cuerpo = '<span class="a b">' + esc(d.titulo) + "</span>" +
-      (d.porque ? "\n" + esc(d.porque) : "") +
-      '\n<span class="g">valor ' + d.valor + " / esfuerzo " + d.esfuerzo +
-      (d.dias ? " · " + d.dias + " d esperando" : "") + (d.limbo ? " · refill en pausa" : "") + "</span>" +
-      (d.opciones || []).map(function(op){
-        return '\n\n<span class="' + (op.letra === d.voto ? "v" : "c") + ' b">' + esc(op.letra) + ")</span> " +
-               esc(op.texto) + (op.tiempo ? ' <span class="g">(' + esc(op.tiempo) + ")</span>" : "") +
-               (op.letra === d.voto ? ' <span class="v">←</span>' : "") +
-               (op.orden ? '\n<span class="g">' + esc(corto(op.orden, 220)) + "</span>" : "");
-      }).join("");
-    (d.opciones || []).forEach(function(op){
-      m.acciones.push([op.letra + ") " + corto(op.texto, 80) + (op.tiempo ? " (" + op.tiempo + ")" : "") +
-                       (op.letra === d.voto ? "  ←" : ""),
-                       function(){ actuar("tools", "op " + d.id + " " + op.letra, true); },
-                       op.letra === d.voto]);
-    });
-    m.acciones.push(accHablar(o, "la oportunidad " + d.id + " (" + corto(d.titulo, 70) + ")"));
-  } else if(o.tipo === "decidida"){
-    var e = ORD_ESTADO[d.orden_estado] || (d.estado === "descartada" ? ["descartada", "g"] : ["sin orden", "g"]);
-    m.titulo = "oportunidad " + d.id + " · decidida";
-    m.cuerpo = '<span class="a b">' + esc(d.titulo) + "</span>" +
-      (d.porque ? "\n" + esc(d.porque) : "") +
-      '\n\n<span class="g">decision</span> ' + (d.letra ? '<span class="c b">' + esc(d.letra) + ")</span> " : "") +
-      esc(d.opcion || (d.estado === "descartada" ? "descartada" : "")) +
-      (d.decidida ? ' <span class="g">' + esc(d.decidida) + "</span>" : "") +
-      (d.motivo ? '\n<span class="g">motivo</span> ' + esc(d.motivo) : "") +
-      '\n<span class="g">orden</span> <span class="' + e[1] + '">' + e[0] + "</span>" +
-      (d.orden ? '\n<span class="g">' + esc(corto(d.orden, 300)) + "</span>" : "");
-    if(d.orden_estado === "x" || d.orden_estado === "!")
-      m.acciones.push(["ver cómo salió", function(){
-        actuar("tools", "cómo salió la orden de la oportunidad " + d.id + " («" + corto(d.orden, 90) +
-                        "»): qué hizo, qué quedó y si falló algo");
-      }, true]);
-    else if(d.orden_estado)
-      m.acciones.push(["ver la cola entera", function(){ actuar("tools", "cola", true); }, true]);
-    m.acciones.push(accHablar(o, "la oportunidad " + d.id + " (" + corto(d.titulo, 70) + "), que ya decidí"));
   } else if(o.tipo === "propuesta"){
     m.titulo = "propuesta " + d.n;
     m.cuerpo = esc(d.orden) + '\n\n<span class="g">tema</span> <span class="c">' + esc(tema) + "</span>";

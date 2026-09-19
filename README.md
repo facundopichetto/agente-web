@@ -728,7 +728,7 @@ cada caja de la derecha tiene una fila de header:
   linea**, el que resume el widget sin abrirlo:
   `server` vivo/apagado + cpu, `usage` la barra mas cerca de la linea **por cuenta**, `agent` la
   cuenta activa + que esta corriendo, `verification agent` / `my tickets` / `propuestas` / `avisos`
-  la cantidad, `opportunities` las pendientes, `decided` las decididas, `podcast` el episodio de
+  la cantidad, `podcast` el episodio de
   arriba, `dj` si suena algo y cuantos bloques van, `models` el ultimo veredicto.
 - **derecha**: `hace Xs` (la edad del `widgets.json` que se esta viendo), **`[↻]`** y **`[⚙]`**.
   en el celu los dos botones tienen area tactil de 40 px.
@@ -748,10 +748,14 @@ en el momento y el modal se queda abierto:
 | `usage` | | `cuentas` (todas o una) |
 | `agent` | | `mostrar la cola` |
 | `my tickets` | | `filtro de estado` (los estados que hay ahora) |
-| `opportunities` | | `ocultar las decididas` (saca la caja `decided`) |
 | `propuestas` | | `filtro de tema` |
 | `podcast` | | `abierto por default` |
 | `dj` | | `mostrar la cola` |
+
+`opportunities` y su caja `decided` **ya no estan** (facundo, 2026-09-19, orden
+2144 {oportunidades}: "saca el widget oportunidades es feo y no tiene sentido"). el dato sigue viajando en
+`widgets.json` (de ahi salen los chips `op N X` del chat) y `oportunidades.py` no se toco; `WIDGETS_FUERA` de
+`index.html` limpia la clave vieja del `wsets` y del `orden_widgets` que quedaron en `tabs.json`.
 
 **donde viven**: en `tabs.json` del buzon, en la clave `wsets` (`{clave: {setting: valor, ts}}`),
 junto al layout, los borradores y el split, con el mismo debounce. se resuelven **una por una por su
