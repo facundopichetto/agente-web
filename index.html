@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.389">
-<link rel="manifest" href="manifest.json?v=4.389">
+<meta name="agente-web-version" content="4.390">
+<link rel="manifest" href="manifest.json?v=4.390">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.389">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.390">
 </head>
 <body>
 
@@ -4286,6 +4286,10 @@ function selPedir(col, arranque){
     if(!base) return false;
     // 2095 paso 5: con una lista abierta, el server manda SOLO la gente de esa lista (`?lista=`)
     var qs = (arranque ? "?arranque=1" : "") + (sel.filtro ? (arranque ? "&" : "?") + "lista=" + encodeURIComponent(sel.filtro) : "");
+    // 2137 {votolocal}: las de la tirada que ya voto y todavia no mando van como `saltear`, si no el server sirve
+    // siempre las mismas 30 primeras (ningun voto llego todavia) y el votador se queda sin tarjetas
+    var sal = (sel.tjHistorial || []).filter(function(h){ return h.col === col; }).map(function(h){ return h.c.id; });
+    if(sal.length) qs += (qs ? "&" : "?") + "saltear=" + encodeURIComponent(sal.slice(-400).join(","));
     return lanFetch(selUrl(base, col) + qs, {method: "GET", cache: "no-store", headers: {"authorization": "Bearer " + token}})
       .then(function(r){ if(!r || !r.ok) throw new Error("http " + (r && r.status)); return r.json(); })
       .then(function(j){ return filaAplicar(col, j); });
@@ -4684,6 +4688,7 @@ function tjPintar(){
 var tjPedirUlt = {};
 function tjPedirMas(e){
   if(!e || !e.continua || !lan.base || e.agotada) return false;
+  if(!sel.tj) return false;   // recien abierta: la fila es la que acaba de pedir `tjAbrir`, no se pide dos veces
   if((e.candidatas || []).length - sel.tj > SEL_FLUSH_MIN) return false;
   if(tjPedirUlt[e.coleccion] && Date.now() - tjPedirUlt[e.coleccion] < SEL_PEDIR_MS) return false;
   tjPedirUlt[e.coleccion] = Date.now();
@@ -4711,6 +4716,15 @@ function tjVoto(e, c, q, txt){
   if(i >= 0) hs[i] = {col: e.coleccion, c: c, q: q, txt: txt || ""};
   else hs.push({col: e.coleccion, c: c, q: q, txt: txt || ""});   // 1640: lo que el back deshace
   sel.tjVotos = tjHist(e).length;   // 1524: sin ninguna decision real, `tjFin` no manda `fin`
+  // la tirada local es la de la fila CONTINUA (el votador de instagram, el de la 2137). una tanda vieja de tarjetas
+  // (no continua, 1440) sigue subiendo cada voto al toque: ahi no hay fila que el server pueda reordenar.
+  if(!e.continua){
+    var r = {id: lidNuevo(), tipo: "tarjeta", ts: Date.now(), candidata_id: c.id, cuenta: c.cuenta || "", decision: q,
+             texto: txt || "", sesion: sel.sesion || ""};
+    var pend = selLeer("pend", []); pend.push({col: e.coleccion, r: r}); selEscribir("pend", pend);
+    (sel.sesionVotos = sel.sesionVotos || []).push(c.id);   // 2002 {back}: lo que la `✕` devuelve a la vista
+    selSubirPronto();
+  }
   sel.tj += 1;
   tjPintar();   // 2137 paso 4: el lote siguiente lo pide el avance de la fila (`tjPedirMas`), nunca el voto
   return true;
@@ -4725,7 +4739,8 @@ function tjRegistros(e){
 }
 // el `enviar`: los votos de la tirada salen TODOS juntos y recien ahi se mueve el embudo. devuelve cuantos mando
 function tjSubirLocales(e){
-  var regs = e ? tjRegistros(e) : [];
+  if(!e || !e.continua) return 0;   // la tanda vieja de tarjetas sube cada voto al toque, no tiene tirada
+  var regs = tjRegistros(e);
   if(!regs.length) return 0;
   var pend = selLeer("pend", []);
   regs.forEach(function(r){ pend.push({col: e.coleccion, r: r}); });
@@ -4762,6 +4777,13 @@ function tjAtras(){
   // 2137 {votolocal}: el back es enteramente local. saca el ultimo voto de la tirada y deja la vista EN esa tarjeta,
   // que nunca salio de la fila: no hay `deshacer` que mandar, ni respuesta del server que pueda volver a moverla.
   var h = hs.splice(i, 1)[0], c = h.c, k = -1;
+  if(!e.continua){   // 1640: el voto de una tanda vieja ya salio: el back lo deshace en el server
+    var rd = {id: lidNuevo(), tipo: "deshacer", ts: Date.now(), candidata_id: c.id, cuenta: c.cuenta || "", texto: "",
+              sesion: sel.sesion || ""};
+    var pd = selLeer("pend", []); pd.push({col: e.coleccion, r: rd}); selEscribir("pend", pd);
+    sel.sesionVotos = (sel.sesionVotos || []).filter(function(x){ return x !== c.id; });
+    selSubirPronto();
+  }
   e.candidatas.forEach(function(x, j){ if(x.id === c.id && k < 0) k = j; });
   if(k < 0){ e.candidatas.splice(Math.min(sel.tj, e.candidatas.length), 0, c); k = Math.min(sel.tj, e.candidatas.length - 1); }
   sel.tj = k;
@@ -4873,6 +4895,10 @@ function selX(){
 function selCerrar(){
   try{ (window.__cierres = window.__cierres || []).push("selCerrar " + new Error().stack.split("\n").slice(1,4).join(" | ")); }catch(x){}
   var tj = vistaEs("tinder"), sub = lis.sub;
+  // 2137 {votolocal}: salir del votador por cualquier otro camino (el `←` de la primera, `esc`, otro icono de la
+  // barra) MANDA lo votado: lo unico que tira la tirada es la `✕` (`selCancelar`), que es lo que pidio la 2002.
+  // asi ningun voto se pierde en silencio por cerrar, que es lo que pasaria ahora que nada sale al toque.
+  if(sel.actual && tjPantalla()) tjSubirLocales(sel.actual);
   if(sel.actual) sel.ignorada[sel.actual.coleccion] = sel.actual.abrir_ts;
   sel.actual = null;
   selModoLista(true);   // 1440: la proxima puede ser una de checkboxes
