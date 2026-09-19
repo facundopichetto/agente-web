@@ -177,8 +177,12 @@
   .accion{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .accion .acctxt{flex:1;min-width:140px;color:var(--gris);font-size:18px}
   .accion .acccuenta{color:var(--verde);font-size:16px;opacity:.8}
-  .accion .accdale{min-width:74px}
+  .accion .accdale{position:relative;min-width:74px}
   .accion .accdale.hecho{opacity:.45;border-color:var(--gris);color:var(--gris)}
+  /* 2080 {diseno} punto 5: la caja `dale` con la misma gramatica que las `OPCION`. `.selec` = elegida y sin
+     mandar (borde mas grueso); `.hecho` = ya salio, y ahi se ve el cuadradito blanco con el checkmark. */
+  .accion .accdale.selec{border-width:2px;padding:5px 9px}
+  .accion .accdale.hecho .chkenv{display:block;opacity:1}
   .bverde.llena.rojo:active{background:var(--rojo)}
   /* 1922 {vistatinder}: caja tocable de una fila (el `home` del votador y el del podcast). borde fino, texto a la
      izquierda, 44 px de alto: lo que es tocable tiene que parecerlo (1808) sin gritar como un boton verde lleno */
@@ -286,10 +290,10 @@
   body.teclado #selcont{display:none!important}
   #selcuenta{white-space:nowrap}
   #sellista{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:6px}
-  #sellista .selitem{flex:0 0 auto;display:flex;align-items:flex-start;gap:8px;min-height:38px;padding:5px 8px;box-sizing:border-box;
+  #sellista .selitem{flex:0 0 auto;display:flex;align-items:center;gap:8px;min-height:38px;padding:5px 8px;box-sizing:border-box;
     border:1px solid var(--linea);border-radius:4px;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   #sellista .selitem.on{border-color:var(--verde)}
-  #sellista input{flex:0 0 auto;width:18px;height:18px;margin:2px 0 0 0;accent-color:var(--verde);cursor:pointer}
+  #sellista input{flex:0 0 auto;width:18px;height:18px;margin:0;accent-color:var(--verde);cursor:pointer}   /* 2080: centrado por la fila, sin empujon de arriba */
   #sellista .seltxt{display:flex;flex-direction:column;gap:1px;min-width:0}
   #sellista .selnom{color:var(--blanco);font-size:var(--texto-max)}
   #sellista .seldet,#sellista .selmot{color:var(--gris);font-size:16px;word-break:break-word}
@@ -304,7 +308,11 @@
   #sellista .selanim{flex:0 0 auto;min-width:4ch;color:var(--verde);font-size:var(--texto-max);text-align:center}
   /* 1394: plantilla contador + meta + lista premarcada + ok = accion. arriba el contador en vivo (`actual - marcadas`
      contra la meta), link al perfil al costado de cada renglon, y el boton dice la accion y cuantas */
-  #selcont{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;color:var(--gris);font-size:18px}
+  /* 2080 {diseno} punto 3 (facundo, 2026-09-18: "en las cosas centradas, si me pones el valor no me lo pongas
+     arriba; centrame las cosas verticalmente"): toda fila que mezcla texto con otra cosa al lado (icono, valor,
+     boton, checkbox) centra vertical. las tres que quedaban en `baseline` y la de `flex-start` pasan a `center`;
+     el titulo de una caja queda a la misma altura que el numero o el icono que tiene al lado. */
+  #selcont{display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:var(--gris);font-size:18px}
   #selcont.oculta{display:none}
   #selcont .selnum{color:var(--blanco);font-size:var(--texto-max);font-weight:bold;line-height:1}
   #selcont.llego .selnum{color:var(--verde)}
@@ -396,7 +404,7 @@
   #selmodal .selenviar{min-height:52px;min-width:124px;padding:12px 20px;font-weight:bold}
   /* 1874 (facundo, 2026-09-17: "el tinder deberia abrir pantalla completa. dos bloques, uno al lado del otro en
      wide, uno arriba del otro en mobile. todo full screen. primero foto lo mas grande que se pueda. luego la
-     informacion que ya tenemos"): al elegir un proceso del `#votmenu` el votador deja de ser una caja chica y ocupa
+     informacion que ya tenemos"): al abrir el votador de un proceso, deja de ser una caja chica y ocupa
      la pantalla entera (`.pantalla`, solo en modo tarjetas: la lista de checkboxes sigue siendo un modal). el molde
      no cambia (`.capa` + `.mcaja`, `esc` cierra por la pila, sin borde de color): la caja pierde el ancho maximo, el
      radio y la sombra, y el centro optico de la 1642 no aplica (la caja mide todo el alto). */
@@ -431,13 +439,11 @@
     #selmodal.pantalla #seltarjeta{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr);gap:12px}
     #selmodal.pantalla #seltarjeta .tjinfo{max-height:100%}
   }
-  /* 1879 {listas} (facundo, 2026-09-17): la vista `tinder` son DOS sub-vistas, `votar` y `listas`. el boton para
-     pasar de una a la otra vive en la cabecera al lado del `←` y dice a donde lleva (molde `.bglifo`, con texto en
-     vez de glifo). la sub-vista `listas` es una columna de cajas, una por lista del embudo: titulo, cuantos son y
+  /* 1879 {listas} (facundo, 2026-09-17): la vista `tinder` son DOS sub-vistas, `votar` y `listas`; desde la 2078
+     {home} `listas` es la HOME (se entra directo aca) y el votador se abre tocando una fila o el titulo de una
+     lista, sin ningun boton de sub-vista. `listas` es una grilla de cajas, una por lista del embudo: titulo, cuantos son y
      por que estan ahi; una lista grande termina ahi, una chica lista a su gente con fotito, lo que ya se sabe y UNA
      frase de accion tocable. lo arma todo el server (`recetas/ig_listas.py`): aca solo se pinta. */
-  #selsub{flex:0 0 auto;margin-left:auto;padding:5px 9px;min-height:38px;font-size:17px;color:var(--verde)}
-  #selsub.oculta{display:none!important}
   /* 2035 {columnas} (facundo, 2026-09-18): `listas` tambien es una GRILLA de dos columnas (una por lista), y la
      gente de una lista chica deja de ser una fila por persona: es una tira de fotitos REDONDAS con el `@` abajo
      (`.listira` + `.lischip`), y tocar una abre su cartita de la 1948. una columna en el celu angosto (abajo). */
@@ -449,7 +455,7 @@
   /* sin borde de color: fondo un paso mas claro y la sombra suave de los modales (1652) */
   #sellistas .liscaja{border:1px solid transparent;border-radius:4px;padding:10px;height:100%;
     background:var(--fondo-caja);box-shadow:var(--caja-sombra);display:flex;flex-direction:column;gap:6px}
-  #sellistas .listit{display:flex;align-items:baseline;gap:8px}
+  #sellistas .listit{display:flex;align-items:center;gap:8px}   /* 2080: el titulo de la lista a la altura de su numero */
   #sellistas .lisnom{color:var(--blanco);font-size:var(--texto-max)}
   /* la cantidad resalta por peso y color, nunca por tamaño (1541) */
   #sellistas .lisn{color:var(--cian);font-size:var(--texto-max);font-weight:600}
@@ -462,6 +468,14 @@
     white-space:nowrap;font-size:15px}
   #sellistas .lischip.toca{cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   #sellistas .lischip.toca:active{opacity:.6}
+  /* 2078 {home}: el titulo de la lista abre el votador de su proceso desde el principio (lo tocable parece
+     tocable, 1808); y cada chip lleva su propio `ficha`, que es lo que abre la cartita de la 1948 */
+  #sellistas .listit.toca{cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+    border-radius:4px;margin:-2px -4px;padding:2px 4px}
+  #sellistas .listit.toca:active{background:#111}
+  #sellistas .lischip .lisfic{min-height:0;padding:1px 6px;font-size:12px;color:var(--gris);
+    border-color:transparent;background:none;line-height:1.2}
+  #sellistas .lischip .lisfic:active{color:var(--verde)}
   #sellistas .lisporque{color:var(--gris);font-size:17px;word-break:break-word}
   #sellistas .lisgrande{color:var(--gris);font-size:16px;opacity:.85}
   /* 2035 {columnas}: la fotito de la tira es REDONDA (la de la lista siempre lo fue, 1404) y el `@` va abajo.
@@ -469,6 +483,11 @@
   #sellistas .lisfoto{flex:0 0 auto;overflow:hidden;border:1px solid var(--linea);background:#111}
   #sellistas .lisfoto img{width:100%;height:100%;object-fit:cover;display:block}
   #sellistas .liscuenta{color:var(--gris);word-break:break-all}
+  /* 2035 {columnas}: en el celu angosto (vertical) la grilla vuelve a UNA columna (facundo: "celu 1 columna"); en
+     ipad (768) y desktop siguen las dos. va DESPUES de la regla de dos columnas o la gana por orden. */
+  @media (max-width:599px){
+    #sellistas{grid-template-columns:minmax(0,1fr)}
+  }
   #lismodal .lisdet{display:flex;flex-direction:column;gap:6px}
   #lismodal .lisdetacc{color:var(--blanco);font-size:var(--texto-max);word-break:break-word}
   #lismodal .lisdatos{color:var(--cian);font-size:16px;word-break:break-word}
@@ -559,11 +578,30 @@
   .copiar.ok,.cuerpo .cp.ok{color:var(--verde);border-color:var(--verde-tenue)}
   .opciones{display:flex;gap:6px;margin:6px 0 2px 0;white-space:normal}
   .opciones .opc{
+    position:relative;
     flex:1 1 0;min-width:0;box-sizing:border-box;background:#000;border:1px solid;border-radius:4px;
     padding:6px 8px;font:inherit;font-size:16px;line-height:1.35;text-align:left;cursor:pointer;
     min-height:40px;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
     touch-action:pan-y;word-break:break-word;
   }
+  /* 2080 {diseno} punto 5 (facundo, 2026-09-18: "solo un clic selecciona, dos clicks un checkmark"): el primer
+     toque SELECCIONA la caja (solo se marca el borde, no sale nada) y el segundo toque sobre la misma manda.
+     tocar otra mueve la seleccion. `.selec` es "elegida, todavia no salio"; el relleno de color (`.sel`) sigue
+     siendo "ya salio", igual que siempre. */
+  .opciones .opc.selec{border-width:2px;padding:5px 7px}
+  .opciones .opc.A.selec{box-shadow:inset 0 0 0 1px var(--verde)}
+  .opciones .opc.B.selec{box-shadow:inset 0 0 0 1px var(--cian)}
+  .opciones .opc.C.selec{box-shadow:inset 0 0 0 1px var(--magenta)}
+  .opciones.hecho .opc.selec{opacity:1}
+  /* el cuadradito blanco con el checkmark: "enviada", nunca "seleccionada". abajo a la derecha de la caja
+     tocada, muy chico, sin animacion, sin toast y sin mini notificacion. */
+  .chkenv{
+    position:absolute;right:3px;bottom:3px;width:12px;height:12px;border-radius:2px;
+    background:var(--blanco);color:#000;font-size:10px;line-height:12px;text-align:center;
+    display:none;pointer-events:none;font-weight:700;
+  }
+  .opciones .opc.sel .chkenv{display:block}
+  .opciones .opc.conf .chkenv{display:none}      /* mientras pregunta, la caja es solo la pregunta */
   .opciones .opc .l{font-weight:600;margin-right:5px}
   /* 1203: hora de envio del mensaje que salio al tocar esa caja (hh:mm de buenos aires). chiquita, a la
      derecha; cada letra lleva la suya (al sumar `A y C`, la A conserva la hora de su toque). */
@@ -703,7 +741,7 @@
   #cmdmodal .mcuerpo2{display:flex;flex-direction:column;gap:2px}
   .cmdgrupo{color:var(--amarillo);font-weight:bold;margin:8px 0 2px}
   .cmdgrupo:first-child{margin-top:0}
-  .cmdfila{display:flex;align-items:baseline;gap:8px;width:100%;min-height:38px;padding:4px 2px;background:none;border:0;
+  .cmdfila{display:flex;align-items:center;gap:8px;width:100%;min-height:38px;padding:4px 2px;background:none;border:0;
     color:var(--blanco);font:inherit;font-size:var(--texto-max);text-align:left;cursor:pointer;touch-action:manipulation}
   .cmdfila:active{opacity:.45}
   .cmdfila .cmdc{color:var(--cian);flex:0 0 auto;white-space:nowrap}
@@ -894,6 +932,17 @@
     background:transparent;color:var(--gris);border:none;border-radius:4px;
     font:inherit;font-size:var(--texto-max);line-height:1;padding:2px 5px;cursor:pointer;
   }
+  /* 2080 {diseno} punto 1 (facundo, 2026-09-18: "los botones de cerrar y cositas del widget todavia siguen
+     siendo muy chicos, ponelos al 160%"): el que crece es el GLIFO, nunca el `font-size` (tope `--texto-max`,
+     hoy 18 px por la 2014; mismo criterio que los votos de la tarjeta de la 1841). `.wglf` escala el glifo
+     x1.6 (18 -> 28.8 px a la vista) y la caja del boton va al 160% tambien, de 22 a 35 px en la compu. en el
+     celu los 40 px de la 1166 son area de DEDO, no tamaño a la vista: ya son mas grandes que el glifo
+     escalado, asi que no se tocan y los cuatro iconos siguen entrando en 390 px. */
+  .caja > .tit > .wacc .wbtn{
+    min-width:35px;min-height:35px;padding:0;
+    display:inline-flex;align-items:center;justify-content:center;
+  }
+  .caja > .tit > .wacc .wbtn .wglf{display:inline-block;transform:scale(1.6);transform-origin:center;line-height:1}
   .wbtn:hover{color:var(--verde)}
   .wbtn:active{color:var(--verde)}
   .wbtn.girando{color:var(--verde)}
@@ -961,7 +1010,7 @@
   .usage .uproy{margin:0 0 7px 0;padding-bottom:6px;border-bottom:1px solid var(--linea)}
   .usage .uproy .ub{margin-bottom:3px}
   .usage .uproy .lect{display:block;font-size:15px;color:var(--gris);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .usage .umod{display:flex;gap:6px;font-size:15px;margin:0 0 5px 0;white-space:nowrap;overflow:hidden}
+  .usage .umod{display:flex;align-items:center;gap:6px;font-size:15px;margin:0 0 5px 0;white-space:nowrap;overflow:hidden}   /* 2080: el nombre a la altura del porcentaje */
   .usage .umod .nom{color:var(--cian);font-weight:600}
   .usage .umod .por{color:var(--gris);overflow:hidden;text-overflow:ellipsis;min-width:0}
   .usage .ucols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -1140,57 +1189,13 @@
   #notis .luz.amarillo,#nlista .luz.amarillo,#campana .badge.amarillo{background:var(--amarillo)}
   #notis .luz.verde,#nlista .luz.verde,#campana .badge.verde{background:var(--verde)}
   #notis .luz.gris,#nlista .luz.gris,#campana .badge.gris{background:var(--gris)}
-  /* 1922 {vistatinder} (facundo, 2026-09-17): "el dropdown es lo que se ve a pantalla completa en la vista tinder".
-     lo que hasta la 1801 era un menu flotante pegado al fueguito es ahora el `home` de la vista `tinder`: vive
-     adentro de la `.selcaja` a pantalla completa de la 1874, con su tipografia y sus espaciados, y cada proceso es
-     una caja tocable del molde (`moldeBoton` tipo `caja`). ni `position:fixed`, ni fondo aparte, ni sombra. */
-  #votmenu.oculta{display:none}
-  /* la cabecera se alinea con la columna de cajas, no con el borde de la pantalla */
-  #selmodal.pantalla.home .seltit,body.v-podcast #vista-podcast .seltit{width:100%;max-width:760px;margin:0 auto}
-  /* 1933 {instatinder} (facundo, 2026-09-17): el `home` va CENTRADO y los seis items ocupan todo el alto
-     disponible repartidos, con espaciado de verdad: nunca seis cajitas de 44 px apiladas arriba. cada item es un
-     item flexible de la columna (`flex:1 1 0`) con el piso del molde (44 px), asi en una pantalla alta crecen y en
-     una baja se apoyan en el piso y la columna scrollea. el molde (`.bcaja`) y el total en gris no cambian. */
-  /* 2035 {columnas} (facundo, 2026-09-18: "el insta tinder tiene que tener 2 columnas en la vista de lista y en la
-     vista principal!! se puede hacer algo para que se vea mas lindo eso? es medio horrible"): el `home` deja de ser
-     una columna de cajitas de 44 px y pasa a ser una GRILLA de dos columnas de tarjetas casi cuadradas, el molde de
-     `.podcard` del podcast (1939) que ya le gusto: `grid` y no `flex` a proposito, porque el `aspect-ratio` de un
-     item flex no lo dibuja bien el safari del iphone (1655). cada proceso es una tarjeta con el nombre arriba y el
-     total abajo en cian; `ver listas` ocupa las dos columnas al pie y no es cuadrada. en el celu angosto, UNA sola
-     columna (media query del final). el look va sin borde de color: fondo un paso mas claro (`--fondo-caja`) y la
-     sombra suave de los modales (1652), con el `1px` transparente para no mover medidas. */
-  #votmenu{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
-    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-content:start;
-    width:100%;max-width:620px;margin:0 auto;padding:6px 0;scroll-snap-type:y proximity}
-  #selmodal.pantalla.home .seltit{justify-content:center;max-width:620px}
-  #votmenu .ntit{color:var(--gris);font-size:14px;text-transform:uppercase;letter-spacing:.06em;padding:0 0 2px 0}
-  #votmenu .vmfila{flex:none;width:100%;aspect-ratio:1/1;height:auto;min-height:44px;
-    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:12px;text-align:center;
-    background:var(--fondo-caja);border-color:transparent;box-shadow:var(--caja-sombra);scroll-snap-align:center}
-  #votmenu .vmfila.apagado{color:var(--gris);border-color:transparent;cursor:default}
-  /* `ver listas` no es un proceso: va al pie, cruzando las dos columnas y sin aspecto cuadrado */
-  #votmenu .vmfila[data-col="listas"]{grid-column:1 / -1;aspect-ratio:auto;min-height:52px;
-    flex-direction:row;align-items:center;justify-content:space-between;text-align:left}
-  #votmenu .vmnom{flex:0 0 auto;min-width:0;overflow:hidden;white-space:normal;
-    font-size:var(--texto-max);line-height:1.3}
-  /* el badge es el numero de pendientes, abajo a la izquierda y en cian (peso y color, nunca tamaño: 1541) */
-  #votmenu .vmbadge{flex:0 0 auto;min-width:0;padding:0;background:none;color:var(--cian);
-    font-size:var(--texto-max);font-weight:600;line-height:1.2;text-align:left}
-  #votmenu .vmfila.apagado .vmbadge{background:none;color:var(--gris)}
-  #votmenu .vmbadge.oculta{display:none}
-  /* 2035 {columnas}: en el celu angosto (vertical) las DOS pantallas de `instatinder` vuelven a UNA columna
-     (facundo: "celu 1 columna"); en ipad y desktop siguen las dos. la tarjeta del `home` sigue cuadrada, que es
-     justo el molde del podcast que ya le gustaba en 390 px. */
-  @media (max-width:599px){
-    #votmenu,#sellistas{grid-template-columns:minmax(0,1fr)}
-    #votmenu .vmfila{aspect-ratio:2.6/1}
-  }
-  /* de 600 px para arriba, las tres filas de tarjetas cuadradas mas `ver listas` tienen que entrar SIN scrollear:
-     el ancho de la grilla sale del alto que hay (tres filas de lado `ancho/2`), con tope en 620 px */
-  @media (min-width:600px){
-    #votmenu{max-width:min(620px, calc((100dvh - 210px) / 3 * 2))}
-    #selmodal.pantalla.home .seltit{max-width:min(620px, calc((100dvh - 210px) / 3 * 2))}
-  }
+  /* 2078 {home} (facundo, 2026-09-18): se fue el `home` de seis cajas de la 1922/2035 (`#votmenu`) y con el el
+     boton de sub-vista `#selsub`: la HOME de la vista es `listas` y el votador se abre tocando. lo que queda del
+     molde de la 2035 (grilla de dos columnas, `--caja-sombra`, una columna en el celu) vive en `#sellistas`. */
+  body.v-podcast #vista-podcast .seltit{width:100%;max-width:760px;margin:0 auto}
+  /* la clase `.home` de `#selmodal` sigue siendo "la home de la vista" (2078: son las listas): lo unico que hace es
+     alinear la cabecera con la grilla, no con el borde de la pantalla */
+  #selmodal.pantalla.home .seltit{width:100%;max-width:980px;margin:0 auto}
 
   /* el desplegable de la campana: solo las no leidas, la mas nueva arriba */
   #nfondo{position:fixed;inset:0;z-index:33}
@@ -1436,10 +1441,14 @@
     -webkit-overflow-scrolling:touch;
   }
   #tabs::-webkit-scrollbar{display:none}
+  /* 2080 {diseno} punto 2 (facundo, 2026-09-18: "las pestañas, agrandale un poquito el padding superior y de
+     abajo, izquierda de hecho esta bien"): el ancho y el padding LATERAL no se tocan (siguen en 9 px, asi la
+     fila de pestañas entra igual en 390 px); sube solo el vertical, de 4 a 8 px, y el texto queda centrado
+     vertical con el flex del propio boton (punto 3), nunca con un `line-height` a mano. la letra no cambia. */
   #tabs .tab{
     flex:0 0 auto;background:#000;color:var(--gris);border:0;
-    border-radius:4px 4px 0 0;padding:4px 9px;font:inherit;font-size:16px;cursor:pointer;
-    white-space:nowrap;
+    border-radius:4px 4px 0 0;padding:8px 9px;font:inherit;font-size:16px;cursor:pointer;
+    white-space:nowrap;display:inline-flex;align-items:center;
   }
   #tabs .tab.enpanel{color:var(--cian)}
   #tabs .tab.activo{
@@ -1459,7 +1468,9 @@
      solo el ultimo aviso sin leer, debajo de las pestañas, en una linea (hora + primeras palabras), sin look de
      boton como la barra de nodos. tocar abre el detalle; la `x` lo marca leido y pasa al siguiente (1170: "leer
      mas no, solo la ultima. y que se pueda cerrar"). la lista entera vive en la campanita del header. */
-  #notis{flex:0 0 auto;display:flex;align-items:center;padding:0 0 0 10px;background:var(--fondo-panel)}
+  /* 2080 {diseno} punto 4: la tira ya no vive entre las pestañas y el chat (ahi tapaba el titulo y empujaba la
+     charla al aparecer). es el ultimo hermano de `#panel-chat`, abajo del historial y arriba del pie. */
+  #notis{flex:0 0 auto;display:flex;align-items:center;padding:3px 0 3px 10px;background:var(--fondo-panel)}
   #notis.oculta{display:none}
   #notis .noti{flex:1 1 auto;display:flex;align-items:center;gap:6px;min-width:0;background:none;border:0;padding:0;margin:0;
     color:var(--blanco);font-size:15px;line-height:18px;cursor:pointer;white-space:nowrap;
