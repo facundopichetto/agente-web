@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.388">
-<link rel="manifest" href="manifest.json?v=4.388">
+<meta name="agente-web-version" content="4.389">
+<link rel="manifest" href="manifest.json?v=4.389">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.388">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.389">
 </head>
 <body>
 
@@ -4230,49 +4230,37 @@ function filaFaltan(e){
   cs.forEach(function(c){ if(v[c.id]) ya++; });
   return Math.max(0, (typeof e.pendientes === "number" ? e.pendientes : cs.length) - ya);
 }
-// 2073 {back} + 2112 {misma}: las tarjetas que volvieron por el back de ESTA carga. ningun refresco (`filaSumar`,
-// la respuesta del POST, `selPedir` a los 2 y 6 s, `selEsperar`) puede sacarlas ni correr la posicion, ni siquiera
-// despues de que un lote las traiga: la marca se suelta SOLO al votarlas de nuevo o al reabrir el proceso (2112).
-function tjProt(col){
-  var p = sel.tjDeshechas = sel.tjDeshechas || {};
-  return (p[col] = p[col] || {});
-}
+// 2137 {votolocal} (facundo, 2026-09-19: "cada vez que toco un boton en el modal hay algo en el server, entonces
+// si yo toco back vuelvo hasta que lo que hice antes en el server responde"): el lote que llega SOLO se apendea al
+// final. no saca ninguna tarjeta ya cargada, no reordena las de antes de la posicion ni la de adelante, y nunca
+// toca `sel.tj`. por eso el `←` ya no puede saltar solo: no hay ninguna respuesta en vuelo que pueda mover la fila
+// (eso era el bug de la 2073 y la 2112, y el parche de la proteccion por tarjeta se fue con el: ya no hace falta).
+// los votos de la tirada son LOCALES (`sel.tjHistorial`) hasta el `enviar`, asi que una tarjeta votada sigue en la
+// fila, se puede volver a ella y cambiarle el voto.
 function filaSumar(e, soloSacar){
   var a = sel.actual;
   if(!a || !a.continua) return false;
-  var v = filaVotadas(a.coleccion), vivas = {}, cur = tjActual(), fall = sel.tjFallidas || [], antesAg = a.agotada;
-  // 2073 {back} (facundo, 2026-09-18: "toco back, llego a la 5 y en unos milisegundos vuelve a la 6"): el lote que
-  // llega es de ANTES del deshacer (el server la devuelve a la fila recien cuando `ejecutar` aplica el `deshacer`),
-  // asi que sin esto la tarjeta que acaba de volver por el back no esta en `vivas`, este filtro la tira, la vista
-  // salta a la siguiente y la tarjeta queda inalcanzable (su entrada del historial ya se consumio).
-  var prot = tjProt(a.coleccion);
-  (e.candidatas || []).forEach(function(c){ vivas[c.id] = true; });
-  var hechas = a.candidatas.slice(0, sel.tj);
-  var resto = a.candidatas.slice(sel.tj).filter(function(c){ return prot[c.id] || (vivas[c.id] && !v[c.id]); });
-  // 2112 {misma} (facundo, septimo intento: "vuelve a la anterior y a los milisegundos salta sola a la siguiente"):
-  // la proteccion NO se suelta cuando el lote del server la trae. soltarla ahi dejaba la tarjeta a merced del lote
-  // siguiente, y como los lotes llegan fuera de orden (la respuesta del POST, `selPedir` a los 2 y 6 s, `selEsperar`),
-  // alcanzaba con que uno VIEJO -de antes del deshacer- llegara despues del bueno para que la sacara de la fila y la
-  // vista saltara sola adelante, con la tarjeta ya inalcanzable (reproducido en `tmp/repro2112.py`: back q5 -> lote
-  // con q5 -> lote sin q5 -> q6 y la fila sin la 5). ahora el deshacer manda hasta que facundo la vuelve a votar
-  // (`tjVoto`) o hasta que el proceso se reabre y la fila se rearma (`tjDeshechas` de esa coleccion, 1975).
+  var v = filaVotadas(a.coleccion), fall = sel.tjFallidas || [], cur = tjActual(), antesAg = a.agotada;
+  var ya = {};
+  a.candidatas.forEach(function(c){ ya[c.id] = true; });
   if(!soloSacar){
-    var ya = {};
-    hechas.concat(resto).forEach(function(c){ ya[c.id] = true; });
+    var nuevas = [];
     (e.candidatas || []).forEach(function(c){
+      // lo ya votado y SUBIDO en otra tirada (`filaVotadas`) no vuelve; lo de esta tirada sigue en la fila
+      if(ya[c.id] || v[c.id] || fall.indexOf(c.id) >= 0) return;
       // 2095 paso 5: lo que repone el server entra solo si es de la lista abierta (`tjEnFiltro`)
-      if(!ya[c.id] && !v[c.id] && fall.indexOf(c.id) < 0 && tjConFoto(c) && tjEnFiltro(c)){ resto.push(c); ya[c.id] = true; }
+      if(!tjConFoto(c) || !tjEnFiltro(c)) return;
+      ya[c.id] = true; nuevas.push(c);
     });
+    a.candidatas = a.candidatas.concat(tjOrdenSuper(nuevas));   // 2134: la virtual apendea por puntaje
     a.pendientes = e.pendientes;
     a.mas = typeof e.pendientes === "number" && e.pendientes > (e.candidatas || []).length;
     if(typeof e.agotada === "boolean") a.agotada = e.agotada;   // 1794: lo dice el server, nunca se infiere
     if(e.resumen) a.resumen = e.resumen;
   }
-  var agAntes = !!antesAg;
-  a.candidatas = hechas.concat(tjOrdenSuper(resto));   // 2134: la lista virtual se camina por puntaje
   if(a.candidatas.length > sel.tj) a.agotada = false;   // 1794: entro algo: la sesion sigue
   var nuevo = tjActual();
-  if(!cur || !nuevo || cur.id !== nuevo.id || agAntes !== !!a.agotada) tjPintar(); else tjContar();
+  if(!cur || !nuevo || cur.id !== nuevo.id || !!antesAg !== !!a.agotada) tjPintar(); else tjContar();
   return true;
 }
 // 1794: el resumen de la sesion de voto continuo (un solo `votaste N` por sesion, el mismo que deja flaudio en el
@@ -4524,7 +4512,6 @@ function tjAbrir(e){
   if(!e.candidatas.length) return false;
   if(e.continua) e.mas = typeof e.pendientes === "number" && e.pendientes > e.candidatas.length;
   sel.tjUlt = 0; sel.tjAtrasUlt = 0;   // 1567: el freno del doble toque es de esta apertura (si no, se come el primer toque de la siguiente)
-  if(sel.tjDeshechas) delete sel.tjDeshechas[e.coleccion];   // 2073 {back}: la fila se rearma, el back de antes ya no manda
   sel.actual = e; sel.tj = 0; sel.tjVotos = 0; sel.tjFallidas = [];   // 1524: decisiones reales de esta apertura
   // 2002 {back}: cada apertura del modal es una SESION con su id. va en cada voto que sube, y es lo que la `✕`
   // manda al server para deshacer exactamente los de ESTA apertura (ni los de una anterior ni los de otra coleccion)
@@ -4575,6 +4562,9 @@ function tjPintar(){
   [].forEach.call(document.querySelectorAll("#selacciones .tjbtn"), function(b){
     b.style.visibility = c ? "" : "hidden";
   });
+  // 2137 {votolocal}: el pie dice cuantos votos hay esperando el `enviar` (nada sale hasta tocarlo)
+  var nv = tjHist(e).length;
+  $("selcerrar").textContent = nv ? "enviar (" + nv + ")" : "enviar";
   bk.classList.remove("oculta");   // en tarjetas el back se ve siempre; `selModoLista` lo esconde en la lista
   bk.classList.toggle("apagado", !atras);
   bk.disabled = !atras;
@@ -4686,6 +4676,19 @@ function tjPintar(){
     info.appendChild(hs);
   }
   t.scrollTop = 0; info.scrollTop = 0;
+  tjPedirMas(e);   // 2137 paso 4: quedan pocas adelante -> se pide el lote siguiente (GET), y entra al final
+}
+// 2137 {votolocal} paso 4: la paginacion la dispara el AVANCE EN LA FILA (la posicion del indice, la mueva un voto,
+// el dedo (2113) o las flechas (2079)), nunca un voto: es un `GET` que pide el lote y lo apendea (`filaSumar`), y
+// nunca un POST que escriba nada. sin lan no se pide: ahi la fila la suma `widgets.json`.
+var tjPedirUlt = {};
+function tjPedirMas(e){
+  if(!e || !e.continua || !lan.base || e.agotada) return false;
+  if((e.candidatas || []).length - sel.tj > SEL_FLUSH_MIN) return false;
+  if(tjPedirUlt[e.coleccion] && Date.now() - tjPedirUlt[e.coleccion] < SEL_PEDIR_MS) return false;
+  tjPedirUlt[e.coleccion] = Date.now();
+  selPedir(e.coleccion);
+  return true;
 }
 // 1495: cada voto firma la tarjeta a la vista (`candidata_id` y `cuenta`). el server rechaza el que no los trae.
 function tjDecidir(q){
@@ -4694,25 +4697,44 @@ function tjDecidir(q){
   if(!e || !c || tjProcQs(e).indexOf(q) < 0) return false;
   return tjVoto(e, c, q, "");
 }
+// 2137 {votolocal}: el voto NO sale al server. queda en `sel.tjHistorial` (la tirada, en memoria del browser) y
+// recien el `enviar` los manda todos juntos. votar la misma tarjeta otra vez PISA su voto, no agrega otro: por eso
+// facundo puede volver con el `←` o con el dedo (2113) y cambiar lo que puso.
 function tjVoto(e, c, q, txt){
   if(Date.now() - (sel.tjUlt || 0) < TJ_TOQUE_MS) return false;   // 1567: el doble toque cuenta una vez
   sel.tjUlt = Date.now();
-  if(e.continua) filaMarcar(e.coleccion, c.id);
-  var r ={id: lidNuevo(), tipo: "tarjeta", ts: Date.now(), candidata_id: c.id, cuenta: c.cuenta || "", decision: q, texto: txt,
-          sesion: sel.sesion || ""};   // 2002 {back}: para que la `✕` sepa cuales deshacer
-  var pend = selLeer("pend", []); pend.push({col: e.coleccion, r: r}); selEscribir("pend", pend);
   // 1657, 1801: el nombre de la decision sale del aria del boton del proceso (`no va`, `dejar de seguir`, `maybe`...)
   var bq = tjProc(e.coleccion).botones.filter(function(x){ return x.q === q; })[0];
   $("selestado").textContent = ((bq && bq.aria) || q) + " @" + (c.cuenta || c.id);
-  sel.tjVotos = (sel.tjVotos || 0) + 1;   // 1524: sin al menos una, `tjFin` no manda `fin`
-  (sel.tjHistorial = sel.tjHistorial || []).push({col: e.coleccion, c: c, q: q});   // 1640: lo que el back deshace
-  delete tjProt(e.coleccion)[c.id];   // 2073 {back}: decidida otra vez, el lote del server ya manda
-  (sel.sesionVotos = sel.sesionVotos || []).push(c.id);   // 2002 {back}: lo que la `✕` devuelve a la vista
+  var hs = sel.tjHistorial = sel.tjHistorial || [], i = -1;
+  hs.forEach(function(h, k){ if(h.col === e.coleccion && h.c && h.c.id === c.id) i = k; });
+  if(i >= 0) hs[i] = {col: e.coleccion, c: c, q: q, txt: txt || ""};
+  else hs.push({col: e.coleccion, c: c, q: q, txt: txt || ""});   // 1640: lo que el back deshace
+  sel.tjVotos = tjHist(e).length;   // 1524: sin ninguna decision real, `tjFin` no manda `fin`
   sel.tj += 1;
-  tjPintar();
-  selSubirPronto();   // 1666: los votos de la tanda se juntan y suben en un archivo (1836: throttle, no debounce)
-  selFlushSiFalta(e);   // 1836: quedan pocas adelante: la subida sale ya y la respuesta trae el lote
+  tjPintar();   // 2137 paso 4: el lote siguiente lo pide el avance de la fila (`tjPedirMas`), nunca el voto
   return true;
+}
+// 2137 {votolocal}: lo votado en esta tirada y todavia sin mandar, listo para el POST del `enviar`. si una tarjeta
+// se voto, se volvio y se voto de nuevo, vale el ultimo (en `tjHistorial` hay una sola entrada por persona).
+function tjRegistros(e){
+  return tjHist(e).map(function(h){
+    return {id: lidNuevo(), tipo: "tarjeta", ts: Date.now(), candidata_id: h.c.id, cuenta: h.c.cuenta || "",
+            decision: h.q, texto: h.txt || "", sesion: sel.sesion || ""};
+  });
+}
+// el `enviar`: los votos de la tirada salen TODOS juntos y recien ahi se mueve el embudo. devuelve cuantos mando
+function tjSubirLocales(e){
+  var regs = e ? tjRegistros(e) : [];
+  if(!regs.length) return 0;
+  var pend = selLeer("pend", []);
+  regs.forEach(function(r){ pend.push({col: e.coleccion, r: r}); });
+  selEscribir("pend", pend);
+  if(e.continua) tjHist(e).forEach(function(h){ filaMarcar(e.coleccion, h.c.id); });   // ya votada: no vuelve a la fila
+  sel.tjHistorial = (sel.tjHistorial || []).filter(function(h){ return h.col !== e.coleccion; });
+  sel.sesionVotos = (sel.sesionVotos || []).concat(regs.map(function(r){ return r.candidata_id; }));
+  selSubir();
+  return regs.length;
 }
 // 1640 (facundo, 2026-09-15: "agregá un back por si quiero cambiar mi voto"), 1657: la flecha `←` de la cabecera
 // (nunca el `-_-`, que es maybe) deshace el ultimo
@@ -4737,24 +4759,15 @@ function tjAtras(){
   // 2002 {back}: SOLO el doble disparo del mismo toque (120 ms); dos toques de facundo son dos tarjetas atras
   if(Date.now() - (sel.tjAtrasUlt || 0) < TJ_BACK_MS) return false;
   sel.tjAtrasUlt = Date.now();
-  var h = hs.splice(i, 1)[0], c = h.c;
-  tjProt(e.coleccion)[c.id] = Date.now();   // 2073 {back}: el deshacer es autoritativo hasta que el server confirme
-  if(e.continua){
-    var f = selLeer("fila", {});
-    if(f[e.coleccion]){ delete f[e.coleccion][c.id]; selEscribir("fila", f); }
-  }
-  var r = {id: lidNuevo(), tipo: "deshacer", ts: Date.now(), candidata_id: c.id, cuenta: c.cuenta || "", texto: "",
-           sesion: sel.sesion || ""};
-  var pend = selLeer("pend", []); pend.push({col: e.coleccion, r: r}); selEscribir("pend", pend);
-  var k = -1;
+  // 2137 {votolocal}: el back es enteramente local. saca el ultimo voto de la tirada y deja la vista EN esa tarjeta,
+  // que nunca salio de la fila: no hay `deshacer` que mandar, ni respuesta del server que pueda volver a moverla.
+  var h = hs.splice(i, 1)[0], c = h.c, k = -1;
   e.candidatas.forEach(function(x, j){ if(x.id === c.id && k < 0) k = j; });
-  if(k >= 0){ e.candidatas.splice(k, 1); if(k < sel.tj) sel.tj -= 1; }
-  e.candidatas.splice(sel.tj, 0, c);
-  sel.tjVotos = Math.max(0, (sel.tjVotos || 0) - 1);
-  sel.sesionVotos = (sel.sesionVotos || []).filter(function(x){ return x !== c.id; });   // 2002 {back}
+  if(k < 0){ e.candidatas.splice(Math.min(sel.tj, e.candidatas.length), 0, c); k = Math.min(sel.tj, e.candidatas.length - 1); }
+  sel.tj = k;
+  sel.tjVotos = tjHist(e).length;
   $("selestado").textContent = "back @" + (c.cuenta || c.id);
   tjPintar();
-  selSubirPronto();
   return true;
 }
 var TJ_REINTENTOS = [1000, 3000];   // 1524: ms antes de cada reintento de una foto que no bajo
@@ -4804,6 +4817,7 @@ function tjFin(){
   var e = sel.actual;
   if(!e) return;
   if(!sel.tjVotos) return tjSinFotos(e);   // 1524: `fin` solo si hubo al menos un `tjVoto` en esta apertura
+  tjSubirLocales(e);   // 2137 {votolocal}: la tanda entera decidida manda sus votos junto con el `fin`
   var hs = selLeer("hechas", {}); hs[e.coleccion] = e.abrir_ts; selEscribir("hechas", hs);
   // `fin`: le dice al server que este `aceptar` es el del modal de tarjetas (una tanda entera decidida) y no el
   // de una pagina vieja que todavia pinta la lista de checkboxes. solo este cierra la tanda.
@@ -4822,6 +4836,8 @@ function tjFin(){
 // le dice al server que deshaga los que ya aplico (cada persona vuelve a su lista y el follow/unfollow que ese voto
 // haya programado en `ig_cola` se cancela mientras siga `pendiente`). nada de una sesion anterior ni de otra
 // coleccion se toca. no manda `fin` ni `aceptar`: la fila queda como estaba.
+// 2137 {votolocal}: lo de esta tirada ni siquiera salio (los votos viven en `sel.tjHistorial`), asi que la `✕`
+// los tira y listo. lo de abajo queda como red para lo ya subido de esta sesion (un `enviar` y seguir votando).
 function selCancelar(){
   var e = sel.actual, ses = sel.sesion || "";
   if(!e) return false;
@@ -4926,14 +4942,9 @@ function selSubirPronto(){
   if(selJuntar) return;
   selJuntar = setTimeout(function(){ selJuntar = null; selSubir(); }, SEL_JUNTAR_MS);
 }
-// 1836: con lan, si la fila local baja de `SEL_FLUSH_MIN` sin votar, la subida sale ya: la respuesta trae el lote
+// 1836: el piso de tarjetas por delante. 2137 {votolocal}: ya no dispara ninguna subida (los votos salen solo con
+// el `enviar`): es el gatillo del `GET` del lote siguiente (`tjPedirMas`), que llega y se apendea al final.
 var SEL_FLUSH_MIN = 12;
-function selFlushSiFalta(e){
-  if(!e || !e.continua || !lan.base) return false;
-  if(e.candidatas.length - sel.tj > SEL_FLUSH_MIN) return false;
-  selSubirYa();
-  return true;
-}
 function selSubirYa(){   // cerrar la pagina o irse a background no espera a los 3 s
   if(!selJuntar) return;
   clearTimeout(selJuntar); selJuntar = null;
@@ -5957,6 +5968,9 @@ function selEnviar(){
   if(!sel.actual) return selCerrar();
   var x = $("seltxt");
   if(!x.classList.contains("oculta") && x.value.trim()) selEnviarTexto();
+  // 2137 {votolocal}: en el votador el `enviar` es lo UNICO que escribe: manda todos los votos de la tirada juntos
+  // y recien ahi se mueve el embudo. sin ningun voto, es el `cerrar` de siempre.
+  if(tjPantalla()) tjSubirLocales(sel.actual);
   selCerrar();
   return true;
 }
@@ -11447,7 +11461,7 @@ window.__agente = {
   selEsTarjetas: selEsTarjetas,   // 1440: modo tarjetas y su fallback sin `modo` del server
   tjPintarCon: function(e, i){ sel.actual = e; sel.tj = i || 0; if(!i){ sel.tjVotos = 0; sel.tjFallidas = []; } tjPintar(); return sel.tj; },   // 1515: `prueba_ig_embudo_tarjetas`
   tjIndice: function(){ return sel.tj; },
-  tjAtras: tjAtras, tjProtegidas: function(col){ return Object.keys(tjProt(col)); },   // 2073 {back}
+  tjAtras: tjAtras, tjPedirMas: tjPedirMas, tjRegistros: tjRegistros,   // 2137 {votolocal}
   tjFila: function(){ return ((sel.actual || {}).candidatas || []).map(function(c){ return c.id; }); },   // 2073 {back}
   tjHistorial: function(){ return (sel.tjHistorial || []).map(function(h){ return h.col + ":" + h.c.id + ":" + h.q; }); },   // 1640: el back
   filaFaltan: filaFaltan, filaSumar: filaSumar, tjToqueMs: function(ms){ TJ_TOQUE_MS = ms; TJ_BACK_MS = ms ? Math.min(ms, 120) : 0; },   // 1567: fila continua; 2002: el back tiene su propia ventana
@@ -11554,7 +11568,7 @@ window.__agente = {
   selEstado: function(){ return {abierto: !!sel.actual, col: sel.actual && sel.actual.coleccion, pend: selLeer("pend", []), fuente: sel.fuente,
                                  marcadas: selMarcadas(), abiertas: sel.abiertas.map(function(a){ return a.coleccion; })}; },
   selFlushMin: function(){ return SEL_FLUSH_MIN; },   // 1836
-  selReset: function(){ sel.actual = null; sel.abiertas = []; sel.ignorada = {}; sel.tjHistorial = []; selTs = 0; sel.agotadas = []; sel.totales = {}; sel.tjDeshechas = {};
+  selReset: function(){ sel.actual = null; sel.abiertas = []; sel.ignorada = {}; sel.tjHistorial = []; selTs = 0; sel.agotadas = []; sel.totales = {};
                         ["pend", "hechas", "fila"].forEach(function(s){ try{ localStorage.removeItem("agente_sel_" + s); }catch(x){} }); },
   selFila: function(){ return selLeer("fila", {}); },   // correccion 18:12
   animRanking: animRanking, animSpinner: animSpinner, animSinVer: animSinVer, animValida: animValida,
