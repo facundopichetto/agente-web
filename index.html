@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.394">
-<link rel="manifest" href="manifest.json?v=4.394">
+<meta name="agente-web-version" content="4.395">
+<link rel="manifest" href="manifest.json?v=4.395">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.394">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.395">
 </head>
 <body>
 
@@ -69,11 +69,12 @@
   <div id="hist"><div id="lista"></div></div>
   <button id="alfinal" type="button">ir al final</button>
 </div>
-<!-- 2080 {diseno} punto 4 (facundo, 2026-09-18: "las notificaciones que me saltan no las pongas mas en la
-     cabecera"): la tira del ultimo aviso sin leer (1162) dejo de vivir arriba, entre las pestañas y el chat,
-     donde tapaba el titulo y empujaba la charla. ahora va abajo del historial, pegada al pie: aparece y
-     desaparece sin mover nada de la cabecera. el contenido, el toque y la `x` son los mismos. -->
-<div id="notis" class="oculta" aria-live="polite"></div>
+<!-- 2151 {tira} (facundo, 2026-09-19: "las notificaciones EN EL CHAT te habia dicho que las saques. no
+     quiero verlas mas. aparecen abajo ahora"): aca vivia la tira `#notis` del ultimo aviso sin leer (1162).
+     La 2080 punto 4 la habia mudado de arriba (entre las pestañas y el chat) al pie, debajo del historial:
+     mala lectura, lo que facundo pidio era sacarla. Ahora se fue del todo y NINGUN aviso se pinta adentro de
+     `#panel-chat`, ni arriba, ni abajo, ni flotando: los avisos se ven y se contestan SOLO en la campana
+     (2022 {campana}) y en el modal de una push (1350). -->
 
 <div id="pie">
   <div id="adjunto" class="oculta" aria-live="polite"></div>
@@ -9612,11 +9613,12 @@ $("nodos").addEventListener("keydown", function(e){
   if(e.key === "Enter" || e.key === " "){ e.preventDefault(); abrirNodo(e); }
 });
 
-// ---------- notificaciones: los avisos sin leer debajo de las pestañas (facundo, 2026-09-13, orden 1162) ----------
-// "los avisos tienen que aparecer arriba como notificaciones, debajo de las pestañas del chat, y si toco puedo leerlo
-// detallado y responder (o no)". los datos salen de `widgets.json` (clave `notificaciones`, `widgets_json.w_notificaciones`:
-// id estable, texto, fecha, tema). responder o cerrar marca el id en `avLeidos`, que viaja en `tabs.json`.
-// la tira muestra solo el mas nuevo sin leer, con una `x` que lo cierra (1170); el resto va en la campanita.
+// ---------- notificaciones: los avisos sin leer (facundo, 2026-09-13, orden 1162) ----------
+// los datos salen de `widgets.json` (clave `notificaciones`, `widgets_json.w_notificaciones`: id estable, texto,
+// fecha, tema). responder o cerrar marca el id en `avLeidos`, que viaja en `tabs.json`.
+// 2151 {tira} (facundo, 2026-09-19: "las notificaciones EN EL CHAT te habia dicho que las saques"): la tira que
+// pintaba el mas nuevo adentro del chat se fue del todo. lo que queda aca es el dato (quien esta sin leer, el
+// detalle, responder y las leidas sincronizadas), y lo PINTA solo la campana (1166 / 2022) o el modal de push.
 var notisPor = {};                 // id -> aviso sin leer, lo ultimo pintado
 function leidosLimpios(){
   var ids = Object.keys(avLeidos);
@@ -9636,7 +9638,7 @@ function recibirLeidos(rem){
     if(!avLeidos[i]){ avLeidos[i] = t; sume = true; }
   });
   Object.keys(avLeidos).forEach(function(i){ if(!(i in rem)) tengo = true; });
-  if(sume){ guardarCache(); pintarNotis(); }
+  if(sume){ guardarCache(); pintarAvisos(); }
   return tengo ? "mio" : sume ? "remoto" : "igual";   // con alguna mia de mas se publica: los dos quedan con la suma
 }
 function marcarLeidos(ids){
@@ -9645,7 +9647,7 @@ function marcarLeidos(ids){
   if(!cambio) return false;
   guardarCache();
   publicarTabs(true);
-  pintarNotis();
+  pintarAvisos();
   return true;
 }
 function notisNoLeidas(){
@@ -9689,23 +9691,14 @@ function temaNoti(n){ return n && n.tema && esTema(n.tema) ? normTema(n.tema) : 
 // el detalle (modal) sigue con el texto entero
 function tituloNoti(n){ return unaLinea(n.titulo || n.texto, 160); }
 function cortoNoti(n){ return unaLinea(n.titulo ? n.titulo + (n.cuerpo ? " · " + n.cuerpo : "") : n.texto, 200); }
-var notisEl = null;
-function pintarNotis(){
+// repinta lo que depende de los avisos sin leer: el badge de la campana, su desplegable si esta abierto y el
+// modal de una push ya abierta. desde la 2151 {tira} no hay nada mas que pintar: el chat no muestra avisos.
+function pintarAvisos(){
   if(notiPush) setTimeout(refrescarNotiPush, 0);   // 1350: llego widgets.json con el aviso del modal abierto
-  if(!notisEl) notisEl = $("notis");
-  if(!notisEl) return;
   var ns = notisNoLeidas();
   notisPor = {};
   ns.forEach(function(n){ notisPor[n.id] = n; });   // el mapa lleva todas: la solapa `todo` abre cualquiera
   pintarCampana(ns);            // el badge y, si esta abierto, el desplegable
-  var acc = notisAccion(ns);    // 2022: la tira es lo que pide una decision, nada de sistema
-  if(!acc.length){ notisEl.innerHTML = ""; notisEl.classList.add("oculta"); return; }
-  var n = acc[0].noti;
-  notisEl.innerHTML = '<span class="noti" role="button" tabindex="0" data-noti="' + esc(n.id) + '" data-nivel="' + nivelNoti(n) +
-      '" title="' + esc(cortoNoti(n)) + '"><span class="luz ' + nivelNoti(n) + '"></span><span class="nh">' + esc(horaNoti(n)) +
-      '</span><span class="nt">' + esc(tituloNoti(n)) + "</span></span>" +
-    '<button class="nx" type="button" data-notix="' + esc(n.id) + '" title="cerrar" aria-label="cerrar aviso">×</button>';
-  notisEl.classList.remove("oculta");
 }
 // la cita que lleva la respuesta: `> aviso hh:mm: <texto>` + linea vacia (el daemon la separa con `marcas_chat`)
 function citaNoti(n){
@@ -9743,16 +9736,6 @@ function abrirNoti(id){
     'autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>'});
   return true;
 }
-function tocarNotis(e){
-  var x = e.target.closest("[data-notix]");
-  if(x){ e.preventDefault(); marcarLeidos([x.dataset.notix]); return; }   // repinta con el siguiente sin leer
-  var r = e.target.closest(".noti[data-noti]");
-  if(r) abrirNoti(r.dataset.noti);
-}
-$("notis").addEventListener("click", tocarNotis);
-$("notis").addEventListener("keydown", function(e){
-  if(e.key === "Enter" || e.key === " "){ e.preventDefault(); tocarNotis(e); }
-});
 // ---------- campana: todas las no leidas, con badge del color de la peor (facundo, 2026-09-13, orden 1166) ----------
 // "desplegame notificaciones que yo no haya cerrado ni respondido, o que hayan sucedido durante la noche sin nadie
 // mirando el board". el badge dice cuantas y su fondo es el nivel de la peor; cada fila tiene el circulito de su
@@ -10125,7 +10108,7 @@ function pintarWidgets(d, err){
   if(typeof vistaEs === "function" && vistaEs("podcast")) podVistaPintar();   // 1875: la vista podcast vive del mismo json
   $("panel-widgets").scrollTop = y;
   pintarNodos(d.nodos);         // la barra de arriba: SERVER | MAC | CLOUD, con quien esta de guardia
-  pintarNotis();                // los avisos sin leer, debajo de las pestañas
+  pintarAvisos();                // los avisos sin leer: el badge de la campana (la tira del chat se fue, 2151)
   pintarChips();                // los chips `op N X` usan las opciones reales de este json
 }
 
@@ -11725,8 +11708,8 @@ window.__agente = {
   stubPush: function(s){ pushStub = s; }, ponerPushSub: function(s){ pushSub = s; },
   pushLeido: function(){ return pushLeido; },
   pintarNodos: function(n){ pintarNodos(n); },
-  // notificaciones (1162): la tira, el detalle, responder y las leidas sincronizadas
-  pintarNotis: pintarNotis, abrirNoti: abrirNoti, responderNoti: responderNoti, citaNoti: citaNoti,
+  // notificaciones (1162, sin tira desde la 2151): el detalle, responder y las leidas sincronizadas
+  pintarAvisos: pintarAvisos, abrirNoti: abrirNoti, responderNoti: responderNoti, citaNoti: citaNoti,
   // 1350 notimodal: tocar una push abre el modal encima del chat sin mover la pestaña (`prueba_web_notimodal`)
   abrirNotiPush: abrirNotiPush, cerrarNotiPush: cerrarNotiPush, responderNotiPush: responderNotiPush,
   ponerChatHist: function(t, filas){ recibirChat(t, {filas: filas}); mezclar(); render(); },
@@ -11745,27 +11728,18 @@ window.__agente = {
   },
   marcarLeidos: marcarLeidos, recibirLeidos: recibirLeidos,
   leidos: function(){ return JSON.parse(JSON.stringify(avLeidos)); },
-  borrarLeidos: function(){ avLeidos = {}; guardarCache(); pintarNotis(); },
-  notis: function(){
-    var el = $("notis");
-    return {visible: !el.classList.contains("oculta") && el.offsetHeight > 0,
-            filas: [].map.call(el.querySelectorAll(".noti"), function(b){
-              var r = b.getBoundingClientRect(), lz = b.querySelector(".luz");
-              return {id: b.dataset.noti, nivel: b.dataset.nivel || "", fondo: lz ? getComputedStyle(lz).backgroundColor : "",
-                      hora: (b.querySelector(".nh") || {}).textContent,
-                      texto: (b.querySelector(".nt") || {}).textContent, tag: b.tagName, alto: Math.round(r.height)};
-            }),
-            mas: (el.querySelector(".nmas") || {}).textContent || "",
-            x: (function(){ var b = el.querySelector(".nx"); if(!b || !b.offsetHeight) return null;
-                            var r = b.getBoundingClientRect(), f = el.getBoundingClientRect();
-                            return {id: b.dataset.notix, ancho: Math.round(r.width), alto: Math.round(r.height),
-                                    derecha: r.right >= f.right - 12}; })(),
-            // 2080 {diseno} punto 4: la tira ya no vive entre las pestañas y el chat. ahora se mide que este
-            // DEBAJO del historial (y por lo tanto fuera de la cabecera), pegada al pie.
-            fueraCabecera: (function(){ var t = $("tabs").getBoundingClientRect(), n = el.getBoundingClientRect(),
-                                            h = $("hist").getBoundingClientRect();
-                                        return !$("cabecera").contains(el) && n.top >= t.bottom - 1 &&
-                                               n.top >= h.bottom - 1; })()};
+  borrarLeidos: function(){ avLeidos = {}; guardarCache(); pintarAvisos(); },
+  // 2151 {tira}: NINGUN aviso se pinta adentro del panel del chat, ni arriba, ni abajo, ni flotando. la
+  // campana (`#nlista`), el modal (`#modal`) y el de push (`#notimodal`) viven fuera de `#panel-chat`, asi que
+  // cualquier cosa de avisos que aparezca aca adentro es la tira volviendo. `prueba_web_tabs` lo chequea.
+  avisosEnChat: function(){
+    var pc = $("panel-chat");
+    if(!pc) return {tira: false, nodos: [], alto: 0};
+    var sel = "#notis, .noti[data-noti], [data-notix], [data-notis], .nfila[data-nid]";
+    var hay = [].map.call(pc.querySelectorAll(sel), function(e){
+      return {id: e.id || "", clase: e.className || "", alto: Math.round(e.getBoundingClientRect().height)};
+    });
+    return {tira: !!$("notis"), nodos: hay, alto: hay.reduce(function(a, e){ return a + e.alto; }, 0)};
   },
   nodos: function(){ return ((widDatos || {}).nodos || {}).nodos || []; },
   clasificar: clasificar, temaActivo: function(){ return temaActivo(); },

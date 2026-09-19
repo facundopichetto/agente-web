@@ -1253,11 +1253,11 @@
   #ver-votacion:active{opacity:.55}
   #ver-votacion.oculta{display:none!important}
   /* el nivel de cada notificacion: la misma paleta que `recetas/nodos.py` (`recetas/nivel_aviso.py`) */
-  #notis .luz.rojo,#nlista .luz.rojo,#campana .badge.rojo{background:var(--rojo)}
-  #notis .luz.naranja,#nlista .luz.naranja,#campana .badge.naranja{background:var(--naranja)}
-  #notis .luz.amarillo,#nlista .luz.amarillo,#campana .badge.amarillo{background:var(--amarillo)}
-  #notis .luz.verde,#nlista .luz.verde,#campana .badge.verde{background:var(--verde)}
-  #notis .luz.gris,#nlista .luz.gris,#campana .badge.gris{background:var(--gris)}
+  #nlista .luz.rojo,#campana .badge.rojo{background:var(--rojo)}
+  #nlista .luz.naranja,#campana .badge.naranja{background:var(--naranja)}
+  #nlista .luz.amarillo,#campana .badge.amarillo{background:var(--amarillo)}
+  #nlista .luz.verde,#campana .badge.verde{background:var(--verde)}
+  #nlista .luz.gris,#campana .badge.gris{background:var(--gris)}
   /* 2078 {home} (facundo, 2026-09-18): se fue el `home` de seis cajas de la 1922/2035 (`#votmenu`) y con el el
      boton de sub-vista `#selsub`: la HOME de la vista es `listas` y el votador se abre tocando. lo que queda del
      molde de la 2035 (grilla de dos columnas, `--caja-sombra`, una columna en el celu) vive en `#sellistas`. */
@@ -1465,7 +1465,6 @@
     /* dedo: los seis botones de la barra se tocan con el pulgar, todos del mismo alto */
     .bb{height:32px;padding:4px 6px;gap:4px}
     #nodos .nodo{min-height:32px}   /* dedo: el label se toca aunque no parezca boton */
-    #notis .noti{min-height:40px;font-size:18px}   /* dedo: el aviso y su `x` se tocan con el pulgar */
     #mcuerpo textarea.nresp{font-size:var(--texto-max)}   /* ios no zoomea al enfocar */
     /* 1829: en celu los nodos ocupan solo lo suyo (no empujan) para que chat | widgets quede contra el borde
        izquierdo; sin nodos pintados, la caja no deja ni el gap */
@@ -1561,24 +1560,11 @@
   /* + de pestaña nueva sin borde (facundo, 2026-09-15, orden 1557): el 1px vuelve al padding, mismo alto */
   #tabs .barrabtn[data-accion="nueva_tab"]{border:0;padding:3px 8px}
   #tabs .relleno{flex:1 1 auto;min-width:8px}
-  /* ---------- notificaciones (facundo, 2026-09-13, orden 1162) ----------
-     solo el ultimo aviso sin leer, debajo de las pestañas, en una linea (hora + primeras palabras), sin look de
-     boton como la barra de nodos. tocar abre el detalle; la `x` lo marca leido y pasa al siguiente (1170: "leer
-     mas no, solo la ultima. y que se pueda cerrar"). la lista entera vive en la campanita del header. */
-  /* 2080 {diseno} punto 4: la tira ya no vive entre las pestañas y el chat (ahi tapaba el titulo y empujaba la
-     charla al aparecer). es el ultimo hermano de `#panel-chat`, abajo del historial y arriba del pie. */
-  #notis{flex:0 0 auto;display:flex;align-items:center;padding:3px 0 3px 10px;background:var(--fondo-panel)}
-  #notis.oculta{display:none}
-  #notis .noti{flex:1 1 auto;display:flex;align-items:center;gap:6px;min-width:0;background:none;border:0;padding:0;margin:0;
-    color:var(--blanco);font-size:15px;line-height:18px;cursor:pointer;white-space:nowrap;
-    user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
-  #notis .luz{width:7px;height:7px;border-radius:50%;background:var(--amarillo);flex:0 0 auto}
-  #notis .nh{color:var(--gris);flex:0 0 auto}
-  #notis .nt{overflow:hidden;text-overflow:ellipsis;min-width:0}
-  #notis .nx{flex:0 0 auto;width:40px;height:40px;margin:-11px 0;display:flex;align-items:center;justify-content:center;
-    background:none;border:0;padding:0;color:var(--gris);font:inherit;font-size:var(--texto-max);cursor:pointer;
-    -webkit-tap-highlight-color:transparent}
-  #notis .nx:active{color:var(--blanco)}
+  /* ---------- notificaciones: NO se pintan en el chat (facundo, 2026-09-19, orden 2151 {tira}) ----------
+     la tira `#notis` de la 1162 (el ultimo aviso sin leer, primero entre las pestañas y el chat, despues abajo
+     del historial por la 2080 punto 4) se fue del todo: ningun aviso se pinta adentro de `#panel-chat`. los
+     avisos viven SOLO en la campana (`#campana` / `#nlista`, 1166 y 2022) y en el modal de push. lo unico que
+     queda aca de aquella tira es la caja de responder del detalle, que la campana sigue usando. */
   #mcuerpo textarea.nresp{display:block;width:100%;box-sizing:border-box;margin-top:10px;background:#000;color:var(--blanco);
     border:1px solid var(--linea);border-radius:4px;padding:6px;font:inherit;resize:vertical;min-height:60px}
   /* ---------- sincronizando (facundo, 2026-09-11) ----------
