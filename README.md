@@ -1357,7 +1357,7 @@ bloque `nube` de `recetas/prueba_web_tabs` (tailscale colgado + nube viva en men
 - **campana** (`#campana`, a la izquierda de la persona): badge chiquito con las no leidas y fondo del color de la peor
   (rojo error, naranja problema, amarillo advertencia, verde ok, gris info). tocarla abre `#nlista`: solo las no leidas,
   la mas nueva arriba, cada fila con circulito, hora, texto, `responder` y `×`; abajo `cerrar todas`. las leidas son las
-  mismas `avisos_leidos` de `tabs.json`. la tira `#notis` usa el mismo circulito. el nivel viene en `notificaciones[].nivel`.
+  mismas `avisos_leidos` de `tabs.json`. (hasta la 2151 {tira} la tira `#notis` del chat usaba el mismo circulito; esa tira se fue). el nivel viene en `notificaciones[].nivel`.
 - **persona** (`#persona`, reemplaza a `[⚙]`): menu con la cuenta en uso (`usage.reparto`), `cuenta <x>` / `cuenta auto`
   (comando crudo, sin modelo), `settings del board` (push y widgets ocultos), `reinicia` y `salir` con confirmacion.
 - **widgets**: iconos del header a 17 px (20 px con 40 px de area en celu) y `×` que oculta la caja; vuelve con `mostrar`
@@ -1374,7 +1374,7 @@ no de hex sueltos:
 | variable | nivel | quien lo usa | hoy |
 |---|---|---|---|
 | `--fondo-chat` | 0 | `#panel-chat` | `#000000` |
-| `--fondo-panel` | 1 | `#panel-widgets`, `#notis`, `#sync` | `#040404` |
+| `--fondo-panel` | 1 | `#panel-widgets`, `#sync` | `#040404` |
 | `--fondo-caja` | 2 | `.caja`, pestaña activa | `#080808` |
 | `--fondo-hundido` | 3 | pista de las barras de `usage` | `#0b0b0b` |
 
