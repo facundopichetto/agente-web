@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.386">
-<link rel="manifest" href="manifest.json?v=4.386">
+<meta name="agente-web-version" content="4.387">
+<link rel="manifest" href="manifest.json?v=4.387">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.386">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.387">
 </head>
 <body>
 
@@ -2152,7 +2152,9 @@ function nodoMsg(m){
   var cab = document.createElement("div");
   cab.innerHTML = '<span class="quien"></span><span class="ts"></span>';
   cab.querySelector(".quien").textContent = m.quien;
-  cab.querySelector(".ts").textContent = " · " + desde(m.iso || new Date().toISOString());
+  var isoMsg = m.iso || new Date().toISOString();
+  cab.querySelector(".ts").textContent = " · " + selloMsg(isoMsg);
+  div.dataset.dia = diaBA(fecha(isoMsg));   // 2132 {dia}: de que dia es, para la linea separadora del hilo
   // `claudio · 12:46 · cloud`: que nodo contesto (facundo, 2026-09-13: el modelo viaja en el json pero no se
   // pinta). mensajes viejos sin nodo: nada.
   // `f · 12:46 · iphone`: desde que dispositivo escribio facundo (1140). mensajes viejos sin `desde`: nada.
@@ -2506,6 +2508,45 @@ function hora12(h, m){
   if(!(h >= 0 && h <= 23 && m >= 0 && m <= 59)) return "";
   return ((h % 12) || 12) + ":" + pad2(m) + " " + (h < 12 ? "am" : "pm");
 }
+// 2132 {dia}: el dia (en buenos aires, no en la zona del dispositivo) de un ms -> `2026-09-19`. con eso se
+// sabe si un mensaje es de hoy y donde cambia el dia en el hilo. el corte es a medianoche de facundo.
+var fmtDiaBA = null;
+function diaBA(ms){
+  ms = +ms || 0;
+  var d = new Date(ms);
+  if(!ms || isNaN(d)) return "";
+  try{
+    if(!fmtDiaBA) fmtDiaBA = new Intl.DateTimeFormat("en-US", {timeZone: TZ_BA, year: "numeric", month: "2-digit", day: "2-digit"});
+    var pp = {};
+    fmtDiaBA.formatToParts(d).forEach(function(x){ pp[x.type] = x.value; });
+    if(pp.year && pp.month && pp.day) return pp.year + "-" + pad2(+pp.month) + "-" + pad2(+pp.day);
+  }catch(x){}
+  return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
+}
+function hoyBA(){ return diaBA(Date.now()); }
+// `2026-09-19` + n dias, en el calendario (sin zonas: buenos aires no tiene horario de verano)
+function diaMas(dia, n){
+  var p = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dia || ""));
+  if(!p) return "";
+  var d = new Date(Date.UTC(+p[1], +p[2] - 1, +p[3]) + (+n || 0) * 86400000);
+  return d.getUTCFullYear() + "-" + pad2(d.getUTCMonth() + 1) + "-" + pad2(d.getUTCDate());
+}
+function ddmm(dia){
+  var p = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dia || ""));
+  return p ? p[3] + "/" + p[2] : "";
+}
+// la hora de un mensaje del hilo: los de hoy solo la hora (1660), los de otro dia con `dd/mm` adelante
+function selloMsg(iso){
+  var t = fecha(iso), h = desde(iso), d = diaBA(t);
+  return (t && d && d !== hoyBA()) ? ddmm(d) + " " + h : h;
+}
+// el texto de la linea separadora del dia que empieza: `ayer`, `hoy` o `dd/mm`
+function etiquetaDia(dia){
+  var hoy = hoyBA();
+  if(dia === hoy) return "hoy";
+  if(dia === diaMas(hoy, -1)) return "ayer";
+  return ddmm(dia);
+}
 // una hora escrita de cualquier forma (`19:41`, `7:41 pm`, `7:41pm`) -> `7:41 pm`, para poder compararlas
 function norm12(t){
   t = String(t || "").trim().toLowerCase();
@@ -2858,7 +2899,30 @@ function pintarMsg(m, arriba){
   if(!arriba && m.clase === "yo" && !renderando) refrescarCajas();
   if(!arriba && m.clase === "agente") pintarChips();   // contesto el daemon: sugerencias nuevas
   if(!arriba && m.clase === "agente") spConfirmo(m);   // 1432: la confirmacion de una carga del widget de salud
+  if(!renderando) sepDias();                            // 2132 {dia}: el hilo cambio, las separadoras tambien
   if(!arriba && vuelo) pintarVuelo();                   // el bloque en vuelo queda siempre al final
+}
+// 2132 {dia} (facundo, 2026-09-19: "si son de otro dia que no es hoy... el separador"): entre el ultimo
+// mensaje de un dia y el primero del siguiente va UNA linea con el dia que empieza (`ayer`, `hoy`, `18/09`).
+// arriba del primer mensaje del hilo nunca va: si la charla arranca hoy no se pinta nada. la dibuja el css
+// (`.diasep`), nunca un `---` de texto. el bloque en vuelo (`#vuelo`, sin `data-dia`) no cuenta.
+function sepDias(){
+  if(!lista) return;
+  [].forEach.call(lista.querySelectorAll(".diasep"), function(n){ n.parentNode.removeChild(n); });
+  var prev = "";
+  [].forEach.call(lista.querySelectorAll(".msg[data-dia]"), function(n){
+    var d = n.getAttribute("data-dia") || "";
+    if(!d) return;
+    if(prev && d !== prev){
+      var s = document.createElement("div");
+      s.className = "diasep"; s.setAttribute("data-dia", d);
+      var t = document.createElement("span");
+      t.textContent = etiquetaDia(d);
+      s.appendChild(t);
+      lista.insertBefore(s, n);
+    }
+    prev = d;
+  });
 }
 var renderando = false;   // el render entero arma cada caja ya con todos los mensajes: no hace falta refrescar
 // 1963 {player}: la alineacion estilo whatsapp (facundo a la derecha con 5% de margen a la izquierda, flaudio a
@@ -2876,6 +2940,7 @@ function render(){
   if(lista) lista.innerHTML = "";
   renderando = true;
   try{ msgs.forEach(function(m){ pintarMsg(m, false); }); } finally { renderando = false; }
+  sepDias();                         // 2132 {dia}: una sola pasada al final del render, no una por mensaje
   pintarChips();
   if(!vueloContestado()) pintarVuelo();
   if(ancla && !ancla.abajo) anclaPoner(ancla);
@@ -8269,6 +8334,15 @@ function refrescarEdad(){
   for(var i = 0; i < els.length; i++) if(els[i].innerHTML !== h) els[i].innerHTML = h;
 }
 setInterval(refrescarEdad, 1000);
+// 2132 {dia}: el board queda abierto de noche. al cruzar la medianoche de facundo, lo que era `hoy` pasa a
+// `ayer`: se repinta el hilo una vez (el reloj es el mismo de 1 s, la comparacion es un string).
+var diaVisto = hoyBA();
+setInterval(function(){
+  var h = hoyBA();
+  if(h === diaVisto) return;
+  diaVisto = h;
+  if(typeof render === "function") render();
+}, 1000);
 function pad(t, n, der){
   t = String(t === null || t === undefined ? "" : t);
   if(t.length > n) t = t.slice(0, n);
@@ -11496,6 +11570,7 @@ window.__agente = {
   // 2096 {codigocaja}: el codigo corto que manda una caja (`prueba_caja_codigo`)
   codigoCaja: codigoCaja, esCodigoCaja: esCodigoCaja, cajaCod: cajaCod,
   hhmmDe: hhmmDe, citaCaja: citaCaja, hhmmBA: hhmmBA,
+  diaBA: diaBA, hoyBA: hoyBA, diaMas: diaMas, ddmm: ddmm, selloMsg: selloMsg, etiquetaDia: etiquetaDia, sepDias: sepDias,   // 2132 {dia}
   hora12: hora12, norm12: norm12, horaNoti: horaNoti,   // 1660: 12 h con am/pm en todo lo que ve facundo   // 1203: hora de envio de cada caja marcada
   // 1212: purga de `agente_opciones` (24 h y claves invalidas)
   purgarOpc: purgarOpc, opcHecho: function(){ return JSON.parse(JSON.stringify(opcHecho)); },

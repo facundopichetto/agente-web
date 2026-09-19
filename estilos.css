@@ -91,6 +91,11 @@
   }
   .msg{margin:0 0 14px 0;white-space:pre-wrap;word-break:break-word;font-size:18px}
   .msg .ts{color:var(--gris);font-size:15px}
+  /* 2132 {dia} (facundo, 2026-09-19): la linea que separa un dia del siguiente en el hilo. nunca un `---` de
+     texto: una linea fina a cada lado del dia, fuente chica (la de `.ts`) y opacidad baja. */
+  .diasep{display:flex;align-items:center;gap:8px;margin:0 0 14px 0;color:var(--gris);font-size:15px;
+    opacity:.55;user-select:none;text-align:center}
+  .diasep:before,.diasep:after{content:"";flex:1 1 auto;height:1px;background:var(--gris)}
   /* nodo · modelo y mini estado de cada respuesta (2026-09-13) */
   .msg .nodo,.msg .mini{color:var(--gris);font-size:15px;user-select:none}
   .msg .mini{margin-left:6px}
