@@ -1521,7 +1521,7 @@
     color:var(--verde);background:var(--fondo-caja);
   }
   #tabs .tab .x{color:#555;margin-left:7px}
-  /* 2097 {pestanas}: con la pestaña en 52.8 px un boton de 27.7 px flotando 3 px arriba del piso quedaba
+  /* 2097 {pestanas}: con la pestaña en 56.8 px un boton de 27.7 px flotando 3 px arriba del piso quedaba
      descolgado. el boton no fija su alto: se estira al de la fila (`align-self:stretch`) y centra su glifo,
      asi queda del mismo alto que las pestañas y apoyado abajo, sin numeros a mano que haya que recalcular
      cada vez que cambia el padding de `.tab`. */
