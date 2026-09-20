@@ -993,6 +993,9 @@
     text-transform:none;letter-spacing:0;font-size:15px;
   }
   .caja > .tit > .wacc{flex:0 0 auto;display:flex;align-items:center;gap:4px}
+  /* 2240 {widgets} paso 4: la hora del ultimo refresco de ESA caja, en 12 h am/pm. gris y chica: es un dato
+     de pie de pagina, no un titulo; el `hace N` de al lado sigue siendo el que avisa que quedo viejo. */
+  .caja > .tit > .wacc .wfre{color:#4a4a4a;font-size:13px;letter-spacing:0;text-transform:none;margin-right:5px}
   .caja > .tit > .wacc .wage{color:#4a4a4a;font-size:13px;letter-spacing:0;text-transform:none}
   .caja > .tit > .wacc .wage.wage-vieja{color:var(--amarillo)}
   .caja > .tit > .wacc .wage.wage-muy{color:var(--rojo)}
@@ -1241,10 +1244,19 @@
   .esctab .enom,.esctab .eth,.esctab .ecel{min-width:0;overflow:hidden;text-overflow:ellipsis}
   .esctab .ecel{text-align:right}
   @media (max-width:480px){ .esctab{column-gap:2px;font-size:15px} }   /* 1938: 12px (1946: +2) y el gap a 2px: asi las 7 columnas siguen entrando en 390px */
-  /* 2176 {models}: la segunda grilla del widget `models`, una fila por MODELO (plata, error, cuota, red,
-     tok/s y frescura). mismas 7 columnas y mismas reglas que `.esctab`: solo se despega de la tabla de
-     arriba con un margen, no cambia ni fuente ni gap (una tabla que no entra se arregla con el gap, 1946) */
-  .esctab.mdtab{margin-top:4px}
+  /* 2176 {models}: la segunda grilla del widget `models`, una fila por MODELO (plata, error, cuota, lat,
+     tok/s y frescura). misma fuente y mismo gap que `.esctab` (una tabla que no entra se arregla con el gap,
+     1946), solo se despega de la tabla de arriba con un margen.
+     2240 {widgets} paso 2: con una fila por modelo el nombre pasa a ser largo (`gem flash-lite`,
+     `mist ministral-14b`) y el reparto `fr` le robaba ancho a los numeros: `11%` salia `1…`. los seis numeros
+     pasan a `max-content` (nunca se cortan) y lo que sobra es del nombre, que corta con `…`. */
+  /* el nombre del modelo se lleva SU renglon entero y los seis numeros van abajo, alineados. la columna de
+     widgets mide lo mismo en el celu que en la compu (~370 px): con el nombre al lado de seis numeros queda
+     en `o\2026` / `g\2026` y dos modelos de la misma familia (`ministral-14b` vs `ministral-3b`) se leen igual,
+     que es justo lo que esta tabla viene a arreglar. */
+  .esctab.mdtab{margin-top:4px;grid-template-columns:repeat(6,minmax(max-content,1fr))}
+  .esctab.mdtab>.enom{grid-column:1/-1;text-align:left;padding-top:2px}
+  .esctab.mdtab>.eth:first-child{display:none}
   /* 2176: la linea `ahora` (lo que esta corriendo en este momento) crece con la cola: envuelve, y las demas
      lineas del widget siguen siendo `pre`. la sangria deja la segunda linea debajo de los chips, no del label. */
   .caja .cuerpo.tabla .ahorafila{display:block;white-space:normal;padding-left:11ch;text-indent:-11ch}

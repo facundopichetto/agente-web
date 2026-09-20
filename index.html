@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.405">
-<link rel="manifest" href="manifest.json?v=4.405">
+<meta name="agente-web-version" content="4.406">
+<link rel="manifest" href="manifest.json?v=4.406">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.405">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.406">
 </head>
 <body>
 
@@ -6894,8 +6894,9 @@ function chipsDale(texto){
   d.forEach(function(frag){ (frag.match(/\d{1,3}/g) || []).forEach(sumar); });
   return ns.map(function(n){ return {cmd: "dale " + n, letra: "dale", texto: n}; });
 }
-// oportunidades: si la respuesta nombra `op N` se ofrecen las opciones REALES de ese item
-// (widgets.json, que es lo que publica oportunidades.json). si no hay datos, la letra que diga el texto.
+// oportunidades: si la respuesta nombra `op N` se ofrecen las opciones REALES de ese item, si por algun
+// lado llegan (un `widgets.json` viejo del buzon). desde la 2240 el server no publica la clave: el camino
+// normal es el de abajo, la letra que diga el texto.
 function chipsOp(texto){
   var vistos = {}, chips = [], m, re = /\bop\s+(\d{1,3})(?:\s*([A-D])\b)?/gi;
   var items = ((widDatos || {}).oportunidades || {}).items || [];
@@ -8559,16 +8560,34 @@ function haceSeg(s){
 // muestra nada (el daemon publica cada 60 s, un `hace 40s` es ruido); pasados los 5 min `hace N min` en
 // ambar, y pasados los 30 en rojo: el dato esta viejo, algo pasa. el reloj de 1 s (`refrescarEdad`)
 // solo reescribe los `.wedad`, sin repintar las cajas.
-function edadWid(){
-  if(!widTs) return "";
-  var min = Math.floor((Date.now() - widTs) / 60000);
-  if(min < 5) return "";
+// 2240 {widgets} paso 4 (panel `widgets`, 5 de 5): la hora es de CADA caja, no del json entero. el server
+// manda `_frescura[clave] = {ts, h12, ms}` con la hora en la que armo ESE pedazo (`widgets_json.datos`), asi
+// una caja que sale de un cache de 6 h no se lee igual de fresca que una que se acaba de armar. la hora va
+// siempre, en 12 h am/pm y en gris; el `hace N` en ambar/rojo sigue apareciendo solo cuando el dato quedo viejo.
+function frescuraWid(clave){
+  var f = ((widDatos || {})._frescura || {})[clave];
+  if(!f || !f.ts) return null;
+  var t = Date.parse(String(f.ts).replace(" ", "T"));
+  return {ms: t || widTs, h12: f.h12 || ""};
+}
+function edadWid(clave){
+  var f = clave ? frescuraWid(clave) : null;
+  var t = f ? f.ms : widTs;
+  if(!t) return "";
+  var hora = f && f.h12 ? '<span class="wfre">' + esc(f.h12) + "</span>" : "";
+  var min = Math.floor((Date.now() - t) / 60000);
+  if(min < 5) return hora;
   var txt = min < 120 ? min + " min" : haceSeg(min * 60);
-  return '<span class="wage ' + (min >= 30 ? "wage-muy" : "wage-vieja") + '">hace ' + esc(txt) + "</span>";
+  return hora + '<span class="wage ' + (min >= 30 ? "wage-muy" : "wage-vieja") + '">hace ' + esc(txt) + "</span>";
 }
 function refrescarEdad(){
-  var h = edadWid(), els = document.querySelectorAll("#widgets .wedad");
-  for(var i = 0; i < els.length; i++) if(els[i].innerHTML !== h) els[i].innerHTML = h;
+  var cajas = document.querySelectorAll("#widgets .caja");
+  for(var i = 0; i < cajas.length; i++){
+    var el = cajas[i].querySelector(".wedad");
+    if(!el) continue;
+    var h = edadWid(cajas[i].getAttribute("data-w"));
+    if(el.innerHTML !== h) el.innerHTML = h;
+  }
 }
 setInterval(refrescarEdad, 1000);
 // 2132 {dia}: el board queda abierto de noche. al cruzar la medianoche de facundo, lo que era `hoy` pasa a
@@ -8599,7 +8618,7 @@ function caja(tit, extra, cuerpo, tabla, clave){
          '<div class="tit"><span class="wtit" data-fold="' + esc(clave) + '" title="' +
          (pleg ? "desplegar" : "plegar") + '">' + esc(tit) + "</span>" +
          '<span class="wesc">' + (extra || "") + "</span>" +
-         '<span class="wacc"><span class="wedad">' + edadWid() + "</span>" +
+         '<span class="wacc"><span class="wedad">' + edadWid(clave) + "</span>" +
          '<button class="wbtn" type="button" data-esc="' + esc(clave) + '" title="escribir sobre este widget"><span class="wglf">✎</span></button>' +
          '<button class="wbtn" type="button" data-ref="' + esc(clave) + '" title="actualizar"><span class="wglf">\u21bb</span></button>' +
          '<button class="wbtn" type="button" data-set="' + esc(clave) + '" title="settings"><span class="wglf">\u2699</span></button>' +
@@ -8843,8 +8862,9 @@ function cajaTickets(t){
 }
 
 // 2144 {oportunidades}: el widget `opportunities` (y su caja `decided`) se fueron del board a pedido
-// de facundo ("saca el widget oportunidades es feo y no tiene sentido"). `oportunidades.py` y el
-// dato de widgets.json siguen: de ahi salen los chips `op N X` del chat.
+// de facundo ("saca el widget oportunidades es feo y no tiene sentido"). 2240 {widgets} paso 1: el dato
+// tampoco viaja mas en widgets.json (eran 20.953 bytes cada 60 s que no pintaba nadie), asi que `chipsOp`
+// arma el chip con la letra que diga el texto; `oportunidades.py` sigue entero como script.
 
 // 1832: `cajaSombra` (el widget `models`) vive en `web/widgets/sombra.js` (la clave del setting y el id siguen `sombra`)
 
@@ -9724,8 +9744,13 @@ function temaNoti(n){ return n && n.tema && esTema(n.tema) ? normTema(n.tema) : 
 // facundo nunca las lee: se sacan del titulo, del cuerpo y de la cita de la respuesta.
 var RE_MARCA_NOTI = /\s*\[forzar:\d{1,5}\]/g;
 function textoNoti(n){ return String((n && n.texto) || "").replace(RE_MARCA_NOTI, ""); }
-function tituloNoti(n){ return unaLinea(n.titulo || textoNoti(n), 160); }
-function cortoNoti(n){ return unaLinea(n.titulo ? n.titulo + (n.cuerpo ? " · " + n.cuerpo : "") : textoNoti(n), 200); }
+// 2238 {cola} paso 5: un aviso de varios renglones (el parte de la mañana) viaja en UNA linea de avisos.md
+// con los renglones separados por `⏎`, porque ese archivo es una linea por aviso. en la fila de la campana
+// se leen como ` · ` (el titulo es de una linea) y en el detalle vuelven a ser renglones de verdad.
+var RE_NL_NOTI = /\s*⏎\s*/g;
+function renglonesNoti(t){ return String(t || "").replace(RE_NL_NOTI, "\n"); }
+function tituloNoti(n){ return unaLinea((n.titulo || textoNoti(n)).replace(RE_NL_NOTI, " · "), 160); }
+function cortoNoti(n){ return unaLinea((n.titulo ? n.titulo + (n.cuerpo ? " · " + n.cuerpo : "") : textoNoti(n)).replace(RE_NL_NOTI, " · "), 200); }
 // repinta lo que depende de los avisos sin leer: el badge de la campana, su desplegable si esta abierto y el
 // modal de una push ya abierta. desde la 2151 {tira} no hay nada mas que pintar: el chat no muestra avisos.
 function pintarAvisos(){
@@ -9738,7 +9763,7 @@ function pintarAvisos(){
 // la cita que lleva la respuesta: `> aviso hh:mm: <texto>` + linea vacia (el daemon la separa con `marcas_chat`)
 function citaNoti(n){
   return "> aviso " + (hora12((n.fecha || "").slice(11, 16)) || (n.fecha || "").slice(0, 16)) +
-         ": " + unaLinea(textoNoti(n), ESC_CHARS) + "\n\n";
+         ": " + unaLinea(textoNoti(n).replace(RE_NL_NOTI, " · "), ESC_CHARS) + "\n\n";
 }
 function responderNoti(n, texto){
   texto = String(texto || "").trim();
@@ -9756,7 +9781,7 @@ function abrirNoti(id){
   var n = notisPor[id];
   if(!n) return false;
   var tema = temaNoti(n);
-  var txtN = textoNoti(n);
+  var txtN = renglonesNoti(textoNoti(n));   // 2238 {cola} paso 5: el parte de la mañana es de varios renglones
   var conUrl = RE_URL.test(txtN);
   RE_URL.lastIndex = 0;
   // 2202 {forzar} pieza 3: el aviso de "la cola espera" trae `[forzar:<n>]`, y eso es un boton adentro del
@@ -10592,7 +10617,9 @@ function modalDe(o){
     }]);
   } else if(o.tipo === "modelo"){
     var inf = d.info || {}, hoy = d.hoy || {}, med = inf.medidas || {};
-    m.titulo = "model: " + d.prov;
+    // 2240 {widgets} paso 2: una fila de la grilla es un MODELO, no un proveedor: el titulo lo dice (los chips
+    // de `hoy` siguen siendo por proveedor y llegan sin `modelo`)
+    m.titulo = "model: " + d.prov + (d.modelo && d.modelo !== d.prov ? " " + d.modelo : "");
     m.cuerpo = esc(inf.que_es || "modelo de respaldo que se mide en sombra.") +
       '\n\n<span class="g">hoy</span> ' + esc(inf.estado || hoy.estado || "?") +
       (hoy.latencia !== null && hoy.latencia !== undefined ? " " + hoy.latencia + "s" : "") +

@@ -35,16 +35,6 @@
     if(x["in"] === null || x["in"] === undefined) return '<span class="ecel g">-</span>';
     return '<span class="ecel c">' + esc(String(x["in"])) + "/" + esc(String(x.out)) + "</span>";
   }
-  // 2176 paso 2: una tasa 0..100 en la grilla. verde hasta 5, ambar hasta 20, rojo arriba: el ojo tiene que
-  // encontrar al que rebota sin abrir ningun modal.
-  function tasa(v){
-    if(v === null || v === undefined) return '<span class="ecel g">-</span>';
-    return '<span class="ecel ' + (v < 5 ? "v" : v < 20 ? "a" : "r") + '">' + esc(String(v)) + "%</span>";
-  }
-  function seg(v, cl){
-    if(v === null || v === undefined) return '<span class="ecel g">-</span>';
-    return '<span class="ecel ' + (cl || "c") + '">' + esc(String(v)) + "s</span>";
-  }
   // 2176 paso 4: la frescura. lo de hace minutos en cian, lo de hace horas en gris, lo de dias en ambar:
   // un acierto de hace cinco dias no vale lo mismo que uno de hace diez minutos, y hasta hoy se veian igual.
   function fresco(e){
@@ -92,47 +82,58 @@
     return h;
   }
 
-  // 2176 {models}: la tabla de arriba compara **categorias**; esta compara **modelos**, que es donde viven la
-  // plata (paso 1), la tasa de error y la de cuota (paso 2, antes escondidas en el modal), la red contra la
-  // velocidad de generacion (paso 3) y la frescura (paso 4). una fila por modelo que hoy se llama.
-  function modelosHtml(sb, cols, cortos){
-    var pr = sb.precios || {}, md = sb.modelos || {}, rem = sb.remotos || [];
-    var filas = cols.filter(function(c){ return md[c] || pr[c]; });
+  // 2176 {models}: la tabla de arriba compara **categorias**; esta compara **MODELOS**, que es donde viven la
+  // plata (paso 1), la tasa de error y la de cuota (paso 2), la red contra la velocidad de generacion (paso 3)
+  // y la frescura (paso 4).
+  // 2240 {widgets} paso 2 (panel `widgets`, 5 de 5): una fila por MODELO, no por proveedor. la columna `local`
+  // tapaba a los ollama y la de `mistral` a tres ministral de distinto precio, asi que dos modelos con 0% y 32%
+  // de error se leian como una sola fila. el proveedor pasa a ser un dato de la fila (el prefijo del nombre).
+  // no rompe la 1045 ("una tabla de widget compara UNA cosa"): sigue comparando modelos, cambio la unidad.
+  // 2240 paso 3: `lat` (la latencia) entra a la grilla y el color de `err`, `429` y `lat` lo decide el server
+  // (`nivel`, como el widget `gasto`). la columna `red` de la 2176 se fue a la fila tocable: con una fila por
+  // modelo son ocho columnas y en 390 px los porcentajes salian cortados con `\u2026`, que es peor que no estar.
+  // la red sigue separada de la generacion, que es lo que pedia la 2176: `tok/s` en la grilla, `red` en el modal.
+  var NIVEL = {ok: "v", aviso: "a", mal: "r", sin: "g"};
+  function nombreModelo(prov, modelo, cortos){
+    var p = cortos[prov] || prov;
+    // el nombre de la fila no repite al proveedor: `gemini-flash-lite-latest` bajo `gem` es `flash-lite`
+    var m = String(modelo || "").split("/").pop().replace(/-latest$/, "").replace(/^gpt-/, "")
+              .replace(/^claude-/, "").replace(/:free$/, "")
+              .replace(new RegExp("^" + prov + "[-.]?", "i"), "");
+    if(!m || m === prov) return p;
+    // el nombre entero no entra en 390 px al lado de seis numeros. se corta por el MEDIO, no por el final:
+    // dos modelos de la misma familia se distinguen por el sufijo (`ministral-14b` vs `ministral-3b`) y
+    // cortando por atras las dos filas quedaban con el mismo texto. el nombre completo esta en el modal.
+    return p + " " + (m.length > 17 ? m.slice(0, 8) + "\u2026" + m.slice(-8) : m);
+  }
+  function celdaNivel(v, nivel, suf){
+    if(v === null || v === undefined) return '<span class="ecel g">-</span>';
+    return '<span class="ecel ' + (NIVEL[nivel] || "g") + '">' + esc(String(v)) + (suf || "") + "</span>";
+  }
+  function modelosHtml(sb, cortos){
+    var filas = sb.modelos_fila || [];
     if(!filas.length) return '<span class="g">sin modelos</span>';
-    function nombre(c){
-      var m = (md[c] || {}).modelo;
-      return (cortos[c] || c) + (m ? " " + String(m).split("/").pop().replace(/-latest$/, "").replace(/^gpt-/, "") : "");
-    }
-    var cel = [[], [], [], [], [], [], []];
-    filas.forEach(function(c){
-      var x = pr[c] || {}, me = (md[c] || {}).medidas || {};
-      cel[0].push(nombre(c));
-      // el `~` va con comillas simples a proposito: `prueba_web` prohibe armar duraciones a mano (el patron de
-      // concatenar una tilde con comillas dobles). esto no es una duracion: es la marca de `precio medido`.
-      cel[1].push(x.free ? "$0" : x.medido ? '~' + x.usd_tok : (x["in"] == null ? "-" : x["in"] + "/" + x.out));
-      cel[2].push(me.tasa_error == null ? "-" : me.tasa_error + "%");
-      cel[3].push(me.tasa_cuota == null ? "-" : me.tasa_cuota + "%");
-      cel[4].push(rem.indexOf(c) < 0 || me.red_s == null ? "-" : me.red_s + "s");
-      cel[5].push(me.gen_toks == null ? "-" : String(me.gen_toks));
-      cel[6].push(edadDe(me.ultimo) || "-");
-    });
-    var h = '<div class="esctab mdtab" style="grid-template-columns:' + esc(B.gridFr(cel)) + '">' +
-      ["modelo", "$/M", "err", "429", "red", "tok/s", "visto"].map(function(t){
+    // las columnas las fija el css (`.esctab.mdtab`): los seis numeros a `max-content` y el nombre con lo que
+    // sobre. el reparto `fr` de `B.gridFr` es para la tabla de arriba, donde todas las celdas son cortas.
+    var h = '<div class="esctab mdtab">' +
+      ["modelo", "$/M", "err", "429", "lat", "tok/s", "visto"].map(function(t){
         return '<span class="eth">' + t + "</span>"; }).join("");
-    filas.forEach(function(c){
-      var x = pr[c] || {}, me = (md[c] || {}).medidas || {}, remoto = rem.indexOf(c) >= 0;
+    filas.forEach(function(f){
+      var m = f.medidas || {}, x = f.precio || {}, n = f.nivel || {};
       // el `.it` (tocable) es el que entra en la grilla, asi que lleva el `enom`: sin eso la celda no se
-      // achica ni corta con `…` y la tabla se pasa del ancho de la caja en el celu (1946)
-      h += it({tipo: "modelo", tema: "tools", d: {prov: c, hoy: ((sb.hoy || {}).estados || {})[c] || {},
-                                                  info: md[c] || {}, precio: x, tabla: sb.tabla || {},
+      // achica ni corta con `\u2026` y la tabla se pasa del ancho de la caja en el celu (1946)
+      h += it({tipo: "modelo", tema: "tools", d: {prov: f.proveedor, modelo: f.modelo,
+                                                  hoy: ((sb.hoy || {}).estados || {})[f.proveedor] || {},
+                                                  info: Object.assign({}, (sb.modelos || {})[f.proveedor] || {},
+                                                                      {modelo: f.modelo, medidas: m}),
+                                                  precio: x, tabla: sb.tabla || {},
                                                   cats: sb.cats || [], veredictos: sb.veredictos || {}}},
-              esc(nombre(c))).replace('class="it"', 'class="it enom c"') +
-           plata(x) + tasa(me.tasa_error) + tasa(me.tasa_cuota) +
-           // la red solo tiene sentido en un remoto: el local no sale del server y claude no es una llamada sola
-           (remoto ? seg(me.red_s, "g") : '<span class="ecel g">-</span>') +
-           (me.gen_toks == null ? '<span class="ecel g">-</span>'
-                                : '<span class="ecel c">' + esc(String(me.gen_toks)) + "</span>") +
-           fresco(edadDe(me.ultimo));
+              esc(nombreModelo(f.proveedor, f.modelo, cortos))).replace('class="it"', 'class="it enom c"') +
+           plata(x) + celdaNivel(m.tasa_error, n.error, "%") + celdaNivel(m.tasa_cuota, n.cuota, "%") +
+           celdaNivel(m.latencia, n.lat, "s") +
+           (m.gen_toks == null ? '<span class="ecel g">-</span>'
+                               : '<span class="ecel c">' + esc(String(m.gen_toks)) + "</span>") +
+           fresco(f.edad);
     });
     return h + "</div>";
   }
@@ -215,7 +216,7 @@ function cajaSombra(sb){
                ' <span class="' + frcl + '">' + pad(fr || "-", 5, true) + "</span>"));
   });
   if(filas.length === 1) filas.push(vacio("sin corridas todavia"));
-  filas.push(modelosHtml(sb, cols, cortos));   // 2176: plata, fallas, red vs modelo y frescura, POR MODELO
+  filas.push(modelosHtml(sb, cortos));   // 2240 paso 2: una fila por MODELO, con plata, fallas, red y frescura
   filas.unshift(escal);   // 1832: la escalera va arriba de la tabla de la sombra
   var hoy = sb.hoy || {}, est = hoy.estados || {};
   if(Object.keys(est).length){
