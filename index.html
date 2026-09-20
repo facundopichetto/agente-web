@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.410">
-<link rel="manifest" href="manifest.json?v=4.410">
+<meta name="agente-web-version" content="4.411">
+<link rel="manifest" href="manifest.json?v=4.411">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.410">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.411">
 </head>
 <body>
 
@@ -182,6 +182,9 @@
          ponemos pequenas acciones arriba de los 3 botones si hay alguna cuarta". los chicos son POR LISTA y los
          manda el server (`extras` del json de la votacion, de `personal/botones-listas.json`): la web no redacta
          ninguno. van centrados sobre el boton del medio y se disparan con la flecha de ARRIBA del teclado -->
+    <!-- {gracia} (facundo, 2026-09-20): el voto que dispara follow o unfollow se puede deshacer mientras corre
+         el contador; el pase de lista de al lado ya se aplico y no tiene nada que deshacer -->
+    <div id="selgracia" class="oculta"></div>
     <div id="selextras" class="oculta"></div>
     <div id="selacciones" class="oculta"></div>
     <textarea id="seltxt" placeholder="algo para sumar (opcional)" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
@@ -4267,6 +4270,218 @@ function tjSigueEnLista(e, q){
   var d = (e.destinos || {})[q];
   return !d || String(d) === String(sel.filtro);
 }
+// ---------- {gracia} (facundo, 2026-09-20): la capa local de movimientos, encima de `listas.json` ----------
+// facundo, textual: "las listas no se actualizan luego de votar en el instatinder. se tiene que poder hacer en el
+// front independientemente de lo que pase en el back. sobre todo si es algo ENTRE LISTAS sin accion follow /
+// unfollow (...) si puse a alguien en following y me arrepiento, mi click de arrepentir es antes de que se dispare".
+// el voto vive en el browser hasta el `enviar` (2137) y `listas.json` lo arma el server cada 10 min, asi que entre
+// una cosa y la otra facundo veia SIEMPRE el estado viejo: los cuadrados de la home con el numero de antes y la
+// persona que acababa de mover todavia en su lista vieja. esta capa es lo que ve mientras el server se entera:
+// cada voto anota de que lista sale la persona y a cual entra (`destinos`, que manda el server: la web no deduce
+// ninguna lista) y el movimiento se REAPLICA sobre cada `listas.json` que baja (el refresco de la 2095 y el pedido
+// fresco de la 2143), asi ningun json viejo la devuelve a la lista de antes. un movimiento se limpia solo cuando el
+// json que llega ya la muestra en la lista destino, o cuando ese json es posterior al `enviar` que lo archivo.
+var MOV_LS = "agente_ig_mov", MOV_VIVE_MS = 7 * 86400000;
+var movs = null;
+function movLeer(){
+  if(movs) return movs;
+  movs = {};
+  try{
+    var j = JSON.parse(localStorage.getItem(MOV_LS) || "null"), ahora = Date.now();
+    if(j) Object.keys(j).forEach(function(k){ if(ahora - (j[k].ts || 0) < MOV_VIVE_MS) movs[k] = j[k]; });
+  }catch(x){}
+  return movs;
+}
+function movGuardar(){
+  try{ localStorage.setItem(MOV_LS, JSON.stringify(movLeer())); }catch(x){}
+}
+function movTodos(){ var m = movLeer(); return Object.keys(m).map(function(k){ return m[k]; }); }
+function movDe(id){ return movLeer()[String(id)] || null; }
+// el voto acaba de pasar: la persona se mueve YA. `destino` (y si el voto dispara follow/unfollow) lo dijo el server
+function movPoner(e, c, q){
+  var destino = (e.destinos || {})[q], accion = (e.colas || {})[q] || "";
+  var desde = c.lista || sel.filtro || "";
+  if(!destino || String(destino) === String(desde)) return null;   // `igual`: no se mueve de lista, no hay nada que pintar
+  var gracia = accion ? Math.max(0, e.gracia_ms || 0) : 0;   // {gracia}: solo lo que toca instagram tiene ventana
+  var m = {id: String(c.id), cuenta: c.cuenta || "", nombre: c.nombre || c.cuenta || "", foto: (c.fotos || [])[0] || "",
+           col: e.coleccion, q: q, desde: String(desde || ""), destino: String(destino), accion: accion,
+           ts: Date.now(), hasta: Date.now() + gracia, enviado: 0, ses: sel.sesion || ""};
+  movLeer()[m.id] = m; movGuardar();
+  gracPintar();
+  return m;
+}
+function movSacar(id){
+  var m = movLeer();
+  if(!m[String(id)]) return false;
+  delete m[String(id)]; movGuardar(); gracPintar();
+  return true;
+}
+// el `enviar` (o cerrar el votador, que tambien manda): desde ahora el server sabe. cualquier `listas.json` armado
+// DESPUES de este momento ya trae el movimiento aplicado, asi que ese json es el que limpia la capa local.
+function movEnviados(col, ses){
+  var m = movLeer(), n = 0;
+  Object.keys(m).forEach(function(k){
+    if(m[k].col !== col || m[k].enviado) return;
+    if(ses && m[k].ses && m[k].ses !== ses) return;
+    m[k].enviado = Date.now(); n++;
+  });
+  if(n) movGuardar();
+  return n;
+}
+// la `✕` (2002): lo de esta sesion no paso nunca (lo local no salio, y lo ya subido lo revierte el `cancelar`)
+function movTirar(col, ses){
+  var m = movLeer(), n = 0;
+  Object.keys(m).forEach(function(k){
+    if(m[k].col !== col || (ses && m[k].ses !== ses)) return;
+    delete m[k]; n++;
+  });
+  if(n){ movGuardar(); gracPintar(); }
+  return n;
+}
+function movTs(d){
+  var t = d && d.ts ? Date.parse(d.ts) : 0;
+  return t > 0 ? t : 0;
+}
+// el json que acaba de llegar confirma un movimiento? (la persona ya esta en la lista destino, o el json se armo
+// despues del `enviar` que lo archivo). recien ahi el movimiento local se va: hasta entonces se reaplica.
+function movPodar(d){
+  if(!d || !d.listas) return 0;
+  var m = movLeer(), ts = movTs(d), n = 0, enDestino = {};
+  d.listas.forEach(function(f){
+    (f.gente || []).forEach(function(p){ (enDestino[String(p.id)] = enDestino[String(p.id)] || {})[f.clave] = true; });
+  });
+  Object.keys(m).forEach(function(k){
+    var x = m[k];
+    if((enDestino[k] || {})[x.destino] || (x.enviado && ts && ts > x.enviado)){ delete m[k]; n++; }
+  });
+  if(n){ movGuardar(); gracPintar(); }
+  return n;
+}
+// `listas.json` con los movimientos locales encima: los conteos de cada cuadrado de la home y la gente de cada lista
+function movVista(d){
+  if(!d || !d.listas) return d;
+  movPodar(d);
+  var ms = movTodos();
+  if(!ms.length) return d;
+  var out = {}, k;
+  for(k in d) if(Object.prototype.hasOwnProperty.call(d, k)) out[k] = d[k];
+  out.listas = d.listas.map(function(f){
+    var g = {}, kk;
+    for(kk in f) if(Object.prototype.hasOwnProperty.call(f, kk)) g[kk] = f[kk];
+    g.gente = movGente(f, f.gente || []);
+    g.n = Math.max(0, (f.n || 0) + movDelta(f));
+    return g;
+  });
+  return out;
+}
+// cuanto cambia el numero de una lista por lo que facundo acaba de votar
+function movDelta(f){
+  var n = 0, tiene = {};
+  (f.gente || []).forEach(function(p){ tiene[String(p.id)] = true; });
+  movTodos().forEach(function(m){
+    if(m.destino === f.clave){ if(!tiene[m.id]) n += 1; return; }
+    if(m.desde === f.clave){ n -= 1; return; }
+    // 2134 {supervirtual}: una lista virtual (`super candidatas`) no es un destino de nadie, pero su gente sale del
+    // embudo: la que se movio de lista ya no esta ahi. solo se descuenta si de verdad venia en el json
+    if(f.virtual && tiene[m.id]) n -= 1;
+  });
+  return n;
+}
+function movGente(f, gente){
+  var fuera = {}, dentro = [];
+  movTodos().forEach(function(m){
+    if(m.destino === f.clave) dentro.push(m);
+    else if(m.desde === f.clave || f.virtual) fuera[m.id] = true;
+  });
+  var g = gente.filter(function(p){ return !fuera[String(p.id)]; });
+  dentro.forEach(function(m){
+    if(g.some(function(p){ return String(p.id) === m.id; })) return;
+    g.unshift({id: m.id, cuenta: m.cuenta, nombre: m.nombre, foto: m.foto, lista: f.clave,
+               titulo_lista: f.titulo || f.clave, porque: "la acabás de votar", movida: true});
+  });
+  return g;
+}
+// la cartita (1948) de una persona que facundo acaba de mover: su lista es la nueva, no la que dice el json viejo
+function movPersona(p){
+  var m = p ? movDe(p.id) : null;
+  if(!m) return p;
+  var f = ((lisCacheLeer() || {}).listas || []).filter(function(x){ return x.clave === m.destino; })[0];
+  var q = {}, k;
+  for(k in p) if(Object.prototype.hasOwnProperty.call(p, k)) q[k] = p[k];
+  q.lista = m.destino;
+  q.titulo_lista = (f && f.titulo) || m.destino;
+  if(q.ficha){
+    var fi = {}, kk;
+    for(kk in q.ficha) if(Object.prototype.hasOwnProperty.call(q.ficha, kk)) fi[kk] = q.ficha[kk];
+    fi.titulo_lista = q.titulo_lista;
+    q.ficha = fi;
+  }
+  return q;
+}
+// ---------- {gracia}: los 60 segundos del voto que dispara follow o unfollow ----------
+// facundo (OPCION A, 2026-09-20): "60 segundos de gracia con `deshacer` a la vista, y pasado eso el follow entra a
+// la cola con su ritmo normal". el pase de lista es INSTANTANEO igual (arriba); lo que espera es la accion de
+// instagram. la cuenta arranca en el voto, no en el `enviar`, y sigue del lado del server (`no_antes` de la 2150)
+// si facundo cierra el board o manda antes de que venza: asi el arrepentimiento no se pierde por cerrar.
+// la duracion no esta hardcodeada: la manda el server en `gracia_ms` (`gracia_accion_segundos` de `ig-cola.json`).
+var grac = {t: null};
+function gracPend(){
+  var ahora = Date.now();
+  return movTodos().filter(function(m){ return m.accion && m.hasta > ahora; })
+                   .sort(function(a, b){ return b.ts - a.ts; });
+}
+function gracPintar(){
+  var c = $("selgracia");
+  if(!c) return false;
+  var ps = gracPend();
+  c.textContent = "";
+  c.classList.toggle("oculta", !ps.length || !tjPantalla());
+  if(!ps.length) return gracReloj(false);
+  var m = ps[0], seg = Math.max(0, Math.ceil((m.hasta - Date.now()) / 1000));
+  var b = moldeBoton({tipo: "caja", clase: "gracchip", txt: "deshacer " + (m.accion === "unfollow" ? "unfollow" : "follow") +
+                      " @" + (m.cuenta || m.id) + " · " + seg + "s",
+                      accion: function(){ gracDeshacer(m.id); }});
+  b.setAttribute("title", "todavía no salió: " + seg + " s para arrepentirte");
+  c.appendChild(b);
+  if(ps.length > 1) c.appendChild(lisLinea("gracmas", "y " + (ps.length - 1) + " más esperando"));
+  gracReloj(true);
+  return true;
+}
+function gracReloj(prender){
+  if(prender && !grac.t){ grac.t = setInterval(gracPintar, 1000); return true; }
+  if(!prender && grac.t){ clearInterval(grac.t); grac.t = null; }
+  return false;
+}
+// el `deshacer` de la ventana: si el voto todavia no salio, se borra en el browser y la persona vuelve a la fila;
+// si ya salio (facundo mando y siguio votando), va el mismo registro `deshacer` del `←` (1640), que en el server
+// la devuelve a su lista y saca de `ig_cola` el follow/unfollow mientras siga `pendiente`.
+function gracDeshacer(id){
+  var m = movDe(id);
+  if(!m) return false;
+  var e = sel.actual;
+  if(m.enviado){
+    var rd = {id: lidNuevo(), tipo: "deshacer", ts: Date.now(), candidata_id: m.id, cuenta: m.cuenta, texto: "",
+              sesion: m.ses || sel.sesion || ""};
+    var pd = selLeer("pend", []); pd.push({col: m.col, r: rd}); selEscribir("pend", pd);
+    sel.sesionVotos = (sel.sesionVotos || []).filter(function(x){ return x !== m.id; });
+    selSubirPronto();
+  }else{
+    var hs = sel.tjHistorial || [], i = -1, h = null;
+    hs.forEach(function(x, k){ if(x.col === m.col && x.c && String(x.c.id) === m.id) i = k; });
+    if(i >= 0) h = hs.splice(i, 1)[0];
+    delete salioSet(m.col, m.desde)[m.id];
+    if(h && e && e.coleccion === m.col){
+      if(!e.candidatas.some(function(x){ return String(x.id) === m.id; })) e.candidatas.push(h.c);
+      sel.tjVotos = tjHist(e).length;
+      cacheGuardar(e);
+    }
+  }
+  movSacar(m.id);
+  $("selestado").textContent = "deshecho @" + (m.cuenta || m.id);
+  if(e) tjPintar();
+  if(lis.sub === "listas") lisPintar(); else if(lis.sub === "una") lisUnaPintar();
+  return true;
+}
 function cacheClave(col, lista){ return (lista || "") + "|" + col; }
 function cacheGuardar(e, lista){
   if(!e || !e.continua) return false;
@@ -4752,6 +4967,7 @@ function tjPintar(){
   tjExtras(e);    // 2247: y los chicos de arriba, los de ESTA lista
   $("selacciones").classList.toggle("oculta", !c);
   $("selextras").classList.toggle("oculta", !c || !tjExtrasSpec(e).length);
+  gracPintar();   // {gracia}: el `deshacer` con su contador vive mientras la ventana corre
   [].forEach.call(document.querySelectorAll("#selacciones .tjbtn"), function(b){
     b.style.visibility = c ? "" : "hidden";
   });
@@ -4916,8 +5132,11 @@ function tjVoto(e, c, q, txt){
   var hs = sel.tjHistorial = sel.tjHistorial || [], i = -1;
   hs.forEach(function(h, k){ if(h.col === e.coleccion && h.c && h.c.id === c.id) i = k; });
   if(i >= 0) hs.splice(i, 1);   // votada de nuevo: su voto viejo se va y el nuevo queda ULTIMO (el `←` deshace lo ultimo que hiciste)
-  hs.push({col: e.coleccion, c: c, q: q, txt: txt || ""});   // 1640: lo que el back deshace
+  hs.push({col: e.coleccion, c: c, q: q, txt: txt || "", ts: Date.now()});   // 1640: lo que el back deshace
   sel.tjVotos = tjHist(e).length;   // 1524: sin ninguna decision real, `tjFin` no manda `fin`
+  // {gracia}: la persona cambia de lista EN EL MOMENTO, en la home, en la lista abierta y en su cartita, sin
+  // esperar al server; si el voto dispara follow o unfollow, arranca ahi la ventana de 60 s con su `deshacer`
+  movPoner(e, c, q);
   // 2140: el voto que la manda a otra lista la saca de la fila YA (local); el que la deja donde esta la mantiene
   if(!tjSigueEnLista(e, q)){
     salioSet(e.coleccion, sel.filtro)[c.id] = true;
@@ -4948,7 +5167,8 @@ function tjVoto(e, c, q, txt){
 // se voto, se volvio y se voto de nuevo, vale el ultimo (en `tjHistorial` hay una sola entrada por persona).
 function tjRegistros(e){
   return tjHist(e).map(function(h){
-    return {id: lidNuevo(), tipo: "tarjeta", ts: Date.now(), candidata_id: h.c.id, cuenta: h.c.cuenta || "",
+    // {gracia}: el `ts` es el del VOTO, no el del `enviar`: de ahi cuenta el server los 60 s de `no_antes`
+    return {id: lidNuevo(), tipo: "tarjeta", ts: h.ts || Date.now(), candidata_id: h.c.id, cuenta: h.c.cuenta || "",
             decision: h.q, texto: h.txt || "", sesion: sel.sesion || ""};
   });
 }
@@ -4963,6 +5183,7 @@ function tjSubirLocales(e){
   if(e.continua) tjHist(e).forEach(function(h){ filaMarcar(e.coleccion, h.c.id); });   // ya votada: no vuelve a la fila
   sel.tjHistorial = (sel.tjHistorial || []).filter(function(h){ return h.col !== e.coleccion; });
   sel.sesionVotos = (sel.sesionVotos || []).concat(regs.map(function(r){ return r.candidata_id; }));
+  movEnviados(e.coleccion, sel.sesion || "");   // {gracia}: lo aplica el server; la capa local se limpia con su json
   selSubir();
   return regs.length;
 }
@@ -4993,6 +5214,7 @@ function tjAtras(){
   // que nunca salio de la fila: no hay `deshacer` que mandar, ni respuesta del server que pueda volver a moverla.
   var h = hs.splice(i, 1)[0], c = h.c, k = -1;
   delete salioSet(e.coleccion, sel.filtro)[c.id];   // 2140: deshecho el voto, vuelve a ser de la lista
+  movSacar(c.id);   // {gracia}: y vuelve a la lista de antes en la home (y se cae su ventana de gracia)
   if(!e.continua){   // 1640: el voto de una tanda vieja ya salio: el back lo deshace en el server
     var rd = {id: lidNuevo(), tipo: "deshacer", ts: Date.now(), candidata_id: c.id, cuenta: c.cuenta || "", texto: "",
               sesion: sel.sesion || ""};
@@ -5090,6 +5312,7 @@ function selCancelar(){
   }
   selEscribir("pend", pend);
   sel.tjHistorial = (sel.tjHistorial || []).filter(function(h){ return h.col !== e.coleccion; });
+  movTirar(e.coleccion, ses);   // {gracia}: los movimientos locales de esta sesion se van con ella
   sel.ignorada[e.coleccion] = e.abrir_ts;
   sel.actual = null; sel.sesion = null; sel.sesionVotos = [];
   selModoLista(true);
@@ -5403,7 +5626,7 @@ function lisPoner(cual, fresco){
   return true;
 }
 function lisPintar(){
-  var c = $("sellistas"), d = lisCacheLeer(), prev = c.scrollTop;
+  var c = $("sellistas"), d = movVista(lisCacheLeer()), prev = c.scrollTop;   // {gracia}: con lo recien votado
   c.textContent = "";
   c.classList.remove("una");
   if(!d || !d.listas || !d.listas.length){
@@ -5527,6 +5750,7 @@ function lisFila(p, f){
 // se sabe de esa persona. nunca un callejon (1948: "toda persona tiene acciones")
 function lisCartita(p){
   if(!p) return false;
+  p = movPersona(p);   // {gracia}: la ficha dice la lista NUEVA, no la que trae el json viejo del server
   if(p.ficha) return lisFicha(p);
   if((p.accion || {}).texto) return lisAccionModal(p);
   // 2095 paso 8: desde que el chip ES la cartita (paso 7), una persona sin ficha ni accion seria un toque que no
@@ -5582,7 +5806,7 @@ function lisUnaFila(){
   if(!u) return null;
   var d = lisCacheLeer();
   // la fila fresca del json (el refresco de atras pudo cambiar el numero); si no esta mas, la ultima que se vio
-  var f = ((d || {}).listas || []).filter(function(x){ return x.clave === u.clave; })[0];
+  var f = (((movVista(d) || {}).listas) || []).filter(function(x){ return x.clave === u.clave; })[0];
   return f || u.f;
 }
 function lisUnaPintar(){
@@ -5606,7 +5830,7 @@ function lisUnaPintar(){
     cab.appendChild(vb);
   }
   c.appendChild(cab);
-  var gente = u.gente || [];
+  var gente = movGente(f, u.gente || []);   // {gracia}: la que facundo acaba de mover ya no esta (o ya esta)
   if(!gente.length){
     // sin gente todavia: la trae la lan. una lista grande sin lan se queda con lo que diga el server
     // 2244: si ya se dijo POR QUE esta vacia, no se repite un "no hay nadie acá" que no aporta nada
@@ -11749,6 +11973,11 @@ window.__agente = {
   tjPintarCon: function(e, i){ sel.actual = e; sel.tj = i || 0; if(!i){ sel.tjVotos = 0; sel.tjFallidas = []; } tjPintar(); return sel.tj; },   // 1515: `prueba_ig_embudo_tarjetas`
   tjIndice: function(){ return sel.tj; },
   tjAtras: tjAtras, tjPedirMas: tjPedirMas, tjRegistros: tjRegistros,   // 2137 {votolocal}
+  // {gracia}: la capa local de movimientos y la ventana de los 60 s (`prueba_web_gracia`)
+  movVista: movVista, movGente: movGente, movPersona: movPersona, movTodos: movTodos, movPoner: movPoner,
+  movSacar: movSacar, movEnviados: movEnviados, movTirar: movTirar, movPodar: movPodar, movDe: movDe,
+  movReset: function(){ movs = {}; try{ localStorage.removeItem(MOV_LS); }catch(x){} return true; },
+  gracPend: gracPend, gracPintar: gracPintar, gracDeshacer: gracDeshacer,
   tjFila: function(){ return ((sel.actual || {}).candidatas || []).map(function(c){ return c.id; }); },   // 2073 {back}
   tjHistorial: function(){ return (sel.tjHistorial || []).map(function(h){ return h.col + ":" + h.c.id + ":" + h.q; }); },   // 1640: el back
   filaFaltan: filaFaltan, filaSumar: filaSumar, tjToqueMs: function(ms){ TJ_TOQUE_MS = ms; TJ_BACK_MS = ms ? Math.min(ms, 120) : 0; },   // 1567: fila continua; 2002: el back tiene su propia ventana

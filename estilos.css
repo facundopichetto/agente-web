@@ -417,6 +417,14 @@
   #selextras .tjx-subir{border-color:var(--verde);color:var(--verde)}
   #selextras .tjx-no,#selextras .tjx-unfollow{border-color:var(--rojo);color:var(--rojo)}
   #selextras .tjx-follow{border-color:var(--cian);color:var(--cian)}
+  /* {gracia} (facundo, 2026-09-20): el voto que dispara follow o unfollow se puede deshacer mientras corre el
+     contador. es UNA franja angosta arriba de los botones, con el molde de caja de la 1922, en el amarillo de
+     aviso: no compite con los tres votos grandes del pie ni tapa la foto. */
+  #selgracia{display:flex;flex-direction:column;align-items:center;gap:4px}
+  #selgracia.oculta{display:none!important}
+  #selgracia .bcaja{min-height:34px;padding:5px 14px;border-radius:17px;font-size:14px;line-height:1.1;
+    border-color:var(--amarillo);color:var(--amarillo);width:auto;text-align:center}
+  #selgracia .gracmas{color:var(--gris);font-size:13px;opacity:.85}
   #selacciones{display:flex;flex-wrap:wrap;gap:6px}
   #selacciones.oculta,#selmodal #seltxt.oculta{display:none!important}
   /* 1922 {vistatinder}: en el `home` de la vista no hay tarjeta que deshacer ni texto que enviar */
@@ -466,6 +474,7 @@
   /* la fila de votos no se estira de borde a borde en una pantalla ancha: queda del ancho de una caja, centrada */
   #selmodal.pantalla #selacciones{width:100%;max-width:520px;margin:0 auto}
   #selmodal.pantalla #selextras{width:100%;max-width:520px;margin:0 auto}
+  #selmodal.pantalla #selgracia{width:100%;max-width:520px;margin:0 auto}
   /* 1933 {instatinder} (facundo, 2026-09-17): en el celu los tres votos van en 3 columnas IGUALES que ocupan el
      100% del ancho, cuadrados, y anclados ABAJO DE TODO de la vista (al pie, no pegados al bloque de datos): la
      fila pasa a grilla y se manda al final del orden de la caja (`order`), asi el pulgar la encuentra siempre en
@@ -477,6 +486,7 @@
     /* 2247: los chicos van pegados ARRIBA de los tres grandes, y el pie de `enviar` queda por encima de ellos */
     #selmodal.pantalla .selpie{order:7}
     #selmodal.pantalla #selextras{order:8;flex:0 0 auto;max-width:none}
+    #selmodal.pantalla #selgracia{order:6;flex:0 0 auto;max-width:none}   /* {gracia}: arriba del pie */
   }
   @media (min-width:700px){
     #selmodal.pantalla #seltarjeta{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr);gap:12px}
