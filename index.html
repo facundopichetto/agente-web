@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.406">
-<link rel="manifest" href="manifest.json?v=4.406">
+<meta name="agente-web-version" content="4.407">
+<link rel="manifest" href="manifest.json?v=4.407">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.406">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.407">
 </head>
 <body>
 
@@ -4817,7 +4817,10 @@ function tjPintar(){
   // 2134 {supervirtual} paso 4: en `super candidatas` la tarjeta dice cuanto puntuo y POR QUE (lo redacta el
   // server, `ig_super.puntuar`); el resto de los procesos no lo pinta aunque la tarjeta lo traiga
   if(c.sup && tjEsSuper()){
-    renglon("puntaje " + c.sup.puntaje + " de " + (c.sup.de || 100) + " · #" + c.sup.puesto, "tjsuper");
+    // 2244 {superranking}: una puntuada SIN el perfil leido lo dice en el mismo renglon del puntaje, asi un 100
+    // sacado con 3 señales no se lee igual que uno sacado con 9 (el detalle va en el `motivo`, que ya lo trae)
+    renglon("puntaje " + c.sup.puntaje + " de " + (c.sup.de || 100) + " · #" + c.sup.puesto
+            + (c.sup.parcial ? " · a medias" : ""), "tjsuper" + (c.sup.parcial ? " tjsupmed" : ""));
     if(c.sup.motivo) renglon(c.sup.motivo, "tjsupmot");
   }
   if(c.motivo) renglon(c.motivo, "tjmot");
@@ -5413,6 +5416,9 @@ function lisCaja(f){
   }
   var pq = document.createElement("div"); pq.className = "lisporque"; pq.textContent = f.porque || "";
   caja.appendChild(pq);
+  // 2244 {superranking} paso 2: una lista que quedo vacia por algo que se puede arreglar lo DICE en su tarjeta
+  // (nunca vacia y callada). la frase y el numero los redacta el server (`ig_super.por_que_vacia`)
+  if(f.aviso && f.aviso.motivo) caja.appendChild(lisLinea("lisnota", f.aviso.motivo));
   // una lista grande NO nombra a nadie: por que estan ahi y cuantos son, y nada mas (facundo)
   if(f.grande){
     var g = document.createElement("div"); g.className = "lisgrande";
@@ -5535,8 +5541,11 @@ function lisUnaPintar(){
   var cab = document.createElement("div"); cab.className = "lisunacab";
   if(lis.aviso) cab.appendChild(lisLinea("lisaviso", lis.aviso));   // 2143
   if(f.porque) cab.appendChild(lisLinea("lisporque", f.porque));
+  // 2244 {superranking} paso 2: el motivo de una lista vacia, tambien adentro (y con el numero de lecturas)
+  var avSuper = (u.aviso && u.aviso.motivo ? u.aviso : (f.aviso && f.aviso.motivo ? f.aviso : null));
+  if(avSuper) cab.appendChild(lisLinea("lisnota", avSuper.motivo));
   // 2095 paso 5: el votador sale de ACA, y abre la fila de ESTA lista (`f.clave`), no la del proceso entero
-  if(f.proceso){
+  if(f.proceso && (f.n || !avSuper)){
     var vb = moldeBoton({tipo: "caja", clase: "lisvotar", txt: "votar esta lista", accion: function(){ lisVotar(f, null); }});
     vb.setAttribute("data-proceso", f.proceso);
     vb.setAttribute("title", "abrir el votador con la gente de `" + (f.titulo || f.clave) + "`");
@@ -5546,8 +5555,10 @@ function lisUnaPintar(){
   var gente = u.gente || [];
   if(!gente.length){
     // sin gente todavia: la trae la lan. una lista grande sin lan se queda con lo que diga el server
-    c.appendChild(lisLinea("lisvacio", u.bajando ? "buscando la gente de la lista…" :
-                           (f.n ? "son " + f.n + ": no pude traer la lista entera (sin lan)" : "no hay nadie acá")));
+    // 2244: si ya se dijo POR QUE esta vacia, no se repite un "no hay nadie acá" que no aporta nada
+    if(!(avSuper && !f.n))
+      c.appendChild(lisLinea("lisvacio", u.bajando ? "buscando la gente de la lista…" :
+                             (f.n ? "son " + f.n + ": no pude traer la lista entera (sin lan)" : "no hay nadie acá")));
     return true;
   }
   var tira = document.createElement("div"); tira.className = "listira lisunatira";
@@ -5569,6 +5580,7 @@ function lisUnaBajar(clave){
     var j = r && r.json;
     if(!j || !j.gente || !lis.una || lis.una.clave !== clave) return false;
     lis.una.gente = j.gente; lis.una.entera = !!j.entera; lis.una.bajando = false;
+    lis.una.aviso = j.aviso || null;   // 2244: el motivo de la lista vacia, fresco del server
     if(lis.sub === "una") lisUnaPintar();
     return true;
   }).catch(function(){ return false; }).then(function(r){
@@ -5590,6 +5602,8 @@ function lisAHome(){
 // no duplica nada: le pasa `desde: "home"` para que el `←` sin nada que deshacer vuelva a la home, no a la grilla.
 function lisTocar(f){
   if(!f) return false;
+  // 2244: una lista vacia con aviso abre SU vista (donde esta el motivo entero), nunca un votador sin tarjetas
+  if(!f.n && f.aviso) return lisEntrar(f);
   if(!f.proceso) return lisEntrar(f);   // `activa`, `ignorada`: no se votan, se miran (paso 5)
   return lisVotar(f, null, "home");
 }
