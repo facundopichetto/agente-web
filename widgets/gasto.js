@@ -2,7 +2,10 @@
 // CONSUMO (facundo, 2026-09-20, orden 2249 {consumo}, opcion C: "el widget deja de ser de plata y pasa a ser de
 // consumo: todas las filas en tokens y % de cuota, la plata solo en un renglon de total abajo"). la gramatica es
 // la misma en todas: `<cuenta> <consumo> · <usado>/<cuota> <ventana>`; claude va por su `week` en % y las apis por
-// sus tokens del mes contra la cuota que publica el proveedor. el consumo, la cuota, el nivel de color y el total
+// su gasto de los ultimos 7 dias. 2255 {escala} (facundo, 2026-09-20, opcion A: "`100%` de `week` = usd 46"):
+// todas las filas se miden contra la MISMA ventana y el MISMO denominador -- una semana, `usd 46`, que es lo que
+// sale una cuenta de claude por semana --, asi que un `40%` quiere decir lo mismo en claude, gemini y mistral.
+// groq es la unica afuera: free tier, `$0`, sin `%`. el consumo, la cuota, el nivel de color y el total
 // del pie llegan ARMADOS del server (`recetas/gasto_api.py` -> `gasto.lineas` y `gasto.total`): la web no convierte
 // nada, no arma ninguna frase y no inventa un denominador cuando el proveedor no publica cuota.
 // tocar cualquier fila abre su modal: la de claude con sus tres barras y el boton de pasar el agente, la de api
@@ -46,6 +49,10 @@
                    : (cu.motivo && !esActiva ? '\n<span class="g">' + esc(cu.motivo) + "</span>" : "")) +
       (cu.modelo ? '\n<span class="g">hoy sale con</span> <span class="c">' + esc(cu.modelo) + "</span>" +
                    (cu.modelo_modo ? ' <span class="g">(modo ' + esc(cu.modelo_modo) + ")</span>" : "") : "") +
+      // 2255 {escala}: el `%` de `week` de esta cuenta, en la plata de la escala comun (`usd 46` la semana),
+      // que es lo que deja compararla con la fila de una api. llega armado del server (`gasto_api.lineas`)
+      (cu.usd_semana_txt ? '\n<span class="g">esta semana</span> <span class="c">' + esc(cu.usd_semana_txt) +
+                           '</span> <span class="g">de ' + esc(cu.escala_txt || "") + "</span>" : "") +
       '<div class="cmod-b">' + USAGE_BARRAS.map(function(k){
         var b = bs.filter(function(x){ return x.clave === k[0] || x.nombre === k[1]; })[0];
         return barraHtml(b || {nombre: k[1], pct: null, linea: null, nivel: "sin"});
@@ -98,12 +105,16 @@
   // `%` de la cuota ya usado (`l.pct`) y el color su nivel (`n-ok`/`n-cerca`/`n-mal`, `n-sin` sin cuota): se
   // fueron el tick de la linea del mes y el gradiente por distancia (2182), que eran de plata. una fila sin
   // cuota llega con `pct: null` y `sec` diciendo por que: la web NO inventa un denominador ni una barra.
-  // 1517 {creditogemini}: una api que se paga de un credito cargado (gemini) ahora SI trae denominador -- el
-  // server manda `pct` = plata del mes sobre el credito y su `nivel` --, asi que cae en esta misma barra, con
-  // los mismos colores que claude. no hay una barra nueva: lo unico que cambio es que la fila trae `pct`.
+  // 2255 {escala}: el denominador de TODAS las filas es el mismo (el `100%` de una semana = `usd 46`), asi que
+  // la barra de gemini, la de mistral y la de una cuenta de claude son comparables a ojo: el mismo ancho es la
+  // misma plata. la web sigue sin convertir nada -- el `%`, la plata de la semana (`usd_semana_txt`, que va en
+  // la ficha y en el tooltip, nunca en el renglon) y la escala llegan armadas del server.
   function filaGasto(l){
     var pct = (l.pct === null || l.pct === undefined) ? 0 : Math.max(0, Math.min(100, l.pct));
     var tit = l.nombre + ": " + (l.consumo_txt || "?") + " · " + (l.sec || "") +
+              // 2255: en el tooltip si va la plata de la semana, que es lo que hace comparable el `%`
+              (l.usd_semana_txt && l.escala_txt ? "\n" + l.usd_semana_txt + " de " + l.escala_txt +
+                                                  " (el 100% de una semana)" : "") +
               (l.extra ? "\n" + l.extra : "") + (l.detalle ? "\n" + l.detalle : "");
     return '<div class="ub grow n-' + esc(l.nivel || "sin") + (l.agotada ? " agotada" : "") +
       (l.dormida ? " dormida" : "") + (l.tocable ? "" : " sinlim") + '" title="' + esc(tit) + '"' +
@@ -133,6 +144,11 @@
                                          alCerrar: function(){ cuAbierta = null; }});
     var f = function(et, v){ return '<span><span class="g">' + esc(et) + "</span> " + v + "</span>"; };
     var html = '<div class="cmod">' + f("plan", '<span class="c">' + esc(l.plan || "?") + "</span>") +
+      // 2255 {escala}: la plata de la SEMANA, que es el numerador del `%` de la fila, y la escala contra la
+      // que se mide (los `usd 46` que vale una semana de claude). aca si va en usd: la ficha no es el renglon
+      (l.usd_semana_txt ? "\n" + f("esta semana", '<span class="c">' + esc(l.usd_semana_txt) + "</span>" +
+                                    ' <span class="g">de ' + esc(l.escala_txt || "") +
+                                    ", los ultimos 7 dias</span>") : "") +
       "\n" + f("este mes", '<span class="c">' + esc(l.usd_txt || "$?") + "</span>" +
                 (l.incluido ? ' <span class="g">de $' + l.incluido + " incluidos</span>" : "")) +
       "\n" + f("tokens del mes", esc((l.tok || 0).toLocaleString("es-AR")) +
@@ -142,12 +158,14 @@
                                    ' <span class="g">' + (l.fuente === "free" ? "si este consumo fuera pago" : "los tokens del mes por la tarifa publicada") +
                                    ((l.sin_precio || []).length ? " (" + l.sin_precio.length + " sin precio publico)" : "") +
                                    "</span>") : "") +
-      // 1517 {creditogemini}: el credito PREPAGO es el pozo del que cobra la api, y es el denominador de la
-      // barra de esa fila; el `credito` de abajo es el free trial de google cloud, que es otra cosa. la plata
-      // de los dos vive aca, en la ficha, nunca en el renglon (2249 {consumo}).
+      // 1517 {creditogemini}: el credito PREPAGO es el pozo del que cobra la api; el `credito` de abajo es el
+      // free trial de google cloud, que es otra cosa. desde la 2255 {escala} el pozo ya no es el denominador
+      // de la fila (ese es `usd 46`), es un dato de la ficha: cuanto del credito cargado se lleva gastado.
       (l.prepago ? "\n" + f("credito prepago", "$" + l.prepago +
                             ' <span class="g">de donde cobra la api' +
-                            (l.pct === null || l.pct === undefined ? "" : ", " + l.pct + "% usado") +
+                            // 2255: el pozo dejo de ser el denominador de la fila, pero cuanto queda se
+                            // sigue viendo aca, con su propio `%` (`prepago_pct`, no el de la fila)
+                            (l.prepago_pct === null || l.prepago_pct === undefined ? "" : ", " + l.prepago_pct + "% usado") +
                             "</span>") : "") +
       (l.credito ? "\n" + f("credito", "$" + l.credito + ' <span class="g">de free trial</span>') : "") +
       (l.alerta ? "\n" + f("alerta", "$" + l.alerta + ' <span class="g">/mes</span>') : "") +
@@ -172,7 +190,15 @@
     }
     // lo tocable: la de claude abre el modal de la cuenta (barras, motivo, boton verde), la de api el suyo
     cuentasVistas = {}; lineasVistas = {};
-    cuentas.forEach(function(c){ if(!sinLimite(c)) cuentasVistas[c.nombre] = c; });
+    // 2255 {escala}: la plata de la semana de una cuenta de claude vive en su FILA (el server la calculo
+    // ahi); el modal la muestra, asi que se le pega a la cuenta antes de abrirlo
+    var porNombre = {};
+    lineas.forEach(function(l){ porNombre[l.nombre] = l; });
+    cuentas.forEach(function(c){
+      var l = porNombre[c.nombre] || {};
+      c.usd_semana_txt = l.usd_semana_txt || null; c.escala_txt = l.escala_txt || null;
+      if(!sinLimite(c)) cuentasVistas[c.nombre] = c;
+    });
     lineas.forEach(function(l){ if(l.tipo !== "claude") lineasVistas[l.nombre] = l; });
     if(lineas.length) html += '<div class="glin">' + lineas.map(filaGasto).join("") + "</div>";
     html += graficoSemana(u.semana);
