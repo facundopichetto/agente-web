@@ -98,6 +98,9 @@
   // `%` de la cuota ya usado (`l.pct`) y el color su nivel (`n-ok`/`n-cerca`/`n-mal`, `n-sin` sin cuota): se
   // fueron el tick de la linea del mes y el gradiente por distancia (2182), que eran de plata. una fila sin
   // cuota llega con `pct: null` y `sec` diciendo por que: la web NO inventa un denominador ni una barra.
+  // 1517 {creditogemini}: una api que se paga de un credito cargado (gemini) ahora SI trae denominador -- el
+  // server manda `pct` = plata del mes sobre el credito y su `nivel` --, asi que cae en esta misma barra, con
+  // los mismos colores que claude. no hay una barra nueva: lo unico que cambio es que la fila trae `pct`.
   function filaGasto(l){
     var pct = (l.pct === null || l.pct === undefined) ? 0 : Math.max(0, Math.min(100, l.pct));
     var tit = l.nombre + ": " + (l.consumo_txt || "?") + " · " + (l.sec || "") +
@@ -139,6 +142,13 @@
                                    ' <span class="g">' + (l.fuente === "free" ? "si este consumo fuera pago" : "los tokens del mes por la tarifa publicada") +
                                    ((l.sin_precio || []).length ? " (" + l.sin_precio.length + " sin precio publico)" : "") +
                                    "</span>") : "") +
+      // 1517 {creditogemini}: el credito PREPAGO es el pozo del que cobra la api, y es el denominador de la
+      // barra de esa fila; el `credito` de abajo es el free trial de google cloud, que es otra cosa. la plata
+      // de los dos vive aca, en la ficha, nunca en el renglon (2249 {consumo}).
+      (l.prepago ? "\n" + f("credito prepago", "$" + l.prepago +
+                            ' <span class="g">de donde cobra la api' +
+                            (l.pct === null || l.pct === undefined ? "" : ", " + l.pct + "% usado") +
+                            "</span>") : "") +
       (l.credito ? "\n" + f("credito", "$" + l.credito + ' <span class="g">de free trial</span>') : "") +
       (l.alerta ? "\n" + f("alerta", "$" + l.alerta + ' <span class="g">/mes</span>') : "") +
       // 2245 {gastoreal}: de donde sale el numero de arriba. `real` = lo leyo de la facturacion del
