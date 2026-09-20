@@ -93,8 +93,11 @@
   // secundario ya armados; aca solo se pinta. la barra reusa el molde `.ub` de siempre (`.ub-n` nombre,
   // `.ub-pista`/`.ub-lleno` la barra, `.ub-p` el numero), asi el color de cada nivel es el mismo del board.
   // 2182 {ritmo} (facundo, 2026-09-19, opcion C): la fila suma dos cosas, las dos armadas en el server
-  // (`gasto_api.marcar_ritmo`): el tick blanco de la LINEA del mes (el objetivo proporcional: dia 19 de 30 =
-  // `63%` del cupo) y, al final, la PROYECCION a fin de mes (`→ $310`, la frase entera en el tooltip). el
+  // (`gasto_api.marcar_ritmo`): el tick blanco de la LINEA (el objetivo proporcional de la ventana de esa
+  // fila) y, al final, la PROYECCION al final de esa misma ventana (`→ $310`, la frase entera en el tooltip).
+  // 2183 {semana}: la ventana no es la misma en todas las filas -- una api va por el mes y una cuenta de
+  // claude por SU ventana `week`, que resetea en otro momento en cada una -- asi que el texto de la linea
+  // llega armado del server en `l.linea_det` y la web no arma ninguna frase. el
   // color de la fila ya no es el absoluto sino la distancia a esa linea: viene en `l.color` como el hsl
   // continuo de siempre (`reparto_cuentas.color_uso`, el mismo de las barras del modal), con la clase `n-*`
   // de fallback. una cuenta agotada o sin cupo llega sin `color` y queda con el color plano de su clase.
@@ -105,11 +108,10 @@
     var col = colorHsl(l.color);
     var tit = l.nombre + ": " + (l.usd_txt || "$?") + " de " + (l.tope_txt || "") +
               (l.plan ? " (" + l.plan + ")" : "") + (l.detalle ? " · " + l.detalle : "") +
-              (l.objetivo_txt ? "\nlinea del mes: " + l.objetivo_txt + " (dia " + l.dia_mes + " de " +
-                                l.dias_mes + " = " + l.frac_mes + "% del cupo " + (l.cupo_txt || "") + ")" +
-                                (l.dist === null || l.dist === undefined ? "" :
-                                 ", " + (l.dist > 0 ? "+" : "") + l.dist + " de la linea")
-                            : "\nsin cupo mensual: va sin linea") +
+              (l.linea_det ? "\n" + l.linea_det +
+                             (l.dist === null || l.dist === undefined ? "" :
+                              ", " + (l.dist > 0 ? "+" : "") + l.dist + " de la linea")
+                           : "\nsin cupo: va sin linea") +
               (l.proy_txt ? "\n" + l.proy_txt : "");
     return '<div class="ub grow n-' + esc(l.nivel || "sin") + (l.agotada ? " agotada" : "") +
       (l.dormida ? " dormida" : "") + (l.tocable ? "" : " sinlim") + '" title="' + esc(tit) + '"' +
