@@ -1187,13 +1187,20 @@
      dejaria de leerse de un vistazo. lo que no entra se corta con elipsis (el detalle esta en el modal) */
   .usage.gasto .ub.grow .ren{flex:0 0 168px;min-width:0;font-size:13px;color:var(--gris);
                              text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  /* 2182 {ritmo}: la proyeccion a fin de mes, en el renglon de abajo de su propia fila y pegada a la derecha
-     (`flex:1 1 100%` sobre el `flex-wrap` de arriba). la frase entera ("a este ritmo terminas en $310") va en
-     el tooltip. lo que no llega al cupo del mes va gris como el dato secundario y lo que se pasa, en rojo. */
-  .usage.gasto .ub.grow .gproy{flex:1 1 100%;min-width:0;font-size:13px;color:var(--gris);line-height:1.2;
-                               margin-top:-1px;
-                               text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .usage.gasto .ub.grow .gproy.sobre{color:var(--rojo)}
+  /* 2249 {consumo}: el renglon de abajo de cada fila (antes era la proyeccion de la 2182, que se fue con la
+     plata): el `fable` y el `to renew` de una cuenta de claude, o de donde sale la cuota de una api. va en su
+     propio renglon, pegado a la derecha (`flex:1 1 100%` sobre el `flex-wrap` de arriba), gris como el resto
+     del dato secundario, y ahi entra la frase legible en vez de un texto cortado. */
+  .usage.gasto .ub.grow .gsec{flex:1 1 100%;min-width:0;font-size:13px;color:var(--gris);line-height:1.2;
+                              margin-top:-1px;
+                              text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* 2249 {consumo}: el UNICO renglon de plata del widget, al pie de la caja: el gasto real del mes de todas
+     las cuentas. no es una fila mas (no tiene barra ni es tocable): es el total, con la etiqueta a la
+     izquierda y el numero a la derecha, separado del resto por una linea finita arriba. */
+  .usage.gasto .gtot{display:flex;align-items:center;justify-content:space-between;gap:6px;
+                     margin-top:5px;padding-top:5px;border-top:1px solid var(--linea)}
+  .usage.gasto .gtot .gtot-e{font-size:13px;color:var(--gris);letter-spacing:.04em}
+  .usage.gasto .gtot .gtot-v{font-size:14px;color:var(--blanco);white-space:nowrap}
   /* 1806: el nombre lo pinta el ESTADO de la cuenta (ok verde clarito, warn amarillo, mal/agotada rojo); el
      color de la PLATA va en la barra y en el numero (`n-ok`/`n-cerca`/`n-mal`), que es otra cosa */
   .usage.gasto .ub.grow .ub-n.e-ok{color:#a6f5a0}

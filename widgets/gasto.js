@@ -1,10 +1,12 @@
-// widget `gasto` del board (hasta la 2175 se llamaba `usage` y era solo CLAUDE): UNA linea por cuenta, todas en
-// dolares (facundo, 2026-09-19, opcion A: "una linea por cuenta, todas en usd, claude contra sus $200 y las de api
-// contra $20 amarillo / $100 rojo"). las tres cuentas de claude leen su `%` de week como plata sobre los $200/mes
-// que sale cada una, y abajo van las de api (`mistral`, `gemini`, `groq`). la plata, el nivel de color y el texto
-// secundario llegan ARMADOS del server (`recetas/gasto_api.py` -> `gasto.lineas`): la web no convierte nada.
-// tocar cualquier linea abre su modal: la de claude con sus tres barras y el boton de pasar el agente, la de api
-// con el plan, el consumo del mes y, si la hay, la advertencia de que ese numero no sale de la facturacion real.
+// widget `gasto` del board (hasta la 2175 se llamaba `usage` y era solo CLAUDE): UNA fila por cuenta, todas de
+// CONSUMO (facundo, 2026-09-20, orden 2249 {consumo}, opcion C: "el widget deja de ser de plata y pasa a ser de
+// consumo: todas las filas en tokens y % de cuota, la plata solo en un renglon de total abajo"). la gramatica es
+// la misma en todas: `<cuenta> <consumo> · <usado>/<cuota> <ventana>`; claude va por su `week` en % y las apis por
+// sus tokens del mes contra la cuota que publica el proveedor. el consumo, la cuota, el nivel de color y el total
+// del pie llegan ARMADOS del server (`recetas/gasto_api.py` -> `gasto.lineas` y `gasto.total`): la web no convierte
+// nada, no arma ninguna frase y no inventa un denominador cuando el proveedor no publica cuota.
+// tocar cualquier fila abre su modal: la de claude con sus tres barras y el boton de pasar el agente, la de api
+// con el plan, la plata del mes y, si la hay, la advertencia de que ese numero no sale de la facturacion real.
 // modulo de widget (orden 1793, 2026-09-16, "el board como las secciones de shopify"): el shell lo carga
 // con `import()` y, cuando la pagina es `file://` (las pruebas), con un `<script>`, que es lo unico que ese
 // protocolo deja. por eso el archivo NO tiene `export`: el contrato es registrarse en el shell, asi el mismo
@@ -89,40 +91,36 @@
     }
     return true;
   }
-  // 2175 {gasto}: UNA fila por cuenta. el server manda la plata (`usd_txt`), el nivel de color y el texto
-  // secundario ya armados; aca solo se pinta. la barra reusa el molde `.ub` de siempre (`.ub-n` nombre,
-  // `.ub-pista`/`.ub-lleno` la barra, `.ub-p` el numero), asi el color de cada nivel es el mismo del board.
-  // 2182 {ritmo} (facundo, 2026-09-19, opcion C): la fila suma dos cosas, las dos armadas en el server
-  // (`gasto_api.marcar_ritmo`): el tick blanco de la LINEA (el objetivo proporcional de la ventana de esa
-  // fila) y, al final, la PROYECCION al final de esa misma ventana (`→ $310`, la frase entera en el tooltip).
-  // 2183 {semana}: la ventana no es la misma en todas las filas -- una api va por el mes y una cuenta de
-  // claude por SU ventana `week`, que resetea en otro momento en cada una -- asi que el texto de la linea
-  // llega armado del server en `l.linea_det` y la web no arma ninguna frase. el
-  // color de la fila ya no es el absoluto sino la distancia a esa linea: viene en `l.color` como el hsl
-  // continuo de siempre (`reparto_cuentas.color_uso`, el mismo de las barras del modal), con la clase `n-*`
-  // de fallback. una cuenta agotada o sin cupo llega sin `color` y queda con el color plano de su clase.
-  function colorHsl(c){ return /^hsl\(\s*\d+(\.\d+)?\s*,\s*\d+(\.\d+)?%\s*,\s*\d+(\.\d+)?%\s*\)$/.test(c || "") ? c : null; }
+  // 2249 {consumo} (facundo, 2026-09-20, opcion C: "el widget deja de ser de plata y pasa a ser de consumo"):
+  // la fila ya no muestra plata ni proyecta nada. UNA gramatica para todas, armada entera en el server
+  // (`gasto_api.lineas`): `<cuenta>  <consumo>  ·  <usado>/<cuota> <ventana>`, y en el renglon de abajo el
+  // dato de esa familia (claude su `fable` y su `to renew`, una api de donde sale su cuota). la barra es el
+  // `%` de la cuota ya usado (`l.pct`) y el color su nivel (`n-ok`/`n-cerca`/`n-mal`, `n-sin` sin cuota): se
+  // fueron el tick de la linea del mes y el gradiente por distancia (2182), que eran de plata. una fila sin
+  // cuota llega con `pct: null` y `sec` diciendo por que: la web NO inventa un denominador ni una barra.
   function filaGasto(l){
     var pct = (l.pct === null || l.pct === undefined) ? 0 : Math.max(0, Math.min(100, l.pct));
-    var tick = (l.linea === null || l.linea === undefined) ? null : Math.max(0, Math.min(100, l.linea));
-    var col = colorHsl(l.color);
-    var tit = l.nombre + ": " + (l.usd_txt || "$?") + " de " + (l.tope_txt || "") +
-              (l.plan ? " (" + l.plan + ")" : "") + (l.detalle ? " · " + l.detalle : "") +
-              (l.linea_det ? "\n" + l.linea_det +
-                             (l.dist === null || l.dist === undefined ? "" :
-                              ", " + (l.dist > 0 ? "+" : "") + l.dist + " de la linea")
-                           : "\nsin cupo: va sin linea") +
-              (l.proy_txt ? "\n" + l.proy_txt : "");
+    var tit = l.nombre + ": " + (l.consumo_txt || "?") + " · " + (l.sec || "") +
+              (l.extra ? "\n" + l.extra : "") + (l.detalle ? "\n" + l.detalle : "");
     return '<div class="ub grow n-' + esc(l.nivel || "sin") + (l.agotada ? " agotada" : "") +
       (l.dormida ? " dormida" : "") + (l.tocable ? "" : " sinlim") + '" title="' + esc(tit) + '"' +
       (l.tocable ? ' data-cta="' + esc(l.nombre) + '" role="button" tabindex="0"' : "") + ">" +
       '<span class="ub-n nom' + (l.estado ? " e-" + esc(l.estado) : "") + '">' + esc(l.nombre) + "</span>" +
-      '<span class="ub-pista"><span class="ub-lleno" style="width:' + pct + '%' +
-      (col ? ";background:" + col : "") + '"></span>' +
-      (tick === null ? "" : '<span class="ub-tick" style="left:' + tick + '%"></span>') + "</span>" +
-      '<span class="ub-p"' + (col ? ' style="color:' + col + '"' : "") + ">" + esc(l.usd_txt || "$?") + "</span>" +
-      '<span class="ren">' + esc(l.sec || "") + (l.falta_fuente ? ' <span class="g">?</span>' : "") + "</span>" +
-      '<span class="gproy' + (l.proy_sobre ? " sobre" : "") + '">' + esc(l.proy_corto || "") + "</span></div>";
+      '<span class="ub-pista"><span class="ub-lleno" style="width:' + pct + '%"></span></span>' +
+      '<span class="ub-p">' + esc(l.consumo_txt || "?") + "</span>" +
+      '<span class="ren">' + esc(l.sec || "") + "</span>" +
+      '<span class="gsec">' + esc(l.extra || "") + "</span></div>";
+  }
+  // 2249 {consumo}: el UNICO renglon de plata del widget, al pie: el gasto real del mes de TODAS las cuentas
+  // (los planes de claude mas la facturacion de las apis), sin desglose por fila. el numero, la etiqueta y el
+  // detalle del tooltip llegan armados del server (`gasto_api.total`).
+  // 2245 {gastoreal}: el `?` de "este numero no sale de la facturacion real" se mudo aca con la plata: la fila
+  // ya no tiene plata que marcar, y el server dice en `estimados` que cuentas entran estimadas.
+  function totalGasto(t){
+    if(!t || !t.txt) return "";
+    var est = (t.estimados || []).length ? ' <span class="g">?</span>' : "";
+    return '<div class="gtot" title="' + esc(t.detalle || "") + '"><span class="gtot-e">' +
+      esc(t.etiqueta || "total del mes") + '</span><span class="gtot-v">' + esc(t.txt) + est + "</span></div>";
   }
   // el modal de una cuenta de api: el plan, lo que va del mes y de donde sale ese numero. sin boton:
   // no hay nada que cambiar desde aca (la cuenta de api no se elige, se usa cuando toca).
@@ -168,6 +166,10 @@
     lineas.forEach(function(l){ if(l.tipo !== "claude") lineasVistas[l.nombre] = l; });
     if(lineas.length) html += '<div class="glin">' + lineas.map(filaGasto).join("") + "</div>";
     html += graficoSemana(u.semana);
+    // el total va DESPUES del grafico: es el pie del widget (2249). si se filtro a una sola cuenta de claude
+    // el total se recalcula igual en el server? no: el total es del mes entero, de todas las cuentas, y no
+    // depende del filtro de la vista; por eso se pinta tal cual llego.
+    if(lineas.length) html += totalGasto(u.totales);
     // al lado del titulo solo la bateria: sin numero, sin texto y sin tooltip
     return caja("GASTO", bateriaUso(u.bateria), '<div class="usage gasto">' + (html || vacio("sin datos")) + "</div>",
                 false, "gasto");
