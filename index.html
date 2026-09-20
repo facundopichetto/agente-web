@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.402">
-<link rel="manifest" href="manifest.json?v=4.402">
+<meta name="agente-web-version" content="4.403">
+<link rel="manifest" href="manifest.json?v=4.403">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.402">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.403">
 </head>
 <body>
 
@@ -9720,8 +9720,12 @@ function horaNoti(n){
 function temaNoti(n){ return n && n.tema && esTema(n.tema) ? normTema(n.tema) : "tools"; }
 // 1328 (19:47): el mismo titulo de una linea ("tipo: asunto") y cuerpo corto que el push (`push_filtro.formato`);
 // el detalle (modal) sigue con el texto entero
-function tituloNoti(n){ return unaLinea(n.titulo || n.texto, 160); }
-function cortoNoti(n){ return unaLinea(n.titulo ? n.titulo + (n.cuerpo ? " · " + n.cuerpo : "") : n.texto, 200); }
+// 2202 {forzar}: el aviso trae marcas para el board (`[forzar:<n>]`, que el modal convierte en un boton).
+// facundo nunca las lee: se sacan del titulo, del cuerpo y de la cita de la respuesta.
+var RE_MARCA_NOTI = /\s*\[forzar:\d{1,5}\]/g;
+function textoNoti(n){ return String((n && n.texto) || "").replace(RE_MARCA_NOTI, ""); }
+function tituloNoti(n){ return unaLinea(n.titulo || textoNoti(n), 160); }
+function cortoNoti(n){ return unaLinea(n.titulo ? n.titulo + (n.cuerpo ? " · " + n.cuerpo : "") : textoNoti(n), 200); }
 // repinta lo que depende de los avisos sin leer: el badge de la campana, su desplegable si esta abierto y el
 // modal de una push ya abierta. desde la 2151 {tira} no hay nada mas que pintar: el chat no muestra avisos.
 function pintarAvisos(){
@@ -9734,7 +9738,7 @@ function pintarAvisos(){
 // la cita que lleva la respuesta: `> aviso hh:mm: <texto>` + linea vacia (el daemon la separa con `marcas_chat`)
 function citaNoti(n){
   return "> aviso " + (hora12((n.fecha || "").slice(11, 16)) || (n.fecha || "").slice(0, 16)) +
-         ": " + unaLinea(n.texto, ESC_CHARS) + "\n\n";
+         ": " + unaLinea(textoNoti(n), ESC_CHARS) + "\n\n";
 }
 function responderNoti(n, texto){
   texto = String(texto || "").trim();
@@ -9752,15 +9756,23 @@ function abrirNoti(id){
   var n = notisPor[id];
   if(!n) return false;
   var tema = temaNoti(n);
-  var conUrl = RE_URL.test(n.texto || "");
+  var txtN = textoNoti(n);
+  var conUrl = RE_URL.test(txtN);
   RE_URL.lastIndex = 0;
-  pintarModal({titulo: "aviso · " + horaNoti(n), tema: tema, noti: n.id, acciones: [
+  // 2202 {forzar} pieza 3: el aviso de "la cola espera" trae `[forzar:<n>]`, y eso es un boton adentro del
+  // aviso (2151 {tira}: la campana es el UNICO lugar donde se ve un aviso; 2022: solo lo que pide decidir).
+  var mf = /\[forzar:(\d{1,5})\]/.exec(n.texto || "");
+  var accForzar = mf ? [["forzar: largarla ya", function(){
+        cerrarModal(); marcarLeidos([n.id]);
+        (accMandarFn || mandar)("forzar " + mf[1], tema, true);
+      }, true]] : [];
+  pintarModal({titulo: "aviso · " + horaNoti(n), tema: tema, noti: n.id, acciones: accForzar.concat([
     ["responder", function(){
       var c = $("notiresp");
       if(!responderNoti(n, c && c.value) && c) c.focus();
-    }, true],
+    }, !mf],
     ["cerrar sin responder", function(){ cerrarModal(); marcarLeidos([n.id]); }, false]
-  ], cuerpo: (conUrl ? enlaces(esc(n.texto || "")) : esc(n.texto || "")) +
+  ]), cuerpo: (conUrl ? enlaces(esc(txtN)) : esc(txtN)) +
     '\n\n<span class="g">' + esc(n.fecha || "") + '</span> <span class="g">tema</span> <span class="c">' + esc(tema) +
     (n.tema ? "" : " (sin tema)") + "</span>" +
     '<textarea id="notiresp" class="nresp" rows="3" placeholder="responder (opcional)" enterkeyhint="send" ' +
@@ -10535,10 +10547,22 @@ function modalDe(o){
     // widget `server` pinta items `tarea` de otro nodo, que no se tocan desde aca. reordenar sale directo
     // (`primero N` / `ultimo N`, sin modelo y reversible); forzar inicio y frenar piden la caja verde `dale`.
     if(o.cola && d.n && o.estado === "cola"){
-      m.acciones.push(["forzar inicio", function(){
+      // 2202 {forzar}: el modal dice POR QUE espera (el recurso concreto que la frena, calculado por el
+      // server) y `forzar` la larga IGNORANDO ese choque; `arrancar` sigue existiendo para lo de siempre
+      // (primera de su tema), que en una fila que no avanza no alcanza.
+      if(d.espera)
+        m.cuerpo += '\n<span class="g">espera por</span> <span class="a">' + esc(d.espera) + "</span>" +
+                    (d.espera_motivo ? ' <span class="g">' + esc(d.espera_motivo) + "</span>" : "");
+      if(d.forzada) m.cuerpo += '\n<span class="v">forzada: arranca en el próximo tick</span>';
+      m.acciones.push(["forzar: largarla ya, ignorando el choque", function(){
+        modalDale(m, tema, "forzar " + d.n,
+                  "sale igual aunque el clasificador diga que choca" + (d.espera ? " por `" + d.espera + "`" : "") +
+                  "; PAUSA, tope de hilos y falta de tokens sí la siguen frenando");
+      }, true]);
+      m.acciones.push(["arrancar: primera de su tema", function(){
         modalDale(m, tema, "arrancar " + d.n,
                   "va al frente de su tema y arranca en el próximo tick (y le saco la pausa de su tema, si la tenía)");
-      }, true]);
+      }]);
       m.acciones.push(["subir: primera de su tema", function(){ actuar(tema, "primero " + d.n, true); }]);
       m.acciones.push(["bajar: última de su tema", function(){ actuar(tema, "ultimo " + d.n, true); }]);
       m.acciones.push(["frenarla: no llega a correr", function(){

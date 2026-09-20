@@ -1250,6 +1250,17 @@
   .caja .cuerpo.tabla .ahorafila{display:block;white-space:normal;padding-left:11ch;text-indent:-11ch}
   .esctab.mdtab .it{cursor:pointer;touch-action:manipulation}
   .qtab .qpaso.qh,.qtab .qcola.qh{opacity:.6} .qtab .qcorre.qh{color:#8fcf7f}
+  /* 2202 {forzar}: una pendiente usa las dos celdas que tenia vacias (`iniciada` y `terminó`) para decir por
+     que espera (el recurso concreto, en ambar) y ofrecer el boton que la larga igual. el boton es el molde
+     chico de siempre (`.btn`) con el area tactil de la 2080 ({diseno}, controles chicos al 160%): la fuente
+     no baja de los 14 px de la tabla, lo que crece es el padding. */
+  .qtab .qcel.a{white-space:normal;word-break:break-word}
+  .qtab .qforz{background:#000;color:var(--cian);border:1px solid var(--linea);border-radius:10px;
+                padding:1px 7px;font:inherit;font-size:14px;line-height:1.3;cursor:pointer;
+                min-height:22px;touch-action:manipulation}
+  .qtab .qforz:hover{border-color:var(--cian)}
+  .qtab .qforz:disabled{opacity:.5;cursor:default}
+  @media (pointer:coarse){ .qtab .qforz{padding:3px 10px;min-height:35px} }
   /* 1862: con la sexta columna (`delay`) las cinco horas ocupan mas: la tabla baja a 11.5px (1938: era 9.5) y 4px de gap tambien
      en la compu (antes 10.5/7, solo el celu bajaba), asi el nombre sigue teniendo lugar y no se corta con `…`;
      en 390 px baja un poco mas */

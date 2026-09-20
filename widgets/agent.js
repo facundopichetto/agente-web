@@ -25,22 +25,42 @@
   function qCelda(cl, v, mas, attrs){
     return '<span class="' + cl + " qcel qh" + (mas || "") + '"' + (attrs || "") + '>' + esc(v || "") + "</span>";
   }
+  // 2202 {forzar} (facundo, 2026-09-20 1:13 am: "por que hay una sola tarea corriendo en la cola?"): una
+  // pendiente dice POR QUE espera, con el recurso concreto que la frena (`*exclusivo*`, `archivo:x.py`,
+  // `codigo:daemon`), y al lado tiene el boton que la larga igual. el motivo lo calcula el server
+  // (`recetas/forzar_cola.esperas`, cero tokens): aca no se adivina nada. la celda ocupa la columna
+  // `iniciada`, que en una pendiente estaba vacia, y el boton la de `terminó`.
+  function qEsperaCelda(f){
+    if(f.forzada) return qCelda("v", "forzada", "", ' title="la largó facundo: arranca en el próximo tick"');
+    if(!f.espera) return qCelda("qcola", "");
+    return qCelda("a", f.espera, "", ' title="' + esc(f.espera_motivo || "") + '"');
+  }
+  function qForzarCelda(f){
+    if(f.forzada || !f.espera) return qCelda("qcola", f.termino || "");
+    return '<span class="qcel qh"><button class="qforz" type="button" data-msg="forzar ' + esc(String(f.n)) +
+           '" title="largarla igual, sin mirar el choque de recursos">forzar</button></span>';
+  }
   function qFila(f){
     var cl = QCLASE[f.estado] || "qcola";
     var corre = f.estado === "corriendo";
+    var pend = f.estado === "cola";
     // 1862 {cola}: `cola: true` marca que esta fila es una orden de la cola local, la unica que puede ofrecer
     // forzar inicio, frenar y reordenar en su modal (el widget `server` tambien pinta items `tarea`, ajenos)
     return it({tipo: "tarea", cola: true, estado: f.estado, tema: f.tema, d: f},
       '<span class="' + cl + ' qnom">' + esc(f.nombre || ("" + f.n)) +
       (f.estado === "fallo" ? ' <span class="r b">!!</span>' : "") + "</span>" +
-      qCelda(cl, f.pedida) + qCelda(cl, f.delay) + qCelda(cl, f.iniciada) +
+      qCelda(cl, f.pedida) + qCelda(cl, f.delay) +
+      (pend ? qEsperaCelda(f) : qCelda(cl, f.iniciada)) +
       qCelda(cl, corre ? durVivo(f) : f.dur, corre ? " b qdelta" : "", corre ? ' data-n="' + esc(String(f.n)) + '"' : "") +
-      qCelda(cl, f.termino));
+      (pend ? qForzarCelda(f) : qCelda(cl, f.termino)));
   }
+  // lo que va en la columna `iniciada` / `terminó` de una fila, para medir el ancho de la columna (1843)
+  function qTxtEspera(f){ return f.estado === "cola" ? (f.forzada ? "forzada" : (f.espera || "")) : f.iniciada; }
+  function qTxtFin(f){ return f.estado === "cola" ? (f.forzada || !f.espera ? "" : "forzar") : f.termino; }
   function qCabecera(){
     return '<span class="qth qnom">nombre</span><span class="qth qcel">pedida</span>' +
            '<span class="qth qcel">delay</span>' +          // 1862: lo que espero de `pedida` a `iniciada`
-           '<span class="qth qcel">iniciada</span>' +
+           '<span class="qth qcel">iniciada</span>' +       // 2202: en una pendiente, por que espera
            '<span class="qth qcel qtiempo">delta</span>' +
            '<span class="qth qcel">terminó</span>';
   }
@@ -53,8 +73,8 @@
     var vis = tabla.filter(function(f){ return verCola || f.estado !== "cola"; });
     var cols = [vis.map(function(f){ return f.nombre || ("" + f.n); }), vis.map(function(f){ return f.pedida; }),
                 vis.map(function(f){ return f.delay; }),
-                vis.map(function(f){ return f.iniciada; }), vis.map(function(f){ return f.dur; }),
-                vis.map(function(f){ return f.termino; })];
+                vis.map(qTxtEspera), vis.map(function(f){ return f.dur; }),
+                vis.map(qTxtFin)];
     var cuerpo = filas.length ? '<div class="qtab" style="grid-template-columns:' + esc(B.gridFr(cols)) + '">' +
                                 qCabecera() + filas.join("") + "</div>"
                : (a.pausa ? '<span class="r b">PAUSA</span>' : vacio("nada en la cola"));
