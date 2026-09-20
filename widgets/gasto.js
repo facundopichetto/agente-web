@@ -92,17 +92,35 @@
   // 2175 {gasto}: UNA fila por cuenta. el server manda la plata (`usd_txt`), el nivel de color y el texto
   // secundario ya armados; aca solo se pinta. la barra reusa el molde `.ub` de siempre (`.ub-n` nombre,
   // `.ub-pista`/`.ub-lleno` la barra, `.ub-p` el numero), asi el color de cada nivel es el mismo del board.
+  // 2182 {ritmo} (facundo, 2026-09-19, opcion C): la fila suma dos cosas, las dos armadas en el server
+  // (`gasto_api.marcar_ritmo`): el tick blanco de la LINEA del mes (el objetivo proporcional: dia 19 de 30 =
+  // `63%` del cupo) y, al final, la PROYECCION a fin de mes (`→ $310`, la frase entera en el tooltip). el
+  // color de la fila ya no es el absoluto sino la distancia a esa linea: viene en `l.color` como el hsl
+  // continuo de siempre (`reparto_cuentas.color_uso`, el mismo de las barras del modal), con la clase `n-*`
+  // de fallback. una cuenta agotada o sin cupo llega sin `color` y queda con el color plano de su clase.
+  function colorHsl(c){ return /^hsl\(\s*\d+(\.\d+)?\s*,\s*\d+(\.\d+)?%\s*,\s*\d+(\.\d+)?%\s*\)$/.test(c || "") ? c : null; }
   function filaGasto(l){
     var pct = (l.pct === null || l.pct === undefined) ? 0 : Math.max(0, Math.min(100, l.pct));
+    var tick = (l.linea === null || l.linea === undefined) ? null : Math.max(0, Math.min(100, l.linea));
+    var col = colorHsl(l.color);
     var tit = l.nombre + ": " + (l.usd_txt || "$?") + " de " + (l.tope_txt || "") +
-              (l.plan ? " (" + l.plan + ")" : "") + (l.detalle ? " · " + l.detalle : "");
+              (l.plan ? " (" + l.plan + ")" : "") + (l.detalle ? " · " + l.detalle : "") +
+              (l.objetivo_txt ? "\nlinea del mes: " + l.objetivo_txt + " (dia " + l.dia_mes + " de " +
+                                l.dias_mes + " = " + l.frac_mes + "% del cupo " + (l.cupo_txt || "") + ")" +
+                                (l.dist === null || l.dist === undefined ? "" :
+                                 ", " + (l.dist > 0 ? "+" : "") + l.dist + " de la linea")
+                            : "\nsin cupo mensual: va sin linea") +
+              (l.proy_txt ? "\n" + l.proy_txt : "");
     return '<div class="ub grow n-' + esc(l.nivel || "sin") + (l.agotada ? " agotada" : "") +
       (l.dormida ? " dormida" : "") + (l.tocable ? "" : " sinlim") + '" title="' + esc(tit) + '"' +
       (l.tocable ? ' data-cta="' + esc(l.nombre) + '" role="button" tabindex="0"' : "") + ">" +
       '<span class="ub-n nom' + (l.estado ? " e-" + esc(l.estado) : "") + '">' + esc(l.nombre) + "</span>" +
-      '<span class="ub-pista"><span class="ub-lleno" style="width:' + pct + '%"></span></span>' +
-      '<span class="ub-p">' + esc(l.usd_txt || "$?") + "</span>" +
-      '<span class="ren">' + esc(l.sec || "") + (l.falta_fuente ? ' <span class="g">?</span>' : "") + "</span></div>";
+      '<span class="ub-pista"><span class="ub-lleno" style="width:' + pct + '%' +
+      (col ? ";background:" + col : "") + '"></span>' +
+      (tick === null ? "" : '<span class="ub-tick" style="left:' + tick + '%"></span>') + "</span>" +
+      '<span class="ub-p"' + (col ? ' style="color:' + col + '"' : "") + ">" + esc(l.usd_txt || "$?") + "</span>" +
+      '<span class="ren">' + esc(l.sec || "") + (l.falta_fuente ? ' <span class="g">?</span>' : "") + "</span>" +
+      '<span class="gproy' + (l.proy_sobre ? " sobre" : "") + '">' + esc(l.proy_corto || "") + "</span></div>";
   }
   // el modal de una cuenta de api: el plan, lo que va del mes y de donde sale ese numero. sin boton:
   // no hay nada que cambiar desde aca (la cuenta de api no se elige, se usa cuando toca).
@@ -117,6 +135,10 @@
       "\n" + f("tokens del mes", esc((l.tok || 0).toLocaleString("es-AR")) +
                 ' <span class="g">en ' + (l.llamadas || 0) + " llamadas</span>") +
       (l.tpd ? "\n" + f("hoy", esc(l.sec || "")) : "") +
+      (l.usd_lista_txt ? "\n" + f("a precio de lista", '<span class="c">' + esc(l.usd_lista_txt) + "</span>" +
+                                   ' <span class="g">si este consumo fuera pago' +
+                                   ((l.sin_precio || []).length ? " (" + l.sin_precio.length + " sin precio publico)" : "") +
+                                   "</span>") : "") +
       (l.credito ? "\n" + f("credito", "$" + l.credito + ' <span class="g">de free trial</span>') : "") +
       (l.alerta ? "\n" + f("alerta", "$" + l.alerta + ' <span class="g">/mes</span>') : "") +
       (l.falta_fuente ? '\n<span class="r">el numero sale de `llamadas.jsonl`, no de la facturacion real</span>' : "") +

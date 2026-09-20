@@ -1132,18 +1132,31 @@
      tokens de una de api. el nombre va sin negrita (1806) y todo centrado vertical (2080). */
   .usage.gasto .glin{display:block}
   .usage.gasto .ub.grow{gap:7px;margin:0 0 7px 0;align-items:center;border-radius:3px}
-  .usage.gasto .ub.grow{gap:6px}
-  .usage.gasto .ub.grow .ub-n{flex:0 0 68px;min-width:68px;color:var(--cian);font-weight:400;letter-spacing:.04em;
+  /* 2182 {ritmo}: la proyeccion NO entra como sexta columna. medido a 390 px y en el board de escritorio (la
+     fila mide 352 y 367 px): el nombre pide 69, el numero 60, el `to renew` de verdad (`3d 18h 59m to renew`,
+     1861) 156 y la barra no puede bajar de ~28, o sea que la fila ya esta llena. asi que la proyeccion baja a
+     su propio renglon, alineada a la derecha, y ahi entra la frase legible en vez de un `→$167` cortado. */
+  /* `row-gap:0`: los dos renglones de una fila van pegados, si no el de la proyeccion queda a la misma
+     distancia de su fila que de la de abajo y no se sabe de cual es */
+  .usage.gasto .ub.grow{column-gap:5px;row-gap:0;flex-wrap:wrap}
+  .usage.gasto .ub.grow .ub-n{flex:0 0 74px;min-width:74px;color:var(--cian);font-weight:400;letter-spacing:.04em;
                               overflow:hidden;text-overflow:ellipsis}
-  .usage.gasto .ub.grow .ub-pista{flex:1 1 30px;min-width:26px}
+  .usage.gasto .ub.grow .ub-pista{flex:1 1 30px;min-width:28px}
   /* el numero es de ancho fijo y nunca se parte ("$24.50" en 50 px se iba a dos renglones): asi todas las
      barras arrancan y terminan en la misma x, que es lo que hace legible la columna */
-  .usage.gasto .ub.grow .ub-p{flex:0 0 58px;min-width:58px;white-space:nowrap;overflow:hidden}
+  .usage.gasto .ub.grow .ub-p{flex:0 0 60px;min-width:60px;white-space:nowrap;overflow:hidden}
   /* el dato secundario cede antes que la barra: `min-width:0` (sin el, un flex nowrap no achica) y elipsis */
   /* el dato secundario tambien es de ancho fijo: si cediera, cada barra arrancaria en otra x y la columna
      dejaria de leerse de un vistazo. lo que no entra se corta con elipsis (el detalle esta en el modal) */
-  .usage.gasto .ub.grow .ren{flex:0 0 108px;min-width:0;font-size:13px;color:var(--gris);
+  .usage.gasto .ub.grow .ren{flex:0 0 168px;min-width:0;font-size:13px;color:var(--gris);
                              text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* 2182 {ritmo}: la proyeccion a fin de mes, en el renglon de abajo de su propia fila y pegada a la derecha
+     (`flex:1 1 100%` sobre el `flex-wrap` de arriba). la frase entera ("a este ritmo terminas en $310") va en
+     el tooltip. lo que no llega al cupo del mes va gris como el dato secundario y lo que se pasa, en rojo. */
+  .usage.gasto .ub.grow .gproy{flex:1 1 100%;min-width:0;font-size:13px;color:var(--gris);line-height:1.2;
+                               margin-top:-1px;
+                               text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .usage.gasto .ub.grow .gproy.sobre{color:var(--rojo)}
   /* 1806: el nombre lo pinta el ESTADO de la cuenta (ok verde clarito, warn amarillo, mal/agotada rojo); el
      color de la PLATA va en la barra y en el numero (`n-ok`/`n-cerca`/`n-mal`), que es otra cosa */
   .usage.gasto .ub.grow .ub-n.e-ok{color:#a6f5a0}
