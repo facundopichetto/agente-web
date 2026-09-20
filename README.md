@@ -320,7 +320,7 @@ La **primera caja**, arriba de `usage`. El dato lo arma `w_server()` de `recetas
   `sleep` remoto, el script de 60 s no se frena. El **throughput mac->server** (20 mb empujados por ssh
   a `cat > /dev/null`) se mide como mucho cada 10 min y tambien se cachea.
 - **si no contesta la caja no desaparece**: dice `apagado / sin red` (o `sin ssh` si el ping anda),
-  apaga las barras (`.usage.off`) y deja las ultimas metricas con el `visto hace`.
+  apaga las barras (`.usage.off`; esa clase la comparten el widget `server` y el `gasto`) y deja las ultimas metricas con el `visto hace`.
 - ademas de las metricas: la **etapa** (`EN CURSO` de `~/.claudio/server/ESTADO.md`), las ordenes de
   `tema server` de la cola, lo que **espera a Facundo** y las ultimas lineas de `log.md` con "server".
 - tres barras `.ub` (cpu / ram / disco) con color por umbral (`75` amarillo, `90` rojo), sin tick: aca
@@ -1429,7 +1429,7 @@ chars; `<clave: algo>` es un tapado de la boveda y no lleva boton). los bloques 
 |---|---|
 | `index.html` | el shell: html, css de arranque no hay, el iife con transporte, pestañas, chat, widgets sin migrar |
 | `estilos.css` | todo el css, servido con `?v=<version>` y enganchado por `<link id="cssppal">` |
-| `widgets/usage.js` | widget `usage` (CLAUDE): barras por cuenta, switch de modelo, grafico de la semana |
+| `widgets/gasto.js` | widget `gasto` (GASTO, ex `usage`/CLAUDE): una fila en usd por cuenta (claude + apis), modal por cuenta, grafico de la semana |
 | `widgets/agent.js` | widget `queue`: la tabla de la cola |
 
 `recetas/web_fuentes.py` es el unico lugar que sabe cual es cual: `texto()` (la suma, para las pruebas),
@@ -1439,7 +1439,7 @@ chars; `<clave: algo>` es un tapado de la boveda y no lleva boton). los bloques 
 
     {"version": "4.322", "ts": 1789..., "fecha": "...",
      "partes": {"shell": "281aaf439840", "css": "41ea12530d17",
-                "widget:usage": "...", "widget:agent": "..."}}
+                "widget:gasto": "...", "widget:agent": "..."}}
 
 `version` y `ts` siguen igual: un board viejo lee solo eso y se recarga como siempre. el board nuevo guarda
 como base el primer json cuya `version` coincide con la del html que cargo y despues compara `partes`:
@@ -1454,7 +1454,7 @@ como base el primer json cuya `version` coincide con la del html que cargo y des
 
 **el contrato de un modulo** (`window.__board`, lo unico que un modulo ve del shell)
 
-    B.registrar("usage", {html: fn(datos), pintar: fn(datos, nodo), destruir: fn()})
+    B.registrar("gasto", {html: fn(datos), pintar: fn(datos, nodo), destruir: fn()})
 
 y como ayudas `esc`, `caja`, `it`, `vacio`, `wset`, `limFilas`, `corto`, `barraUso`, `moldeSwitch`,
 `moldeSwitchReg`, `moldeSwitchSacar`, `mandarAparte(cmd, tema)`, `reemplazar(nodo, html)`,

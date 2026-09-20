@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.398">
-<link rel="manifest" href="manifest.json?v=4.398">
+<meta name="agente-web-version" content="4.399">
+<link rel="manifest" href="manifest.json?v=4.399">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.398">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.399">
 </head>
 <body>
 
@@ -765,7 +765,7 @@ var WSETS_DEBOUNCE = 1200;
 var WSETS = {
   server:      [{k: "log", et: "mostrar el log", tipo: "bool", def: true}],
   salud:       [{k: "solo_problemas", et: "solo rojo y amarillo", tipo: "bool", def: false}],
-  usage:       [{k: "cuentas", et: "cuentas", tipo: "opciones", def: "todas", ops: ["todas"]}],
+  gasto:       [{k: "cuentas", et: "cuentas", tipo: "opciones", def: "todas", ops: ["todas"]}],
   agent:       [{k: "cola", et: "mostrar la cola", tipo: "bool", def: true}],
   tickets:     [{k: "estado", et: "filtro de estado", tipo: "opciones", def: "todos", ops: ["todos"]}],
   propuestas:  [{k: "tema", et: "filtro de tema", tipo: "opciones", def: "todos", ops: ["todos"]}],
@@ -784,6 +784,11 @@ var WSETS = {
 // guardada queda limpia sola en la primera pasada y nada la vuelve a resucitar.
 var WIDGETS_FUERA = {oportunidades: 1, decided: 1};
 function widgetFuera(c){ return !!WIDGETS_FUERA[c]; }
+// 2175 {gasto}: el widget `usage` pasa a llamarse `gasto` (ya no es solo claude). la clave vieja puede
+// seguir viva en el `tabs.json` del buzon o en el cache de localStorage: se traduce al leer, asi la
+// setting y el lugar en el orden que facundo ya habia dejado no se pierden con el renombre.
+var WIDGETS_ALIAS = {usage: "gasto"};
+function claveW(c){ return WIDGETS_ALIAS[c] || c; }
 var WSETS_COMUNES = [{k: "plegado", et: "plegado por default", tipo: "bool", def: false},
                      {k: "filas", et: "filas visibles", tipo: "opciones", def: 0, ops: [0, 3, 5, 8, 12]},
                      {k: "oculto", et: "ocultar este widget", tipo: "bool", def: false}];
@@ -832,9 +837,10 @@ function wsetsLimpias(){
 function recibirWsets(rem){
   if(!rem || typeof rem !== "object") return false;
   var cambio = false;
-  Object.keys(rem).forEach(function(c){
+  Object.keys(rem).forEach(function(cv){
+    var c = claveW(cv);
     if(widgetFuera(c)){ if(wsets[c]){ delete wsets[c]; cambio = true; } return; }
-    var r = rem[c] || {}, mio = wsets[c] || {};
+    var r = rem[cv] || {}, mio = wsets[c] || {};
     if((+r.ts || 0) <= (+mio.ts || 0)) return;
     wsets[c] = r; cambio = true;
   });
@@ -867,7 +873,8 @@ function recibirOrden(rem){
   if(!Array.isArray(rem.ids)) return false;
   if((+rem.ts || 0) <= (+ordenW.ts || 0)) return false;
   var ids = [];
-  rem.ids.forEach(function(c){
+  rem.ids.forEach(function(cv){
+    var c = typeof cv === "string" ? claveW(cv) : cv;   // 2175: `usage` guardado = `gasto`
     if(typeof c === "string" && c && !widgetFuera(c) && ids.indexOf(c) < 0) ids.push(c);
   });
   ordenW = {ids: ids, ts: +rem.ts || 0};
@@ -8609,8 +8616,8 @@ function limFilas(clave, filas){
 }
 // opciones que dependen de los datos de ahora (para el modal de settings)
 function cuentasConocidas(){
-  return ((widDatos || {}).usage || {}).cuentas ?
-         (widDatos.usage.cuentas || []).map(function(c){ return c.nombre; }) : [];
+  return ((widDatos || {}).gasto || {}).cuentas ?
+         (widDatos.gasto.cuentas || []).map(function(c){ return c.nombre; }) : [];
 }
 function estadosConocidos(){
   var vs = [];
@@ -8676,7 +8683,7 @@ function barraUso(b){
          '<span class="ub-p" ' + est + ">" + (pct === null ? "?" : Math.round(pct)) + "%</span></div>";
 }
 // ---------- server (la geekom `claudio`) ----------
-// facundo (2026-09-11): un widget dedicado, arriba de usage. si no contesta muestra "apagado / sin red"
+// facundo (2026-09-11): un widget dedicado, arriba de `gasto`. si no contesta muestra "apagado / sin red"
 // con la ultima vez que se lo vio; las metricas que se pintan son las cacheadas de esa ultima vez.
 function bytes(n){
   if(n === null || n === undefined) return "?";
@@ -8787,7 +8794,7 @@ function cajaSalud(s){
   return caja("salud", ese, limFilas("salud", filas).join("\n"), false, "salud");
 }
 
-// facundo (2026-09-14, orden 1218): el widget usage rehecho. menos informacion: arriba UNA barra de proyeccion
+// facundo (2026-09-14, orden 1218): el widget `gasto` (ex `usage`) rehecho. menos informacion: arriba UNA barra de proyeccion
 // general (las dos cuentas como un solo tanque, `u.proyeccion.combinada`, con su lectura corta), una linea por
 // modelo (a que cuenta va y por que, corto) y abajo las dos cuentas en DOS COLUMNAS (faacuu izquierda, orugote
 // derecha) con `5h`, `week` y `fable` a la misma altura. un numero por barra; el tick de la linea sigue igual.
@@ -8796,7 +8803,7 @@ function cajaSalud(s){
 // week y fable de cada cuenta), `opus` y `fable` (override a mano, se respeta hasta que lo saque). manda el comando
 // `modelos <modo>` a la pestaña tools sin tocar la caja del chat, y lo contesta el daemon sin modelo.
 // abajo, una linea por cuenta con que modelo sale hoy ahi. usa el molde `moldeSwitch` (docs/componentes-web.md).
-// widgets `usage` (CLAUDE) y `agent` (queue): se fueron a `web/widgets/usage.js` y `web/widgets/agent.js`
+// widgets `gasto` (ex `usage`, ex titulo CLAUDE) y `agent` (queue): en `web/widgets/gasto.js` y `web/widgets/agent.js`
 // (orden 1793, 2026-09-16). el shell los carga con `cargarModulo()` y pide su html con `modHtml()`; cuando
 // `version.json` dice que cambio SOLO uno de esos modulos, se recarga ese archivo y se repinta ESA caja, sin
 // tocar el chat ni el scroll. lo que un modulo puede usar del shell esta en `BOARD` (`window.__board`).
@@ -9863,9 +9870,9 @@ $("nlista").addEventListener("click", function(e){
 // ---------- persona: menu de cuenta (facundo, 2026-09-13, orden 1166) ----------
 // reemplaza al `[⚙]` de arriba a la derecha: settings del board, `reinicia` con confirmacion y abajo de todo
 // `salir`. 1806 (facundo, 2026-09-16): las opciones de cuenta se fueron de aca: la cuenta se cambia desde el
-// widget `usage` (tocar `faacuu` u `orugote` abre su modal con el boton verde). el titulo sigue diciendo cual usa.
+// widget `gasto` (tocar `faacuu` u `orugote` abre su modal con el boton verde). el titulo sigue diciendo cual usa.
 function cuentaEnUso(){
-  var rep = ((widDatos || {}).usage || {}).reparto || {};
+  var rep = ((widDatos || {}).gasto || {}).reparto || {};
   // 1915 {widgets}: `agente.cuenta` puede ser `sin cuenta hasta ...`; para el menu del tipito vale `cuenta_activa`
   var ag = (widDatos || {}).agente || {};
   return {elegida: rep.elegida || ag.cuenta_activa || ag.cuenta || "", modo: rep.modo || ""};
@@ -9940,8 +9947,8 @@ document.addEventListener("keydown", function(e){
 // de un widget ya migrado, se vuelve a cargar ese archivo y se repinta ESA caja (`repintarMod`), sin tocar el
 // chat, su scroll ni lo que este tipeado. si cambio el shell (o algo que no se sabe repintar), el reload de
 // siempre. un modulo no ve el adentro del shell: solo esto.
-var MODULOS = ["usage", "agent", "sombra", "seguidores", "igcola"];   // widgets migrados, en `web/widgets/<clave>.js` (1832: `models` = clave `sombra`)
-var MOD_DATOS = {usage: "usage", agent: "agente"};   // de que campo de `widgets.json` come cada uno
+var MODULOS = ["gasto", "agent", "sombra", "seguidores", "igcola"];   // widgets migrados, en `web/widgets/<clave>.js` (1832: `models` = clave `sombra`)
+var MOD_DATOS = {gasto: "gasto", agent: "agente"};   // de que campo de `widgets.json` come cada uno
 var mods = {}, modsVer = {}, modsTimers = {}, modsError = {}, modCargando = null, modsCargas = 0;
 var visibleForzada = false;   // 1849: las pruebas headless corren con `document.hidden` y fuerzan `B.visible()`
 
@@ -9965,7 +9972,7 @@ var BOARD = {
   gridFr: gridFr,   // 1843: las columnas de una tabla de widget, en `fr` proporcional al contenido
   barraUso: barraUso, moldeSwitch: moldeSwitch, moldeSwitchReg: moldeSwitchReg,
   moldeSwitchSacar: function(nombre){ delete MOLDE_SW[nombre]; },
-  modalMolde: modalMolde,   // 1806: el modal de una cuenta del widget `usage` usa el molde (esc cierra, sin borde)
+  modalMolde: modalMolde,   // 1806: el modal de una cuenta del widget `gasto` usa el molde (esc cierra, sin borde)
   repintarWidgets: repintarWidgets,
   // 1849 {fluida}: un widget puede pedir su pedazo fresco por la lan (nunca por github: sin lan no pide nada),
   // dejar ese dato en `widDatos` para que el repintado de 30 s no lo pise con uno mas viejo, y repintar su caja
@@ -10099,7 +10106,7 @@ function pintarWidgets(d, err){
   // tengan la setting `oculto` no se pintan, pero se pueden volver a mostrar desde el pie.
   var partes = [
     ["server", cajaServer(d.server || {})],
-    ["usage", modHtml("usage")],
+    ["gasto", modHtml("gasto")],
     ["salud", cajaSalud(d.salud || {})],
     ["agent", modHtml("agent")],
     ["verificaciones", cajaVerif(d.verificaciones || {})],
@@ -10453,7 +10460,7 @@ function accHablar(o, contexto){
 // contexto": el `[✎]` del header (y `escribir` en el modal de cada fila) lleva a la pestaña del tema
 // del widget y deja una cita `> widget <nombre>: ...` + linea vacia en el input, sin mandar nada. el
 // daemon la separa del pedido con `marcas_chat` (igual que `responder`) y se la pasa al modelo.
-var TEMA_WIDGET = {server: "server", salud: "tools", usage: "tools", agent: "tools", cola: "tools", verificaciones: "awtomic/qa",
+var TEMA_WIDGET = {server: "server", salud: "tools", gasto: "tools", agent: "tools", cola: "tools", verificaciones: "awtomic/qa",
                    tickets: "awtomic", sombra: "tools",
                    propuestas: "tools", podcast: "podcast", dj: "fuzzer", mail: "fuzzer",
                    que_ver: "personal", salud_personal: "personal"};
@@ -10481,9 +10488,9 @@ function escribirWidget(clave){
   var tit = c && c.querySelector(".wtit"), ese = c && c.querySelector(".wesc");
   var nombre = tit ? tit.textContent : clave;
   // `CLAUDE` no tiene texto al lado del titulo (solo la bateria): la cita lleva la linea del reparto, que desde
-  // la 1806 ya no se pinta en el widget pero sigue viniendo en el json (`usage.reparto.linea`)
+  // la 1806 ya no se pinta en el widget pero sigue viniendo en el json (`gasto.reparto.linea`)
   var txEse = ese ? ese.textContent.trim() : "";
-  var repL = clave === "usage" ? ((((widDatos || {}).usage || {}).reparto || {}).linea || "") : "";
+  var repL = clave === "gasto" ? ((((widDatos || {}).gasto || {}).reparto || {}).linea || "") : "";
   var dato = unaLinea(txEse || repL, ESC_CHARS);
   escribirEn(temaWidget(clave), "> widget " + nombre + ":" + (dato ? " " + dato : ""));
 }
@@ -10568,11 +10575,29 @@ function modalDe(o){
       (inf.modelo || hoy.modelo ? '\n<span class="g">modelo</span> <span class="c">' + esc(inf.modelo || hoy.modelo) + "</span>"
        : d.prov === "local" ? '\n<span class="g">modelo</span> <span class="g">sin local</span>' : "") +
       '\n<span class="g">clave</span> ' + (inf.clave === false ? '<span class="r">falta</span>' : '<span class="v">ok</span>') +
-      // dos medidas que no entran en la grilla (facundo, 2026-09-16): errores/cuota de 7 dias y tokens por corrida
+      // 2176 {models} paso 1: lo que sale el modelo. la grilla lo resume, aca va con la letra chica (el free
+      // tier dice cuanto saldria el dia que se pase a pago, y claude aclara que es medido, no una tarifa).
+      (d.precio ? '\n<span class="g">$/M</span> ' +
+        (d.precio.free ? '<span class="v">$0</span>'
+         : d.precio.medido ? (d.precio.usd_tok ? '<span class="a">~$' + d.precio.usd_tok + "</span>" : '<span class="g">-</span>')
+         : d.precio["in"] == null ? '<span class="g">sin precio publico</span>'
+         : '<span class="c">$' + d.precio["in"] + " in / $" + d.precio.out + " out</span>") +
+        (d.precio.lista ? '<span class="g"> (si se pagara: $' + d.precio.lista["in"] + " / $" + d.precio.lista.out + ")</span>" : "") +
+        (d.precio.nota ? '\n<span class="g">' + esc(d.precio.nota) + "</span>" : "") : "") +
+      // 2176 paso 3: la red no es el modelo. el `tok/s` de un remoto que contesta un token medía la ida y
+      // vuelta por internet (1817): aca van separados, el piso de latencia y lo que de verdad genera.
+      ((med.red_s != null || med.gen_toks != null)
+        ? '\n<span class="g">red</span> ' + (med.red_s == null ? '<span class="g">-</span>' : '<span class="c">' + med.red_s + "s</span>") +
+          '<span class="g"> de ida y vuelta · </span>' +
+          (med.gen_toks == null ? '<span class="g">velocidad sin medir (ninguna salida larga)</span>'
+           : '<span class="c">' + med.gen_toks + '</span><span class="g"> tok/s generando</span>') : "") +
+      // dos medidas que ahora TAMBIEN estan en la grilla (2176 paso 2): errores/cuota de 7 dias y tokens por corrida
       (med.n ? '\n<span class="g">7 días</span> ' + med.n + " corridas · " +
                '<span class="' + (med.tasa_error >= 30 ? "r" : med.tasa_error > 0 ? "a" : "v") + '">' +
                med.tasa_error + "% error</span>" +
-               (med.cuota ? '<span class="g"> (' + med.cuota + " por cuota)</span>" : "") +
+               (med.cuota ? '<span class="g"> (' + med.cuota + " por cuota" +
+                            (med.tasa_cuota != null ? ", " + med.tasa_cuota + "%" : "") + ")</span>" : "") +
+               (med.ultimo ? '\n<span class="g">ultima corrida</span> <span class="c">' + esc(med.ultimo) + "</span>" : "") +
                '\n<span class="g">tokens</span> ' +
                (med.tokens_medios === null || med.tokens_medios === undefined ? '<span class="g">no los reporta</span>'
                 : '<span class="c">' + med.tokens_medios + "</span>" + '<span class="g"> por corrida (' +
@@ -10593,6 +10618,18 @@ function modalDe(o){
       actuar("tools", "sacá " + d.prov + " del widget `models`: quitalo de COLS_SOMBRA en " +
                       "recetas/widgets_json.py y de donde se mida en recetas/sombra.py, y decime por qué quedó afuera");
     }]);
+  } else if(o.tipo === "ahora"){
+    // 2176 paso 5: una de las cosas que estan corriendo en este momento (una tarea de la cola, o el chat)
+    m.titulo = "ahora: " + (d.nombre || "chat");
+    m.cuerpo = '<span class="g">modelo</span> <span class="c">' + esc(d.modelo || "?") + "</span>" +
+      (d.escalon ? '<span class="g"> (escalon ' + esc(d.escalon) + ")</span>" : "") +
+      (d.cuenta ? '\n<span class="g">cuenta</span> <span class="c">' + esc(d.cuenta) + "</span>" : "") +
+      (d.carril ? '\n<span class="g">carril</span> ' + esc(d.carril) : "") +
+      (d.tema ? '\n<span class="g">tema</span> ' + esc(d.tema) : "") +
+      (d.min || d.min === 0 ? '\n<span class="g">corriendo hace</span> ' + d.min + " min" : "") +
+      (d.chrome ? '\n<span class="g">con chrome</span>' : "") +
+      (d.motivo ? '\n\n<span class="g">' + esc(d.motivo) + "</span>" : "");
+    m.acciones.push(accHablar(o, "lo que esta corriendo ahora con " + (d.modelo || "claude")));
   } else if(o.tipo === "catbackup"){
     var v = d.veredicto || {};
     m.titulo = "backup: categoria " + d.cat;
@@ -10604,7 +10641,10 @@ function modalDe(o){
                : x.acierto + " (crudo " + x.crudo + ") · " + (x.latencia === null ? "?" : x.latencia) + "s · " + x.n + " corridas");
       }).join("") +
       '\n\n<span class="g">veredicto</span> ' + esc(v.veredicto || "pocos datos") +
-      (v.proveedor ? " (" + esc(v.proveedor) + ")" : "");
+      (v.proveedor ? " (" + esc(v.proveedor) + ")" : "") +
+      // 2176 paso 4: de cuando es lo que se esta mirando
+      ((d.fresco && d.fresco.ultimo) ? '\n<span class="g">medido por ultima vez</span> <span class="c">' +
+        esc(d.fresco.ultimo) + '</span><span class="g"> (hace ' + esc(d.fresco.edad || "?") + ")</span>" : "");
     m.acciones.push(accHablar(o, "la categoria " + d.cat + " de los modelos de backup"));
   } else if(o.tipo === "ticket"){
     m.titulo = d.key;
@@ -11671,10 +11711,10 @@ window.__agente = {
   animRotable: animRotable, animGus: animGus, animMenuAbrir: animMenuAbrir, animMenuCerrar: animMenuCerrar,
   animPoner: animPoner, animIdx: animIdx, animColor: animColor,   // 1670: color por caracter y `ritmo`
   escTope: escTope, capaTope: function(){ var c = capaTope(); return c && c.nombre; }, modalMolde: modalMolde, moldeBoton: moldeBoton, moldeSwitch: moldeSwitch,
-  // 1793: `usage` vive en `web/widgets/usage.js`: lo que era global se pide al modulo cargado
+  // 1793: `gasto` vive en `web/widgets/gasto.js` (hasta la 2175, `usage`): lo global se pide al modulo
   // 1806: sin switch de modelo; lo tocable es cada cuenta (`cuentaAbrir`), `cuEstado` dice que mando
-  cuentaAbrir: function(cu){ return mods.usage ? mods.usage.cuentaAbrir(cu) : false; },
-  cuEstado: function(){ return mods.usage ? mods.usage.cuEstado() : null; },
+  cuentaAbrir: function(cu){ return mods.gasto ? mods.gasto.cuentaAbrir(cu) : false; },
+  cuEstado: function(){ return mods.gasto ? mods.gasto.cuEstado() : null; },
   verImagen: verImagen,   // 1455: esc cierra el de mas arriba (`prueba_web_votar`)
   glifos: function(){ var o = {}; Object.keys(GLIFOS).forEach(function(k){ o[k] = GLIFOS[k][0]; }); return o; },   // 1657: `prueba_web_votar` chequea que `-_-` sea maybe y `←` el back
   animGusto: animGusto, animGustosSubir: animGustosSubir, animPeso: animPeso,

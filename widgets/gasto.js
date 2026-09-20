@@ -1,4 +1,10 @@
-// widget `usage` del board: las barras de CLAUDE por cuenta (tocables: modal con el detalle) y el grafico de la semana.
+// widget `gasto` del board (hasta la 2175 se llamaba `usage` y era solo CLAUDE): UNA linea por cuenta, todas en
+// dolares (facundo, 2026-09-19, opcion A: "una linea por cuenta, todas en usd, claude contra sus $200 y las de api
+// contra $20 amarillo / $100 rojo"). las tres cuentas de claude leen su `%` de week como plata sobre los $200/mes
+// que sale cada una, y abajo van las de api (`mistral`, `gemini`, `groq`). la plata, el nivel de color y el texto
+// secundario llegan ARMADOS del server (`recetas/gasto_api.py` -> `gasto.lineas`): la web no convierte nada.
+// tocar cualquier linea abre su modal: la de claude con sus tres barras y el boton de pasar el agente, la de api
+// con el plan, el consumo del mes y, si la hay, la advertencia de que ese numero no sale de la facturacion real.
 // modulo de widget (orden 1793, 2026-09-16, "el board como las secciones de shopify"): el shell lo carga
 // con `import()` y, cuando la pagina es `file://` (las pruebas), con un `<script>`, que es lo unico que ese
 // protocolo deja. por eso el archivo NO tiene `export`: el contrato es registrarse en el shell, asi el mismo
@@ -58,16 +64,18 @@
     cuAbierta = cu.nombre;
     return cuModal.abrir({titulo: "cuenta " + cu.nombre, cuenta: cu.email || "", html: html, botones: botones});
   }
-  var cuentasVistas = {};
+  var cuentasVistas = {}, lineasVistas = {};
   function alTocar(ev){
-    var n = ev.target.closest && ev.target.closest(".usage .cta[data-cta]");
+    var n = ev.target.closest && ev.target.closest(".gasto [data-cta]");
     if(!n) return;
     ev.preventDefault(); ev.stopPropagation();
-    var cu = cuentasVistas[n.getAttribute("data-cta")];
-    if(cu) cuentaAbrir(cu);
+    var k = n.getAttribute("data-cta");
+    if(cuentasVistas[k]) cuentaAbrir(cuentasVistas[k]);
+    else if(lineasVistas[k]) apiAbrir(lineasVistas[k]);
   }
   document.addEventListener("click", alTocar, true);
-  var USAGE_ORDEN = ["faacuu", "orugote", "facundo"];
+  // el orden de las cuentas lo pone el server (`gasto_api.lineas`), no la web. las tres barras siguen
+  // vivas SOLO adentro del modal de una cuenta de claude (5h, week y el weekly de fable de esa cuenta).
   var USAGE_BARRAS = [["five_hour", "5h"], ["seven_day", "week"], ["fable", "fable"]];
   // orden 1808 (facundo, 2026-09-16): una cuenta sin limite que cuente (ninguna barra `week` ni `fable`
   // con numero: sin plan, sin login, sin datos de uso) se pinta en gris apagado y NO es tocable: no abre
@@ -81,52 +89,60 @@
     }
     return true;
   }
-  function cajaUsage(u){
-    var cuentas = (u.cuentas || []).slice(), html = "";
-    if(!cuentas.length && (u.barras || []).length)
-      cuentas = [{nombre: "cuenta", activa: true, barras: u.barras}];
-    var soloCta = wset("usage", "cuentas");
-    if(soloCta && soloCta !== "todas")
+  // 2175 {gasto}: UNA fila por cuenta. el server manda la plata (`usd_txt`), el nivel de color y el texto
+  // secundario ya armados; aca solo se pinta. la barra reusa el molde `.ub` de siempre (`.ub-n` nombre,
+  // `.ub-pista`/`.ub-lleno` la barra, `.ub-p` el numero), asi el color de cada nivel es el mismo del board.
+  function filaGasto(l){
+    var pct = (l.pct === null || l.pct === undefined) ? 0 : Math.max(0, Math.min(100, l.pct));
+    var tit = l.nombre + ": " + (l.usd_txt || "$?") + " de " + (l.tope_txt || "") +
+              (l.plan ? " (" + l.plan + ")" : "") + (l.detalle ? " · " + l.detalle : "");
+    return '<div class="ub grow n-' + esc(l.nivel || "sin") + (l.agotada ? " agotada" : "") +
+      (l.dormida ? " dormida" : "") + (l.tocable ? "" : " sinlim") + '" title="' + esc(tit) + '"' +
+      (l.tocable ? ' data-cta="' + esc(l.nombre) + '" role="button" tabindex="0"' : "") + ">" +
+      '<span class="ub-n nom' + (l.estado ? " e-" + esc(l.estado) : "") + '">' + esc(l.nombre) + "</span>" +
+      '<span class="ub-pista"><span class="ub-lleno" style="width:' + pct + '%"></span></span>' +
+      '<span class="ub-p">' + esc(l.usd_txt || "$?") + "</span>" +
+      '<span class="ren">' + esc(l.sec || "") + (l.falta_fuente ? ' <span class="g">?</span>' : "") + "</span></div>";
+  }
+  // el modal de una cuenta de api: el plan, lo que va del mes y de donde sale ese numero. sin boton:
+  // no hay nada que cambiar desde aca (la cuenta de api no se elige, se usa cuando toca).
+  function apiAbrir(l){
+    if(!l || !B.modalMolde) return false;
+    if(!cuModal) cuModal = B.modalMolde({id: "cuentamodal", z: 43, sinServer: true,
+                                         alCerrar: function(){ cuAbierta = null; }});
+    var f = function(et, v){ return '<span><span class="g">' + esc(et) + "</span> " + v + "</span>"; };
+    var html = '<div class="cmod">' + f("plan", '<span class="c">' + esc(l.plan || "?") + "</span>") +
+      "\n" + f("este mes", '<span class="c">' + esc(l.usd_txt || "$?") + "</span>" +
+                (l.incluido ? ' <span class="g">de $' + l.incluido + " incluidos</span>" : "")) +
+      "\n" + f("tokens del mes", esc((l.tok || 0).toLocaleString("es-AR")) +
+                ' <span class="g">en ' + (l.llamadas || 0) + " llamadas</span>") +
+      (l.tpd ? "\n" + f("hoy", esc(l.sec || "")) : "") +
+      (l.credito ? "\n" + f("credito", "$" + l.credito + ' <span class="g">de free trial</span>') : "") +
+      (l.alerta ? "\n" + f("alerta", "$" + l.alerta + ' <span class="g">/mes</span>') : "") +
+      (l.falta_fuente ? '\n<span class="r">el numero sale de `llamadas.jsonl`, no de la facturacion real</span>' : "") +
+      "</div>";
+    cuAbierta = l.nombre;
+    return cuModal.abrir({titulo: "cuenta " + l.nombre, cuenta: l.plan || "", html: html, botones: []});
+  }
+  function cajaGasto(u){
+    var lineas = (u.lineas || []).slice(), html = "";
+    var cuentas = (u.cuentas || []).slice();
+    var soloCta = wset("gasto", "cuentas");
+    if(soloCta && soloCta !== "todas"){
+      lineas = lineas.filter(function(l){ return l.tipo !== "claude" || l.nombre === soloCta; });
       cuentas = cuentas.filter(function(c){ return c.nombre === soloCta; });
-    cuentas.sort(function(x, y){
-      var ix = USAGE_ORDEN.indexOf(x.nombre), iy = USAGE_ORDEN.indexOf(y.nombre);
-      return (ix < 0 ? 9 : ix) - (iy < 0 ? 9 : iy);
-    });
-    // orden 1376/1377 (facundo, 2026-09-14): el titulo dice `CLAUDE` y al lado va solo la bateria. afuera la
-    // proyeccion general, las lineas por modelo, excluidas y brecha. orden 1806 (2026-09-16): tambien afuera la
-    // linea del reparto y el switch del modo: abajo del titulo van directo las dos cuentas.
-    // las dos columnas: el nombre pintado por `estado` (ok verde clarito, warn amarillo, mal rojo), sin negrita
-    cuentasVistas = {};
-    var cols = cuentas.map(function(cu){
-      // orden 1808 (facundo, 2026-09-16): la que no tiene limite que cuente va gris y no se toca
-      var sinlim = sinLimite(cu);
-      var est = sinlim ? "" : (cu.agotada ? "agotada" : (cu.estado || ""));
-      if(!sinlim) cuentasVistas[cu.nombre] = cu;
-      var cab = '<span class="cta"' + (sinlim ? "" : ' data-cta="' + esc(cu.nombre) + '" role="button" tabindex="0" title="detalle de ' + esc(cu.nombre) + '"') +
-        '><span class="nom' + (est ? " e-" + esc(est) : "") + '">' + esc(cu.nombre) + "</span>" +
-        (sinlim ? "" : renuevaHtml(cu)) + "</span>";
-      var cuerpo;
-      if(cu.sin_login){
-        // sin login propio: no se repiten los numeros de la otra, pero el hueco guarda la altura de las barras
-        cuerpo = USAGE_BARRAS.map(function(){ return '<div class="ub-hueco"></div>'; }).join("");
-      } else {
-        var bs = cu.barras || [];
-        cuerpo = USAGE_BARRAS.map(function(k){
-          var b = bs.filter(function(x){ return x.clave === k[0] || x.nombre === k[1]; })[0];
-          return barraHtml(b || {nombre: k[1], pct: null, linea: null, nivel: "sin"});
-        }).join("");
-      }
-      // 1915 {widgets}: `dormida` = sin 5h pero con lugar en la semana: misma opacidad que la agotada, la 5h en rojo
-      return '<div class="ucol' + (cu.elegida ? " elegida" : "") + (sinlim ? " sinlim" : "") +
-        (cu.agotada ? " agotada" : "") + (cu.dormida ? " dormida" : "") + '">' +
-        cab + cuerpo + "</div>";
-    });
-    if(cols.length) html += '<div class="ucols">' + cols.join("") + "</div>";
+    }
+    // lo tocable: la de claude abre el modal de la cuenta (barras, motivo, boton verde), la de api el suyo
+    cuentasVistas = {}; lineasVistas = {};
+    cuentas.forEach(function(c){ if(!sinLimite(c)) cuentasVistas[c.nombre] = c; });
+    lineas.forEach(function(l){ if(l.tipo !== "claude") lineasVistas[l.nombre] = l; });
+    if(lineas.length) html += '<div class="glin">' + lineas.map(filaGasto).join("") + "</div>";
     html += graficoSemana(u.semana);
     // al lado del titulo solo la bateria: sin numero, sin texto y sin tooltip
-    return caja("CLAUDE", bateriaUso(u.bateria), '<div class="usage">' + (html || vacio("sin datos")) + "</div>",
-                false, "usage");
+    return caja("GASTO", bateriaUso(u.bateria), '<div class="usage gasto">' + (html || vacio("sin datos")) + "</div>",
+                false, "gasto");
   }
+
   // orden 1377: lo que QUEDA (promedio de week y fable del tanque de las dos cuentas, lo calcula widgets_json).
   // llena = verde, se vacia proporcional, con 15% o menos le aparece el borde rojo.
   function bateriaUso(b){
@@ -155,15 +171,15 @@
               '<div class="usem"><div class="usem-g">' + ln + barras + '</div><div class="usem-et">' + ets + "</div></div>");
   }
 
-  B.registrar("usage", {
-    html: function(d){ return cajaUsage(d || {}); },
-    pintar: function(d, nodo){ return B.reemplazar(nodo, cajaUsage(d || {})); },
+  B.registrar("gasto", {
+    html: function(d){ return cajaGasto(d || {}); },
+    pintar: function(d, nodo){ return B.reemplazar(nodo, cajaGasto(d || {})); },
     // lo que este modulo deja puesto afuera: el listener del titulo de cada cuenta y su modal. al soltarlo se sacan
     destruir: function(){
       document.removeEventListener("click", alTocar, true);
       if(cuModal){ try{ cuModal.cerrar(true); }catch(e){} var el = document.getElementById("cuentamodal"); if(el) el.remove(); }
-      cuModal = null; cuUltimo = null; cuAbierta = null; cuentasVistas = {};
+      cuModal = null; cuUltimo = null; cuAbierta = null; cuentasVistas = {}; lineasVistas = {};
     },
-    cuentaAbrir: cuentaAbrir, cuEstado: cuEstado
+    cuentaAbrir: cuentaAbrir, apiAbrir: apiAbrir, cuEstado: cuEstado
   });
 })();

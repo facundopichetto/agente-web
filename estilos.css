@@ -1127,6 +1127,38 @@
   .usage .ucol.sinlim .cta .nom{color:var(--gris);opacity:.7}
   .usage .ucol.sinlim .cta{cursor:default}
   .usage .ucol.sinlim .cta:hover{background:none}
+  /* 2175 {gasto}: UNA fila por cuenta, todas en usd. la fila reusa el molde `.ub` (mismo alto, mismos colores
+     por nivel) y agrega el dato secundario a la derecha: el `to renew` de una cuenta de claude o el cupo de
+     tokens de una de api. el nombre va sin negrita (1806) y todo centrado vertical (2080). */
+  .usage.gasto .glin{display:block}
+  .usage.gasto .ub.grow{gap:7px;margin:0 0 7px 0;align-items:center;border-radius:3px}
+  .usage.gasto .ub.grow{gap:6px}
+  .usage.gasto .ub.grow .ub-n{flex:0 0 68px;min-width:68px;color:var(--cian);font-weight:400;letter-spacing:.04em;
+                              overflow:hidden;text-overflow:ellipsis}
+  .usage.gasto .ub.grow .ub-pista{flex:1 1 30px;min-width:26px}
+  /* el numero es de ancho fijo y nunca se parte ("$24.50" en 50 px se iba a dos renglones): asi todas las
+     barras arrancan y terminan en la misma x, que es lo que hace legible la columna */
+  .usage.gasto .ub.grow .ub-p{flex:0 0 58px;min-width:58px;white-space:nowrap;overflow:hidden}
+  /* el dato secundario cede antes que la barra: `min-width:0` (sin el, un flex nowrap no achica) y elipsis */
+  /* el dato secundario tambien es de ancho fijo: si cediera, cada barra arrancaria en otra x y la columna
+     dejaria de leerse de un vistazo. lo que no entra se corta con elipsis (el detalle esta en el modal) */
+  .usage.gasto .ub.grow .ren{flex:0 0 108px;min-width:0;font-size:13px;color:var(--gris);
+                             text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* 1806: el nombre lo pinta el ESTADO de la cuenta (ok verde clarito, warn amarillo, mal/agotada rojo); el
+     color de la PLATA va en la barra y en el numero (`n-ok`/`n-cerca`/`n-mal`), que es otra cosa */
+  .usage.gasto .ub.grow .ub-n.e-ok{color:#a6f5a0}
+  .usage.gasto .ub.grow .ub-n.e-warn{color:var(--amarillo)}
+  .usage.gasto .ub.grow .ub-n.e-mal,
+  .usage.gasto .ub.grow .ub-n.e-agotada{color:var(--rojo)}
+  .usage.gasto .ub.grow[data-cta]{cursor:pointer}
+  .usage.gasto .ub.grow[data-cta]:hover{background:#0d1410}
+  /* la agotada y la dormida bajan a opacidad .8 MENOS el `to renew`, que se lee igual en todas (1861/1915) */
+  .usage.gasto .ub.grow.agotada > *:not(.ren),
+  .usage.gasto .ub.grow.dormida > *:not(.ren){opacity:.8}
+  /* 1808: la cuenta sin limite que cuente (sin login, sin datos) va gris y no se toca */
+  .usage.gasto .ub.grow.sinlim .ub-n{color:var(--gris);opacity:.7}
+  .usage.gasto .ub.grow.sinlim{cursor:default}
+  .usage.gasto .ub.grow.sinlim:hover{background:none}
   .ubat{display:inline-block;vertical-align:middle;position:relative;width:20px;height:9px;margin:0 5px 0 2px;
         border:1px solid #555;border-radius:2px;padding:1px;box-sizing:border-box}
   .ubat::after{content:"";position:absolute;right:-3px;top:2px;width:2px;height:3px;background:#555;border-radius:0 1px 1px 0}
@@ -1196,6 +1228,11 @@
   .esctab .enom,.esctab .eth,.esctab .ecel{min-width:0;overflow:hidden;text-overflow:ellipsis}
   .esctab .ecel{text-align:right}
   @media (max-width:480px){ .esctab{column-gap:2px;font-size:15px} }   /* 1938: 12px (1946: +2) y el gap a 2px: asi las 7 columnas siguen entrando en 390px */
+  /* 2176 {models}: la segunda grilla del widget `models`, una fila por MODELO (plata, error, cuota, red,
+     tok/s y frescura). mismas 7 columnas y mismas reglas que `.esctab`: solo se despega de la tabla de
+     arriba con un margen, no cambia ni fuente ni gap (una tabla que no entra se arregla con el gap, 1946) */
+  .esctab.mdtab{margin-top:4px}
+  .esctab.mdtab .it{cursor:pointer;touch-action:manipulation}
   .qtab .qpaso.qh,.qtab .qcola.qh{opacity:.6} .qtab .qcorre.qh{color:#8fcf7f}
   /* 1862: con la sexta columna (`delay`) las cinco horas ocupan mas: la tabla baja a 11.5px (1938: era 9.5) y 4px de gap tambien
      en la compu (antes 10.5/7, solo el celu bajaba), asi el nombre sigue teniendo lugar y no se corta con `…`;
