@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.408">
-<link rel="manifest" href="manifest.json?v=4.408">
+<meta name="agente-web-version" content="4.409">
+<link rel="manifest" href="manifest.json?v=4.409">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.408">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.409">
 </head>
 <body>
 
@@ -433,7 +433,7 @@ var TEMAS = ["tools", "awtomic", "awtomic/qa", "flabs", "fuzzer", "juegos", "pla
 var PRIORIDAD = ["awtomic/qa", "flabs", "podcast", "consejo", "server", "juegos", "plata", "fuzzer", "awtomic", "flaudio", "tools"];
 var MODOS_TAB = [];
 var PROVEEDORES_TAB = ["gemini", "groq", "groq-tandas", "mistral"];
-var MODELOS_TAB = [["claude", "claude (el modelo que corre flaudio) \u2014 elegir tema"], ["gemini", "gemini"], ["groq", "groq"], ["groq-tandas", "groq en tandas (contexto largo, troceado)"], ["mistral", "mistral"]];
+var PESTANAS_TAB = [["awtomic", "awtomic"], ["awtomic/qa", "awtomic/qa"], ["consejo", "consejo"], ["flabs", "flabs"], ["flaudio", "flaudio"], ["fuzzer", "fuzzer"], ["gemini", "gemini"], ["juegos", "juegos"], ["mistral", "mistral"], ["personal", "personal"], ["plata", "plata"], ["podcast", "podcast"], ["server", "server"], ["tools", "tools"]];
 var ALIAS = {"awtomic-qa": "awtomic/qa", "claudio": "flaudio"};
 var RE_CORTE_SRC = "(\\n+)|([.;!?]\\s+)|(^|[\\s,;:])(?:y\\s+otra\\s+cosa|otra\\s+cosa|aparte|adem[a\u00e1]s|tambi[e\u00e9]n)(?!\\w)";
 var PALABRAS = {
@@ -1562,33 +1562,22 @@ function cerrarTab(tema){
   if(activo === tema) activo = reemplazo;
   pintarTabs(); render(); irDonde();
 }
-// 2162 (facundo, 2026-09-19): el `MAS` abre PRIMERO la lista de MODELOS, armada del mismo archivo de
-// config que las pestañas por modelo (`pestanas-proveedor.json` -> `MODELOS_TAB`). `claude` es una opcion
-// mas de esa lista y lleva al menu de temas de siempre: las pestañas abiertas hoy (`tools`, `juegos`) son
-// pestañas de CLAUDE, el modelo que corre flaudio. cualquier otro modelo abre una pestaña de ESE modelo,
-// con su contexto y su clave, sin tocar carpeta ni cola.
+// 2248 {pestanas} (facundo, 2026-09-20): "cada pestaña tiene un nombre y sus reglas... rompemos con la
+// idea de ayer de claude / no claude". el `MAS` abre UNA lista plana de pestañas por nombre: se fue el
+// grupo `claude` y se fue el grupo de proveedores. la lista la genera `clasificar_tema` en `PESTANAS_TAB`
+// desde el mismo `pestanas-proveedor.json`, asi que una pestaña con `"menu": false` (hoy `groq` y
+// `groq-tandas`) no aparece aca aunque su config siga viva. la mayoria las contesta el chat de siempre;
+// `gemini` y `mistral` las contesta su proveedor, y eso lo decide el daemon por el nombre de la pestaña
+// (`pestanas_proveedor.es_pestana`), no el menu: la web las manda igual que cualquier otra.
 function nuevaTab(){
-  var mods = (typeof MODELOS_TAB !== "undefined" ? MODELOS_TAB : [["claude", "claude — elegir tema"]]);
-  var ops = [];
-  mods.forEach(function(m){
-    if(m[0] !== "claude" && tabs.indexOf(m[0]) >= 0) return;   // ya la tenés abierta
+  var lista = (typeof PESTANAS_TAB !== "undefined" ? PESTANAS_TAB : []);
+  var ops = [["general (sin tema, la puerta de entrada)", AUTO]];
+  lista.forEach(function(m){
+    if(tabs.indexOf(m[0]) >= 0) return;   // ya la tenés abierta
     ops.push([m[1], m[0]]);
   });
-  dd("pestaña nueva: qué modelo?", ops, function(m){
-    if(m === "claude") nuevaTabTema(); else abrirTab(m);
-  });
+  dd("pestaña nueva: cuál?", ops, abrirTab);
 }
-function nuevaTabTema(){
-  var ops = [["general (sin tema, la puerta de entrada)", AUTO]];
-  TEMAS.forEach(function(t){
-    if(tabs.indexOf(t) < 0 && !esModo(t) && !esPestanaModelo(t)) ops.push([t, t]);   // los modos ya estan
-  });
-  dd("pestaña de claude: qué tema?", ops, abrirTab);
-}
-function esPestanaModelo(t){
-  return (typeof PROVEEDORES_TAB !== "undefined" ? PROVEEDORES_TAB : []).indexOf(normTema(t)) >= 0;
-}
-
 // ---------- dropdown (pestaña nueva / esto parece de otro tema) ----------
 function dd(titulo, opciones, alElegir){
   var d = $("dd");
