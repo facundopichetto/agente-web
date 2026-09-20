@@ -400,6 +400,23 @@
   #selmodal .seltit{align-items:center}
   /* 2002 {back}: el back pasa de 38 px al porte del molde (`.mesquina`, 52 px), el mismo que la `✕` de al lado */
   #selback{margin-right:2px}
+  /* 2247 {botones} (facundo, 2026-09-19, por audio): "dejamos 3 principales para TODAS (o sea 3 minimo), y ponemos
+     pequenas acciones arriba de los 3 botones si hay alguna cuarta [...] seria una opcion arriba de la del medio
+     quiza. se toca con la flecha de arriba". los chicos NO son `.bglifo` (no son votos grandes ni cuadrados): son
+     pastillas de texto, centradas sobre el boton del medio, bien mas chicas que el pie para que nunca compitan con
+     los tres de siempre. el que dispara la flecha de arriba lleva el `↑` al lado (`.tjxtecla`) */
+  #selextras{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:center}
+  #selextras.oculta{display:none!important}
+  #selextras .tjxbtn{display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:5px 14px;
+    border-radius:17px;border:1px solid var(--linea);background:transparent;color:var(--blanco);
+    font:inherit;font-size:13px;line-height:1.1;cursor:pointer;opacity:.85}
+  #selextras .tjxbtn:hover,#selextras .tjxbtn:focus-visible{opacity:1;background:rgba(255,255,255,.06)}
+  #selextras .tjxtxt{white-space:normal;overflow-wrap:anywhere}
+  #selextras .tjxtecla{font-size:12px;opacity:.6}
+  /* el color sigue el mismo vocabulario del pie: `subir` verde, `no`/`unfollow` rojo, `follow` cian */
+  #selextras .tjx-subir{border-color:var(--verde);color:var(--verde)}
+  #selextras .tjx-no,#selextras .tjx-unfollow{border-color:var(--rojo);color:var(--rojo)}
+  #selextras .tjx-follow{border-color:var(--cian);color:var(--cian)}
   #selacciones{display:flex;flex-wrap:wrap;gap:6px}
   #selacciones.oculta,#selmodal #seltxt.oculta{display:none!important}
   /* 1922 {vistatinder}: en el `home` de la vista no hay tarjeta que deshacer ni texto que enviar */
@@ -448,6 +465,7 @@
   #selmodal.pantalla #seltarjeta .tjppal img{object-fit:contain}
   /* la fila de votos no se estira de borde a borde en una pantalla ancha: queda del ancho de una caja, centrada */
   #selmodal.pantalla #selacciones{width:100%;max-width:520px;margin:0 auto}
+  #selmodal.pantalla #selextras{width:100%;max-width:520px;margin:0 auto}
   /* 1933 {instatinder} (facundo, 2026-09-17): en el celu los tres votos van en 3 columnas IGUALES que ocupan el
      100% del ancho, cuadrados, y anclados ABAJO DE TODO de la vista (al pie, no pegados al bloque de datos): la
      fila pasa a grilla y se manda al final del orden de la caja (`order`), asi el pulgar la encuentra siempre en
@@ -456,7 +474,9 @@
     #selmodal.pantalla #selacciones{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;
       order:9;flex:0 0 auto;margin-top:auto;max-width:none}
     #selmodal.pantalla #selacciones .tjbtn{aspect-ratio:1/1;min-height:58px;width:100%;box-sizing:border-box}
-    #selmodal.pantalla .selpie{order:8}
+    /* 2247: los chicos van pegados ARRIBA de los tres grandes, y el pie de `enviar` queda por encima de ellos */
+    #selmodal.pantalla .selpie{order:7}
+    #selmodal.pantalla #selextras{order:8;flex:0 0 auto;max-width:none}
   }
   @media (min-width:700px){
     #selmodal.pantalla #seltarjeta{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr);gap:12px}
@@ -522,6 +542,14 @@
   /* 2244 {superranking} paso 2: por que esta vacia una lista que se puede destrabar (falta de lecturas). va en
      el amarillo de aviso de la 2143, adentro de la tarjeta y tambien arriba de la lista abierta. */
   #sellistas .lisnota{color:var(--amarillo);font-size:16px;opacity:.85;word-break:break-word}
+  /* 2247 {botones} paso 3: las acciones de LISTA ENTERA, abajo del `por que` del cuadrado. son chips chicos, bien
+     distintos del cuadrado (que abre el votador): cortan la burbuja y abren el modal con la caja `dale` */
+  #sellistas .lismasivos{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+  #sellistas .lismas{border:1px solid var(--linea);background:transparent;color:var(--gris);font:inherit;
+    font-size:14px;line-height:1.1;padding:6px 12px;border-radius:15px;cursor:pointer;text-align:left}
+  #sellistas .lismas:hover,#sellistas .lismas:focus-visible{color:var(--blanco);background:rgba(255,255,255,.06)}
+  #sellistas .lismas.lisx-no,#sellistas .lismas.lisx-unfollow{border-color:#3a1f1f;color:var(--rojo-apagado)}
+  #sellistas .lismas.lisx-no:hover,#sellistas .lismas.lisx-unfollow:hover{color:var(--rojo)}
   /* 2035 {columnas}: la fotito de la tira es REDONDA (la de la lista siempre lo fue, 1404) y el `@` va abajo.
      lo que antes era una fila con nombre, datos, por que y la frase de accion vive ahora en la cartita (1948). */
   #sellistas .lisfoto{flex:0 0 auto;overflow:hidden;border:1px solid var(--linea);background:#111}

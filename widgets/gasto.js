@@ -138,12 +138,18 @@
                 ' <span class="g">en ' + (l.llamadas || 0) + " llamadas</span>") +
       (l.tpd ? "\n" + f("hoy", esc(l.sec || "")) : "") +
       (l.usd_lista_txt ? "\n" + f("a precio de lista", '<span class="c">' + esc(l.usd_lista_txt) + "</span>" +
-                                   ' <span class="g">si este consumo fuera pago' +
+                                   ' <span class="g">' + (l.fuente === "free" ? "si este consumo fuera pago" : "los tokens del mes por la tarifa publicada") +
                                    ((l.sin_precio || []).length ? " (" + l.sin_precio.length + " sin precio publico)" : "") +
                                    "</span>") : "") +
       (l.credito ? "\n" + f("credito", "$" + l.credito + ' <span class="g">de free trial</span>') : "") +
       (l.alerta ? "\n" + f("alerta", "$" + l.alerta + ' <span class="g">/mes</span>') : "") +
-      (l.falta_fuente ? '\n<span class="r">el numero sale de `llamadas.jsonl`, no de la facturacion real</span>' : "") +
+      // 2245 {gastoreal}: de donde sale el numero de arriba. `real` = lo leyo de la facturacion del
+      // proveedor (`recetas/facturacion.py`, cacheado), y ahi va el periodo y cuando se leyo; cualquier otra
+      // cosa es una estimacion nuestra y va en rojo, como antes.
+      (l.fuente_txt ? "\n" + f("de donde sale", (l.falta_fuente ? '<span class="r">' : '<span class="c">') +
+                               esc(l.fuente_txt) + "</span>" +
+                               (l.real_periodo ? ' <span class="g">' + esc(l.real_periodo) + "</span>" : "")) : "") +
+      (l.real_error ? '\n<span class="r">la ultima lectura fallo: ' + esc(l.real_error) + "</span>" : "") +
       "</div>";
     cuAbierta = l.nombre;
     return cuModal.abrir({titulo: "cuenta " + l.nombre, cuenta: l.plan || "", html: html, botones: []});

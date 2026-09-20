@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.407">
-<link rel="manifest" href="manifest.json?v=4.407">
+<meta name="agente-web-version" content="4.408">
+<link rel="manifest" href="manifest.json?v=4.408">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.407">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.408">
 </head>
 <body>
 
@@ -178,6 +178,11 @@
     <div id="seltarjeta" class="oculta"></div>
     <!-- 1801: los botones los arma `tjBotones` segun el proceso (`TJ_PROCS`). candidatas: `↓` baja (hoy a ignoradas)
          · `-_-` maybe · `↑` sube (hoy a interesan). el back `←` sigue arriba, fuera de esta fila (1657) -->
+    <!-- 2247 {botones} (facundo, 2026-09-19, por audio): "dejamos 3 principales para TODAS (o sea 3 minimo), y
+         ponemos pequenas acciones arriba de los 3 botones si hay alguna cuarta". los chicos son POR LISTA y los
+         manda el server (`extras` del json de la votacion, de `personal/botones-listas.json`): la web no redacta
+         ninguno. van centrados sobre el boton del medio y se disparan con la flecha de ARRIBA del teclado -->
+    <div id="selextras" class="oculta"></div>
     <div id="selacciones" class="oculta"></div>
     <textarea id="seltxt" placeholder="algo para sumar (opcional)" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
     <div class="selbtns mfila"><button id="selaceptar" class="selbtn bverde llena" type="button">aceptar</button><button id="selmandar" class="selbtn bverde llena" type="button">enviar texto</button></div>
@@ -4232,6 +4237,7 @@ function selModoLista(lista){
   $("sellista").classList.toggle("oculta", !lista);
   $("seltarjeta").classList.toggle("oculta", lista);
   $("selacciones").classList.toggle("oculta", lista);
+  $("selextras").classList.toggle("oculta", lista);   // 2247: los chicos son de la tarjeta, no de la lista de checkboxes
   $("selback").classList.toggle("oculta", lista);   // 1657: el back es de las tarjetas, no de la lista de checkboxes
   $("seltxt").classList.toggle("oculta", !lista);   // 1561: en tarjetas no hay campo de texto
   var b = document.querySelector("#selmodal .selbtns");
@@ -4469,9 +4475,11 @@ var TJ_PROCS = {
     {q: "bajar", tipo: "bajar", aria: "baja a maybe"},
     {q: "igual", tipo: "igual", aria: "queda en interesan"},
     {q: "subir", tipo: "subir", aria: "empezar a seguir"}]},
+  // 2247 {botones}: el tercero (`3 minimo para TODAS`), la `✕` roja: la ignoro sin dejar de seguirla
   "ig-dejar": {nombre: "dejar de seguir", botones: [
     {q: "bajar", tipo: "bajar", aria: "dejar de seguir"},
-    {q: "igual", tipo: "igual", aria: "queda igual"}]},
+    {q: "igual", tipo: "igual", aria: "queda igual"},
+    {q: "ignorar", tipo: "no", aria: "la ignoro, la sigo igual"}]},
   // 1872 {maybe}: el cuarto proceso, la lista `maybe` (lo que junta el `-_-` de candidatas y el `↓` de empezar a seguir)
   // 1928 {arrepenti} (reemplaza la 1873): el quinto proceso es `activa` + `follow` y ya no deshace ningun voto.
   // 2019 {solicitudes}: `follow` son dos listas, `follow_request_sent` y `following` (mas `activar`); la cartita de
@@ -4537,7 +4545,46 @@ function tjBotones(e){
   });
   return caja;
 }
+// 2247 {botones}: los botones CHICOS de arriba del pie, por LISTA. el pie de 3 grandes (`tjBotones`) no cambia
+// nunca: esto es lo que se suma arriba, centrado sobre el del medio. el catalogo y que lista tiene cual viven en
+// `personal/botones-listas.json` (server), asi que sacar o cambiar una cuarta accion es editar ese archivo.
+function tjExtrasSpec(e){
+  var xs = (e && e.extras) || [];
+  return xs.map(function(b){ return {q: b.q, tipo: b.tipo || "igual", texto: b.texto || b.q}; });
+}
+// cual dispara la flecha de ARRIBA: el mas cercano al centro, y con dos el primero (el de la izquierda)
+function tjExtraCentro(e){
+  var xs = tjExtrasSpec(e);
+  return xs.length ? xs[Math.floor((xs.length - 1) / 2)].q : null;
+}
+function tjExtras(e){
+  var caja = $("selextras"), xs = tjExtrasSpec(e);
+  var firma = (e && e.coleccion || "") + "|" + (sel.filtro || "") + "|" + xs.map(function(b){ return b.q + ":" + b.texto; }).join("|");
+  if(caja.getAttribute("data-firma") !== firma){
+    caja.setAttribute("data-firma", firma);
+    caja.textContent = "";
+    var centro = tjExtraCentro(e);
+    xs.forEach(function(b){
+      var el = document.createElement("button");
+      el.type = "button";
+      el.className = "tjxbtn tjx-" + b.tipo + (b.q === centro ? " tjxcentro" : "");
+      el.setAttribute("data-q", b.q);
+      el.setAttribute("aria-label", b.texto);
+      el.title = b.texto + (b.q === centro ? " (flecha de arriba)" : "");
+      var t = document.createElement("span"); t.className = "tjxtxt"; t.textContent = b.texto;
+      el.appendChild(t);
+      if(b.q === centro){
+        var k = document.createElement("span"); k.className = "tjxtecla"; k.textContent = "\u2191";
+        el.appendChild(k);
+      }
+      caja.appendChild(el);
+    });
+  }
+  return caja;
+}
 function tjProcQs(e){ return tjBotonesSpec(e).map(function(b){ return b.q; }); }
+// todas las decisiones que se pueden votar en esta tarjeta: los 3 del pie mas los chicos de la lista (2247)
+function tjTodasQs(e){ return tjProcQs(e).concat(tjExtrasSpec(e).map(function(b){ return b.q; })); }
 // 1883 {teclado} + 1893 {mapa}, con las teclas de la 2079 {votador}: votar sin tocar la pantalla. los votos son
 // `a` / `s` / `d` POR POSICION, como se ven al pie, y las flechas `←` / `→` ya no votan: navegan la fila (`tjMover`).
 // lo de abajo queda como estaba para el resto (`tjQMedio`, el backspace de la 1905 y los guards de foco):
@@ -4605,6 +4652,15 @@ function tjTecla(ev){
   if(ev.key === "ArrowRight" || ev.key === "ArrowLeft"){
     ev.preventDefault();
     tjMover(ev.key === "ArrowRight" ? 1 : -1);
+    return;
+  }
+  // 2247 {botones} (facundo: "se toca con la flecha de arriba"): la flecha de ARRIBA vota el boton chico del
+  // centro. sin extras en esta lista no hace nada (la lista que no tiene cuarta accion no gana una tecla nueva).
+  if(ev.key === "ArrowUp"){
+    var xq = tjExtraCentro(sel.actual);
+    if(!xq) return;
+    ev.preventDefault();
+    tjDecidir(xq);
     return;
   }
   var qs = tjProcQs(sel.actual), k = String(ev.key || "").toLowerCase(), q = null;
@@ -4704,7 +4760,9 @@ function tjPintar(){
   // a la LISTA de la que salio el votador. solo queda gris si el votador no salio de una lista (el push, un icono)
   var atras = tjHist(e).length > 0 || !!lis.origen, bk = $("selback");
   tjBotones(e);   // 1801: los botones son los del proceso de esta coleccion
+  tjExtras(e);    // 2247: y los chicos de arriba, los de ESTA lista
   $("selacciones").classList.toggle("oculta", !c);
+  $("selextras").classList.toggle("oculta", !c || !tjExtrasSpec(e).length);
   [].forEach.call(document.querySelectorAll("#selacciones .tjbtn"), function(b){
     b.style.visibility = c ? "" : "hidden";
   });
@@ -4852,7 +4910,7 @@ function tjPedirMas(e){
 function tjDecidir(q){
   var e = sel.actual, c = tjActual();
   // 1657, 1801: solo las decisiones del proceso que se esta votando (el server rechaza las de otro proceso igual)
-  if(!e || !c || tjProcQs(e).indexOf(q) < 0) return false;
+  if(!e || !c || tjTodasQs(e).indexOf(q) < 0) return false;   // 2247: los 3 del pie + los chicos de la lista
   return tjVoto(e, c, q, "");
 }
 // 2137 {votolocal}: el voto NO sale al server. queda en `sel.tjHistorial` (la tirada, en memoria del browser) y
@@ -4863,7 +4921,9 @@ function tjVoto(e, c, q, txt){
   sel.tjUlt = Date.now();
   // 1657, 1801: el nombre de la decision sale del aria del boton del proceso (`no va`, `dejar de seguir`, `maybe`...)
   var bq = tjProc(e.coleccion).botones.filter(function(x){ return x.q === q; })[0];
-  $("selestado").textContent = ((bq && bq.aria) || q) + " @" + (c.cuenta || c.id);
+  // 2247: si el voto salio de un boton CHICO, la frase es la del extra (el server la manda en `extras`)
+  var xq = tjExtrasSpec(e).filter(function(x){ return x.q === q; })[0];
+  $("selestado").textContent = ((xq && xq.texto) || (bq && bq.aria) || q) + " @" + (c.cuenta || c.id);
   var hs = sel.tjHistorial = sel.tjHistorial || [], i = -1;
   hs.forEach(function(h, k){ if(h.col === e.coleccion && h.c && h.c.id === c.id) i = k; });
   if(i >= 0) hs.splice(i, 1);   // votada de nuevo: su voto viejo se va y el nuevo queda ULTIMO (el `←` deshace lo ultimo que hiciste)
@@ -5334,7 +5394,7 @@ function lisPoner(cual, fresco){
   if(pie0) pie0.classList.add("oculta");
   $("sellista").classList.add("oculta");
   $("seltarjeta").classList.add("oculta");
-  $("selacciones").classList.add("oculta");
+  $("selacciones").classList.add("oculta"); $("selextras").classList.add("oculta");   // 2247
   $("selback").classList.add("oculta");
   $("seltxt").classList.add("oculta");
   var b = document.querySelector("#selmodal .selbtns");
@@ -5419,6 +5479,11 @@ function lisCaja(f){
   // 2244 {superranking} paso 2: una lista que quedo vacia por algo que se puede arreglar lo DICE en su tarjeta
   // (nunca vacia y callada). la frase y el numero los redacta el server (`ig_super.por_que_vacia`)
   if(f.aviso && f.aviso.motivo) caja.appendChild(lisLinea("lisnota", f.aviso.motivo));
+  // 2247 {botones} paso 3 (facundo, 2026-09-19: "no es lo mismo votar toda la lista que votar una tarjeta
+  // individualmente"): abajo del `por que` va lo que se puede aplicar a la LISTA ENTERA. el toque en el cuadrado
+  // sigue abriendo el votador (2113): estos chips cortan la burbuja, como el resto de lo que tiene accion propia.
+  // nada se escribe aca: abren el modal de siempre, con el comando exacto a la vista y UNA caja verde `dale`.
+  if((f.masivo || []).length) caja.appendChild(lisMasivos(f));
   // una lista grande NO nombra a nadie: por que estan ahi y cuantos son, y nada mas (facundo)
   if(f.grande){
     var g = document.createElement("div"); g.className = "lisgrande";
@@ -5513,7 +5578,7 @@ function lisModoUna(){
   if(pie) pie.classList.add("oculta");
   $("sellista").classList.add("oculta");
   $("seltarjeta").classList.add("oculta");
-  $("selacciones").classList.add("oculta");
+  $("selacciones").classList.add("oculta"); $("selextras").classList.add("oculta");   // 2247
   $("seltxt").classList.add("oculta");
   var b = document.querySelector("#selmodal .selbtns");
   if(b) b.classList.add("oculta");
@@ -5836,6 +5901,43 @@ function lisFicMolde(){
   var c = lisFic.el.querySelector(".mcaja");
   if(c) c.classList.add("selcaja");
   return lisFic;
+}
+// 2247 paso 3: la tira de acciones de lista entera, y su modal de confirmacion.
+function lisMasivos(f){
+  var tira = document.createElement("div"); tira.className = "lismasivos";
+  (f.masivo || []).forEach(function(mo){
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "lismas lisx-" + (mo.tipo || "mover");
+    b.textContent = mo.texto + " a los " + (mo.n || 0);
+    b.title = "a toda la lista `" + (f.titulo || f.clave) + "`";
+    b.addEventListener("click", function(ev){
+      ev.stopPropagation(); ev.preventDefault();   // el cuadrado abre el votador; esto no
+      lisMasivoModal(f, mo);
+    });
+    tira.appendChild(b);
+  });
+  return tira;
+}
+// el mismo molde de `lisAccionModal`: que va a pasar, a cuantas, el comando exacto y UNA caja verde `dale`.
+// sin tocar la caja no se escribe nada (no hay caja `no`: no tocarla es no confirmar).
+function lisMasivoModal(f, mo){
+  if(!lisModal) lisModal = modalMolde({id: "lismodal", z: 44, sinServer: true});
+  var cu = document.createElement("div"); cu.className = "lisdet";
+  var fr = document.createElement("div"); fr.className = "lisdetacc";
+  fr.textContent = mo.texto + " · " + (mo.n || 0) + " personas de `" + (f.titulo || f.clave) + "`";
+  cu.appendChild(fr);
+  if(mo.porque) cu.appendChild(lisLinea("lisdatos", mo.porque));
+  if((mo.ejemplos || []).length) cu.appendChild(lisLinea("lisdatos", "por ejemplo: " + mo.ejemplos.join(", ")));
+  if(mo.salteadas) cu.appendChild(lisLinea("lisdatos", mo.salteadas + " ya tienen la acción en la cola: no se encolan de nuevo"));
+  cu.appendChild(lisLinea("lisdatos", "sale con el ritmo de siempre: pausas de 2 a 5 min y tope de 60 por día"));
+  var pre = document.createElement("pre"); pre.className = "liscmd"; pre.textContent = mo.comando;
+  cu.appendChild(pre);
+  return lisModal.abrir({titulo: f.titulo || f.clave, cuenta: "", cuerpo: cu, botones: [
+    {txt: "dale", clase: "lisdale", accion: function(m){
+      (accMandarFn || mandar)(mo.comando, "personal", true);
+      m.cerrar(); m.estado("");
+    }}]});
 }
 function lisLinea(clase, txt){
   if(!txt) return null;
