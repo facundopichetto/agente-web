@@ -1232,6 +1232,9 @@
      tok/s y frescura). mismas 7 columnas y mismas reglas que `.esctab`: solo se despega de la tabla de
      arriba con un margen, no cambia ni fuente ni gap (una tabla que no entra se arregla con el gap, 1946) */
   .esctab.mdtab{margin-top:4px}
+  /* 2176: la linea `ahora` (lo que esta corriendo en este momento) crece con la cola: envuelve, y las demas
+     lineas del widget siguen siendo `pre`. la sangria deja la segunda linea debajo de los chips, no del label. */
+  .caja .cuerpo.tabla .ahorafila{display:block;white-space:normal;padding-left:11ch;text-indent:-11ch}
   .esctab.mdtab .it{cursor:pointer;touch-action:manipulation}
   .qtab .qpaso.qh,.qtab .qcola.qh{opacity:.6} .qtab .qcorre.qh{color:#8fcf7f}
   /* 1862: con la sexta columna (`delay`) las cinco horas ocupan mas: la tabla baja a 11.5px (1938: era 9.5) y 4px de gap tambien

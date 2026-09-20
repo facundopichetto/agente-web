@@ -169,7 +169,10 @@
       ch.push('<span class="g">' + esc(r.tarea) + " </span>" + '<span class="v">' + esc(r.modelo || "local") + "</span>");
     });
     if(!ch.length) ch.push('<span class="g">nada corriendo</span>');
-    return '<span class="g">' + pad("ahora", 11) + "</span>" + ch.join('<span class="g"> \u00b7 </span>');
+    // `.ahorafila` corta el `white-space:pre` del cuerpo: con cinco tareas, el chat y cuatro tareas ruteadas la
+    // linea mide 230 caracteres y hacia scrollear el widget entero en el celu. las tablas siguen sin envolver.
+    return '<span class="ahorafila"><span class="g">' + pad("ahora", 11) + "</span>" +
+           ch.join('<span class="g"> \u00b7 </span>') + "</span>";
   }
 
 function cajaSombra(sb){
