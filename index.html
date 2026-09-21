@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.418">
-<link rel="manifest" href="manifest.json?v=4.418">
+<meta name="agente-web-version" content="4.419">
+<link rel="manifest" href="manifest.json?v=4.419">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.418">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.419">
 </head>
 <body>
 
@@ -4902,18 +4902,32 @@ function tjOrdenSuper(cs){
     return ((a.sup || {}).puesto || 9999) - ((b.sup || {}).puesto || 9999);
   });
 }
+// 1605 {vista} paso 3: la fila EXACTA que va a ver el votador de esa coleccion con ese filtro de lista puesto.
+// salio de adentro de `tjAbrir` para que haya UN solo lugar donde se decide que tarjetas hay: el que abre el
+// votador y el que cuenta para la caja de la home son el mismo codigo, asi que la caja no puede prometer tarjetas
+// que la apertura despues no tiene (que es de donde salia el toque que no abria nada).
+// 1495: la tarjeta sin foto de perfil no se muestra (el server ya las saca; esto es la red de abajo)
+// 2140: en una lista entera lo votado ANTES vuelve a la fila (es miembro de la lista hoy); lo unico que no
+// vuelve es lo que un voto de esta carga saco de la lista
+function tjFilaFiltrada(e, filtro){
+  if(!e || !e.candidatas) return [];
+  var prev = sel.filtro, cs;
+  sel.filtro = filtro || null;   // `tjEnFiltro`, `salioSet`, `cacheTraer` y `tjOrdenSuper` leen el filtro de `sel`
+  try{
+    var v = e.continua && !e.circular ? filaVotadas(e.coleccion) : {};   // 1567: lo votado aca que el server no saco
+    var fuera = salioSet(e.coleccion, sel.filtro);
+    var sirve = function(c){ return !v[c.id] && !fuera[c.id] && tjConFoto(c) && tjEnFiltro(c); };
+    // 2137 correccion 11:55: primero lo que ya estaba bajado de ESA lista (en su orden), despues lo que trae el server
+    cs = (e.continua ? cacheTraer(e.coleccion, sel.filtro) : []).filter(sirve);
+    var ya = {};
+    cs.forEach(function(c){ ya[c.id] = true; });
+    e.candidatas.forEach(function(c){ if(!ya[c.id] && sirve(c)){ ya[c.id] = true; cs.push(c); } });
+    cs = tjOrdenSuper(cs);
+  } finally { sel.filtro = prev; }
+  return cs;
+}
 function tjAbrir(e){
-  // 1495: la tarjeta sin foto de perfil no se muestra (el server ya las saca; esto es la red de abajo)
-  // 2140: en una lista entera lo votado ANTES vuelve a la fila (es miembro de la lista hoy); lo unico que no
-  // vuelve es lo que un voto de esta carga saco de la lista
-  var v = e.continua && !e.circular ? filaVotadas(e.coleccion) : {};   // 1567: lo votado aca que el server no saco
-  var fuera = salioSet(e.coleccion, sel.filtro);
-  var sirve = function(c){ return !v[c.id] && !fuera[c.id] && tjConFoto(c) && tjEnFiltro(c); };
-  // 2137 correccion 11:55: primero lo que ya estaba bajado de ESA lista (en su orden), despues lo que trae el server
-  var cs = (e.continua ? cacheTraer(e.coleccion, sel.filtro) : []).filter(sirve), ya = {};
-  cs.forEach(function(c){ ya[c.id] = true; });
-  e.candidatas.forEach(function(c){ if(!ya[c.id] && sirve(c)){ ya[c.id] = true; cs.push(c); } });
-  e = Object.assign({}, e, {candidatas: tjOrdenSuper(cs)});
+  e = Object.assign({}, e, {candidatas: tjFilaFiltrada(e, sel.filtro)});
   if(!e.candidatas.length) return false;
   if(e.continua) e.mas = typeof e.pendientes === "number" && e.pendientes > e.candidatas.length;
   sel.tjUlt = 0; sel.tjAtrasUlt = 0;   // 1567: el freno del doble toque es de esta apertura (si no, se come el primer toque de la siguiente)
@@ -5673,6 +5687,27 @@ function lisPintar(){
   lis.scroll = 0;
   if(y) try{ c.scrollTop = y; }catch(x){}
 }
+// 1605 {vista} paso 3: cuantas tarjetas tiene AHORA el votador de esa lista, con el mismo codigo que la apertura
+// (`tjFilaFiltrada`). devuelve `null` = "no se sabe": ahi manda el numero del server, que es el de la lista entera.
+// no se sabe cuando la lista no se vota (`activa`, `ignorada`: su numero es la gente), cuando el server todavia no
+// sirvio la fila de ese proceso, y cuando la fila se vuelve a pedir al abrir (`arranque`, `dejar de seguir`: la
+// 1975 arma la fila recien ahi, asi que lo que hay cargado no dice nada).
+// la EXCEPCION del guardian: `super candidatas` es una lista VIRTUAL y su caja sigue diciendo el total del ranking
+// (1959/2134), nunca el tamaño de la tanda que bajo el proceso.
+function lisVotables(f){
+  if(!f || !f.proceso || f.virtual) return null;
+  if(selArranca(f.proceso) && !cacheTiene(f.proceso, f.clave)) return null;
+  var e = (sel.abiertas || []).filter(function(a){ return a.coleccion === f.proceso; })[0];
+  if(!e) return null;
+  return tjFilaFiltrada(e, f.clave).length;
+}
+// el numero del renglon de arriba de la caja. el server manda (es el total de la lista, que es lo que el votador
+// continuo recorre: la fila rota y pide mas, 2140), con UNA correccion: si la fila de esa lista esta cargada y no
+// tiene una sola tarjeta para votar, la caja no puede seguir diciendo un numero que el votador no va a mostrar.
+function lisNum(f){
+  var vt = lisVotables(f);
+  return vt === 0 ? 0 : (f.n || 0);
+}
 function lisCaja(f){
   var caja = document.createElement("div"); caja.className = "liscaja";
   caja.setAttribute("data-lista", f.clave);
@@ -5681,7 +5716,7 @@ function lisCaja(f){
   if(f.virtual){ caja.classList.add("virt"); caja.setAttribute("data-virtual", "1"); }
   var h = document.createElement("div"); h.className = "listit";
   var t = document.createElement("span"); t.className = "lisnom"; t.textContent = f.titulo || f.clave;
-  var n = document.createElement("span"); n.className = "lisn"; n.textContent = String(f.n || 0);
+  var n = document.createElement("span"); n.className = "lisn"; n.textContent = String(lisNum(f));   // 1605 paso 3
   h.appendChild(t); h.appendChild(n); caja.appendChild(h);
   // 2095 {instatinder} pasos 5, 6 y 7 (facundo, 2026-09-18: "toco following y lo primero que veo es una que es de
   // `follow request sent`, asi que aca hay algo mal"): tocar una lista YA NO abre el votador de su proceso. varias
@@ -5719,6 +5754,10 @@ function lisCaja(f){
   // 2244 {superranking} paso 2: una lista que quedo vacia por algo que se puede arreglar lo DICE en su tarjeta
   // (nunca vacia y callada). la frase y el numero los redacta el server (`ig_super.por_que_vacia`)
   if(f.aviso && f.aviso.motivo) caja.appendChild(lisLinea("lisnota", f.aviso.motivo));
+  // 1605 {vista} paso 3: la lista que tiene gente pero ninguna tarjeta lista para votar tampoco se queda callada:
+  // el numero de arriba ya dice `0` y este renglon dice que el toque igual abre algo (su gente), que es el piso
+  else if(f.n && lisVotables(f) === 0)
+    caja.appendChild(lisLinea("lisnota", "sin tarjetas para votar ahora: el toque abre su gente"));
   // 2247 {botones} paso 3 (facundo, 2026-09-19: "no es lo mismo votar toda la lista que votar una tarjeta
   // individualmente"): abajo del `por que` va lo que se puede aplicar a la LISTA ENTERA. el toque en el cuadrado
   // sigue abriendo el votador (2113): estos chips cortan la burbuja, como el resto de lo que tiene accion propia.
@@ -6356,9 +6395,21 @@ function selArranca(col){
 }
 // 2078 {home}: `desde` es el id de la persona tocada en la lista: la fila se rota para que sea la PRIMERA y el
 // resto queda atras (nadie se pierde). sin `desde`, arranca donde arranca el proceso.
+// 1605 {vista} pasos 1 y 2 (facundo, 2026-09-21: "tocar `super candidatas` me deja sin nada en pantalla"): esta
+// funcion ponia `lis.sub = "votar"` ACA, antes de saber si la fila filtrada tenia una sola tarjeta. con eso puesto
+// y `sel.actual` todavia en null, el guard de `selBoton` (`vistaEs("tinder") && !sel.actual && lis.sub !== "listas"
+// && lis.sub !== "una"`) lee un votador abierto que no existe y saca a facundo de la vista; peor: lo hace ANTES del
+// plan B (`selAbrirCol` llama a `selBoton` adentro, y el camino del `arranque` lo hace en el poll de los 2 s), asi
+// que el plan B de abajo ya se encontraba con `vistaEs("tinder")` en false y no corria. resultado: pantalla vacia.
+// el arreglo es el orden: `lis.sub` NO se toca aca; lo pone `selModoLista(false)`, adentro de `tjAbrir`, que corre
+// recien DESPUES del `if(!e.candidatas.length) return false`. o sea: primero se arma la fila, y solo si trae al
+// menos una tarjeta se entra al votador. el guard de la 1875 queda intacto (sigue sacando de la vista cuando el
+// server cierra una coleccion con el votador abierto): lo que cambia es que durante la apertura la sub-vista sigue
+// siendo la que facundo esta mirando (`listas` o `una`), que es la verdad.
 function tinderAbrirCol(col, desde, falla, lista, titulo){
-  var ok;
-  lis.sub = "votar";
+  var ok, filtro0 = sel.filtro, titulo0 = sel.filtroTitulo;
+  // 1605 paso 2: si la fila no abre, el filtro no queda colgado sobre una lista que nadie esta votando
+  var atras = function(){ sel.filtro = filtro0; sel.filtroTitulo = titulo0; };
   // 2095 paso 5: de que lista es la fila que se va a ver. lo pone el toque en la lista y lo respetan `tjAbrir` (la
   // apertura) y `filaSumar` (todo lo que el server manda despues): en el votador de `following` no entra nunca
   // nadie de `follow request sent`, aunque el server sirva las dos en la misma coleccion.
@@ -6372,10 +6423,13 @@ function tinderAbrirCol(col, desde, falla, lista, titulo){
     selPedir(col, true).then(function(){
       // la fila recien pedida puede no traer a la persona tocada (la 1960 exige `seguidores`, la 1495 foto): ahi no
       // se abre el votador en otra persona, se cae al plan B del toque (su cartita)
-      if(desde && !lisEnFila(col, desde)) return falla ? falla() : lisVolver();
+      if(desde && !lisEnFila(col, desde)){ atras(); return falla ? falla() : lisVolver(); }
       // 2113: sin fila para esa lista el plan B es el `falla` del toque (la grilla de gente, la cartita), y solo
       // sin plan B se vuelve de donde salio: el toque en la lista nunca rebota a la home con las manos vacias
-      if(!selAbrirCol(col) && vistaEs("tinder") && !sel.actual) (falla || lisVolver)();
+      // 1605 paso 2: el plan B ya no pide `vistaEs("tinder")`. pedirlo era lo que lo dejaba sin correr justo
+      // cuando mas hacia falta (el guard acababa de sacar de la vista); ademas `lisEntrar` / `lisCartita` /
+      // `lisVolver` vuelven a poner la vista, asi que el peor caso es volver a entrar, nunca quedarse afuera.
+      if(!selAbrirCol(col) && !sel.actual){ atras(); (falla || lisVolver)(); }
       else tjIr(desde);
     });
     return true;
@@ -6389,7 +6443,8 @@ function tinderAbrirCol(col, desde, falla, lista, titulo){
   }
   // 2095 paso 5: si la fila de esa lista no tiene a nadie cargado todavia, se vuelve a la LISTA (de donde salio el
   // toque), nunca a otro proceso (eso era el bug) ni a la home. 2113: si el toque trajo su plan B, ese manda
-  if(!ok && vistaEs("tinder") && !sel.actual) (falla || lisVolver)();
+  // 1605 paso 2: sin `vistaEs("tinder")` (ver arriba): el toque en una lista SIEMPRE termina en algo a la vista
+  if(!ok && !sel.actual){ atras(); (falla || lisVolver)(); }
   else if(ok){ tjIr(desde); selFresco(col); }   // 2143: lo cacheado pinto el primer frame, el server manda
   return ok;
 }
@@ -12058,6 +12113,8 @@ window.__agente = {
   lisEntrar: lisEntrar, lisAHome: lisAHome, lisVolver: lisVolver, lisUnaPintar: lisUnaPintar,
   // 2113 {listavotador}: el toque en una lista abre su votador, y el swipe camina la fila como las flechas
   lisTocar: lisTocar, tjSwGuard: tjSwGuard,
+  // 1605 {vista} paso 3: la fila real del votador de una lista y el numero que por eso muestra su caja
+  lisVotables: lisVotables, lisNum: lisNum, tjFilaFiltrada: tjFilaFiltrada,
   tjSwipe: function(dx, ancho){ if(!tjSwGuard()) return false; return tjSwSoltar(dx, ancho || ($("seltarjeta").offsetWidth || 1), true); },
   lisUna: function(){ return lis.una ? {clave: lis.una.clave, n: lis.una.n, gente: (lis.una.gente || []).length} : null; },
   lisCache: function(){ try{ return JSON.parse(localStorage.getItem(LIS_LS) || "null"); }catch(x){ return null; } },
