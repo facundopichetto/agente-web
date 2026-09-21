@@ -2,7 +2,7 @@
 // no cachea nada a proposito (sin handler de fetch): la pagina va siempre a la red y se recarga sola con
 // version.json. el daemon reescribe VERSION en cada publicacion, asi el navegador toma el sw nuevo.
 // detalle en README.md, seccion "notificaciones push".
-var VERSION = "4.413";
+var VERSION = "4.414";
 
 self.addEventListener("install", function(){ self.skipWaiting(); });
 self.addEventListener("activate", function(e){ e.waitUntil(self.clients.claim()); });

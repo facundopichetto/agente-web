@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.413">
-<link rel="manifest" href="manifest.json?v=4.413">
+<meta name="agente-web-version" content="4.414">
+<link rel="manifest" href="manifest.json?v=4.414">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.413">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.414">
 </head>
 <body>
 
@@ -432,12 +432,12 @@ var alfinal = $("alfinal"), envoltorio = $("envoltorio");
 // una copia GENERADA de esa receta: se actualiza con `python3 -m recetas.clasificar_tema --sync-web`
 // y `recetas/prueba_web` falla si quedo vieja. no editarla a mano.
 /* TEMAS-JS: generado por `python3 -m recetas.clasificar_tema --sync-web`, no editar a mano */
-var TEMAS = ["tools", "awtomic", "awtomic/qa", "flabs", "fuzzer", "juegos", "plata", "server", "personal", "podcast", "consejo", "flaudio", "gemini", "groq", "groq-tandas", "mistral"];
-var PRIORIDAD = ["awtomic/qa", "flabs", "podcast", "consejo", "server", "juegos", "plata", "fuzzer", "awtomic", "flaudio", "tools"];
+var TEMAS = ["tools", "awtomic", "awtomic/qa", "flabs", "fuzzer", "juegos", "plata", "server", "personal", "podcast", "mesa", "flaudio", "gemini", "groq", "groq-tandas", "mistral"];
+var PRIORIDAD = ["awtomic/qa", "flabs", "podcast", "mesa", "server", "juegos", "plata", "fuzzer", "awtomic", "flaudio", "tools"];
 var MODOS_TAB = [];
 var PROVEEDORES_TAB = ["gemini", "groq", "groq-tandas", "mistral"];
-var PESTANAS_TAB = [["awtomic", "awtomic"], ["awtomic/qa", "awtomic/qa"], ["consejo", "consejo"], ["flabs", "flabs"], ["flaudio", "flaudio"], ["fuzzer", "fuzzer"], ["gemini", "gemini"], ["juegos", "juegos"], ["mistral", "mistral"], ["personal", "personal"], ["plata", "plata"], ["podcast", "podcast"], ["server", "server"], ["tools", "tools"]];
-var ALIAS = {"awtomic-qa": "awtomic/qa", "claudio": "flaudio"};
+var PESTANAS_TAB = [["awtomic", "awtomic"], ["awtomic/qa", "awtomic/qa"], ["flabs", "flabs"], ["flaudio", "flaudio"], ["fuzzer", "fuzzer"], ["gemini", "gemini"], ["juegos", "juegos"], ["mesa", "mesa"], ["mistral", "mistral"], ["personal", "personal"], ["plata", "plata"], ["podcast", "podcast"], ["server", "server"], ["tools", "tools"]];
+var ALIAS = {"awtomic-qa": "awtomic/qa", "claudio": "flaudio", "consejo": "mesa"};
 var RE_CORTE_SRC = "(\\n+)|([.;!?]\\s+)|(^|[\\s,;:])(?:y\\s+otra\\s+cosa|otra\\s+cosa|aparte|adem[a\u00e1]s|tambi[e\u00e9]n)(?!\\w)";
 var PALABRAS = {
   "awtomic/qa": ["verificador", "awtomic[- ]?qa", "qa", "tanda de tickets", "revisor de tanda", "loop verificador", "capturas del ticket"],
@@ -449,7 +449,7 @@ var PALABRAS = {
   "flabs": ["flabs", "flabsdev"],
   "podcast": ["podcast", "podcasts", "episodio", "episodios", "cap\\wtulo", "cap\\wtulos", "daniela", "player", "guion", "PROXIMO\\.md"],
   "flaudio": ["filosof\\wa", "principio", "principios", "a futuro", "ideas? a futuro", "visi\\wn", "claudio en general", "flaudio en general"],
-  "consejo": ["consejo", "panel de modelos", "panel", "proveedores?", "groq", "mistral", "gemini", "modelos gratis", "free tier", "troceado", "juicio a ciegas", "contexto empaquetado"],
+  "mesa": ["mesa", "consejo", "panel de modelos", "panel", "proveedores?", "groq", "mistral", "gemini", "modelos gratis", "free tier", "troceado", "juicio a ciegas", "contexto empaquetado"],
   "tools": ["claude", "iterm", "fish", "chrome", "tui", "consola", "daemon", "agente", "receta", "recetas", "skill", "terminal", "tmux", "widget", "widgets", "web terminal", "mision", "modelo", "tokens", "cola", "launchd", "pesta[\u00f1n]a", "pesta[\u00f1n]as", "interfaz", "chat"],
 };
 /* /TEMAS-JS */
