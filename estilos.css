@@ -363,8 +363,12 @@
      `padding-bottom` y no `aspect-ratio`: safari del iphone lo ovalaba en un item flex (1655); el `- 2px` son los dos
      bordes, asi el cuadro es cuadrado de verdad (probado a 348x348 en viewport de iphone). la img va absoluta
      con `cover` y el radio es el chico del board (4 px, como `.tjf` y `.tjlink`), nunca 50%. */
-  #seltarjeta .tjppal{position:relative;width:100%;height:0;padding-bottom:calc(100% - 2px);box-sizing:border-box;border-radius:4px;
-    overflow:hidden;display:block;background:#111;border:1px solid var(--linea)}
+  /* {fotoancha2} (facundo, 2026-09-21, por captura: "y saca esa caja gris horrible, si es un contenedor que sea
+     transparente"): el contenedor de la foto NO se pinta: sin fondo, sin borde y sin sombra, asi la foto queda
+     sobre el negro de la tarjeta y no se lee como una caja gris con la imagen adentro. sin el borde el cuadrado
+     es `padding-bottom:100%` pelado (el `- 2px` de la 1772 eran los dos bordes que ya no estan). */
+  #seltarjeta .tjppal{position:relative;width:100%;height:0;padding-bottom:100%;box-sizing:border-box;border-radius:4px;
+    overflow:hidden;display:block;background:transparent;border:0;box-shadow:none}
   #seltarjeta .tjppal img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block}
   #seltarjeta .tjmas{flex:1 1 auto;display:flex;gap:6px;flex-wrap:wrap;min-width:0}
   #seltarjeta .tjmas .tjf{width:56px;height:56px;border-radius:4px;overflow:hidden;border:1px solid var(--linea);background:#111}
@@ -508,7 +512,7 @@
     #selmodal.pantalla #seltarjeta{display:flex;flex-direction:column;gap:8px;
       overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch}
     #selmodal.pantalla #seltarjeta .tjfotos{flex:0 0 auto;height:auto;width:100%}
-    #selmodal.pantalla #seltarjeta .tjppal{height:0;padding-bottom:125%;border-left:0;border-right:0;border-radius:0}
+    #selmodal.pantalla #seltarjeta .tjppal{height:0;padding-bottom:125%;border-radius:0;background:transparent}
     #selmodal.pantalla #seltarjeta .tjppal img{object-fit:cover;object-position:center}
     /* los datos ya no son un panel con scroll propio: son el resto de la tarjeta */
     #selmodal.pantalla #seltarjeta .tjinfo{max-height:none;overflow:visible;flex:0 0 auto;padding:0 10px}
@@ -518,7 +522,7 @@
   }
   /* {fotoancha}: sin foto no queda un hueco negro: el mismo cuadro con la inicial (la tapa la foto al bajar) */
   #seltarjeta .tjppal .tjini{position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;
-    justify-content:center;background:#111}
+    justify-content:center;background:transparent}
   /* la inicial es un glifo, no texto: el `font-size` se queda en el tope de 18 px (2014) y lo que la agranda es el
      `scale`, igual que los votos de la 1841 */
   #seltarjeta .tjppal .tjinil{font-size:var(--texto-max);font-weight:bold;line-height:1;color:var(--gris);

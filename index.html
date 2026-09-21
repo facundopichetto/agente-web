@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.417">
-<link rel="manifest" href="manifest.json?v=4.417">
+<meta name="agente-web-version" content="4.418">
+<link rel="manifest" href="manifest.json?v=4.418">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.417">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.418">
 </head>
 <body>
 
@@ -5029,10 +5029,13 @@ function tjPintar(){
   // 1580 {fotoancha}: si la candidata trae varias fotos se caminan de a UNA a ancho completo (swipe horizontal con
   // snap), nunca la tira chica de miniaturas. sin ninguna foto igual se pinta el cuadro, con la inicial adentro:
   // asi la tarjeta no queda con un hueco negro del alto de la foto (facundo, 2026-09-20, por captura)
+  // {fotoancha2} (facundo, 2026-09-21): la que NO TRAE NINGUNA foto (el caso de `@_solabdala`) no pinta el cuadro:
+  // la tarjeta arranca directo con el nombre y los datos, sin un bloque vacio del alto de una foto. el placeholder
+  // con la inicial de la 1580 se queda para la foto que existe y todavia no bajo (o que no baja), que es otra cosa.
   var fotos = (c.fotos || []).filter(Boolean);
   if(fotos.length > 1) fs.classList.add("tjcarr");
   var pp = null;
-  (fotos.length ? fotos : [null]).forEach(function(foto, i){
+  fotos.forEach(function(foto, i){
     var x = document.createElement(ppUrl ? "a" : "div"); x.className = "tjppal";
     if(ppUrl){ x.href = ppUrl; x.target = "_blank"; x.rel = "noopener"; }
     // 1772: el alto sale del css (cuadrado); si la candidata trae `ratio` (ancho/alto) el placeholder ya nace con ese.
@@ -5056,7 +5059,7 @@ function tjPintar(){
     if(foto) tjBajarFoto(c.id, foto, x, i === 0);
     if(!i) pp = x;
   });
-  t.appendChild(fs);
+  if(fotos.length) t.appendChild(fs);   // {fotoancha2}: sin foto no hay bloque (ni hueco)
   // 1874: todo lo que no es la foto vive en UN bloque (`.tjinfo`): abajo de la foto en mobile, al lado en wide
   var info = document.createElement("div"); info.className = "tjinfo"; t.appendChild(info);
   if(fotos.length > 1){   // 1580: en que foto va, en el bloque de datos (la foto no lleva nada encima)
