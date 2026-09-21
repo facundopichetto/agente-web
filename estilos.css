@@ -492,6 +492,40 @@
     #selmodal.pantalla #seltarjeta{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr);gap:12px}
     #selmodal.pantalla #seltarjeta .tjinfo{max-height:100%}
   }
+  /* 1580 {fotoancha} (facundo, 2026-09-20, por captura: "tiene que la foto ser 100 ancho en celu y yo scrolleo si
+     quiero ver mas" / "asegurate de que la foto se vea 100% ancho en esta vista"): en el celu la tarjeta DEJA de
+     comprimirse para entrar en una pantalla. arriba la foto al 100% del ancho del viewport (sin margen lateral,
+     sin borde ni radio), con relacion fija 4:5 y `cover` recortando al centro; abajo nombre, chips, datos, bio,
+     puntaje y motivo con scroll vertical normal, y si no entra facundo scrollea. el que scrollea es `#seltarjeta`,
+     no la caja: el pie (el `enviar`, el chico de la 2247 y los 3 grandes de la 1933) queda siempre a la vista.
+     el alto va por `padding-bottom` y no por `aspect-ratio` (1655: safari del iphone lo ovalaba en un flex item),
+     asi el cuadro nace medido y la foto no salta al bajar (1772). el `contain` de la 1874 sigue siendo el de wide,
+     donde el cuadro lo mide la grilla. */
+  @media (max-width:699px){
+    /* la foto llega al borde de la pantalla: el padding lateral sale de la caja y vuelve solo en los renglones de
+       texto (`.tjinfo`), que son los que no pueden quedar pegados al borde */
+    #selmodal.pantalla .selcaja{padding-left:0;padding-right:0;border-left:0;border-right:0}
+    #selmodal.pantalla #seltarjeta{display:flex;flex-direction:column;gap:8px;
+      overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch}
+    #selmodal.pantalla #seltarjeta .tjfotos{flex:0 0 auto;height:auto;width:100%}
+    #selmodal.pantalla #seltarjeta .tjppal{height:0;padding-bottom:125%;border-left:0;border-right:0;border-radius:0}
+    #selmodal.pantalla #seltarjeta .tjppal img{object-fit:cover;object-position:center}
+    /* los datos ya no son un panel con scroll propio: son el resto de la tarjeta */
+    #selmodal.pantalla #seltarjeta .tjinfo{max-height:none;overflow:visible;flex:0 0 auto;padding:0 10px}
+    #selmodal.pantalla #seltarjeta > .tjdet{padding:0 10px}
+    /* el pie (`enviar` y el aviso de la lan) tampoco queda pegado al borde: los botones grandes si, a proposito */
+    #selmodal.pantalla .selpie{padding-left:10px;padding-right:10px;box-sizing:border-box}
+  }
+  /* {fotoancha}: sin foto no queda un hueco negro: el mismo cuadro con la inicial (la tapa la foto al bajar) */
+  #seltarjeta .tjppal .tjini{position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;
+    justify-content:center;color:var(--gris);font-size:64px;font-weight:bold;line-height:1;background:#111}
+  #seltarjeta .tjppal.confoto .tjini{display:none}
+  /* {fotoancha}: varias fotos se caminan de a UNA a ancho completo (swipe horizontal con snap), nunca la tira chica */
+  #selmodal #seltarjeta .tjfotos.tjcarr{display:flex;align-items:flex-start;overflow-x:auto;overflow-y:hidden;
+    scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;touch-action:pan-x;scrollbar-width:none}
+  #selmodal #seltarjeta .tjfotos.tjcarr::-webkit-scrollbar{display:none}
+  #selmodal #seltarjeta .tjfotos.tjcarr > .tjppal{flex:0 0 100%;scroll-snap-align:center}
+  #seltarjeta .tjfnum{color:var(--gris);font-size:16px}
   /* 1879 {listas} (facundo, 2026-09-17): la vista `tinder` son DOS sub-vistas, `votar` y `listas`; desde la 2078
      {home} `listas` es la HOME (se entra directo aca) y el votador se abre tocando una fila o el titulo de una
      lista, sin ningun boton de sub-vista. `listas` es una grilla de cajas, una por lista del embudo: titulo, cuantos son y

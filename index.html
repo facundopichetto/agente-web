@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.415">
-<link rel="manifest" href="manifest.json?v=4.415">
+<meta name="agente-web-version" content="4.416">
+<link rel="manifest" href="manifest.json?v=4.416">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.415">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.416">
 </head>
 <body>
 
@@ -4953,6 +4953,30 @@ function tjActual(){
 }
 // 1874: la vista entera la pone `selModoLista` (modo tarjetas); lo que cambia es la clase del modal
 function tjPantalla(){ return $("selmodal").classList.contains("pantalla"); }
+// 1524 (2026-09-15 16:20): en el iphone no bajo ninguna y el `catch` avanzaba en cadena hasta mandar `fin`. ahora
+// se reintenta (probando la lan de nuevo) y si igual no baja la tarjeta SE SACA de la tanda, sin votar (eso solo lo
+// hace la foto PRINCIPAL: 1580 {fotoancha}, una foto de mas abajo del carrusel que no baja no saca a nadie).
+function tjBajarFoto(id, foto, pp, principal){
+  var intento = 0;
+  function bajar(){
+    bajarImagen(foto).then(function(url){
+      if(!tjActual() || tjActual().id !== id) return;
+      var im = document.createElement("img"); im.alt = "";
+      // 1772: la foto entra en el contenedor que ya mide lo final (css): nada de cambiar el tamaño en `onload`,
+      // que era lo que hacia saltar la tarjeta de chica a grande (1642/1677 quedan atras)
+      im.src = url; pp.appendChild(im);
+      pp.classList.add("confoto");   // 1580: la foto tapa la inicial del placeholder
+      pp.__url = url;   // 1665: la privada se agranda con esta misma foto (no hay otra bajada)
+    }).catch(function(){
+      if(!tjActual() || tjActual().id !== id) return;
+      if(intento >= TJ_REINTENTOS.length) return principal ? tjSacar(id) : null;
+      setTimeout(function(){
+        (lan.base ? Promise.resolve() : probarLan()).then(bajar, bajar);
+      }, TJ_REINTENTOS[intento++]);
+    });
+  }
+  bajar();
+}
 function tjPintar(){
   var e = sel.actual, c = tjActual(), t = $("seltarjeta");
   t.textContent = "";
@@ -5002,48 +5026,48 @@ function tjPintar(){
   // para volver al board; un `<a target="_blank">` de verdad (el mismo envoltorio que el `@cuenta`) abre el in-app
   // browser y al volver cae directo en el board. la privada sigue siendo un `div`: su foto va al visor, no al perfil
   var ppUrl = c.privada ? "" : (c.link && /^https:\/\//.test(c.link) ? c.link : (c.cuenta ? "https://instagram.com/" + c.cuenta : ""));
-  var pp = document.createElement(ppUrl ? "a" : "div"); pp.className = "tjppal";
-  if(ppUrl){ pp.href = ppUrl; pp.target = "_blank"; pp.rel = "noopener"; }
-  // 1772: el alto sale del css (cuadrado); si la candidata trae `ratio` (ancho/alto) el placeholder ya nace con ese.
-  // 1874: en la vista entera el cuadro lo mide la grilla y la foto entra con `contain`, asi que no lleva `ratio`
-  if(!tjPantalla() && typeof c.ratio === "number" && c.ratio > 0.2 && c.ratio < 5) pp.style.paddingBottom = (100 / c.ratio).toFixed(2) + "%";
-  fs.appendChild(pp); t.appendChild(fs);
-  // 1874: todo lo que no es la foto vive en UN bloque (`.tjinfo`): abajo de la foto en mobile, al lado en wide
-  var info = document.createElement("div"); info.className = "tjinfo"; t.appendChild(info);
-  tjPrecargar(e, sel.tj);   // 1772: las dos tarjetas siguientes bajan mientras vota esta
-  // 1665 (facundo): tocar la foto. cuenta publica -> el perfil de instagram en otra pestaña; privada (donde el perfil
-  // no muestra nada) -> la foto a pantalla completa en el visor, que ya cierra con esc, la ✕ y el fondo
-  pp.setAttribute("role", "button");
-  pp.setAttribute("aria-label", c.privada ? "agrandar la foto" : "abrir el perfil");
-  (function(c){
-    pp.addEventListener("click", function(ev){
+  // 1580 {fotoancha}: si la candidata trae varias fotos se caminan de a UNA a ancho completo (swipe horizontal con
+  // snap), nunca la tira chica de miniaturas. sin ninguna foto igual se pinta el cuadro, con la inicial adentro:
+  // asi la tarjeta no queda con un hueco negro del alto de la foto (facundo, 2026-09-20, por captura)
+  var fotos = (c.fotos || []).filter(Boolean);
+  if(fotos.length > 1) fs.classList.add("tjcarr");
+  var pp = null;
+  (fotos.length ? fotos : [null]).forEach(function(foto, i){
+    var x = document.createElement(ppUrl ? "a" : "div"); x.className = "tjppal";
+    if(ppUrl){ x.href = ppUrl; x.target = "_blank"; x.rel = "noopener"; }
+    // 1772: el alto sale del css (cuadrado); si la candidata trae `ratio` (ancho/alto) el placeholder ya nace con ese.
+    // 1874: en la vista entera el cuadro lo mide la grilla y la foto entra con `contain`, asi que no lleva `ratio`
+    // 1580 {fotoancha}: en el celu el cuadro es 4:5 fijo a ancho completo (css), tampoco lleva `ratio`
+    if(!tjPantalla() && typeof c.ratio === "number" && c.ratio > 0.2 && c.ratio < 5) x.style.paddingBottom = (100 / c.ratio).toFixed(2) + "%";
+    var ini = document.createElement("span"); ini.className = "tjini";
+    ini.textContent = (String(c.titulo || c.cuenta || "?").trim().charAt(0) || "?").toUpperCase();
+    x.appendChild(ini);
+    // 1665 (facundo): tocar la foto. cuenta publica -> el perfil de instagram en otra pestaña; privada (donde el perfil
+    // no muestra nada) -> la foto a pantalla completa en el visor, que ya cierra con esc, la ✕ y el fondo
+    x.setAttribute("role", "button");
+    x.setAttribute("aria-label", c.privada ? "agrandar la foto" : "abrir el perfil");
+    x.addEventListener("click", function(ev){
       ev.stopPropagation();   // tocar la foto nunca vota ni avanza la tarjeta
       if(ppUrl) return;       // 1791: el `<a>` navega solo (in-app browser), nada de `window.open`
-      if(pp.__url) verImagen(pp.__url, c.titulo || c.cuenta || "");
+      if(x.__url) verImagen(x.__url, c.titulo || c.cuenta || "");
     });
-  })(c);
-  // 1524 (2026-09-15 16:20): en el iphone no bajo ninguna y el `catch` avanzaba en cadena hasta mandar `fin`. ahora
-  // se reintenta (probando la lan de nuevo) y si igual no baja la tarjeta SE SACA de la tanda, sin votar.
-  (function(id, foto){
-    var intento = 0;
-    function bajar(){
-      bajarImagen(foto).then(function(url){
-        if(!tjActual() || tjActual().id !== id) return;
-        var im = document.createElement("img"); im.alt = "";
-        // 1772: la foto entra en el contenedor que ya mide lo final (css): nada de cambiar el tamaño en `onload`,
-        // que era lo que hacia saltar la tarjeta de chica a grande (1642/1677 quedan atras)
-        im.src = url; pp.appendChild(im);
-        pp.__url = url;   // 1665: la privada se agranda con esta misma foto (no hay otra bajada)
-      }).catch(function(){
-        if(!tjActual() || tjActual().id !== id) return;
-        if(intento >= TJ_REINTENTOS.length) return tjSacar(id);
-        setTimeout(function(){
-          (lan.base ? Promise.resolve() : probarLan()).then(bajar, bajar);
-        }, TJ_REINTENTOS[intento++]);
-      });
-    }
-    bajar();
-  })(c.id, c.fotos[0]);
+    fs.appendChild(x);
+    if(foto) tjBajarFoto(c.id, foto, x, i === 0);
+    if(!i) pp = x;
+  });
+  t.appendChild(fs);
+  // 1874: todo lo que no es la foto vive en UN bloque (`.tjinfo`): abajo de la foto en mobile, al lado en wide
+  var info = document.createElement("div"); info.className = "tjinfo"; t.appendChild(info);
+  if(fotos.length > 1){   // 1580: en que foto va, en el bloque de datos (la foto no lleva nada encima)
+    var fn = document.createElement("div"); fn.className = "tjfnum";
+    var fnPintar = function(){
+      var an = fs.clientWidth || 1, k = Math.min(fotos.length, Math.round(fs.scrollLeft / an) + 1);
+      fn.textContent = "foto " + k + " de " + fotos.length;
+    };
+    fnPintar(); fs.addEventListener("scroll", fnPintar, {passive: true});
+    info.appendChild(fn);
+  }
+  tjPrecargar(e, sel.tj);   // 1772: las dos tarjetas siguientes bajan mientras vota esta
   var nom = document.createElement("div"); nom.className = "tjnom"; nom.textContent = c.titulo || c.id;
   if(c.cuenta){   // 1515: el @cuenta es link al perfil (solo https), abre aparte y no vota ni avanza la tarjeta
     var lk = c.link && /^https:\/\//.test(c.link), k = document.createElement(lk ? "a" : "span");
@@ -6557,6 +6581,8 @@ function tjSwSoltar(dx, ancho, ok){
 $("seltarjeta").addEventListener("touchstart", function(e){
   tjSw = null;
   if(e.touches.length !== 1 || !tjSwGuard()) return;
+  // 1580 {fotoancha}: si hay varias fotos, el dedo de costado ADENTRO del carrusel camina las fotos, no la fila
+  if(e.target && e.target.closest && e.target.closest(".tjfotos.tjcarr")) return;
   // la foto grande ES un `<a>` al perfil (1665/1791) y ocupa casi toda la tarjeta: si el link se quedara con el
   // gesto no habria de donde agarrarla. el swipe arranca en cualquier parte y lo que cuida al link es el click de
   // abajo, que se come el que viene atras del gesto (un swipe no abre instagram)
