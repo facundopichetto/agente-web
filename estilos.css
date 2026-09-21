@@ -939,10 +939,20 @@
     flex:0 0 auto}
   .player.roto .pltiempo{color:var(--rojo)}
   .player.sonando .plrell,.player.sonando .plpunto{background:var(--amarillo)}
-  /* 1970 {grabar} + 2044 {audiotodas}: en el celu (todas las pestañas) la barra de entrada se reemplaza por tres
-     botones grandes; en la mac queda la barra de siempre. tres columnas iguales al 100% del ancho, altas pero NUNCA cuadradas
-     (nada de `aspect-ratio:1/1`): en 390 px cada una mide ~119x64. molde `moldeBoton` -> `.bterm`, svg con
-     `currentColor`, y las fuentes respetan el tope de la 1946 (`--texto-max`, 14 px). */
+  /* 1573 {teclado} (facundo, 2026-09-20: "sacame la barra de audio de abajo en el celu porfa. prefiero el
+     teclado de antes"): el pie del celu es de nuevo el input de siempre + `enviar`, con el micro como un `.ico`
+     chico al lado del `enviar` (nunca una barra que tape el teclado). el orden lo pone `#pie.celu`, que solo
+     existe en el celu: en la compu la fila queda exactamente como estaba. el reproductor de dos renglones al
+     pie de cada respuesta (`.player`) NO se toca.
+     1970 {grabar} + 2044 {audiotodas}: la barra de tres botones grandes sigue estilada aca abajo, pero apagada
+     (`audPieGrande()` devuelve false): nada le pone ya la clase `audio` al pie. tres columnas iguales al 100%
+     del ancho, altas pero NUNCA cuadradas (nada de `aspect-ratio:1/1`): en 390 px cada una mide ~119x64. */
+  #pie.celu #prompt{order:0}
+  #pie.celu #txt{order:1}
+  #pie.celu #grabinfo{order:2}
+  #pie.celu #camara{order:3}
+  #pie.celu #grabar{order:4}                    /* el micro, chico y pegado al enviar */
+  #pie.celu #mandar{order:5}
   #pie.audio #fila{display:none}
   #pie.audio.txton #fila{display:flex}          /* el teclado abre el campo de texto de siempre */
   #audbarra{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;width:100%;margin-top:4px}

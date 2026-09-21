@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.414">
-<link rel="manifest" href="manifest.json?v=4.414">
+<meta name="agente-web-version" content="4.415">
+<link rel="manifest" href="manifest.json?v=4.415">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.414">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.415">
 </head>
 <body>
 
@@ -2971,7 +2971,7 @@ var renderando = false;   // el render entero arma cada caja ya con todos los me
 // el celu (`audModo`, la misma vista mobile de `esVistaMobile`); en la mac el chat queda como siempre.
 function marcarModoAudio(){
   if(lista) lista.classList.toggle("modoaudio", typeof audModo === "function" && audModo());
-  // 1970 {grabar}: y el pie del celu son tres botones grandes en vez de la barra de siempre
+  // 1970 {grabar} + 1573 {teclado}: y el pie se repinta (hoy: el input de siempre con el micro chico al lado)
   if(typeof audPintar === "function") audPintar(true);
 }
 function render(){
@@ -8113,8 +8113,9 @@ function terminarGrabacion(enviar){
     return terminarDictado().then(function(d){
       // 1939: el audio de la vista `podcast` no sale: queda en la fila del episodio, borrable, hasta el `enviar`
       if(pg) return podSumarAudio(blob, mime, ms, d);
-      // 1970: en la pestaña `audio` el audio queda pre mandado arriba de la barra hasta el `enviar`
-      if(audModo() && !audioDestino) return audSumar(blob, mime, ms, d);
+      // 1970: con la barra grande prendida el audio queda pre mandado arriba de ella hasta el `enviar`;
+      // apagada (1573 {teclado}) el celu vuelve al camino de siempre: adjunto pendiente con play y `×`
+      if(audPieGrande() && !audioDestino) return audSumar(blob, mime, ms, d);
       // 1350: la voz del modal de una push sale ya, a su tema y con la cita (no hay adjunto que revisar)
       if(audioDestino){
         var ad = audioDestino; audioDestino = null;
@@ -8553,6 +8554,13 @@ var audSeq = 0;
 // decide si enter manda y el `celu`/`compu` del `[desde:]`), nunca por el ancho de la ventana (facundo,
 // 2026-09-12); en la mac, aunque la ventana sea angosta, queda la barra de siempre con su boton de grabar.
 function audModo(){ return typeof esTactil === "function" && esTactil(); }
+// 1573 {teclado} (facundo, 2026-09-20: "sacame la barra de audio de abajo en el celu porfa. prefiero el
+// teclado de antes"): el pie de TRES BOTONES GRANDES de la 2044 se apago. en el celu el pie vuelve a ser el
+// input de siempre + `enviar`, con el micro como un `.ico` chico al lado del enviar (`#pie.celu`, el orden lo
+// pone el css). lo que NO se toca: el reproductor de dos renglones al pie de cada respuesta y la alineacion
+// whatsapp del celu, que siguen colgados de `audModo()`. la barra grande queda en el codigo, apagada por
+// esta funcion: prenderla de nuevo es devolver `audModo()` aca.
+function audPieGrande(){ return false; }
 function audBtn(k){ return $("audbarra").querySelector(".aud" + k); }
 function audBarraArmar(){
   var caja = $("audbarra");
@@ -8687,7 +8695,9 @@ function audCartas(){
 }
 // el estado entero de la barra en un solo lugar: que icono lleva cada boton y si `enviar` esta encendido
 function audPintar(sinAncla){
-  var pie = $("pie"), enAudio = audModo(), ancla = null;
+  var pie = $("pie"), enAudio = audPieGrande(), ancla = null;
+  // 1573 {teclado}: en el celu el micro va chico al lado del `enviar` (el css lo ordena con `#pie.celu`)
+  pie.classList.toggle("celu", typeof audModo === "function" && audModo());
   if(!sinAncla) ancla = anclaClavar(true);
   pie.classList.toggle("audio", enAudio);
   $("audbarra").classList.toggle("oculta", !enAudio);
@@ -12419,7 +12429,7 @@ window.__agente = {
   modoAudioPintado: function(){ return !!(lista && lista.classList.contains("modoaudio")); },
   // 1970 {grabar} + 2044: la barra de tres botones del celu (todas las pestañas) y los audios pre mandados
   audGrabar: audGrabar, audSumar: audSumar, audBorrar: audBorrar, audEnviar: audEnviar,
-  audTeclado: audTeclado, audPintar: audPintar, audSvg: AUD_SVG,
+  audTeclado: audTeclado, audPintar: audPintar, audSvg: AUD_SVG, audPieGrande: audPieGrande,
   audBarra: function(){
     var caja = $("audbarra"), pie = $("pie"), r = caja.getBoundingClientRect();
     return {
@@ -12428,6 +12438,14 @@ window.__agente = {
       // la barra vieja (`#fila`) no se ve hasta que facundo toca el teclado; el `[▶]` chico tampoco
       fila: !!($("fila").offsetWidth || $("fila").offsetHeight), txton: pie.classList.contains("txton"),
       enviarOn: !audBtn("der") || !audBtn("der").disabled,
+      // 1573 {teclado}: el pie del celu es el input de siempre; el micro, un `.ico` chico al lado del `enviar`
+      pieGrande: audPieGrande(), celu: pie.classList.contains("celu"),
+      chicos: [].map.call([$("txt"), $("grabar"), $("camara"), $("mandar")], function(n){
+        var x = n.getBoundingClientRect();
+        return {id: n.id, w: Math.round(x.width), h: Math.round(x.height), izq: Math.round(x.left),
+                orden: getComputedStyle(n).order,
+                visible: !!(n.offsetWidth || n.offsetHeight)};
+      }),
       botones: [].map.call(caja.children, function(b){
         var x = b.getBoundingClientRect(), ce = medirCentro(b);   // 1974: el icono, centrado en la caja
         return {clase: b.className.split(" ").filter(function(k){ return /^aud(izq|cen|der)$/.test(k); })[0] || "",
