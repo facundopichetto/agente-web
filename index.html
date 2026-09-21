@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.421">
-<link rel="manifest" href="manifest.json?v=4.421">
+<meta name="agente-web-version" content="4.422">
+<link rel="manifest" href="manifest.json?v=4.422">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.421">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.422">
 </head>
 <body>
 
@@ -1545,7 +1545,7 @@ function abrirTab(tema){
   if(!esTema(tema) && tema !== AUTO){ sistema("tema desconocido: " + tema, "error"); return; }
   if(tabs.indexOf(tema) < 0) tabs.push(tema);
   activo = tema;
-  pintarTabs(); render(); irDonde();
+  pintarTabs(); render(true); irDonde();
   chatDeTab(tema);          // si nunca se bajo su charla, llega sola
 }
 // renombrar una pestaña (si ya habia una de ese tema, no se duplica). la general ya no se renombra sola
@@ -1555,7 +1555,7 @@ function renombrarTab(viejo, nuevo){
   if(tabs.indexOf(nuevo) >= 0) tabs.splice(tabs.indexOf(viejo), 1);
   else tabs[tabs.indexOf(viejo)] = nuevo;
   if(activo === viejo) activo = nuevo;
-  pintarTabs(); render(); irDonde();
+  pintarTabs(); render(true); irDonde();
 }
 function cerrarTab(tema){
   if(tabs.length < 2){ sistema("la última pestaña se queda abierta"); return; }
@@ -1564,7 +1564,7 @@ function cerrarTab(tema){
   tabs.splice(j, 1);
   var reemplazo = tabs[Math.min(j, tabs.length - 1)];
   if(activo === tema) activo = reemplazo;
-  pintarTabs(); render(); irDonde();
+  pintarTabs(); render(true); irDonde();
 }
 // 2248 {pestanas} (facundo, 2026-09-20): "cada pestaña tiene un nombre y sus reglas... rompemos con la
 // idea de ayer de claude / no claude". el `MAS` abre UNA lista plana de pestañas por nombre: se fue el
@@ -1656,6 +1656,9 @@ function hace(iso){
   return Math.floor(s / 3600) + "h";
 }
 function abajo(){
+  // 1622: mientras facundo selecciona, el piso no se mueve. el `pego` de cuando llego el mensaje lo anota
+  // `render`, asi que al soltar se va al fondo solo si de verdad estaba pegado abajo.
+  if(selTxViva()) return;
   hist.scrollTop = hist.scrollHeight;
   // segunda pasada: el teclado y el autosize del textarea cambian el alto despues del layout
   requestAnimationFrame(function(){ hist.scrollTop = hist.scrollHeight; });
@@ -2975,7 +2978,66 @@ function marcarModoAudio(){
   // 1970 {grabar} + 1573 {teclado}: y el pie se repinta (hoy: el input de siempre con el micro chico al lado)
   if(typeof audPintar === "function") audPintar(true);
 }
-function render(){
+// ---------- 1622 {seleccion}: repintar el historial no puede romper la seleccion de texto ----------
+// facundo, 2026-09-21: "el scroll del chat sigue andando como el orto" / "se va siempre para abajo". arrastraba
+// para copiar y a los 5 s el `tick` repintaba `#lista` entero (`innerHTML = ""`): la seleccion se apagaba (gris)
+// y el scroll saltaba. mientras hay una seleccion viva en el chat -o el dedo/mouse apretado arrastrando sobre
+// `#hist`- el historial NO se repinta ni se mueve: lo que llega se acumula (`selTxPend`) y se aplica recien al
+// soltar, con el ancla de la 1805 clavada. la pausa es SOLO del historial: widgets, cola y campana siguen igual.
+var selTxArrastre = false;   // dedo o boton apretado sobre el historial
+var selTxPend = false;       // llego charla nueva mientras habia seleccion
+var selTxFondo = false;      // ... y ademas tocaba ir al fondo
+var selTxSync = false;       // el foco volvio con seleccion viva
+// seleccion de texto de verdad (no colapsada, con texto) y adentro del scroller del chat
+function selTxHay(){
+  try{
+    var s = window.getSelection && window.getSelection();
+    if(!s || !hist || s.isCollapsed || !s.rangeCount) return false;
+    if(!String(s.toString() || "").length) return false;
+    var r = s.getRangeAt(0);
+    return hist.contains(r.commonAncestorContainer) || hist.contains(s.anchorNode) || hist.contains(s.focusNode);
+  }catch(x){ return false; }
+}
+function selTxViva(){ return selTxArrastre || selTxHay(); }
+// al soltar: si quedo algo pendiente se pinta de una sola pasada. `renderYa` mide y repone el ancla, asi que
+// la linea de arriba no se mueve; solo se va al fondo si cuando llego el mensaje estabas pegado abajo.
+function selTxSoltar(){
+  if(selTxViva()) return false;
+  var sync = selTxSync, pend = selTxPend, fondo = selTxFondo;
+  selTxSync = selTxPend = selTxFondo = false;
+  if(pend){
+    renderYa();
+    if(fondo) alFinal();
+  }
+  if(sync) alVolver();
+  return pend || sync;
+}
+function selTxEstado(){ return {viva: selTxViva(), arrastre: selTxArrastre, pend: selTxPend, fondo: selTxFondo, sync: selTxSync}; }
+(function(){
+  if(!hist) return;
+  function apretar(){ selTxArrastre = true; }
+  function soltar(){ if(!selTxArrastre) return; selTxArrastre = false; selTxSoltar(); }
+  hist.addEventListener("pointerdown", function(e){ if(e.button === undefined || e.button === 0) apretar(); });
+  hist.addEventListener("touchstart", apretar, {passive: true});
+  window.addEventListener("pointerup", soltar);
+  window.addEventListener("pointercancel", soltar);
+  window.addEventListener("touchend", soltar, {passive: true});
+  window.addEventListener("touchcancel", soltar, {passive: true});
+  // soltar el boton deja la seleccion viva (facundo todavia no copio): lo pendiente sale cuando la suelta
+  document.addEventListener("selectionchange", function(){ if(!selTxViva()) selTxSoltar(); });
+})();
+// `forzar` = lo pidio facundo con un gesto que cambia lo que se ve (abrir/cerrar/renombrar pestaña): ahi el
+// historial se pinta igual, porque quedarse con la charla vieja seria peor que perder la seleccion.
+function render(forzar){
+  if(forzar){ selTxPend = false; selTxFondo = false; }
+  else if(selTxViva()){              // 1622: con una seleccion viva no se toca el dom del historial
+    selTxPend = true;
+    if(pegadoAbajo()) selTxFondo = true;
+    return;
+  }
+  renderYa();
+}
+function renderYa(){
   var ancla = anclaMedir();          // 1805: llego mas charla y se repinta todo: la linea de arriba no se mueve
   marcarModoAudio();
   if(lista) lista.innerHTML = "";
@@ -2989,7 +3051,7 @@ function render(){
 function alFinal(){ abajo(); }
 // abrir la web, volver al foco o cambiar de pestaña te deja **donde estabas**, no al final (facundo,
 // 2026-09-11). el fondo sigue siendo el default: `aplicarVista` solo mueve si habia algo guardado.
-function restaurarVistas(){ aplicarVista(); }
+function restaurarVistas(){ if(selTxViva()) return false; return aplicarVista(); }   // 1622
 // 1770 (facundo, 2026-09-16): el chat nunca queda arriba. antes `irDonde` iba al fondo y restauraba la
 // vista en un `requestAnimationFrame`, que no corre si la pagina recargo sin estar a la vista (el
 // chequeo de version es cada 60 s, tambien con el celu bloqueado) y `abajo()` con el alto sin medir
@@ -2999,6 +3061,7 @@ function restaurarVistas(){ aplicarVista(); }
 var ASENTAR_MS = 1500, asentarHasta = 0, asentarPendiente = false;
 function asentarVista(){
   if(!hist || !lista) return false;
+  if(selTxViva()) return false;     // 1622: queda pendiente y se asienta al soltar la seleccion
   var conLayout = hist.clientHeight > 0 && (hist.scrollHeight > hist.clientHeight || !lista.querySelector(".msg"));
   if(!aplicarVista()) abajo();
   if(conLayout) asentarPendiente = false;
@@ -3572,6 +3635,7 @@ function sincronizar(primera){
 // volver al foco: sincroniza ya. con un piso corto para que alt-tab no dispare una bajada por segundo.
 function alVolver(){
   if(document.hidden || !token) return;
+  if(selTxViva()){ selTxSync = true; return; }   // 1622: volver al foco no le apaga la seleccion a facundo
   if(Date.now() - syncUlt < 1200) return;
   sincronizar(false).catch(function(e){ if(ruidoso(e)) sistema("error: " + e.message, "error"); });
 }
@@ -12796,6 +12860,8 @@ window.__agente = {
   },
   // historial por tema: lo que publica el daemon en `chat/<tema>.json`
   cargarChat: cargarChat, cargarChatTema: cargarChatTema, recibirChat: recibirChat, render: render,
+  // 1622 {seleccion}: la pausa del repintado del historial (`prueba_web_seleccion`)
+  selTxViva: selTxViva, selTxEstado: selTxEstado, selTxSoltar: selTxSoltar, renderYa: renderYa,
   temasACargar: temasACargar, archivoChat: archivoChat, mezclar: mezclar, claveMsg: claveMsg,
   hist: function(t){ return (msgsHist[normTema(t)] || []).map(function(m){
     return {id: m.id, tema: m.tema, clase: m.clase, texto: m.texto, iso: m.iso, audio: m.audio || null}; }); },
