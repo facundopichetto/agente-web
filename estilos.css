@@ -1162,6 +1162,10 @@
   }
   .ub-lleno{position:absolute;left:0;top:0;bottom:0;background:#333;border-radius:1px}
   .ub-tick{position:absolute;top:0;bottom:0;width:1px;background:var(--blanco);opacity:.8}
+  /* 1625 {tick}: el tick de ritmo de una fila del widget `gasto`, con la MISMA marca visual que la linea
+     del grafico de los 7 dias (`.usem-l`): raya blanca punteada de 1px, opacidad .7. ahi es horizontal
+     (la barra crece para arriba) y aca vertical (la barra crece para la derecha). el `%` lo pone el server. */
+  .gasto .ub-tick{width:0;background:none;border-left:1px dashed var(--blanco);opacity:.7}
   .ub-p{flex:0 0 43px;text-align:right;font-weight:600;color:var(--gris)}
   .ub-r{flex:0 0 58px;text-align:right;color:var(--gris);font-size:15px}
   .ub.n-ok .ub-lleno{background:var(--verde)}

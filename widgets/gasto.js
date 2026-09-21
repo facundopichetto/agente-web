@@ -103,24 +103,38 @@
   // (`gasto_api.lineas`): `<cuenta>  <consumo>  ·  <usado>/<cuota> <ventana>`, y en el renglon de abajo el
   // dato de esa familia (claude su `fable` y su `to renew`, una api de donde sale su cuota). la barra es el
   // `%` de la cuota ya usado (`l.pct`) y el color su nivel (`n-ok`/`n-cerca`/`n-mal`, `n-sin` sin cuota): se
-  // fueron el tick de la linea del mes y el gradiente por distancia (2182), que eran de plata. una fila sin
+  // fueron el gradiente por distancia (2182) y la plata del renglon. una fila sin
   // cuota llega con `pct: null` y `sec` diciendo por que: la web NO inventa un denominador ni una barra.
   // 2255 {escala}: el denominador de TODAS las filas es el mismo (el `100%` de una semana = `usd 46`), asi que
   // la barra de gemini, la de mistral y la de una cuenta de claude son comparables a ojo: el mismo ancho es la
   // misma plata. la web sigue sin convertir nada -- el `%`, la plata de la semana (`usd_semana_txt`, que va en
   // la ficha y en el tooltip, nunca en el renglon) y la escala llegan armadas del server.
+  // 1625 {tick} (facundo, 2026-09-21): *"la de la fila: vuelve el tick de ritmo en cada barra, ahora en la
+  // escala de la semana (usd 46), sin plata en el renglon"*. el tick que se habia ido con la 2249 era un
+  // objetivo de PLATA del mes; este es `%` puro sobre la misma escala que la barra, y marca por donde deberia
+  // ir la barra a esta altura de la semana (la de esa cuenta de claude, la calendario para una api). el
+  // numero (`l.linea`) y su texto (`l.linea_txt`) llegan armados del server: la web no calcula ninguna
+  // fraccion. es la MISMA marca visual del tick del grafico de los 7 dias (`usem-l`): una raya blanca de 1px
+  // atravesando la barra, aca vertical porque la barra es horizontal. sin cuota conocida (groq) el server
+  // manda `linea: null` y no se pinta nada: la web no inventa una marca.
+  function tickHtml(l){
+    if(l.linea === null || l.linea === undefined) return "";
+    var t = Math.max(0, Math.min(100, l.linea));
+    return '<span class="ub-tick" style="left:' + t + '%"></span>';
+  }
   function filaGasto(l){
     var pct = (l.pct === null || l.pct === undefined) ? 0 : Math.max(0, Math.min(100, l.pct));
     var tit = l.nombre + ": " + (l.consumo_txt || "?") + " · " + (l.sec || "") +
               // 2255: en el tooltip si va la plata de la semana, que es lo que hace comparable el `%`
               (l.usd_semana_txt && l.escala_txt ? "\n" + l.usd_semana_txt + " de " + l.escala_txt +
                                                   " (el 100% de una semana)" : "") +
+              (l.linea_txt ? "\n" + l.linea_txt : "") +
               (l.extra ? "\n" + l.extra : "") + (l.detalle ? "\n" + l.detalle : "");
     return '<div class="ub grow n-' + esc(l.nivel || "sin") + (l.agotada ? " agotada" : "") +
       (l.dormida ? " dormida" : "") + (l.tocable ? "" : " sinlim") + '" title="' + esc(tit) + '"' +
       (l.tocable ? ' data-cta="' + esc(l.nombre) + '" role="button" tabindex="0"' : "") + ">" +
       '<span class="ub-n nom' + (l.estado ? " e-" + esc(l.estado) : "") + '">' + esc(l.nombre) + "</span>" +
-      '<span class="ub-pista"><span class="ub-lleno" style="width:' + pct + '%"></span></span>' +
+      '<span class="ub-pista"><span class="ub-lleno" style="width:' + pct + '%"></span>' + tickHtml(l) + "</span>" +
       '<span class="ub-p">' + esc(l.consumo_txt || "?") + "</span>" +
       '<span class="ren">' + esc(l.sec || "") + "</span>" +
       '<span class="gsec">' + esc(l.extra || "") + "</span></div>";
