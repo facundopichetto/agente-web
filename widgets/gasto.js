@@ -100,7 +100,8 @@
   }
   // 2249 {consumo} (facundo, 2026-09-20, opcion C: "el widget deja de ser de plata y pasa a ser de consumo"):
   // la fila ya no muestra plata ni proyecta nada. UNA gramatica para todas, armada entera en el server
-  // (`gasto_api.lineas`): `<cuenta>  <consumo>  ·  <usado>/<cuota> <ventana>`, y en el renglon de abajo el
+  // (`gasto_api.lineas`): `<cuenta>  <consumo>  ·  <ventana>` -- el `<usado>/<cuota>` del renglon se fue el
+  // 2026-09-21 ("el 92%/100% es un dato que hace ruido"), queda `semana` pelado --, y en el renglon de abajo el
   // dato de esa familia (claude su `fable` y su `to renew`, una api de donde sale su cuota). la barra es el
   // `%` de la cuota ya usado (`l.pct`) y el color su nivel (`n-ok`/`n-cerca`/`n-mal`, `n-sin` sin cuota): se
   // fueron el gradiente por distancia (2182) y la plata del renglon. una fila sin

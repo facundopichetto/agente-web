@@ -1162,10 +1162,15 @@
   }
   .ub-lleno{position:absolute;left:0;top:0;bottom:0;background:#333;border-radius:1px}
   .ub-tick{position:absolute;top:0;bottom:0;width:1px;background:var(--blanco);opacity:.8}
-  /* 1625 {tick}: el tick de ritmo de una fila del widget `gasto`, con la MISMA marca visual que la linea
-     del grafico de los 7 dias (`.usem-l`): raya blanca punteada de 1px, opacidad .7. ahi es horizontal
-     (la barra crece para arriba) y aca vertical (la barra crece para la derecha). el `%` lo pone el server. */
-  .gasto .ub-tick{width:0;background:none;border-left:1px dashed var(--blanco);opacity:.7}
+  /* 1625 {tick}: el tick de ritmo de una fila del widget `gasto`. arranco punteado de 1px a opacidad .7,
+     igual que la linea del grafico de los 7 dias (`.usem-l`), y sobre el relleno no se veia (facundo,
+     2026-09-21): ahora es una raya BLANCA solida de 2px, opaca. el halo negro de 1px es lo que la hace
+     legible sobre CUALQUIER relleno: sobre el gris hundido de la pista el blanco ya contrasta solo, pero
+     sobre el verde pleno de una barra sana el blanco casi se funde. el `%` lo pone el server. */
+  .gasto .ub-tick{
+    width:2px;margin-left:-1px;background:var(--blanco);border:0;opacity:1;
+    box-shadow:0 0 0 1px rgba(0,0,0,.75);
+  }
   .ub-p{flex:0 0 43px;text-align:right;font-weight:600;color:var(--gris)}
   .ub-r{flex:0 0 58px;text-align:right;color:var(--gris);font-size:15px}
   .ub.n-ok .ub-lleno{background:var(--verde)}
