@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.419">
-<link rel="manifest" href="manifest.json?v=4.419">
+<meta name="agente-web-version" content="4.420">
+<link rel="manifest" href="manifest.json?v=4.420">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.419">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.420">
 </head>
 <body>
 
@@ -4566,13 +4566,18 @@ var SEL_PEDIR_MS = 2500, selPedirT = null;
 // 1975 {arranque}: `arranque` = lo pidio facundo ABRIENDO el proceso. va al server como `?arranque=1` (el que rearma
 // desde el principio descarta su fila y la vuelve a armar con el orden de ahora) y borra la memoria local de lo
 // votado de ESA coleccion, que si no escondia 7 dias a la que el server acaba de volver a servir
+// 1605 {piso} (facundo, 2026-09-21, orden 1607): el pedido de la fila que NO volvio (sin lan, http o json roto)
+// queda anotado por coleccion. es la unica diferencia entre "no hay nadie en esta lista hoy" y "no se pudo leer la
+// lista": las dos dejan al votador sin abrir, pero no son lo mismo y facundo tiene que poder distinguirlas.
+var selFallos = {}, SEL_FALLO_MS = 60000;
+function selFallo(col){ var t = selFallos[col]; return !!t && Date.now() - t < SEL_FALLO_MS; }
 function selPedir(col, arranque){
   if(arranque){
     var f = selLeer("fila", {});
     if(f[col]){ delete f[col]; selEscribir("fila", f); }
   }
   return votLan().then(function(base){
-    if(!base) return false;
+    if(!base){ selFallos[col] = Date.now(); return false; }   // 1605 {piso}: sin lan no se pudo leer nada
     // 2095 paso 5: con una lista abierta, el server manda SOLO la gente de esa lista (`?lista=`)
     var qs = (arranque ? "?arranque=1" : "") + (sel.filtro ? (arranque ? "&" : "?") + "lista=" + encodeURIComponent(sel.filtro) : "");
     // 2137 {votolocal}: las de la tirada que ya voto y todavia no mando van como `saltear`, si no el server sirve
@@ -4584,8 +4589,8 @@ function selPedir(col, arranque){
     if(sal.length) qs += (qs ? "&" : "?") + "saltear=" + encodeURIComponent(sal.slice(-400).join(","));
     return lanFetch(selUrl(base, col) + qs, {method: "GET", cache: "no-store", headers: {"authorization": "Bearer " + token}})
       .then(function(r){ if(!r || !r.ok) throw new Error("http " + (r && r.status)); return r.json(); })
-      .then(function(j){ return filaAplicar(col, j); });
-  }).catch(function(){ return false; });
+      .then(function(j){ delete selFallos[col]; return filaAplicar(col, j); });   // 1605 {piso}: contesto
+  }).catch(function(){ selFallos[col] = Date.now(); return false; });   // 1605 {piso}
 }
 function filaAplicar(col, j){
   if(!j || j.coleccion !== col) return false;
@@ -5583,7 +5588,8 @@ var LIS_LS = "agente_listas", LIS_REFRESCO = 60000;
 // en blanco por eso: se pinta lo cacheado con esta linea arriba, que se va sola apenas entra un json de verdad
 var LIS_AVISO = "no pude actualizar: esto es lo último que bajó";
 var lis = {sub: "listas", datos: null, ts: 0, bajando: null, etag: null, scroll: 0, origen: null,
-           una: null, unaScroll: 0, refT: null, aviso: ""};
+           una: null, unaScroll: 0, refT: null, aviso: "",
+           piso: null};   // 1605 {piso}: por que el ultimo toque no abrio el votador (`vacia` / `error`)
 function lisCacheLeer(){
   if(lis.datos) return lis.datos;
   try{
@@ -5838,7 +5844,11 @@ function lisEntrar(f, fresco){
   if(!f) return false;
   try{ lis.scroll = $("sellistas").scrollTop; }catch(x){ lis.scroll = 0; }
   lis.sub = "una";
-  lis.una = {clave: f.clave, f: f, gente: (f.gente || []).slice(), n: f.n, entera: !f.grande, bajando: false};
+  // 1605 {piso}: el motivo que dejo `tinderAbrirCol` es de ESTA lista y de este toque (entrar a otra no lo arrastra)
+  var piso = lis.piso && lis.piso.clave === f.clave ? lis.piso.motivo : null;
+  lis.piso = null;
+  lis.una = {clave: f.clave, f: f, gente: (f.gente || []).slice(), n: f.n, entera: !f.grande, bajando: false,
+             piso: piso, fallo: false};
   lisModoUna();
   lisUnaPintar();
   lisUnaBajar(f.clave);
@@ -5876,6 +5886,17 @@ function lisUnaFila(){
   var f = (((movVista(d) || {}).listas) || []).filter(function(x){ return x.clave === u.clave; })[0];
   return f || u.f;
 }
+// 1605 {piso} (facundo, 2026-09-21, orden 1607: "tocar una lista NUNCA puede dejar la pantalla vacia o cerrada").
+// las dos razones por las que el votador de una lista no abre se leen distinto, y ninguna de las dos es una
+// pantalla en negro: `vacia` = el server contesto y no hay una sola tarjeta para votar, `error` = el pedido no
+// volvio (sin lan, http o json roto). si ademas hay gente cargada, la linea dice que es lo que se esta viendo.
+function lisPisoTexto(motivo, hayGente, n){
+  if(motivo === "error")
+    return hayGente ? "no se pudo leer la lista: te muestro lo último que bajó" : "no se pudo leer la lista";
+  if(hayGente) return "no hay nadie para votar en esta lista hoy: te muestro su gente";
+  // la lista que el server dice que tiene gente (`n`) no esta vacia: lo que no hay es nada para votar AHORA
+  return n ? "no hay nadie para votar en esta lista hoy" : "no hay nadie en esta lista hoy";
+}
 function lisUnaPintar(){
   var c = $("sellistas"), u = lis.una, f = lisUnaFila();
   if(!u || !f) return false;
@@ -5885,6 +5906,11 @@ function lisUnaPintar(){
   $("selcuenta").textContent = String(f.n || 0);
   var cab = document.createElement("div"); cab.className = "lisunacab";
   if(lis.aviso) cab.appendChild(lisLinea("lisaviso", lis.aviso));   // 2143
+  // 1605 {piso}: el toque que no pudo abrir el votador termina ACA, y lo primero que se lee es que paso. la vista
+  // sigue abierta, con su back y su `✕`: el piso es que facundo nunca se quede mirando una pantalla muda.
+  var gente = movGente(f, u.gente || []);   // {gracia}: la que facundo acaba de mover ya no esta (o ya esta)
+  var piso = u.piso ? lisPisoTexto(u.piso, gente.length > 0, f.n || 0) : "";
+  if(piso) cab.appendChild(lisLinea("lispiso", piso));
   if(f.porque) cab.appendChild(lisLinea("lisporque", f.porque));
   // 2244 {superranking} paso 2: el motivo de una lista vacia, tambien adentro (y con el numero de lecturas)
   var avSuper = (u.aviso && u.aviso.motivo ? u.aviso : (f.aviso && f.aviso.motivo ? f.aviso : null));
@@ -5897,13 +5923,16 @@ function lisUnaPintar(){
     cab.appendChild(vb);
   }
   c.appendChild(cab);
-  var gente = movGente(f, u.gente || []);   // {gracia}: la que facundo acaba de mover ya no esta (o ya esta)
   if(!gente.length){
     // sin gente todavia: la trae la lan. una lista grande sin lan se queda con lo que diga el server
     // 2244: si ya se dijo POR QUE esta vacia, no se repite un "no hay nadie acá" que no aporta nada
-    if(!(avSuper && !f.n))
-      c.appendChild(lisLinea("lisvacio", u.bajando ? "buscando la gente de la lista…" :
-                             (f.n ? "son " + f.n + ": no pude traer la lista entera (sin lan)" : "no hay nadie acá")));
+    // 1605 {piso}: y la linea del piso, que ya esta arriba, tampoco se repite. la lectura que no volvio
+    // (`u.fallo`: 404 del buzon, json sin `gente`, red caida) dice eso y no "no hay nadie", que seria mentira
+    if(u.bajando) c.appendChild(lisLinea("lisvacio", "buscando la gente de la lista…"));
+    else if(!(avSuper && !f.n) && !piso)
+      c.appendChild(lisLinea("lisvacio", u.fallo ? "no se pudo leer la lista" :
+                             (f.n ? "son " + f.n + ": no pude traer la lista entera (sin lan)" :
+                              "no hay nadie en esta lista hoy")));
     return true;
   }
   var tira = document.createElement("div"); tira.className = "listira lisunatira";
@@ -5923,12 +5952,18 @@ function lisUnaBajar(clave){
   return api("GET", "/repos/" + REPO + "/contents/listas/" + encodeURIComponent(clave) + ".json", null, null,
              "application/vnd.github.raw+json").then(function(r){
     var j = r && r.json;
+    // 1605 {piso}: el 404 del buzon y el json sin `gente` tampoco trajeron la lista: la vista lo dice, no inventa
+    // un "no hay nadie" que seria mentira
+    if(!j || !j.gente){ if(lis.una && lis.una.clave === clave) lis.una.fallo = true; }
     if(!j || !j.gente || !lis.una || lis.una.clave !== clave) return false;
-    lis.una.gente = j.gente; lis.una.entera = !!j.entera; lis.una.bajando = false;
+    lis.una.gente = j.gente; lis.una.entera = !!j.entera; lis.una.bajando = false; lis.una.fallo = false;
     lis.una.aviso = j.aviso || null;   // 2244: el motivo de la lista vacia, fresco del server
     if(lis.sub === "una") lisUnaPintar();
     return true;
-  }).catch(function(){ return false; }).then(function(r){
+  }).catch(function(){
+    if(lis.una && lis.una.clave === clave) lis.una.fallo = true;   // 1605 {piso}
+    return false;
+  }).then(function(r){
     if(lis.una && lis.una.clave === clave){
       lis.una.bajando = false;
       if(lis.sub === "una" && !lis.una.gente.length) lisUnaPintar();
@@ -6410,6 +6445,11 @@ function tinderAbrirCol(col, desde, falla, lista, titulo){
   var ok, filtro0 = sel.filtro, titulo0 = sel.filtroTitulo;
   // 1605 paso 2: si la fila no abre, el filtro no queda colgado sobre una lista que nadie esta votando
   var atras = function(){ sel.filtro = filtro0; sel.filtroTitulo = titulo0; };
+  // 1605 {piso}: POR QUE no abrio el votador, para que la vista que se queda lo diga en una linea en vez de dejar
+  // la pantalla muda: `error` = el pedido de la fila no volvio (`selFallo`), `vacia` = volvio y no hay ninguna
+  // tarjeta de esa lista. lo lee `lisEntrar` (la gente de esa misma lista); el plan B de una persona tocada abre
+  // su cartita, que ya explica sola, asi que ahi no se escribe nada.
+  var porque = function(){ lis.piso = {clave: lista || null, motivo: selFallo(col) ? "error" : "vacia"}; };
   // 2095 paso 5: de que lista es la fila que se va a ver. lo pone el toque en la lista y lo respetan `tjAbrir` (la
   // apertura) y `filaSumar` (todo lo que el server manda despues): en el votador de `following` no entra nunca
   // nadie de `follow request sent`, aunque el server sirva las dos en la misma coleccion.
@@ -6429,7 +6469,7 @@ function tinderAbrirCol(col, desde, falla, lista, titulo){
       // 1605 paso 2: el plan B ya no pide `vistaEs("tinder")`. pedirlo era lo que lo dejaba sin correr justo
       // cuando mas hacia falta (el guard acababa de sacar de la vista); ademas `lisEntrar` / `lisCartita` /
       // `lisVolver` vuelven a poner la vista, asi que el peor caso es volver a entrar, nunca quedarse afuera.
-      if(!selAbrirCol(col) && !sel.actual){ atras(); (falla || lisVolver)(); }
+      if(!selAbrirCol(col) && !sel.actual){ atras(); porque(); (falla || lisVolver)(); }
       else tjIr(desde);
     });
     return true;
@@ -6444,8 +6484,8 @@ function tinderAbrirCol(col, desde, falla, lista, titulo){
   // 2095 paso 5: si la fila de esa lista no tiene a nadie cargado todavia, se vuelve a la LISTA (de donde salio el
   // toque), nunca a otro proceso (eso era el bug) ni a la home. 2113: si el toque trajo su plan B, ese manda
   // 1605 paso 2: sin `vistaEs("tinder")` (ver arriba): el toque en una lista SIEMPRE termina en algo a la vista
-  if(!ok && !sel.actual){ atras(); (falla || lisVolver)(); }
-  else if(ok){ tjIr(desde); selFresco(col); }   // 2143: lo cacheado pinto el primer frame, el server manda
+  if(!ok && !sel.actual){ atras(); porque(); (falla || lisVolver)(); }
+  else if(ok){ lis.piso = null; tjIr(desde); selFresco(col); }   // 2143: lo cacheado pinto el primer frame, el server manda
   return ok;
 }
 // salir de una votacion (terminar la tanda, `enviar`, `esc`): vuelve al `home`, no cierra la vista (1922)

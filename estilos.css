@@ -594,6 +594,9 @@
   /* 2244 {superranking} paso 2: por que esta vacia una lista que se puede destrabar (falta de lecturas). va en
      el amarillo de aviso de la 2143, adentro de la tarjeta y tambien arriba de la lista abierta. */
   #sellistas .lisnota{color:var(--amarillo);font-size:16px;opacity:.85;word-break:break-word}
+  /* 1605 {piso}: por que el toque no abrio el votador. mismo amarillo de aviso que la nota, arriba de todo y a
+     opacidad entera: es lo primero que se lee cuando la lista no tenia nada para votar o no se pudo leer. */
+  #sellistas .lispiso{color:var(--amarillo);font-size:16px;word-break:break-word}
   /* 2247 {botones} paso 3: las acciones de LISTA ENTERA, abajo del `por que` del cuadrado. son chips chicos, bien
      distintos del cuadrado (que abre el votador): cortan la burbuja y abren el modal con la caja `dale` */
   #sellistas .lismasivos{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
