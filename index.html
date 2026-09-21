@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.422">
-<link rel="manifest" href="manifest.json?v=4.422">
+<meta name="agente-web-version" content="4.423">
+<link rel="manifest" href="manifest.json?v=4.423">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.422">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.423">
 </head>
 <body>
 
@@ -5766,7 +5766,12 @@ function lisPintar(){
 // la EXCEPCION del guardian: `super candidatas` es una lista VIRTUAL y su caja sigue diciendo el total del ranking
 // (1959/2134), nunca el tamaño de la tanda que bajo el proceso.
 function lisVotables(f){
-  if(!f || !f.proceso || f.virtual) return null;
+  if(!f) return null;
+  // 1625 {votador}: la lista VIRTUAL (`super candidatas`) no tiene fila propia en el cliente (su filtro es el
+  // ranking, que vive en el server), asi que el server manda `votables` ya contado. sin eso la caja decia `1999` y
+  // el toque abria el votador en blanco
+  if(f.virtual) return (typeof f.votables === "number") ? f.votables : null;
+  if(!f.proceso) return null;
   if(selArranca(f.proceso) && !cacheTiene(f.proceso, f.clave)) return null;
   var e = (sel.abiertas || []).filter(function(a){ return a.coleccion === f.proceso; })[0];
   if(!e) return null;
