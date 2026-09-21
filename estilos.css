@@ -518,7 +518,11 @@
   }
   /* {fotoancha}: sin foto no queda un hueco negro: el mismo cuadro con la inicial (la tapa la foto al bajar) */
   #seltarjeta .tjppal .tjini{position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;
-    justify-content:center;color:var(--gris);font-size:64px;font-weight:bold;line-height:1;background:#111}
+    justify-content:center;background:#111}
+  /* la inicial es un glifo, no texto: el `font-size` se queda en el tope de 18 px (2014) y lo que la agranda es el
+     `scale`, igual que los votos de la 1841 */
+  #seltarjeta .tjppal .tjinil{font-size:var(--texto-max);font-weight:bold;line-height:1;color:var(--gris);
+    transform:scale(3.5);transform-origin:center}
   #seltarjeta .tjppal.confoto .tjini{display:none}
   /* {fotoancha}: varias fotos se caminan de a UNA a ancho completo (swipe horizontal con snap), nunca la tira chica */
   #selmodal #seltarjeta .tjfotos.tjcarr{display:flex;align-items:flex-start;overflow-x:auto;overflow-y:hidden;
