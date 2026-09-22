@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.426">
-<link rel="manifest" href="manifest.json?v=4.426">
+<meta name="agente-web-version" content="4.427">
+<link rel="manifest" href="manifest.json?v=4.427">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.426">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.427">
 </head>
 <body>
 
@@ -674,7 +674,7 @@ function aplicarLayout(L, ts){
   tabs = s.tabs; activo = s.activo;
   layoutTs = ts || Date.now();
   aplicando = true;
-  try{ pintarTabs(); if(!igual){ render(); irDonde(); } }finally{ aplicando = false; }
+  try{ pintarTabs(); if(!igual){ render(); irDonde(true); } }finally{ aplicando = false; }
   guardarCache();
   return !igual;
 }
@@ -1221,7 +1221,10 @@ function recibirVistas(rem){
       cambio = true;
     }
   });
-  if(cambio){ guardarCache(); aplicarVista(); }
+  // 1650 {historial}: la vista que llega del otro dispositivo se guarda SIEMPRE, pero con el historial
+  // subido a mano NO se aplica: mover el scroll de una ventana donde facundo esta leyendo arriba lo mandaba
+  // a una posicion vieja (o a la del celu). vuelve a aplicarse sola en cuanto vuelve al fondo o cambia de pestaña.
+  if(cambio){ guardarCache(); if(!subioAMano) aplicarVista(); }
   return cambio;
 }
 
@@ -1545,7 +1548,7 @@ function abrirTab(tema){
   if(!esTema(tema) && tema !== AUTO){ sistema("tema desconocido: " + tema, "error"); return; }
   if(tabs.indexOf(tema) < 0) tabs.push(tema);
   activo = tema;
-  pintarTabs(); render(true); irDonde();
+  pintarTabs(); render(true); irDonde(true);
   chatDeTab(tema);          // si nunca se bajo su charla, llega sola
 }
 // renombrar una pestaña (si ya habia una de ese tema, no se duplica). la general ya no se renombra sola
@@ -1555,7 +1558,7 @@ function renombrarTab(viejo, nuevo){
   if(tabs.indexOf(nuevo) >= 0) tabs.splice(tabs.indexOf(viejo), 1);
   else tabs[tabs.indexOf(viejo)] = nuevo;
   if(activo === viejo) activo = nuevo;
-  pintarTabs(); render(true); irDonde();
+  pintarTabs(); render(true); irDonde(true);
 }
 function cerrarTab(tema){
   if(tabs.length < 2){ sistema("la última pestaña se queda abierta"); return; }
@@ -1564,7 +1567,7 @@ function cerrarTab(tema){
   tabs.splice(j, 1);
   var reemplazo = tabs[Math.min(j, tabs.length - 1)];
   if(activo === tema) activo = reemplazo;
-  pintarTabs(); render(true); irDonde();
+  pintarTabs(); render(true); irDonde(true);
 }
 // 2248 {pestanas} (facundo, 2026-09-20): "cada pestaña tiene un nombre y sus reglas... rompemos con la
 // idea de ayer de claude / no claude". el `MAS` abre UNA lista plana de pestañas por nombre: se fue el
@@ -3068,7 +3071,11 @@ function renderYa(){
 function alFinal(){ abajo(); }
 // abrir la web, volver al foco o cambiar de pestaña te deja **donde estabas**, no al final (facundo,
 // 2026-09-11). el fondo sigue siendo el default: `aplicarVista` solo mueve si habia algo guardado.
-function restaurarVistas(){ if(selTxViva()) return false; return aplicarVista(); }   // 1622
+// 1650 {historial} (facundo, 2026-09-21: "ES A ALGUN LUGAR, ME CAMBIA DE DONDE ESTOY"): un repintado con el
+// historial subido a mano NO puede aplicar `vistas[tema]`, que es una vista GUARDADA (con su ancla y su delta, y
+// pisada por la del otro dispositivo si su `ts` es mas nuevo). la posicion ya la conserva `renderYa` midiendo el
+// ancla justo antes de tocar el dom: aca no se escribe `scrollTop`.
+function restaurarVistas(){ if(selTxViva() || subioAMano) return false; return aplicarVista(); }   // 1622
 // 1770 (facundo, 2026-09-16): el chat nunca queda arriba. antes `irDonde` iba al fondo y restauraba la
 // vista en un `requestAnimationFrame`, que no corre si la pagina recargo sin estar a la vista (el
 // chequeo de version es cada 60 s, tambien con el celu bloqueado) y `abajo()` con el alto sin medir
@@ -3079,12 +3086,17 @@ var ASENTAR_MS = 1500, asentarHasta = 0, asentarPendiente = false;
 function asentarVista(){
   if(!hist || !lista) return false;
   if(selTxViva()) return false;     // 1622: queda pendiente y se asienta al soltar la seleccion
+  if(subioAMano) return false;      // 1650: subio a mano -> ni el ResizeObserver ni el volver al foco lo mueven
   var conLayout = hist.clientHeight > 0 && (hist.scrollHeight > hist.clientHeight || !lista.querySelector(".msg"));
   if(!aplicarVista()) abajo();
   if(conLayout) asentarPendiente = false;
   return conLayout;
 }
-function irDonde(){
+// `forzar` = cambio de pestaña: lo que se ve es otra charla, asi que la marca de "subio a mano" (que era de la
+// pestaña anterior) se apaga y la vista de la nueva se aplica. sin `forzar` (sync, volver al foco, historial que
+// llega) la marca manda y no se mueve nada.
+function irDonde(forzar){
+  if(forzar) subioAManoSoltar();    // 1650 {historial}
   asentarPendiente = true;
   asentarHasta = Date.now() + ASENTAR_MS;
   asentarVista();                           // ya, con el layout que hay
@@ -3450,8 +3462,9 @@ function cargarComentarios(reemplazar){
     // el tema de cada mensaje depende del anterior, asi que se recalcula la charla entera y se
     // reparte de nuevo entre las pestañas (es una pasada por un par de cientos de mensajes)
     if(nuevos || reemplazar){ mezclar(); render(); }
-    // un mensaje nuevo siempre se lee entero y al fondo, aunque estuvieras mirando mas arriba
-    if(pego || nuevos) alFinal();
+    // un mensaje nuevo se lee entero y al fondo... salvo que facundo haya subido a mano a leer algo
+    // (1650 {historial}): ahi se queda donde esta, y `render` ya le dejo clavada la linea de arriba.
+    if(pego || (nuevos && !subioAMano)) alFinal();
   });
 }
 
@@ -3600,7 +3613,7 @@ function tick(){
       if(!chatCambio) return;
       var pego = seguirAlFinal();
       mezclar(); render();
-      if(pego) alFinal(); else restaurarVistas();   // 1645: subio a mano -> conserva la posicion
+      if(pego) alFinal(); else restaurarVistas();   // 1645/1650: subio a mano -> se queda donde esta
     }).catch(function(e){ if(ruidoso(e)) sistema("chat: " + e.message, "error"); });
   }
 }
