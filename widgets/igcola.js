@@ -48,6 +48,8 @@
   function celda(cl, v, mas){
     return '<span class="' + cl + " qcel qh" + (mas || "") + '">' + esc(v || "") + "</span>";
   }
+  // 1681 {cuelgue}: el rojo del atascado viene del server en `cl` (`qcola qvieja`), con la espera en el `title`:
+  // aca no se calcula ninguna demora, igual que las horas
   function fila(f){
     var cl = f.cl || CL[f.estado] || "qcola";
     return '<span class="' + cl + ' qnom">' + esc(f.que || "") + "</span>" +

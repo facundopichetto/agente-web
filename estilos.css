@@ -1346,6 +1346,8 @@
   .igtab .igest{text-align:right}
   /* lo que todavia no salio se lee entero; lo que ya paso queda atras, apagado (el gris de `.qpaso`) */
   .igtab .qpaso{opacity:.55} .igtab .qcorre{color:#8fcf7f} .igtab .qfren{color:var(--rojo)}
+  /* 1681 {cuelgue}: una pendiente esperando hace mas de 2 h va en rojo, para ver el atasco antes de que se acumule */
+  .igtab .qvieja{color:var(--rojo);opacity:1}
   .igpie{font-size:14px;margin-top:3px}
   @media (max-width:430px){ .igtab{font-size:14px;column-gap:3px} }
   /* 1832: la escalera de modelos del widget `models`: grid de 7 columnas, entra en el celu sin scroll horizontal */
