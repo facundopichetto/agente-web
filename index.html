@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.425">
-<link rel="manifest" href="manifest.json?v=4.425">
+<meta name="agente-web-version" content="4.426">
+<link rel="manifest" href="manifest.json?v=4.426">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.425">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.426">
 </head>
 <body>
 
@@ -1669,20 +1669,37 @@ function pegadoAbajo(){ return hist.scrollHeight - hist.scrollTop - hist.clientH
 // teclado abierto el alto de `#hist` cambia y la respuesta quedaba pintada abajo, fuera de pantalla
 // (facundo, 2026-09-12: la de las 17:09 "tardo 2 minutos en aparecer"). scrollear para leer lo viejo
 // cierra el teclado (blur), asi que esto no pisa la lectura.
-function seguirAlFinal(){ return pegadoAbajo() || document.activeElement === txt; }
+// 1645 (facundo, 2026-09-21: "scrolleo para arriba y se va para abajo solo"): con el cursor puesto en la
+// caja de escribir, `document.activeElement === txt` hacia que el chat se considerara "al final" aunque
+// estuviera arriba de todo, y cada poll lo tiraba al fondo (rompia la 1813). ahora un gesto propio de
+// facundo (rueda, dedo, arrastre de la barra) que lo deja NO pegado abajo prende `subioAMano`, y con esa
+// marca la caja ya no cuenta como estar al final. se apaga sola al volver al fondo o al mandar un mensaje.
+// el celu no cambia: ahi scrollear hace blur y ademas queda pegado abajo.
+var subioAMano = false;
+var gestoTs = 0;                                  // ultimo gesto propio sobre el historial
+var GESTO_MS = 1500;
+function gestoScroll(){ gestoTs = Date.now(); }   // solo un gesto puede prender la marca: el autosize del
+function gestoVivo(){ return Date.now() - gestoTs < GESTO_MS; }   // textarea mueve el layout, no es subir a mano
+function subioAManoPoner(){ if(gestoVivo()) subioAMano = true; }
+function subioAManoSoltar(){ subioAMano = false; }
+function seguirAlFinal(){ return pegadoAbajo() || (document.activeElement === txt && !subioAMano); }
 var vistaTimer = null;
 function anotarVista(){
   if(vistaTimer) clearTimeout(vistaTimer);
   vistaTimer = setTimeout(function(){ vistaTimer = null; guardarVista(); }, 400);
 }
 hist.addEventListener("scroll", function(){
-  if(pegadoAbajo()) alfinal.style.display = "none";
+  if(pegadoAbajo()){ alfinal.style.display = "none"; subioAManoSoltar(); }   // 1645: volvio al fondo
+  else subioAManoPoner();                                                    // 1645: subio a mano
   anclaMirar();      // 1805: la linea de arriba, medida antes de que algo mueva el layout
   anotarVista();
 });
 // 1770: scrollear a mano (dedo o rueda) apaga el asentado de la vista: no se le pelea al gesto
-hist.addEventListener("wheel", function(){ asentarHasta = 0; asentarPendiente = false; }, {passive:true});
-hist.addEventListener("touchmove", function(){ asentarHasta = 0; asentarPendiente = false; }, {passive:true});
+hist.addEventListener("wheel", function(){ asentarHasta = 0; asentarPendiente = false; gestoScroll(); }, {passive:true});
+hist.addEventListener("touchmove", function(){ asentarHasta = 0; asentarPendiente = false; gestoScroll(); }, {passive:true});
+// arrastrar la barra de scroll o el teclado con el foco en el historial tambien son gestos de facundo
+hist.addEventListener("pointerdown", gestoScroll);
+hist.addEventListener("keydown", gestoScroll);
 
 // celu: si facundo scrollea hacia arriba para leer, el teclado se cierra solo (blur del input).
 // solo por gesto propio (dedo o rueda) y solo hacia arriba: los scrolls programados (abajo(),
@@ -3583,7 +3600,7 @@ function tick(){
       if(!chatCambio) return;
       var pego = seguirAlFinal();
       mezclar(); render();
-      if(pego) alFinal(); else restaurarVistas();
+      if(pego) alFinal(); else restaurarVistas();   // 1645: subio a mano -> conserva la posicion
     }).catch(function(e){ if(ruidoso(e)) sistema("chat: " + e.message, "error"); });
   }
 }
@@ -4958,7 +4975,10 @@ function tjContar(){
 // 2134 {supervirtual}: `super candidatas` no es una lista del embudo, es el ranking de `ig_super` usado como
 // filtro: su gente sigue siendo `candidata`. la tarjeta que entra es la que trae puntaje (`sup`), lo pone el server.
 var SUPER_LISTA = "super";
-function tjEsSuper(){ return String(sel.filtro || "") === SUPER_LISTA; }
+// 1642 {paquete}: ahora son DOS listas virtuales (`super candidatas` y `candidatAIs`), las dos calculadas sobre
+// `candidata` por `ig_candidatais` y las dos servidas con `sup` en la tarjeta: el votador las trata igual.
+var VIRT_LISTAS = [SUPER_LISTA, "candidatais"];
+function tjEsSuper(){ return VIRT_LISTAS.indexOf(String(sel.filtro || "")) >= 0; }
 function tjEnFiltro(c){
   if(!sel.filtro) return true;
   if(tjEsSuper()) return !!(c && c.sup);
@@ -7154,6 +7174,7 @@ function mandar(texto, tema, crudo, tsEnvio){
     return Promise.resolve();
   }
   enviando++;
+  if(!aparte) subioAManoSoltar();   // 1645: mandar un mensaje apaga la marca de "subio a mano"
   $("mandar").disabled = true;
   if(!aparte){
     if(txt.value.trim() === texto){ txt.value = ""; txt.style.height = ""; }   // la caja se vacia ya
@@ -12741,6 +12762,8 @@ window.__agente = {
             sobra: Math.round((v.offsetTop || 0) + v.height - p.bottom)};
   },
   seguirAlFinal: seguirAlFinal,
+  subioAManoEstado: function(){ return {marca: subioAMano, gesto: gestoVivo()}; },
+  gestoScroll: gestoScroll,
   // envio idempotente: dos enter rapidos no mandan dos veces (prueba_web_tabs lo chequea)
   envios: function(){ return {enviando: enviando, ultimo: ultimoTexto, repeMs: REPE_MS}; },
   stubApi: function(f){ apiStub = f || null; },
