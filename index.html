@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.441">
-<link rel="manifest" href="manifest.json?v=4.441">
+<meta name="agente-web-version" content="4.442">
+<link rel="manifest" href="manifest.json?v=4.442">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.441">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.442">
 </head>
 <body>
 
@@ -8237,6 +8237,26 @@ function pararPistas(st){
 function hayGrabacion(){
   return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && mimeAudio() !== null);
 }
+// {enviar} (facundo, 2026-09-22): mientras el micro esta abierto, el `enviar` del pie deja de ser el avioncito
+// verde y pasa a ser una flecha roja apuntando arriba, empujando (el loop suave lo pone `#mandar.grabando` en el
+// css). al terminar o cancelar la grabacion vuelve al avioncito de siempre: el resto del pie no se toca.
+var MANDAR_SVG = {
+  avion: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
+    'stroke-linejoin="round" aria-hidden="true"><path d="M21 3 10 14"/><path d="M21 3 14 21l-4-7-7-4z"/></svg>',
+  flecha: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
+    'stroke-linejoin="round" aria-hidden="true"><path d="M12 20V4"/><path d="M5 11l7-7 7 7"/></svg>'
+};
+function pintarMandar(grab){
+  var b = $("mandar");
+  if(!b) return;
+  grab = !!grab;
+  if(b.dataset.grab === (grab ? "1" : "0")) return;      // no se repinta el svg en cada tick del reloj
+  b.dataset.grab = grab ? "1" : "0";
+  b.classList.toggle("grabando", grab);
+  b.innerHTML = grab ? MANDAR_SVG.flecha : MANDAR_SVG.avion;
+  b.setAttribute("aria-label", grab ? "mandar el audio" : "mandar");
+  b.title = b.getAttribute("aria-label");
+}
 // **lo que abro lo cierro**: la grabacion se suelta siempre, aunque la subida falle. va en el `finally` de
 // todos los caminos, y para **todas** las pistas del micro (1372): no queda ningun stream vivo.
 function soltarMicro(){
@@ -8250,6 +8270,7 @@ function soltarMicro(){
   $("grabar").classList.remove("grabando");
   $("grabinfo").classList.remove("viendo");
   $("grabinfo").textContent = "";
+  pintarMandar(false);                // {enviar}: el avioncito verde vuelve apenas se cierra el micro
   // 1970: el micro se cerro (pausa, descarte, error o irse de la pagina): la barra vuelve a reposo y lo que
   // estaba sonando cuando arranco la grabacion retoma donde quedo
   if(typeof audPintar === "function"){ audPintar(); audSeguirSonando(); }
@@ -8272,6 +8293,7 @@ function empezarGrabacion(){
     marcarOcupado("grabando", true);   // el daemon no reinicia mientras el micro esta abierto (1204)
     desdeGrab = Date.now();
     $("grabar").classList.add("grabando");
+    pintarMandar(true);                // {enviar}: el `enviar` pasa a flecha roja mientras dura la grabacion
     $("grabinfo").classList.add("viendo");
     $("grabinfo").textContent = relojTexto(0);
     relojGrab = setInterval(function(){
@@ -13000,6 +13022,14 @@ window.__agente = {
       enviarOn: !audBtn("der") || !audBtn("der").disabled,
       // 1573 {teclado}: el pie del celu es el input de siempre; el micro, un `.ico` chico al lado del `enviar`
       pieGrande: audPieGrande(), celu: pie.classList.contains("celu"),
+      // {enviar}: el `enviar` del pie mientras se graba (flecha roja que empuja) y en reposo (avioncito verde)
+      mandar: (function(m){
+        var cs = m ? getComputedStyle(m) : null, d = m ? m.querySelector("path") : null;
+        return {grabando: !!(m && m.classList.contains("grabando")), color: cs ? cs.color : "",
+                anim: cs ? (cs.animationName || "") : "", dur: cs ? (cs.animationDuration || "") : "",
+                iter: cs ? (cs.animationIterationCount || "") : "",
+                d: d ? (d.getAttribute("d") || "") : "", aria: m ? (m.getAttribute("aria-label") || "") : ""};
+      })($("mandar")),
       chicos: [].map.call([$("txt"), $("grabar"), $("camara"), $("mandar")], function(n){
         var x = n.getBoundingClientRect();
         return {id: n.id, w: Math.round(x.width), h: Math.round(x.height), izq: Math.round(x.left),

@@ -909,6 +909,13 @@
   .ico svg{width:23px;height:23px;display:block;pointer-events:none}
   #mandar{color:var(--verde);font-size:18px}
   #mandar:active{background:#0a1a06}
+  /* {enviar} (facundo, 2026-09-22: "mientras se esta grabando un audio el boton de enviar pasa a ser una flecha
+     apuntando hacia arriba, en rojo, con una animacion que empuja hacia arriba"). el svg lo cambia
+     `pintarMandar()`; aca va el color y el empujon, un loop suave mientras dura la grabacion. */
+  #mandar.grabando{color:var(--rojo)}
+  #mandar.grabando:active{background:#1a0000}
+  #mandar.grabando svg{animation:empujar 1.1s ease-in-out infinite}
+  @keyframes empujar{0%,100%{transform:translateY(2px)}50%{transform:translateY(-3px)}}
   /* camara (facundo, 2026-09-11: "se puede poner una funcion tipo camara aca? como en whatsapp").
      mismo look terminal que el boton de mandar; el input file de verdad esta escondido. */
   #camara{color:var(--cian)}
