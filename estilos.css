@@ -872,20 +872,10 @@
   }
   #adjunto .adj-x:hover{border-color:var(--rojo)}
   /* la fila de comandos rapidos se saco (facundo, 2026-09-11): esos comandos quedan en el widget `agent` */
-  /* sugerencias de respuesta: salen de la ultima respuesta del daemon en esta pestaña (cero tokens) */
-  /* pegados a la caja de texto: sin padding ni margen abajo (facundo, 2026-09-12: "entre el input
-     y el si/no no quiero que haya nada"). lo chequea `prueba_web_tabs` (chipsPegados). */
-  #chips{display:flex;gap:5px;overflow-x:auto;padding:0;margin:0;scrollbar-width:none;-webkit-overflow-scrolling:touch}
-  #chips::-webkit-scrollbar{display:none}
-  #chips.oculta,#chips:empty{display:none;padding:0;margin:0}   /* sin chips no ocupa ni alto ni margen */
-  #chips button{
-    flex:0 0 auto;background:#000;color:var(--gris);border:1px solid var(--linea);
-    border-radius:3px;padding:3px 7px;font:inherit;font-size:16px;line-height:1.3;
-    cursor:pointer;white-space:nowrap;
-  }
-  #chips button .l{color:var(--amarillo)}
-  #chips button:hover{color:var(--blanco);border-color:#2a2a2a}
-  #chips button:active{background:#111}
+  /* 1658 {cajas} (facundo, 2026-09-21: "sacame las cajas esas si no que aparecen en el chat a veces...
+     prefiero siempre el concepto A B C"): aca vivia la fila `#chips`, los botoncitos `A` `B` `C`, `dale`,
+     `op N X` y `si`/`no` que se pintaban arriba del input. Se fue entera: en el chat hay UNA sola forma de
+     decidir, las cajas grandes con el texto de la opcion adentro (`nodoCajas`). */
   /* la fila del input (facundo, 2026-09-13, desde el celu): `f>`, la caja y los tres iconos a la misma altura,
      centrados entre si (align-items:center), y la caja sin borde ni fondo propio: se funde con el panel. */
   #fila{display:flex;gap:4px;align-items:center}
