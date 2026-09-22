@@ -53,6 +53,8 @@
       // que es lo que deja compararla con la fila de una api. llega armado del server (`gasto_api.lineas`)
       (cu.usd_semana_txt ? '\n<span class="g">esta semana</span> <span class="c">' + esc(cu.usd_semana_txt) +
                            '</span> <span class="g">de ' + esc(cu.escala_txt || "") + "</span>" : "") +
+      // {awtomicgasto}: la cuenta que no paga facundo dice quien la paga, y no tiene plata que mostrar
+      (cu.etiqueta ? '\n<span class="g">' + esc(cu.etiqueta) + "</span>" : "") +
       '<div class="cmod-b">' + USAGE_BARRAS.map(function(k){
         var b = bs.filter(function(x){ return x.clave === k[0] || x.nombre === k[1]; })[0];
         return barraHtml(b || {nombre: k[1], pct: null, linea: null, nivel: "sin"});
@@ -123,6 +125,9 @@
     var t = Math.max(0, Math.min(100, l.linea));
     return '<span class="ub-tick" style="left:' + t + '%"></span>';
   }
+  // {awtomicgasto} (facundo, 2026-09-22): la cuenta `awtomic` (plan team, la paga awtomic) va con el molde de
+  // las otras pero SOLO con su `%` de `week`: el server la manda con `sin_costo`, la etiqueta `team, paga
+  // awtomic` en `extra`, `linea: null` (sin tick) y sin plata en el tooltip; la web solo le suma la clase.
   function filaGasto(l){
     var pct = (l.pct === null || l.pct === undefined) ? 0 : Math.max(0, Math.min(100, l.pct));
     var tit = l.nombre + ": " + (l.consumo_txt || "?") + " · " + (l.sec || "") +
@@ -132,7 +137,7 @@
               (l.linea_txt ? "\n" + l.linea_txt : "") +
               (l.extra ? "\n" + l.extra : "") + (l.detalle ? "\n" + l.detalle : "");
     return '<div class="ub grow n-' + esc(l.nivel || "sin") + (l.agotada ? " agotada" : "") +
-      (l.dormida ? " dormida" : "") + (l.tocable ? "" : " sinlim") + '" title="' + esc(tit) + '"' +
+      (l.dormida ? " dormida" : "") + (l.sin_costo ? " sincosto" : "") + (l.tocable ? "" : " sinlim") + '" title="' + esc(tit) + '"' +
       (l.tocable ? ' data-cta="' + esc(l.nombre) + '" role="button" tabindex="0"' : "") + ">" +
       '<span class="ub-n nom' + (l.estado ? " e-" + esc(l.estado) : "") + '">' + esc(l.nombre) + "</span>" +
       '<span class="ub-pista"><span class="ub-lleno" style="width:' + pct + '%"></span>' + tickHtml(l) + "</span>" +
@@ -212,6 +217,7 @@
     cuentas.forEach(function(c){
       var l = porNombre[c.nombre] || {};
       c.usd_semana_txt = l.usd_semana_txt || null; c.escala_txt = l.escala_txt || null;
+      c.etiqueta = l.sin_costo ? (l.etiqueta || null) : null;
       if(!sinLimite(c)) cuentasVistas[c.nombre] = c;
     });
     lineas.forEach(function(l){ if(l.tipo !== "claude") lineasVistas[l.nombre] = l; });
