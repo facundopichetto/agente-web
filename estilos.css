@@ -432,7 +432,7 @@
   #selacciones{display:flex;flex-wrap:wrap;gap:6px}
   #selacciones.oculta,#selmodal #seltxt.oculta{display:none!important}
   /* 1922 {vistatinder}: en el `home` de la vista no hay tarjeta que deshacer ni texto que enviar */
-  #selback.oculta,#selmodal .selpie.oculta,#podback.oculta{display:none!important}
+  #selback.oculta,#selmodal .selpie.oculta,#podback.oculta,#docsback.oculta{display:none!important}
   /* 1841 (facundo, 2026-09-17: "esos tres botones son muy chicos, agrandalos un poquito"): los votos de la tarjeta
      pasan de 38 a 46 px de alto y el glifo se ve un 25% mas grande con `transform:scale` sobre el span `.tjglf`: el
      `font-size` sigue en el tope de 14 px de la 1541 (1938) (es un icono, no texto, y el tope computado no se toca). siguen
@@ -1736,9 +1736,17 @@
        letra (13 -> 16 px) y en 390 px el ultimo quedaba cortado por 11 px: las cajas bajan de los 32/36 de la 2008
        a 30/36, el gap de la cabecera a 1, su padding a 3 y el gap interno del nodo a 3. el gap de `#nodos` NO baja
        de 8 (1930 pide aire proporcional) y ninguna letra se toca. */
+    /* 1676 {vista}: con el icono de `docs` la barra tiene un boton mas y los tres labels de los nodos volvian a
+       quedar cortados por ~23 px en 390 px. mismo remedio de siempre (2008, 2014): baja el ANCHO de los iconos,
+       nunca la letra ni el alto de dedo.
+       las cajas de vista van de 30 a 24 px (el glifo sigue en 20 px y el area tactil en 50 px de alto); la campana
+       y el tipito NO bajan de 36 px, que es el minimo de dedo de la 1166. */
+    /* 1676 {vista}: en el celu el `tema · fecha` de la cabecera se come el titulo del informe (queda `Pla…`);
+       ahi no se pinta, porque la linea de abajo ya dice la ruta entera con su tema y cuantas filas tildaste */
+    body.v-docs #docscuenta{display:none}
     #cabecera{gap:1px;padding-left:3px;padding-right:3px}
     /* dedo: campana, persona, filas de la campana y el menu de persona con 40px (1166) */
-    .ib{width:30px;height:50px;margin:-4px 0}
+    .ib{width:24px;height:50px;margin:-4px 0}
     #campana,#persona{width:36px}
     .ib svg{width:20px;height:20px}
     .ib .badge{top:4px;right:0}   /* afuera del icono de 16px, que no lo tape (1342) */
