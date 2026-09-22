@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.440">
-<link rel="manifest" href="manifest.json?v=4.440">
+<meta name="agente-web-version" content="4.441">
+<link rel="manifest" href="manifest.json?v=4.441">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.440">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.441">
 </head>
 <body>
 
@@ -5094,9 +5094,14 @@ function tjPantalla(){ return $("selmodal").classList.contains("pantalla"); }
 // hace la foto PRINCIPAL: 1580 {fotoancha}, una foto de mas abajo del carrusel que no baja no saca a nadie).
 function tjBajarFoto(id, foto, pp, principal){
   var intento = 0;
+  // 1729 {votador}: la bajada es de ESTA apertura. mirar solo el id no alcanza: entrar al votador por el chip de
+  // una persona, salir y volver a entrar reabre a la MISMA, y el reintento de la apertura anterior la sacaba de la
+  // fila nueva (`tjSacar`) como si su foto no hubiera bajado nunca. `sel.sesion` (2002) cambia en cada apertura.
+  var ses = sel.sesion;
+  function viva(){ return sel.sesion === ses && tjActual() && tjActual().id === id; }
   function bajar(){
     bajarImagen(foto).then(function(url){
-      if(!tjActual() || tjActual().id !== id) return;
+      if(!viva()) return;
       var im = document.createElement("img"); im.alt = "";
       // 1772: la foto entra en el contenedor que ya mide lo final (css): nada de cambiar el tamaño en `onload`,
       // que era lo que hacia saltar la tarjeta de chica a grande (1642/1677 quedan atras)
@@ -5104,7 +5109,7 @@ function tjBajarFoto(id, foto, pp, principal){
       pp.classList.add("confoto");   // 1580: la foto tapa la inicial del placeholder
       pp.__url = url;   // 1665: la privada se agranda con esta misma foto (no hay otra bajada)
     }).catch(function(){
-      if(!tjActual() || tjActual().id !== id) return;
+      if(!viva()) return;
       if(intento >= TJ_REINTENTOS.length) return principal ? tjSacar(id) : null;
       setTimeout(function(){
         (lan.base ? Promise.resolve() : probarLan()).then(bajar, bajar);
@@ -5858,7 +5863,8 @@ function lisCaja(f){
   // una persona en particular"): el toque en la LISTA vuelve a abrir el votador continuo, pero con lo que arreglo la
   // 2095 intacto: la fila va FILTRADA a esa lista (`f.clave`), nunca la del proceso entero. la sub-vista `una` (la
   // grilla de gente) sigue existiendo y es el plan B: la lista que no se vota (`activa`, `ignorada`, sin `proceso`)
-  // y la que todavia no tiene fila armada abren su gente, y desde ahi cada persona abre su cartita (paso 5).
+  // y la que todavia no tiene fila armada abren su gente, y desde ahi cada persona entra al votador de esa lista
+  // parada en ella (1729 {votador}; su cartita queda de plan B).
   if(true){
     // 2087 {resume-3} (facundo, 2026-09-18: "quiero poder tocar en cualquier lugar del cuadrado, no solo el
     // titulo"): el `toca` y el click pasan del renglon `h` al CUADRADO ENTERO, asi el titulo, el `lisporque`, el
@@ -5899,7 +5905,7 @@ function lisCaja(f){
     return caja;
   }
   // 2035 {columnas}: la gente de una lista chica va como una TIRA de fotitos redondas con el `@` abajo, no una
-  // fila por persona; lo que se puede hacer con ella vive adentro de su cartita (1948), que es lo que abre el toque
+  // fila por persona; 1729 {votador}: tocar una entra al votador de esta lista parado en ella
   var gente = f.gente || [];
   if(gente.length){
     var tira = document.createElement("div"); tira.className = "listira";
@@ -5911,16 +5917,23 @@ function lisCaja(f){
 function lisFila(p, f){
   var fila = document.createElement("div"); fila.className = "lisfila lischip";
   fila.setAttribute("data-persona", p.id);
-  // 2095 paso 7 (facundo, 2026-09-18: "ya cambiamos el modo, asi que cada lista abre lo suyo"): el chip de una
-  // persona abre SU CARTITA (1948), no el votador. el votador se abre desde la lista (el boton `votar`), que es lo
-  // que garantiza que la fila sea la de ESA lista. reemplaza el toque de la 2078 (paso 3 y 5) y su boton `ficha`.
+  // 1729 {votador} (facundo, 2026-09-22): el chip de una persona ENTRA AL VOTADOR de su lista, parado en ELLA.
+  // reemplaza el toque de la 2095 paso 7 (que abria su cartita) sin duplicar un solo handler ni un solo boton:
+  // el unico camino al votador sigue siendo `lisVotar`, el mismo que usan el toque en la lista (2113) y el boton
+  // `votar esta lista` (2095 paso 5), asi que el filtro por lista, el origen del back y el plan B son los de
+  // siempre. `p` se le pasa para que `tjIr` arranque la fila en esa persona (2078: la fila rota, no se recorta).
+  // la CARTITA no se fue: `lisVotar` la abre igual cuando esa lista no se vota (`activa`, `ignorada`, sin
+  // `proceso`) o cuando la persona no esta en la fila de hoy (1605 {piso}: el toque nunca queda en la nada).
   fila.classList.add("toca");
   fila.setAttribute("role", "button");
   fila.setAttribute("tabindex", "0");
-  fila.setAttribute("title", "@" + p.cuenta + ": su ficha entera");
+  fila.setAttribute("title", "@" + p.cuenta + ": votarla en `" + ((f || {}).titulo || (f || {}).clave || "") + "`");
   var abrir = function(ev){
     if(ev && ev.stopPropagation) ev.stopPropagation();   // 2087: el cuadrado entero abre la lista
-    lisCartita(p);
+    // sin la fila de la lista no hay votador posible: queda su cartita, como antes
+    if(!f) return lisCartita(p);
+    // el back: desde la grilla de gente (`una`) se vuelve a esa grilla, desde la home se vuelve a la home (2113)
+    return lisVotar(f, p, lis.sub === "una" ? "una" : "home");
   };
   fila.addEventListener("click", abrir);
   fila.addEventListener("keydown", function(ev){
@@ -5957,7 +5970,8 @@ function lisCartita(p){
 }
 // ---------- 2095 {instatinder} pasos 5, 6 y 7: la sub-vista `una`, UNA lista con SU gente ----------
 // la home (2078) sigue siendo la grilla de listas; tocar una entra ACA: el titulo de la lista arriba, su gente en
-// la misma grilla de chips de la 2035 (tocar una abre su cartita, paso 7) y, si la lista se vota, el boton
+// la misma grilla de chips de la 2035 (1729 {votador}: tocar una entra al votador de esta lista, parado en
+// ella) y, si la lista se vota, el boton
 // `votar esta lista`, que abre el votador FILTRADO a esta lista (nunca la fila entera del proceso, que mezcla
 // varias). la gente entera de una lista grande no viaja en `listas.json` (serian megas de fichas): la trae la lan
 // en el momento (`listas/<clave>.json`, cero tokens). sin lan queda lo que ya vino en el json.

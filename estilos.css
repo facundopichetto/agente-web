@@ -577,8 +577,8 @@
     white-space:nowrap;font-size:15px}
   #sellistas .lischip.toca{cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   #sellistas .lischip.toca:active{opacity:.6}
-  /* 2078 {home}: el titulo de la lista abre el votador de su proceso desde el principio (lo tocable parece
-     tocable, 1808); y cada chip lleva su propio `ficha`, que es lo que abre la cartita de la 1948 */
+  /* 2078 {home}: lo tocable parece tocable (1808). 1729 {votador}: el chip de una persona entra al votador de su
+     lista parado en ella; el boton `ficha` de la 2078 no existe mas (lo saco la 2095) y su `.lisfic` tampoco */
   /* 2087 {resume-3}: lo tocable es el CUADRADO ENTERO de la lista, no el renglon del titulo */
   #sellistas .liscaja.toca{cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
     outline:none}
@@ -586,9 +586,6 @@
   /* 2134 {supervirtual}: la lista virtual se reconoce por el nombre en amarillo, nada de un molde propio */
   #sellistas .liscaja.virt .lisnom{color:var(--amarillo)}
   #sellistas .liscaja.toca:focus-visible{border-color:var(--verde)}
-  #sellistas .lischip .lisfic{min-height:0;padding:1px 6px;font-size:12px;color:var(--gris);
-    border-color:transparent;background:none;line-height:1.2}
-  #sellistas .lischip .lisfic:active{color:var(--verde)}
   #sellistas .lisporque{color:var(--gris);font-size:17px;word-break:break-word}
   #sellistas .lisgrande{color:var(--gris);font-size:16px;opacity:.85}
   /* 2244 {superranking} paso 2: por que esta vacia una lista que se puede destrabar (falta de lecturas). va en
