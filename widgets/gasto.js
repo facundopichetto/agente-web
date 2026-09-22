@@ -15,9 +15,11 @@
 // protocolo deja. por eso el archivo NO tiene `export`: el contrato es registrarse en el shell, asi el mismo
 // texto sirve de modulo ES y de script clasico. del shell solo se usa lo que expone `window.__board`.
 // {sinpie} (facundo, 2026-09-22): se fue el pie entero -- el grafico de 7 dias con su linea de ritmo y el
-// renglon `total del mes` -- y el tick de ritmo de cada fila (1625 {tick}); el widget no muestra plata en
-// NINGUN lado, tampoco en el tooltip ni en el modal de una cuenta. queda la lista de cuentas con su `%`. el
-// server sigue publicando `totales`, `semana` y los `usd_*` en el json: la web ya no los pinta.
+// renglon `total del mes` --, y el widget no muestra plata en NINGUN lado, tampoco en el tooltip ni en el
+// modal de una cuenta. queda la lista de cuentas con su `%`. el tick de ritmo de cada fila (1625 {tick}) SE
+// QUEDA: {sinpie} se llevo la raya del pie, no la marca de adentro de cada barra, y volvio el mismo dia
+// (facundo: *"te habia dicho la linea que separaba el gasto total abajo, no la de la proyeccion en las lineas
+// individuales"*). el server sigue publicando `totales`, `semana` y los `usd_*` en el json: la web no los pinta.
 (function(){
   var B = (typeof window !== "undefined" ? window : self).__board;
   var esc = B.esc, caja = B.caja, vacio = B.vacio, wset = B.wset;
@@ -118,20 +120,33 @@
   // la barra de gemini, la de mistral y la de una cuenta de claude son comparables a ojo: el mismo ancho es la
   // misma plata. la web sigue sin convertir nada: el `%` y la escala llegan armados del server, y desde
   // {sinpie} la plata de la semana (`usd_semana_txt`) ya no se pinta ni en la ficha ni en el tooltip.
-  // 1625 {tick} lo habia devuelto a la fila; {sinpie} (facundo, 2026-09-22) lo saca: la fila es su barra y
-  // su `%`, sin marca de ritmo (el server sigue mandando `linea`, la web no la pinta).
   // {awtomicgasto} (facundo, 2026-09-22): la cuenta `awtomic` (plan team, la paga awtomic) va con el molde de
   // las otras: el server la manda con `sin_costo` y la etiqueta solo para su modal; la web solo le suma la clase.
+  // 1625 {tick} (facundo, 2026-09-21, y de vuelta el 2026-09-22): *"la de la fila: vuelve el tick de ritmo en
+  // cada barra, ahora en la escala de la semana, sin plata en el renglon"*. marca por donde deberia ir la barra
+  // a esta altura de la semana (la de esa cuenta de claude, la calendario para una api). el numero (`l.linea`) y
+  // su texto (`l.linea_txt`) llegan armados del server (`gasto_api.tick_ritmo` / `tick_txt`, ninguno en usd): la
+  // web no calcula ninguna fraccion. una fila sin cuota conocida (groq) y la de `awtomic` llegan con
+  // `linea: null` y no se pinta nada: la web no inventa una marca.
+  function tickHtml(l){
+    if(l.linea === null || l.linea === undefined) return "";
+    var t = Number(l.linea);
+    if(!isFinite(t)) return "";
+    t = Math.max(0, Math.min(100, t));
+    return '<span class="ub-tick" style="left:' + t + '%"></span>';
+  }
   function filaGasto(l){
     var pct = (l.pct === null || l.pct === undefined) ? 0 : Math.max(0, Math.min(100, l.pct));
-    // {sinpie}: el tooltip ya no lleva la plata de la semana, el ritmo ni el `detalle` (que la trae adentro)
+    // {sinpie}: el tooltip ya no lleva la plata de la semana ni el `detalle` (que la trae adentro). el ritmo
+    // SI vuelve (1625 {tick}): `linea_txt` es `%` puro, no tiene un solo numero en usd.
     var tit = l.nombre + ": " + sinPlata(l.consumo_txt || "?") + " · " + sinPlata(l.sec) +
+              (l.linea_txt ? "\n" + sinPlata(l.linea_txt) : "") +
               (l.extra ? "\n" + sinPlata(l.extra) : "");
     return '<div class="ub grow n-' + esc(l.nivel || "sin") + (l.agotada ? " agotada" : "") +
       (l.dormida ? " dormida" : "") + (l.sin_costo ? " sincosto" : "") + (l.tocable ? "" : " sinlim") + '" title="' + esc(tit) + '"' +
       (l.tocable ? ' data-cta="' + esc(l.nombre) + '" role="button" tabindex="0"' : "") + ">" +
       '<span class="ub-n nom' + (l.estado ? " e-" + esc(l.estado) : "") + '">' + esc(l.nombre) + "</span>" +
-      '<span class="ub-pista"><span class="ub-lleno" style="width:' + pct + '%"></span></span>' +
+      '<span class="ub-pista"><span class="ub-lleno" style="width:' + pct + '%"></span>' + tickHtml(l) + "</span>" +
       '<span class="ub-p">' + esc(sinPlata(l.consumo_txt || "?")) + "</span>" +
       '<span class="ren">' + esc(sinPlata(l.sec)) + "</span>" +
       '<span class="gsec">' + esc(sinPlata(l.extra)) + "</span></div>";
