@@ -126,8 +126,8 @@
     return '<span class="ub-tick" style="left:' + t + '%"></span>';
   }
   // {awtomicgasto} (facundo, 2026-09-22): la cuenta `awtomic` (plan team, la paga awtomic) va con el molde de
-  // las otras pero SOLO con su `%` de `week`: el server la manda con `sin_costo`, la etiqueta `team, paga
-  // awtomic` en `extra`, `linea: null` (sin tick) y sin plata en el tooltip; la web solo le suma la clase.
+  // las otras pero SOLO con su `%` de `week`: el server la manda con `sin_costo`, la etiqueta solo para
+  // su modal (el renglon lleva fable y el `to renew`), `linea: null` (sin tick) y sin plata en el tooltip; la web solo le suma la clase.
   function filaGasto(l){
     var pct = (l.pct === null || l.pct === undefined) ? 0 : Math.max(0, Math.min(100, l.pct));
     var tit = l.nombre + ": " + (l.consumo_txt || "?") + " · " + (l.sec || "") +
@@ -227,18 +227,11 @@
     // el total se recalcula igual en el server? no: el total es del mes entero, de todas las cuentas, y no
     // depende del filtro de la vista; por eso se pinta tal cual llego.
     if(lineas.length) html += totalGasto(u.totales);
-    // al lado del titulo solo la bateria: sin numero, sin texto y sin tooltip
-    return caja("GASTO", bateriaUso(u.bateria), '<div class="usage gasto">' + (html || vacio("sin datos")) + "</div>",
+    // {widget} (facundo, 2026-09-22): el titulo es `USAGE` y al lado no va nada (se fue la bateria)
+    return caja("USAGE", "", '<div class="usage gasto">' + (html || vacio("sin datos")) + "</div>",
                 false, "gasto");
   }
 
-  // orden 1377: lo que QUEDA (promedio de week y fable del tanque de las dos cuentas, lo calcula widgets_json).
-  // llena = verde, se vacia proporcional, con 15% o menos le aparece el borde rojo.
-  function bateriaUso(b){
-    if(!b || b.carga === null || b.carga === undefined) return "";
-    var c = Math.max(0, Math.min(100, +b.carga || 0));
-    return '<span class="ubat' + (c <= 15 ? " baja" : "") + '"><span class="ubat-c" style="width:' + c + '%"></span></span>';
-  }
   // orden 1379: una barrita por dia de los ultimos 7 (uso sumado de las dos cuentas en % de un cupo) y la linea de
   // cuanto usar por dia para llegar al 100% de week en cada reset. los dias viejos son aproximados (ver uso_historial.py).
   function graficoSemana(s){
