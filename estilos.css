@@ -1270,6 +1270,29 @@
   .usage.gasto .ub.grow .gsec{flex:1 1 100%;min-width:0;font-size:13px;color:var(--gris);line-height:1.2;
                               margin-top:-1px;
                               text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* {fila} (facundo, 2026-09-22): la fila de `awtomic` lleva DOS barritas apiladas. esta es la de ARRIBA, la
+     ventana de 5 h: va en su propio renglon del mismo `flex-wrap` (`flex:1 1 100%`, primera en el dom, asi que
+     queda arriba y empuja al resto al renglon de siempre) y copia las columnas de la fila -- hueco de 74 px,
+     pista, numero de 60 px, etiqueta en el ancho del dato secundario -- para que las dos barras arranquen y
+     terminen en la MISMA x. clases propias (`g5-*`) y no `.ub-*`: anidar un `.ub` adentro de otro haria que el
+     color por nivel del padre pintara tambien esta barra. la de abajo (week) no se toco. */
+  .usage.gasto .ub.grow .g5{flex:1 1 100%;display:flex;align-items:center;column-gap:5px;margin-bottom:3px}
+  .usage.gasto .ub.grow .g5-h{flex:0 0 74px;min-width:74px}
+  .usage.gasto .ub.grow .g5-pista{flex:1 1 30px;min-width:28px;position:relative;height:14px;
+                                  background:var(--fondo-hundido);border:1px solid var(--linea);
+                                  border-radius:2px;overflow:hidden}
+  .usage.gasto .ub.grow .g5-lleno{position:absolute;left:0;top:0;bottom:0;background:#333;border-radius:1px}
+  .usage.gasto .ub.grow .g5-p{flex:0 0 60px;min-width:60px;text-align:right;font-weight:600;color:var(--gris);
+                              white-space:nowrap;overflow:hidden}
+  /* el `5h` chiquito en gris al lado del numero: es lo unico que distingue esta barrita de la de abajo */
+  .usage.gasto .ub.grow .g5-et{flex:0 0 168px;min-width:0;font-size:13px;color:var(--gris);
+                               white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .usage.gasto .ub.grow .g5.n-ok .g5-lleno{background:var(--verde)}
+  .usage.gasto .ub.grow .g5.n-ok .g5-p{color:var(--verde)}
+  .usage.gasto .ub.grow .g5.n-cerca .g5-lleno{background:var(--amarillo)}
+  .usage.gasto .ub.grow .g5.n-cerca .g5-p{color:var(--amarillo)}
+  .usage.gasto .ub.grow .g5.n-mal .g5-lleno{background:var(--rojo);box-shadow:0 0 7px var(--rojo)}
+  .usage.gasto .ub.grow .g5.n-mal .g5-p{color:var(--rojo);font-weight:700}
   /* 2249 {consumo}: el UNICO renglon de plata del widget, al pie de la caja: el gasto real del mes de todas
      las cuentas. no es una fila mas (no tiene barra ni es tocable): es el total, con la etiqueta a la
      izquierda y el numero a la derecha, separado del resto por una linea finita arriba. */

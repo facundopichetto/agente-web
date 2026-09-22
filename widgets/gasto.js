@@ -138,16 +138,34 @@
     t = Math.max(0, Math.min(100, t));
     return '<span class="ub-tick" style="left:' + t + '%"></span>';
   }
+  // {fila} (facundo, 2026-09-22): la fila de `awtomic` lleva DOS barritas apiladas: arriba la de la ventana de
+  // 5 h de claude (session limit) y abajo la de `week`, que queda exactamente como estaba. es la unica cuenta
+  // con esa ventana a la vista, asi que es el server quien decide (manda `cinco` solo en esa fila): la web no
+  // pregunta por el nombre de la cuenta ni abre otra fila. la barrita de arriba usa clases propias (`g5-*`)
+  // a proposito: si reusara `.ub-p` / `.ub-lleno`, el `%` y el ancho de la fila pasarian a ser los de 5 h.
+  // el `5h` chiquito en gris al lado del `%` es lo que las distingue; la de abajo va sin etiqueta.
+  function cincoHtml(l){
+    var c = l.cinco;
+    if(!c) return "";
+    var pct = (c.pct === null || c.pct === undefined) ? 0 : Math.max(0, Math.min(100, c.pct));
+    return '<span class="g5 n-' + esc(c.nivel || "sin") + '">' +
+      '<span class="g5-h"></span>' +
+      '<span class="g5-pista"><span class="g5-lleno" style="width:' + pct + '%"></span></span>' +
+      '<span class="g5-p">' + esc(sinPlata(c.pct_txt || "?")) + "</span>" +
+      '<span class="g5-et">' + esc(c.etiqueta || "5h") + "</span></span>";
+  }
   function filaGasto(l){
     var pct = (l.pct === null || l.pct === undefined) ? 0 : Math.max(0, Math.min(100, l.pct));
     // {sinpie}: el tooltip ya no lleva la plata de la semana ni el `detalle` (que la trae adentro). el ritmo
     // SI vuelve (1625 {tick}): `linea_txt` es `%` puro, no tiene un solo numero en usd.
     var tit = l.nombre + ": " + sinPlata(l.consumo_txt || "?") + " · " + sinPlata(l.sec) +
               (l.linea_txt ? "\n" + sinPlata(l.linea_txt) : "") +
-              (l.extra ? "\n" + sinPlata(l.extra) : "");
+              (l.extra ? "\n" + sinPlata(l.extra) : "") +
+              (l.cinco ? "\n" + sinPlata(l.cinco.detalle) : "");
     return '<div class="ub grow n-' + esc(l.nivel || "sin") + (l.agotada ? " agotada" : "") +
       (l.dormida ? " dormida" : "") + (l.sin_costo ? " sincosto" : "") + (l.tocable ? "" : " sinlim") + '" title="' + esc(tit) + '"' +
       (l.tocable ? ' data-cta="' + esc(l.nombre) + '" role="button" tabindex="0"' : "") + ">" +
+      cincoHtml(l) +
       '<span class="ub-n nom' + (l.estado ? " e-" + esc(l.estado) : "") + '">' + esc(l.nombre) + "</span>" +
       '<span class="ub-pista"><span class="ub-lleno" style="width:' + pct + '%"></span>' + tickHtml(l) + "</span>" +
       '<span class="ub-p">' + esc(sinPlata(l.consumo_txt || "?")) + "</span>" +
