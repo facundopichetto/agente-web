@@ -1528,7 +1528,7 @@
      `widgets` se vean las DOS lo decide aca el mismo media query de siempre, asi girar el celu o cambiar el tamaño de
      la ventana no puede dejar un layout viejo aunque no llegue ningun evento al js. `tinder` y `podcast` van siempre
      solas, a pantalla completa. cambiar de vista no recarga nada (1793). */
-  body.v-tinder #cuerpo,body.v-podcast #cuerpo,body.v-votar #cuerpo{display:none}
+  body.v-tinder #cuerpo,body.v-podcast #cuerpo,body.v-votar #cuerpo,body.v-docs #cuerpo{display:none}
   /* 1933 {instatinder}: la vista `votar` es la misma idea que el tinder: el modal de checkboxes (o el votador de
      animaciones) deja de flotar sobre el chat y es el contenido de la vista, abajo de la barra de iconos */
   body.v-votar #selmodal:not(.pantalla),body.v-votar #votar{position:static;inset:auto;flex:1 1 auto;min-height:0;
@@ -1645,7 +1645,74 @@
   #podvista #podgrab.grabando{color:var(--rojo)}
   /* el toggle `es de pronunciacion` vive en el modal de la nota, fuera de `#podvista` */
   .podpron.on{border-color:var(--verde);color:var(--verde)}
-  body.sinlogin #vista-podcast,body.sinlogin #vista-home{display:none!important}
+  /* ---------- 1676 {vista}: la vista `docs` (facundo, 2026-09-22) ----------
+     misma estructura que `podcast` y `home` (1922 / 2008 paso 10): `.selcaja mcaja` + `.seltit mhead` con el `←`
+     grande y la `✕` (2002 {back}), pantalla entera abajo de la barra de iconos (2133 {tapada}). el indice son las
+     dos solapas con el molde de la campana (2022), el buscador y un grupo por tema con `.bcaja` (1922). el informe
+     abierto es el html que rindio el server, con la tabla dibujada por css con el molde de `.tmd` (1400). fuentes
+     al 1.25 y tope `--texto-max` (2014 {fuentes}). */
+  #vista-docs{display:none}
+  body.v-docs #vista-docs{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;
+    background:var(--fondo-chat);padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom) 0}
+  body.v-docs #vista-docs .selcaja{max-width:none;width:100%;flex:1 1 auto;min-height:0;
+    border-radius:0;box-shadow:none;display:flex;flex-direction:column;gap:6px;padding:6px 10px 10px 10px}
+  body.v-docs #vista-docs .seltit{width:100%;max-width:980px;margin:0 auto}
+  body.v-docs #ver-docs{display:none}
+  body.v-docs #cuerpo,body.v-docs #panel-chat,body.v-docs #panel-widgets,body.v-docs #sep{display:none}
+  #docsvista{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    display:flex;flex-direction:column;gap:6px;width:100%;max-width:980px;margin:0 auto}
+  /* el titulo de un informe puede ser largo: en el celu se corta con puntos suspensivos y la cabecera no crece */
+  body.v-docs #vista-docs #docstitulo{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  body.v-docs #vista-docs #docscuenta{flex:0 0 auto;white-space:nowrap}
+  #docsvista .dvaviso{color:var(--amarillo,#d8b25a);font-size:16px}
+  #docsvista .dvsol{display:flex;align-items:center;gap:2px;padding:1px 0 4px 0;border-bottom:1px solid var(--linea)}
+  #docsvista .dvsolb{background:#000;color:var(--gris);border:0;border-radius:4px;padding:4px 9px;font:inherit;
+    font-size:16px;cursor:pointer;white-space:nowrap;-webkit-tap-highlight-color:transparent}
+  #docsvista .dvsolb.on{color:var(--verde);background:var(--fondo-caja)}
+  #docsvista .dvq{width:100%;box-sizing:border-box;min-height:40px;background:none;border:1px solid var(--linea);
+    border-radius:4px;color:var(--blanco);font:inherit;font-size:var(--texto-max);padding:6px 8px}
+  #docsvista .dvlista{display:flex;flex-direction:column;gap:6px}
+  #docsvista .dvtema{display:flex;align-items:center;gap:6px;color:var(--magenta);font-size:16px;
+    text-transform:uppercase;letter-spacing:.06em;margin-top:6px}
+  #docsvista .dvteman{color:var(--gris)}
+  #docsvista .dvfila{display:flex;align-items:center;gap:8px;min-height:52px;flex-wrap:wrap}
+  #docsvista .dvtit{flex:1 1 auto;min-width:0;color:var(--blanco)}
+  #docsvista .dvfecha{flex:0 0 auto;color:var(--gris);font-size:16px}
+  #docsvista .dvtildes{flex:0 0 auto;color:var(--verde);font-size:16px}
+  #docsvista .dvnotasn{flex:0 0 auto;color:var(--cian);font-size:16px}
+  #docsvista .dvvacio{color:var(--gris);font-size:17px}
+  #docsvista .dvbarra{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  #docsvista .dvmeta{flex:1 1 auto;min-width:0;color:var(--gris);font-size:15px;overflow-wrap:anywhere}
+  /* el informe: el html que rindio el server */
+  #docsvista .dvmd{display:flex;flex-direction:column;gap:6px;color:var(--blanco);font-size:17px;line-height:1.5}
+  #docsvista .dvmd .dvh{margin:8px 0 0 0;color:var(--verde);font-size:var(--texto-max);font-weight:bold}
+  #docsvista .dvmd .dvh1{color:var(--magenta)}
+  #docsvista .dvmd .dvp{margin:0}
+  #docsvista .dvmd .dvul,#docsvista .dvmd .dvol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:3px}
+  #docsvista .dvmd .dvcita{margin:0;border-left:2px solid var(--verde);padding:2px 0 2px 8px;color:var(--gris)}
+  #docsvista .dvmd .dvsep{border-top:1px solid var(--linea);opacity:.45;height:0;margin:4px 0}
+  #docsvista .dvmd .dvcod{margin:0;background:#0b0b0b;border:1px solid var(--linea);border-radius:4px;padding:6px 8px;
+    overflow-x:auto;-webkit-overflow-scrolling:touch;font-size:16px}
+  #docsvista .dvmd code{color:var(--cian);background:#0b0b0b;border-radius:3px;padding:0 3px}
+  #docsvista .dvmd a{color:var(--cian);text-decoration:none;border-bottom:1px dotted #1f3a44;overflow-wrap:anywhere}
+  /* la tabla: el molde de `.tmd` (1400), mas la columna del tilde y la de la nota */
+  #docsvista .dvtab{display:block;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;margin:2px 0}
+  #docsvista .dvtab table{border-collapse:collapse;white-space:normal;font-size:16px;line-height:1.45}
+  #docsvista .dvtab th,#docsvista .dvtab td{border:1px solid var(--linea-clara);padding:3px 8px;text-align:left;
+    vertical-align:top;white-space:normal;overflow-wrap:break-word;min-width:5ch}
+  #docsvista .dvtab .tcab th{color:var(--magenta);font-weight:600}
+  #docsvista .dvtab .tfila.par{background:#0b0b0b}
+  #docsvista .dvtab .tfila.dvok td{color:var(--verde-tenue)}
+  #docsvista .dvtab td.dvtd,#docsvista .dvtab th.dvthx{min-width:0;width:1%;text-align:center;padding:2px 4px}
+  #docsvista .dvtilde{min-width:34px;min-height:34px;background:#000;border:1px solid var(--linea-clara);
+    border-radius:4px;color:var(--verde);font:inherit;font-size:var(--texto-max);cursor:pointer;
+    -webkit-tap-highlight-color:transparent;-webkit-text-fill-color:currentColor;appearance:none}
+  #docsvista .dvtilde.puesto{border-color:var(--verde);background:var(--fondo-caja)}
+  #docsvista .dvnota{min-height:30px;background:none;border:1px dashed var(--linea-clara);border-radius:4px;
+    color:var(--gris);font:inherit;font-size:16px;padding:1px 6px;cursor:pointer;max-width:220px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;-webkit-tap-highlight-color:transparent}
+  #docsvista .dvnota.tiene{color:var(--cian);border-style:solid}
+  body.sinlogin #vista-podcast,body.sinlogin #vista-home,body.sinlogin #vista-docs{display:none!important}
   /* vista mobile: una vista a la vez, la elige la barra de arriba. puro css, sin js de layout.
      entra cuando la ventana es angosta (celu) O cuando es mas alta que ancha (facundo, 2026-09-11:
      una ventana vertical en la compu, o el celu de pie, tambien quieren el toggle chat | widgets).

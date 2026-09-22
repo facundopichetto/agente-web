@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.431">
-<link rel="manifest" href="manifest.json?v=4.431">
+<meta name="agente-web-version" content="4.432">
+<link rel="manifest" href="manifest.json?v=4.432">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.431">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.432">
 </head>
 <body>
 
@@ -47,6 +47,10 @@
   <button id="ver-votacion" class="ib oculta" type="button" title="votar" aria-label="votar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="3"/><path d="M8 12.2l2.9 2.9L16.6 9"/></svg></button>
   <button id="ver-votar" class="ib bglifo oculta" type="button" title="instatinder" aria-label="instatinder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22c-4 0-7-2.8-7-6.5 0-2.6 1.4-4.6 2.8-6.3.3 1.3 1 2.3 2 2.9-.3-3 .9-6.2 4.2-8.1-.2 2.6.9 4.2 2.4 5.7 1.5 1.6 2.6 3.3 2.6 5.8 0 3.7-3 6.5-7 6.5z"/><path d="M12 22c-1.7 0-3-1.3-3-3 0-1.4.8-2.4 1.6-3.3.5.9 1.1 1.4 1.9 1.7.8-.5 1.2-1.3 1.3-2.2.8 1.1 1.2 2.2 1.2 3.8 0 1.7-1.3 3-3 3z"/></svg></button>
     <button id="ver-podcast" class="ib" type="button" title="podcast" aria-label="podcast"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v4"/></svg></button>
+  <!-- 1676 {vista}: la vista `docs`, los informes en markdown que el agente escribe en `~/.claudio/<tema>/`. el
+       indice, el html de cada informe y lo que facundo tilda los arma ENTERO el server (`recetas/docs_vista.py`):
+       la web solo pinta y manda el toque. -->
+  <button id="ver-docs" class="ib" type="button" title="docs" aria-label="docs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 12h6"/><path d="M9 16h6"/></svg></button>
   <button id="campana" class="ib" type="button" title="notificaciones" aria-label="notificaciones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 8 2.5 8h-17S6 15 6 9"/><path d="M10.3 20.5a2 2 0 0 0 3.4 0"/></svg><span id="badge" class="badge oculta"></span></button>
   <button id="persona" class="ib" type="button" title="cuenta" aria-label="cuenta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></button>
 </div>
@@ -164,6 +168,14 @@
 <div id="vista-podcast"><div class="selcaja mcaja">
   <div class="seltit mhead"><button id="podback" class="bglifo mesquina b-atras oculta" type="button" data-q="atras" aria-label="back" title="back"><span class="mglf">←</span></button><span id="podtitulo"></span><span id="podcuenta" class="mcuenta"></span><button id="podx" class="bglifo mesquina b-x" type="button" aria-label="cerrar" title="cerrar"></button></div>
   <div id="podvista"></div>
+</div></div>
+<!-- 1676 {vista}: la vista `docs` copia la estructura de `podcast` y de `home` (1922 / 2008 paso 10): la misma
+     `.selcaja mcaja`, la misma cabecera con el `←` grande a la izquierda y la `✕` a la derecha (2002 {back}), y
+     arranca DEBAJO de la barra de iconos (2133 {tapada}). adentro, dos sub-vistas: el indice (buscador + un grupo
+     por tema + la solapa `archivados`) y un informe abierto, con su html ya renderizado por el server. -->
+<div id="vista-docs"><div class="selcaja mcaja">
+  <div class="seltit mhead"><button id="docsback" class="bglifo mesquina b-atras oculta" type="button" data-q="atras" aria-label="back" title="back"><span class="mglf">←</span></button><span id="docstitulo">docs</span><span id="docscuenta" class="mcuenta"></span><button id="docsx" class="bglifo mesquina b-x" type="button" aria-label="cerrar" title="cerrar"></button></div>
+  <div id="docsvista"></div>
 </div></div>
 <div id="selmodal" class="capa oculta" role="dialog" aria-modal="true" aria-labelledby="seltitulo">
   <div class="selcaja mcaja">
@@ -11780,6 +11792,253 @@ $("ctxfondo").addEventListener("contextmenu", function(e){ e.preventDefault(); c
 // scroll no burbujea: con captura se ve el de cualquier panel
 document.addEventListener("scroll", function(){ if(menuAbierto) cerrarMenu(); }, true);
 
+// ---------- 1676 {vista}: la vista `docs` (facundo, 2026-09-22) ----------
+// "agregar al board una vista nueva `docs` que muestre los informes en markdown que el agente escribe dentro de
+// `~/.claudio/<tema>/`, leible desde el celu y desde la mac". todo lo pesado es del server
+// (`recetas/docs_vista.py`, `GET /docs`, `GET /docs/<id>`, `POST /docs/<id>`): indexar, renderizar el markdown a
+// html y guardar lo que facundo tilda. la web pide, pinta y manda el toque; no parsea markdown ni escribe nunca un
+// `.md`. cada fila de una tabla trae su tilde (`lo bajé`) y su nota, y eso vive en un `.estado.json` al lado.
+// 2143 {cache}: lo ultimo que llego queda en localStorage y pinta el primer frame, pero entrar a la vista o abrir
+// un informe SIEMPRE pide fresco; si el pedido falla queda lo cacheado CON aviso, nunca una pantalla en blanco.
+var docs = {idx: null, doc: null, q: "", solapa: "docs", aviso: "", cargando: false};
+var DOCS_LS = "agente_docs";
+function docsCacheLeer(k){
+  try{ var d = JSON.parse(localStorage.getItem(DOCS_LS) || "{}"); return d[k] || null; }catch(x){ return null; }
+}
+function docsCacheGuardar(k, v){
+  try{
+    var d = JSON.parse(localStorage.getItem(DOCS_LS) || "{}");
+    d[k] = v;
+    var ks = Object.keys(d);
+    if(ks.length > 12) ks.slice(0, ks.length - 12).forEach(function(x){ if(x !== "idx") delete d[x]; });
+    localStorage.setItem(DOCS_LS, JSON.stringify(d));
+  }catch(x){}
+}
+function docsPedir(ruta, opts){
+  return votLan().then(function(base){
+    if(!base) throw new Error("sin lan");
+    var o = opts || {};
+    o.cache = "no-store";
+    o.headers = Object.assign({"authorization": "Bearer " + token}, o.headers || {});
+    return lanFetch(base + ruta, o);
+  }).then(function(r){
+    if(!r || !r.ok) throw new Error("http " + (r && r.status));
+    return r.json();
+  });
+}
+// el indice: siempre fresco del server, con lo cacheado pintado mientras llega
+function docsCargarIndice(){
+  var cache = docsCacheLeer("idx:" + docs.solapa);
+  if(!docs.idx && cache){ docs.idx = cache; docs.aviso = ""; docsPintar(); }
+  docs.cargando = true;
+  return docsPedir("/docs" + (docs.solapa === "archivados" ? "?archivados=1" : "")).then(function(j){
+    docs.idx = j; docs.aviso = ""; docs.cargando = false;
+    docsCacheGuardar("idx:" + docs.solapa, j);
+    docsPintar();
+    return j;
+  }).catch(function(e){
+    docs.cargando = false;
+    docs.aviso = "no llegué al server (" + (e && e.message || e) + ")" + (docs.idx ? ": esto es lo último que tenía" : "");
+    docsPintar();
+    return null;
+  });
+}
+function docsAbrir(id){
+  var cache = docsCacheLeer("doc:" + id);
+  docs.doc = cache && cache.id === id ? cache : {id: id, titulo: "", html: "", filas: [], cargando: true};
+  docs.aviso = "";
+  docsPintar();
+  return docsPedir("/docs/" + encodeURIComponent(id)).then(function(j){
+    if(!j || j.error) throw new Error(j && j.error || "no existe");
+    docs.doc = j; docs.aviso = "";
+    docsCacheGuardar("doc:" + id, j);
+    docsPintar();
+    return j;
+  }).catch(function(e){
+    docs.aviso = "no llegué al server (" + (e && e.message || e) + ")" + (docs.doc && docs.doc.html ? ": esto es lo último que tenía" : "");
+    if(docs.doc) docs.doc.cargando = false;
+    docsPintar();
+    return null;
+  });
+}
+function docsCerrarDoc(){ docs.doc = null; docs.aviso = ""; docsPintar(); return docsCargarIndice(); }
+function docsSolapa(cual){
+  docs.solapa = cual === "archivados" ? "archivados" : "docs";
+  docs.doc = null; docs.idx = null;
+  docsPintar();
+  return docsCargarIndice();
+}
+// tildar una fila, dejarle una nota o archivar el informe: el server contesta el doc entero ya repintado
+function docsMandar(cuerpo){
+  var id = (docs.doc || {}).id;
+  if(!id) return Promise.resolve(null);
+  return docsPedir("/docs/" + encodeURIComponent(id), {method: "POST",
+      headers: {"content-type": "application/json"}, body: JSON.stringify(cuerpo)}).then(function(j){
+    if(!j || j.error) throw new Error(j && j.error || "no se pudo");
+    docs.doc = j; docs.aviso = "";
+    docsCacheGuardar("doc:" + id, j);
+    docsPintar();
+    return j;
+  }).catch(function(e){
+    docs.aviso = "no se pudo guardar (" + (e && e.message || e) + ")";
+    docsPintar();
+    return null;
+  });
+}
+function docsTilde(fila, valor, ref){ return docsMandar({fila: fila, tilde: !!valor, ref: ref || ""}); }
+function docsNota(fila, texto){ return docsMandar({fila: fila, nota: String(texto == null ? "" : texto)}); }
+function docsArchivar(si){
+  return docsMandar({archivar: !!si}).then(function(j){
+    if(j) docsCacheGuardar("idx:" + docs.solapa, null);
+    return j;
+  });
+}
+var docsNotaM = null;
+function docsNotaAbrir(fila, ref, nota){
+  if(!docsNotaM) docsNotaM = modalMolde({id: "docsnotamodal", z: 44, sinServer: true});
+  var cu = document.createElement("div");
+  var f = document.createElement("div"); f.className = "rmfrase"; f.textContent = ref || fila;
+  cu.appendChild(f);
+  var ta = document.createElement("textarea");
+  ta.id = "docsnotatxt"; ta.value = nota || "";
+  ta.placeholder = "una nota corta sobre esta fila";
+  ta.setAttribute("autocomplete", "off"); ta.setAttribute("autocapitalize", "off"); ta.setAttribute("spellcheck", "false");
+  cu.appendChild(ta);
+  return docsNotaM.abrir({titulo: "una nota acá", cuenta: fila, cuerpo: cu, botones: [
+    {tipo: "term", txt: "guardar la nota", principal: true, accion: function(m){
+      docsNota(fila, ta.value).then(function(j){
+        if(j){ m.estado("anotada"); setTimeout(function(){ m.cerrar(false); }, 500); }
+        else m.estado("no salió");
+      });
+    }},
+    {tipo: "term", txt: "borrar la nota", accion: function(m){
+      docsNota(fila, "").then(function(){ m.cerrar(false); });
+    }}]});
+}
+// ---------- pintado ----------
+function docsPintar(){
+  var el = $("docsvista");
+  if(!el) return "";
+  el.textContent = "";
+  var hay = !!docs.doc;
+  $("docsback").classList.toggle("oculta", !hay);
+  $("docstitulo").textContent = hay ? (docs.doc.titulo || "informe") : "docs";
+  $("docscuenta").textContent = hay ? ((docs.doc.tema || "") + (docs.doc.fecha ? " · " + docs.doc.fecha : ""))
+                                    : (docs.idx ? docs.idx.total + (docs.idx.total === 1 ? " informe" : " informes") : "");
+  if(docs.aviso){
+    var a = document.createElement("div"); a.className = "dvaviso"; a.textContent = docs.aviso;
+    el.appendChild(a);
+  }
+  if(hay) docsPintarDoc(el); else docsPintarIndice(el);
+  return el.innerHTML;
+}
+function docsPintarIndice(el){
+  // las dos solapas, con el molde de la campana (2022): la puesta en verde
+  var sol = document.createElement("div"); sol.className = "dvsol";
+  [["docs", "docs"], ["archivados", "archivados" + (docs.idx && docs.idx.archivados ? " (" + docs.idx.archivados + ")" : "")]]
+    .forEach(function(x){
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "dvsolb" + (docs.solapa === x[0] ? " on" : "");
+      b.setAttribute("data-solapa", x[0]); b.textContent = x[1];
+      b.addEventListener("click", function(){ docsSolapa(x[0]); });
+      sol.appendChild(b);
+    });
+  el.appendChild(sol);
+  var bus = document.createElement("input");
+  bus.id = "docsq"; bus.className = "dvq"; bus.type = "search"; bus.value = docs.q;
+  bus.placeholder = "buscar por título";
+  bus.setAttribute("autocomplete", "off"); bus.setAttribute("autocapitalize", "off"); bus.setAttribute("spellcheck", "false");
+  bus.addEventListener("input", function(){ docs.q = bus.value; docsPintarLista(); });
+  el.appendChild(bus);
+  var lista = document.createElement("div"); lista.id = "docslista"; lista.className = "dvlista";
+  el.appendChild(lista);
+  docsPintarLista();
+}
+function docsFiltrados(){
+  var q = String(docs.q || "").trim().toLowerCase(), temas = ((docs.idx || {}).temas) || [];
+  if(!q) return temas;
+  return temas.map(function(t){
+    return {tema: t.tema, docs: (t.docs || []).filter(function(d){
+      return (d.titulo || "").toLowerCase().indexOf(q) >= 0 || (d.archivo || "").toLowerCase().indexOf(q) >= 0 ||
+             (t.tema || "").toLowerCase().indexOf(q) >= 0;
+    })};
+  }).filter(function(t){ return t.docs.length; });
+}
+function docsPintarLista(){
+  var el = $("docslista");
+  if(!el) return "";
+  el.textContent = "";
+  var temas = docsFiltrados();
+  if(!temas.length){
+    var v = document.createElement("div"); v.className = "dvvacio";
+    v.textContent = docs.idx ? (docs.q ? "ningún informe con ese título" :
+                    (docs.solapa === "archivados" ? "no archivaste ninguno todavía" : "todavía no hay informes"))
+                  : "pidiéndole el índice al server…";
+    el.appendChild(v);
+    return el.innerHTML;
+  }
+  temas.forEach(function(t){
+    var h = document.createElement("div"); h.className = "dvtema";
+    h.textContent = t.tema;
+    var n = document.createElement("span"); n.className = "dvteman"; n.textContent = t.docs.length;
+    h.appendChild(n);
+    el.appendChild(h);
+    t.docs.forEach(function(d){
+      var b = moldeBoton({tipo: "caja"});
+      b.className += " dvfila";
+      b.setAttribute("data-doc", d.id);
+      var ti = document.createElement("span"); ti.className = "dvtit"; ti.textContent = d.titulo || d.archivo;
+      var fe = document.createElement("span"); fe.className = "dvfecha"; fe.textContent = d.fecha || "";
+      b.appendChild(ti); b.appendChild(fe);
+      if(d.tildes){ var c = document.createElement("span"); c.className = "dvtildes"; c.textContent = "✓ " + d.tildes; b.appendChild(c); }
+      if(d.notas){ var nn = document.createElement("span"); nn.className = "dvnotasn"; nn.textContent = "✎ " + d.notas; b.appendChild(nn); }
+      b.addEventListener("click", function(){ docsAbrir(d.id); });
+      el.appendChild(b);
+    });
+  });
+  return el.innerHTML;
+}
+function docsPintarDoc(el){
+  var d = docs.doc || {};
+  var pie = document.createElement("div"); pie.className = "dvbarra";
+  var meta = document.createElement("span"); meta.className = "dvmeta";
+  meta.textContent = (d.rel || "") + (d.tildes ? " · " + d.tildes + " tildadas" : "") +
+                     (d.archivado ? " · archivado " + (d.archivado_hora || "") : "");
+  pie.appendChild(meta);
+  var arch = moldeBoton({tipo: "term", txt: d.archivado ? "desarchivar" : "archivar",
+                         accion: function(){ docsArchivar(!d.archivado); }});
+  arch.className += " dvarch";
+  pie.appendChild(arch);
+  el.appendChild(pie);
+  var cuerpo = document.createElement("div"); cuerpo.className = "dvmd"; cuerpo.id = "docsmd";
+  if(d.cargando && !d.html) cuerpo.textContent = "abriendo el informe…";
+  else cuerpo.innerHTML = d.html || "";   // html renderizado POR EL SERVER (docs_vista.render), nunca markdown acá
+  el.appendChild(cuerpo);
+}
+// un solo listener delegado para los tildes y las notas de todas las filas
+$("docsvista").addEventListener("click", function(e){
+  var t = e.target.closest(".dvtilde");
+  if(t){
+    var fila = t.getAttribute("data-tilde"), tr = t.closest("tr");
+    var puesto = t.getAttribute("aria-pressed") === "true";
+    // se pinta en el acto y despues se confirma con lo que conteste el server
+    t.setAttribute("aria-pressed", puesto ? "false" : "true");
+    t.classList.toggle("puesto", !puesto);
+    t.textContent = puesto ? "" : "✓";
+    if(tr) tr.classList.toggle("dvok", !puesto);
+    docsTilde(fila, !puesto, tr ? (tr.cells[1] ? tr.cells[1].textContent : "") : "");
+    return;
+  }
+  var n = e.target.closest(".dvnota");
+  if(n){
+    var f2 = n.getAttribute("data-nota"), tr2 = n.closest("tr");
+    docsNotaAbrir(f2, tr2 && tr2.cells[1] ? tr2.cells[1].textContent : f2, n.classList.contains("tiene") ? n.textContent : "");
+  }
+});
+$("ver-docs").addEventListener("click", function(){ vistaPoner("docs"); });
+$("docsx").addEventListener("click", function(){ docs.doc = null; vistaVolver(); });
+$("docsback").addEventListener("click", function(){ if(docs.doc) docsCerrarDoc(); else vistaVolver(); });
+
 // ---------- 1875: el board son VISTAS enteras (facundo, 2026-09-17) ----------
 // "el tinder tiene que ser simplemente una vista entera, que se esconde cuando esta activa. chat / widget (o chat Y
 // widget) tiene que ser una o dos vistas segun si es mobile o desktop y tambien esconderse el que esta activo".
@@ -11792,8 +12051,8 @@ document.addEventListener("scroll", function(){ if(menuAbierto) cerrarMenu(); },
 // 1933 {instatinder} (facundo, 2026-09-17): la vista del votador de instagram se llama `instatinder` en todo lo
 // que ve facundo (la clave interna sigue siendo `tinder`) y `votar` es una vista propia: las votaciones puntuales
 // que NO son instagram (checkboxes: animaciones, tandas), con su icono fucsia en la barra.
-var VISTAS_TODAS = ["chat", "widgets", "tinder", "votar", "podcast", "home"];
-var VISTA_SOLAS = ["tinder", "votar", "podcast", "home"];       // ocupan la pantalla entera, nunca conviven con otra
+var VISTAS_TODAS = ["chat", "widgets", "tinder", "votar", "podcast", "home", "docs"];
+var VISTA_SOLAS = ["tinder", "votar", "podcast", "home", "docs"];       // ocupan la pantalla entera, nunca conviven con otra
 var VISTA_LS = "agente_vista";
 // 1930 {barra} (facundo, 2026-09-17): "lo que vos tenes que guardar es, en el caso de que yo me haya ido de la vista
 // de chat, lo que sea que este viendo de las dos opciones en el celular; y si es en el desktop queda por default chat".
@@ -11837,10 +12096,12 @@ function vistaPoner(n){
   if(vistaPrevia === "tinder" && n !== "tinder") tinderSalir();
   if(vistaPrevia === "votar" && n !== "votar") votacionSalir();   // 1933 {instatinder}
   if(vistaPrevia === "podcast" && n !== "podcast") pod.ep = null;
+  if(vistaPrevia === "docs" && n !== "docs") docs.doc = null;   // 1676: salir por la barra cierra el informe abierto
   vistaPintar();
   if(vistaEs("widgets") && Date.now() - widUlt > 15000) cargarWidgets().catch(function(){});
   if(vistaEs("podcast")) podVistaPintar();
   if(vistaEs("home")) homePintar();   // 2008 paso 10
+  if(vistaEs("docs")){ docsPintar(); docsCargarIndice(); }   // 1676 {vista}: la cache pinta, el server manda (2143)
   if(vistaEs("chat")){
     var a = vistaAnclas.chat;
     if(a && anclaPoner(a)){
@@ -11987,6 +12248,9 @@ capaRegistrar({nombre: "dd", el: "dd", cerrar: function(){ cerrarDd(); }});
 // 1922: `esc` adentro de un episodio vuelve al `home` del podcast; desde el `home` sale de la vista
 capaRegistrar({nombre: "vista-podcast", el: "vista-podcast", z: 1, abierta: function(){ return vistaEs("podcast"); },
                cerrar: function(){ if(pod.ep) podAbrirEp(null); else vistaVolver(); }});
+// 1676 {vista}: `esc` adentro de un informe vuelve al indice; desde el indice sale de la vista
+capaRegistrar({nombre: "vista-docs", el: "vista-docs", z: 1, abierta: function(){ return vistaEs("docs"); },
+               cerrar: function(){ if(docs.doc) docsCerrarDoc(); else vistaVolver(); }});
 function escTope(){
   var c = capaTope();
   if(!c) return null;
@@ -12146,6 +12410,13 @@ function medirCentro(b){
 }
 
 window.__agente = {
+  // 1676 {vista}: la vista `docs` (`prueba_docs_vista`)
+  docsPintar: docsPintar, docsCargarIndice: docsCargarIndice, docsAbrir: docsAbrir, docsCerrarDoc: docsCerrarDoc,
+  docsSolapa: docsSolapa, docsTilde: docsTilde, docsNota: docsNota, docsArchivar: docsArchivar,
+  docsBuscar: function(q){ docs.q = q; docsPintarLista(); return docsFiltrados(); },
+  docsEstado: function(){ return {solapa: docs.solapa, q: docs.q, aviso: docs.aviso,
+    doc: docs.doc ? {id: docs.doc.id, titulo: docs.doc.titulo, tildes: docs.doc.tildes, archivado: !!docs.doc.archivado} : null,
+    total: (docs.idx || {}).total, archivados: (docs.idx || {}).archivados}; },
   medirCentro: medirCentro,
   fmtTiempo: fmtTiempo,
   // 1631: glifo `/` de comandos (`prueba_web_comandos`)
