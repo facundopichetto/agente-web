@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.434">
-<link rel="manifest" href="manifest.json?v=4.434">
+<meta name="agente-web-version" content="4.435">
+<link rel="manifest" href="manifest.json?v=4.435">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.434">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.435">
 </head>
 <body>
 
@@ -11800,8 +11800,27 @@ document.addEventListener("scroll", function(){ if(menuAbierto) cerrarMenu(); },
 // `.md`. cada fila de una tabla trae su tilde (`lo bajé`) y su nota, y eso vive en un `.estado.json` al lado.
 // 2143 {cache}: lo ultimo que llego queda en localStorage y pinta el primer frame, pero entrar a la vista o abrir
 // un informe SIEMPRE pide fresco; si el pedido falla queda lo cacheado CON aviso, nunca una pantalla en blanco.
-var docs = {idx: null, doc: null, q: "", solapa: "docs", aviso: "", cargando: false};
+// 1691 {vista} (facundo, 2026-09-22): "deberia poder ordenarse por fecha y agruparse O NO por tema". los dos
+// controles viven arriba del indice y se recuerdan entre visitas en el localStorage del board, como el resto de
+// las preferencias de vista (`agente_vista`). el server manda las dos vistas del mismo indice (`temas` agrupado y
+// `docs` plano): ordenar o desagrupar NO vuelve a pedir nada.
+var docs = {idx: null, doc: null, q: "", solapa: "docs", aviso: "", cargando: false, agrupar: true, orden: "fecha"};
 var DOCS_LS = "agente_docs";
+var DOCS_PREF_LS = "agente_docs_pref";
+function docsPrefLeer(){
+  try{
+    var d = JSON.parse(localStorage.getItem(DOCS_PREF_LS) || "{}");
+    if(typeof d.agrupar === "boolean") docs.agrupar = d.agrupar;
+    if(d.orden === "titulo" || d.orden === "fecha") docs.orden = d.orden;
+  }catch(x){}
+  return {agrupar: docs.agrupar, orden: docs.orden};
+}
+function docsPrefGuardar(){
+  try{ localStorage.setItem(DOCS_PREF_LS, JSON.stringify({agrupar: !!docs.agrupar, orden: docs.orden})); }catch(x){}
+}
+docsPrefLeer();
+function docsAgrupar(si){ docs.agrupar = !!si; docsPrefGuardar(); docsPintar(); return docs.agrupar; }
+function docsOrden(cual){ docs.orden = cual === "titulo" ? "titulo" : "fecha"; docsPrefGuardar(); docsPintar(); return docs.orden; }
 function docsCacheLeer(k){
   try{ var d = JSON.parse(localStorage.getItem(DOCS_LS) || "{}"); return d[k] || null; }catch(x){ return null; }
 }
@@ -11916,11 +11935,15 @@ function docsNotaAbrir(fila, ref, nota){
     }}]});
 }
 // ---------- pintado ----------
+var docsIxNodo = null, docsIxFirma = "", docsIxScroll = 0;
 function docsPintar(){
   var el = $("docsvista");
   if(!el) return "";
   el.textContent = "";
   var hay = !!docs.doc;
+  // el indice y el informe son SIEMPRE dos paneles en el dom: en el celu se ve uno solo (sub-vistas separadas,
+  // como hoy) y en desktop el css los pone lado a lado, el indice fijo a la izquierda y el doc con el ancho que sobra
+  el.classList.toggle("condoc", hay);
   $("docsback").classList.toggle("oculta", !hay);
   $("docstitulo").textContent = hay ? (docs.doc.titulo || "informe") : "docs";
   $("docscuenta").textContent = hay ? ((docs.doc.tema || "") + (docs.doc.fecha ? " · " + docs.doc.fecha : ""))
@@ -11929,7 +11952,27 @@ function docsPintar(){
     var a = document.createElement("div"); a.className = "dvaviso"; a.textContent = docs.aviso;
     el.appendChild(a);
   }
-  if(hay) docsPintarDoc(el); else docsPintarIndice(el);
+  var sp = document.createElement("div"); sp.className = "dvsplit"; sp.id = "docssplit";
+  el.appendChild(sp);
+  // el indice se rearma SOLO si cambio algo suyo (solapa, orden, agrupar, busqueda o el indice del server): asi
+  // tildar una fila no vuelve a dibujar los 480 informes ni le mueve el scroll a facundo
+  var firma = [docs.solapa, docs.orden, docs.agrupar ? 1 : 0,
+               (docs.idx || {}).ts, (docs.idx || {}).total, docs.idx ? 1 : 0].join("|");
+  var ix;
+  if(docsIxNodo && docsIxFirma === firma){
+    ix = docsIxNodo;
+    sp.appendChild(ix);
+  }else{
+    ix = document.createElement("div"); ix.className = "dvindice"; ix.id = "docsindice";
+    sp.appendChild(ix);          // `docsPintarIndice` busca `#docslista` por id: el panel va al dom ANTES de pintarlo
+    docsPintarIndice(ix);
+    docsIxNodo = ix; docsIxFirma = firma; docsIxScroll = 0;
+  }
+  ix.scrollTop = docsIxScroll;
+  ix.onscroll = function(){ docsIxScroll = ix.scrollTop; };
+  var dd = document.createElement("div"); dd.className = "dvdoc"; dd.id = "docsdoc";
+  sp.appendChild(dd);
+  if(hay) docsPintarDoc(dd);
   return el.innerHTML;
 }
 function docsPintarIndice(el){
@@ -11950,19 +11993,66 @@ function docsPintarIndice(el){
   bus.setAttribute("autocomplete", "off"); bus.setAttribute("autocapitalize", "off"); bus.setAttribute("spellcheck", "false");
   bus.addEventListener("input", function(){ docs.q = bus.value; docsPintarLista(); });
   el.appendChild(bus);
+  // 1691: agrupar por tema si/no, y el orden. lo elegido se recuerda y no pide nada al server
+  var ctl = document.createElement("div"); ctl.className = "dvctl";
+  var g = document.createElement("button");
+  g.type = "button"; g.id = "docsagrupar"; g.className = "dvctlb" + (docs.agrupar ? " on" : "");
+  g.setAttribute("data-agrupar", docs.agrupar ? "1" : "0");
+  g.setAttribute("aria-pressed", docs.agrupar ? "true" : "false");
+  g.textContent = "agrupar por tema";
+  g.addEventListener("click", function(){ docsAgrupar(!docs.agrupar); });
+  ctl.appendChild(g);
+  // el orden viaja junto: si la fila no entra, corta ENTRE el toggle y el orden, nunca entre `fecha` y `titulo`
+  var gr = document.createElement("span"); gr.className = "dvctlo";
+  var sep = document.createElement("span"); sep.className = "dvctlr"; sep.textContent = "orden";
+  gr.appendChild(sep);
+  [["fecha", "fecha"], ["titulo", "t\u00edtulo"]].forEach(function(x){
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "dvctlb" + (docs.orden === x[0] ? " on" : "");
+    b.setAttribute("data-orden", x[0]);
+    b.setAttribute("aria-pressed", docs.orden === x[0] ? "true" : "false");
+    b.textContent = x[1];
+    b.addEventListener("click", function(){ docsOrden(x[0]); });
+    gr.appendChild(b);
+  });
+  ctl.appendChild(gr);
+  el.appendChild(ctl);
   var lista = document.createElement("div"); lista.id = "docslista"; lista.className = "dvlista";
   el.appendChild(lista);
   docsPintarLista();
 }
+// la lista plana la manda el server (`indice().docs`); un indice viejo cacheado sin ella se aplana aca
+function docsPlano(){
+  var idx = docs.idx || {};
+  if(idx.docs && idx.docs.length) return idx.docs.slice();
+  var out = [];
+  (idx.temas || []).forEach(function(t){ (t.docs || []).forEach(function(d){ out.push(d); }); });
+  return out;
+}
+function docsOrdenar(ds){
+  var l = ds.slice();
+  if(docs.orden === "titulo") l.sort(function(a, b){
+    var x = (a.titulo || a.archivo || ""), y = (b.titulo || b.archivo || "");
+    return x.localeCompare(y, "es", {sensitivity: "base"}) || (b.mtime || 0) - (a.mtime || 0);
+  });
+  else l.sort(function(a, b){ return (b.mtime || 0) - (a.mtime || 0); });
+  return l;
+}
+// agrupado si = un grupo por tema, como siempre (el orden de los grupos lo da el primero de la lista ya ordenada);
+// agrupado no = UNA sola lista, con el tema como etiqueta chica en cada fila
 function docsFiltrados(){
-  var q = String(docs.q || "").trim().toLowerCase(), temas = ((docs.idx || {}).temas) || [];
-  if(!q) return temas;
-  return temas.map(function(t){
-    return {tema: t.tema, docs: (t.docs || []).filter(function(d){
-      return (d.titulo || "").toLowerCase().indexOf(q) >= 0 || (d.archivo || "").toLowerCase().indexOf(q) >= 0 ||
-             (t.tema || "").toLowerCase().indexOf(q) >= 0;
-    })};
-  }).filter(function(t){ return t.docs.length; });
+  var q = String(docs.q || "").trim().toLowerCase();
+  var plano = docsOrdenar(docsPlano().filter(function(d){
+    return !q || (d.titulo || "").toLowerCase().indexOf(q) >= 0 || (d.archivo || "").toLowerCase().indexOf(q) >= 0 ||
+           (d.tema || "").toLowerCase().indexOf(q) >= 0;
+  }));
+  if(!docs.agrupar) return plano.length ? [{tema: "", docs: plano, plano: true}] : [];
+  var orden = [], por = {};
+  plano.forEach(function(d){
+    if(!por[d.tema]){ por[d.tema] = []; orden.push(d.tema); }
+    por[d.tema].push(d);
+  });
+  return orden.map(function(t){ return {tema: t, docs: por[t]}; });
 }
 function docsPintarLista(){
   var el = $("docslista");
@@ -11978,15 +12068,22 @@ function docsPintarLista(){
     return el.innerHTML;
   }
   temas.forEach(function(t){
-    var h = document.createElement("div"); h.className = "dvtema";
-    h.textContent = t.tema;
-    var n = document.createElement("span"); n.className = "dvteman"; n.textContent = t.docs.length;
-    h.appendChild(n);
-    el.appendChild(h);
+    if(!t.plano){
+      var h = document.createElement("div"); h.className = "dvtema";
+      h.textContent = t.tema;
+      var n = document.createElement("span"); n.className = "dvteman"; n.textContent = t.docs.length;
+      h.appendChild(n);
+      el.appendChild(h);
+    }
     t.docs.forEach(function(d){
       var b = moldeBoton({tipo: "caja"});
       b.className += " dvfila";
       b.setAttribute("data-doc", d.id);
+      if(t.plano){
+        var tg = document.createElement("span"); tg.className = "dvtag";
+        tg.setAttribute("data-tema", d.tema); tg.textContent = d.tema;
+        b.appendChild(tg);
+      }
       var ti = document.createElement("span"); ti.className = "dvtit"; ti.textContent = d.titulo || d.archivo;
       var fe = document.createElement("span"); fe.className = "dvfecha"; fe.textContent = d.fecha || "";
       b.appendChild(ti); b.appendChild(fe);
@@ -12413,8 +12510,10 @@ window.__agente = {
   // 1676 {vista}: la vista `docs` (`prueba_docs_vista`)
   docsPintar: docsPintar, docsCargarIndice: docsCargarIndice, docsAbrir: docsAbrir, docsCerrarDoc: docsCerrarDoc,
   docsSolapa: docsSolapa, docsTilde: docsTilde, docsNota: docsNota, docsArchivar: docsArchivar,
+  docsAgrupar: docsAgrupar, docsOrden: docsOrden, docsPref: docsPrefLeer, docsFiltrados: docsFiltrados,
   docsBuscar: function(q){ docs.q = q; docsPintarLista(); return docsFiltrados(); },
   docsEstado: function(){ return {solapa: docs.solapa, q: docs.q, aviso: docs.aviso,
+    agrupar: !!docs.agrupar, orden: docs.orden,
     doc: docs.doc ? {id: docs.doc.id, titulo: docs.doc.titulo, tildes: docs.doc.tildes, archivado: !!docs.doc.archivado} : null,
     total: (docs.idx || {}).total, archivados: (docs.idx || {}).archivados}; },
   medirCentro: medirCentro,

@@ -1658,11 +1658,21 @@
     background:var(--fondo-chat);padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom) 0}
   body.v-docs #vista-docs .selcaja{max-width:none;width:100%;flex:1 1 auto;min-height:0;
     border-radius:0;box-shadow:none;display:flex;flex-direction:column;gap:6px;padding:6px 10px 10px 10px}
-  body.v-docs #vista-docs .seltit{width:100%;max-width:980px;margin:0 auto}
+  body.v-docs #vista-docs .seltit{width:100%;max-width:none;margin:0}
   body.v-docs #ver-docs{display:none}
   body.v-docs #cuerpo,body.v-docs #panel-chat,body.v-docs #panel-widgets,body.v-docs #sep{display:none}
-  #docsvista{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
-    display:flex;flex-direction:column;gap:6px;width:100%;max-width:980px;margin:0 auto}
+  /* 1691 {vista} (facundo, 2026-09-22): "deberia ocuparse mejor el ancho en desktop". en desktop el indice es un
+     panel fijo a la izquierda y el informe ocupa TODO el ancho que sobra, cada uno con su propio scroll; sin
+     informe abierto el indice se queda con la pantalla entera. el celu queda igual que siempre (una columna, el
+     indice y el doc como dos sub-vistas separadas): esas reglas estan en el media query de abajo. */
+  #docsvista{flex:1 1 auto;min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:6px;width:100%}
+  #docsvista .dvsplit{flex:1 1 auto;min-height:0;display:flex;align-items:stretch;gap:14px}
+  #docsvista .dvindice{flex:0 0 clamp(260px,26%,400px);min-width:0;display:flex;flex-direction:column;gap:6px;
+    overflow-y:auto;-webkit-overflow-scrolling:touch;border-right:1px solid var(--linea);padding-right:12px}
+  #docsvista .dvdoc{flex:1 1 auto;min-width:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    display:flex;flex-direction:column;gap:6px}
+  #docsvista:not(.condoc) .dvdoc{display:none}
+  #docsvista:not(.condoc) .dvindice{flex:1 1 auto;border-right:0;padding-right:0}
   /* el titulo de un informe puede ser largo: en el celu se corta con puntos suspensivos y la cabecera no crece */
   body.v-docs #vista-docs #docstitulo{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   body.v-docs #vista-docs #docscuenta{flex:0 0 auto;white-space:nowrap}
@@ -1673,6 +1683,15 @@
   #docsvista .dvsolb.on{color:var(--verde);background:var(--fondo-caja)}
   #docsvista .dvq{width:100%;box-sizing:border-box;min-height:40px;background:none;border:1px solid var(--linea);
     border-radius:4px;color:var(--blanco);font:inherit;font-size:var(--texto-max);padding:6px 8px}
+  /* 1691: `agrupar por tema` si/no y el orden `fecha` | `titulo`, con el molde de las solapas */
+  #docsvista .dvctl{display:flex;align-items:center;flex-wrap:wrap;gap:4px}
+  #docsvista .dvctlb{background:#000;color:var(--gris);border:1px solid var(--linea);border-radius:4px;
+    padding:4px 9px;font:inherit;font-size:16px;cursor:pointer;white-space:nowrap;min-height:30px;
+    -webkit-tap-highlight-color:transparent}
+  #docsvista .dvctlb.on{color:var(--verde);border-color:var(--verde);background:var(--fondo-caja)}
+  #docsvista .dvctlo{display:inline-flex;align-items:center;gap:4px}
+  #docsvista .dvctlr{color:var(--gris);font-size:15px;margin-right:2px}
+  #docsvista .dvtag{flex:0 0 auto;color:var(--magenta);font-size:15px;text-transform:uppercase;letter-spacing:.06em}
   #docsvista .dvlista{display:flex;flex-direction:column;gap:6px}
   #docsvista .dvtema{display:flex;align-items:center;gap:6px;color:var(--magenta);font-size:16px;
     text-transform:uppercase;letter-spacing:.06em;margin-top:6px}
@@ -1720,6 +1739,13 @@
      una ventana vertical en la compu, o el celu de pie, tambien quieren el toggle chat | widgets).
      el mismo media query vive en el js como `MQ_MOBILE`: si cambia uno, cambia el otro. */
   @media (max-width:899px), (max-aspect-ratio: 1/1){
+    /* 1691: el celu (y la ventana angosta o mas alta que ancha) no se parte en dos: una sola columna centrada,
+       el indice y el informe como dos sub-vistas separadas, como estaba antes de la 1691 */
+    body.v-docs #vista-docs .seltit{max-width:980px;margin:0 auto}
+    #docsvista{overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;max-width:980px;margin:0 auto}
+    #docsvista .dvsplit{flex-direction:column;gap:6px;min-height:0}
+    #docsvista .dvindice,#docsvista .dvdoc{flex:0 0 auto;overflow:visible;border-right:0;padding-right:0}
+    #docsvista.condoc .dvindice{display:none}
     /* dedo: los seis botones de la barra se tocan con el pulgar, todos del mismo alto */
     .bb{height:32px;padding:4px 6px;gap:4px}
     #nodos .nodo{min-height:32px}   /* dedo: el label se toca aunque no parezca boton */
