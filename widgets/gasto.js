@@ -63,6 +63,9 @@
                    (cu.modelo_modo ? ' <span class="g">(modo ' + esc(cu.modelo_modo) + ")</span>" : "") : "") +
       // {awtomicgasto}: la cuenta que no paga facundo dice quien la paga, y no tiene plata que mostrar
       (cu.etiqueta ? '\n<span class="g">' + esc(cu.etiqueta) + "</span>" : "") +
+      // {pestanafija} (facundo, 2026-09-22): una cuenta puede no TENER fable (`awtomic`). la barra vacia no
+      // lo dice, asi que lo dice la ficha: es el porque de que una pestaña fijada a fable salga con opus.
+      (cu.sin_fable ? '\n<span class="r">sin fable en esta cuenta: sale con opus</span>' : "") +
       '<div class="cmod-b">' + USAGE_BARRAS.map(function(k){
         var b = bs.filter(function(x){ return x.clave === k[0] || x.nombre === k[1]; })[0];
         return barraHtml(b || {nombre: k[1], pct: null, linea: null, nivel: "sin"});
