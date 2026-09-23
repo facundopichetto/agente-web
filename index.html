@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.451">
-<link rel="manifest" href="manifest.json?v=4.451">
+<meta name="agente-web-version" content="4.452">
+<link rel="manifest" href="manifest.json?v=4.452">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.451">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.452">
 </head>
 <body>
 
@@ -1352,6 +1352,7 @@ function anclaMirar(){
 // el ancho o el alto cambiaron (resize, girar, teclado, ventana partida, swap de css): se clava con la
 // medicion previa al reflow y se suelta al final de la rafaga, que es donde antes se perdia la linea.
 function anclaRelayout(){
+  cvSoltar();                       // 1822 {assertion}: otro ancho = los altos medidos ya no valen
   var a = anclaClavar();
   if(a) anclaPoner(a);
   if(anclaTimer) clearTimeout(anclaTimer);
@@ -3273,8 +3274,61 @@ function asentarVista(){
   if(subioAMano) return false;      // 1650: subio a mano -> ni el ResizeObserver ni el volver al foco lo mueven
   var conLayout = hist.clientHeight > 0 && (hist.scrollHeight > hist.clientHeight || !lista.querySelector(".msg"));
   if(!aplicarVista()) abajo();
-  if(conLayout) asentarPendiente = false;
+  if(conLayout){ asentarPendiente = false; cvRepasar(); }   // 1822 {assertion}: el layout ya esta hecho, medir es gratis
   return conLayout;
+}
+// 1822 {assertion} (facundo, 2026-09-23: "que esos ~35 ms bajen y el 1.8x se cumpla solo"): cambiar de
+// pestaña costaba ~35 ms y 22 de esos eran UN layout (`Performance.getMetrics`: `LayoutDuration` 22 ms,
+// `RecalcStyleDuration` 4, `ScriptDuration` 0). o sea que el gesto ya no gasta nada en js -eso lo arreglo la
+// 2149-: lo que queda es que para saber donde termina el historial el navegador tiene que maquetar el texto de
+// las ~50 burbujas de esa charla, no el de las 6 que se ven.
+// `content-visibility:auto` saltea el maquetado de lo que esta fuera de la pantalla y lo baja a 1.7 ms (medido,
+// 20x), pero puesto a secas en el css MIENTE el alto: el `scrollHeight` pasa a ser una estimacion y ahi se rompe
+// justo lo que no se puede romper -el ancla de la 1813 ({primeralinea}) y la vista guardada de cada pestaña-.
+// medido tambien: con `contain-intrinsic-size: auto 90px` en el css, `prueba_web_ancla` y `prueba_web_seleccion`
+// se ponen rojas.
+// por eso el salteo se prende SOLO con el alto REAL de cada burbuja: se mide una vez con el layout ya hecho
+// (`cvRepasar` corre con el layout limpio, asi que leer `offsetHeight` no fuerza nada) y se escribe como
+// `contain-intrinsic-size`. una burbuja que todavia no se midio no se saltea: la primera vez que se abre una
+// pestaña se paga el layout entero, como siempre, y de ahi en mas es gratis. si cambia la forma del scroller
+// (girar el celu, resize, teclado, swap de css) los altos medidos ya no valen: `anclaRelayout` los suelta todos
+// y se vuelve a medir con el layout nuevo.
+var cvAncho = -1;
+function cvSoltarNodo(n){
+  if(!n || !n.style) return;
+  if(n.style.contentVisibility){ n.style.contentVisibility = ""; n.style.containIntrinsicSize = ""; }
+}
+function cvSoltar(){
+  if(lista) [].forEach.call(lista.querySelectorAll(".msg[data-clave]"), cvSoltarNodo);
+  Object.keys(nodoCache).forEach(function(k){ cvSoltarNodo(nodoCache[k]); });
+  cvAncho = -1;
+}
+// se llama con el layout LIMPIO (al final de `asentarVista`, que acaba de forzarlo): leer `offsetHeight` aca
+// no cuesta un layout mas. lo que ya tiene su alto no se vuelve a tocar.
+var cvAdentro = false;
+function cvRepasar(){
+  if(cvAdentro || !lista || !hist || !hist.clientHeight) return;   // el RO de `#lista` entra por `asentarVista`
+  var w = hist.clientWidth;
+  if(w !== cvAncho){ cvSoltar(); cvAncho = w; return; }   // ancho nuevo: se mide en la pasada siguiente
+  // PRIMERO se leen todos los altos y DESPUES se escriben todos los estilos. intercalado, cada escritura
+  // ensucia el layout y el `offsetHeight` de la burbuja siguiente lo fuerza de nuevo: son 50 layouts en vez
+  // de cero, y medido asi un cambio de pestaña pasaba de 35 ms a 1.170 ms.
+  var pend = [];
+  [].forEach.call(lista.querySelectorAll(".msg[data-clave]"), function(n){
+    if(n.style.contentVisibility) return;
+    // el alto va con decimales (`getBoundingClientRect`, no `offsetHeight`, que redondea a entero): con el
+    // entero cada burbuja pierde hasta un pixel, `#lista` cambia de alto al prenderse el salteo y el
+    // `ResizeObserver` entra en loop (`ResizeObserver loop completed with undelivered notifications`).
+    var h = n.getBoundingClientRect().height;
+    if(h) pend.push([n, Math.round(h * 1000) / 1000]);
+  });
+  cvAdentro = true;
+  try{ pend.forEach(function(x){
+    // dos ejes: el ancho va `none` (una burbuja de bloque lo saca igual del contenedor) y el alto es el
+    // medido. `auto` deja que el navegador se quede con el alto de verdad de la ultima vez que la dibujo.
+    x[0].style.containIntrinsicSize = "auto none auto " + x[1] + "px";
+    x[0].style.contentVisibility = "auto";
+  }); } finally { cvAdentro = false; }
 }
 // `forzar` = cambio de pestaña: lo que se ve es otra charla, asi que la marca de "subio a mano" (que era de la
 // pestaña anterior) se apaga y la vista de la nueva se aplica. sin `forzar` (sync, volver al foco, historial que
