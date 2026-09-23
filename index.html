@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.449">
-<link rel="manifest" href="manifest.json?v=4.449">
+<meta name="agente-web-version" content="4.450">
+<link rel="manifest" href="manifest.json?v=4.450">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.449">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.450">
 </head>
 <body>
 
@@ -532,6 +532,7 @@ var tabsPendiente = null, tabsPub = 0;
 var TABS_ARCHIVO = "tabs.json";
 var TABS_DEBOUNCE = 1500, TABS_MINIMO = 8000;   // agrupar cambios seguidos y no pegarle a la api
 var BORRA_DEBOUNCE = 1000;        // lo que se esta tipeando se publica mas seguido que el layout
+var CACHE_DEBOUNCE = 300;         // 2149 {pestana}: y el cache a disco espera a que facundo suelte la tecla
 var BORRA_TOPE = 8000;            // un borrador mas largo que esto no se sincroniza entero
 var BORRA_VIDA = 172800000;       // 2 dias: un borrador vacio mas viejo que esto se poda
 // borradores del input, uno por pestaña: `{tema: {texto, ts}}`. viajan en el mismo `tabs.json` pero se
@@ -704,6 +705,22 @@ function guardarCache(){
        llegadas: llegadasLimpias()}));
   }catch(x){}
 }
+// 2149 {pestana} (facundo, 2026-09-23: "escribo y no veo lo que escribo y en un segundo actualiza"): tipear no
+// puede bajar el cache entero a disco por tecla (un `JSON.stringify` de pestañas, borradores, vistas, widgets y
+// llegadas, mas un `localStorage.setItem` sincronico). el estado en MEMORIA se actualiza al instante -asi un
+// `tabs.json` viejo nunca le gana a lo que se esta escribiendo-; el que baja a disco espera 300 ms de silencio.
+// lo que no es tipeo (abrir una pestaña, una vista, un widget) sigue guardando en el acto.
+var cacheTimer = null;
+function guardarCachePronto(ms){
+  if(cacheTimer){ clearTimeout(cacheTimer); cacheTimer = null; }
+  if(!ms){ guardarCache(); return; }
+  cacheTimer = setTimeout(function(){ cacheTimer = null; guardarCache(); }, ms);
+}
+function guardarCacheYa(){ if(cacheTimer) guardarCachePronto(0); }
+// cerrar la pestaña o irse a background no puede perder lo tipeado: lo pendiente baja ahi mismo
+window.addEventListener("beforeunload", guardarCacheYa);
+window.addEventListener("pagehide", guardarCacheYa);
+document.addEventListener("visibilitychange", function(){ if(document.hidden) guardarCacheYa(); });
 // cambio local: sube el reloj, guarda el cache y encola la publicacion. si el layout quedo igual
 // (el pintado de siempre, un foco que ya estaba) no toca el `ts`: si no, abrir la pagina se llevaria
 // por delante lo que dejo el otro dispositivo.
@@ -964,7 +981,7 @@ function guardarBorrador(tema, texto, ya){
   texto = String(texto === null || texto === undefined ? "" : texto);
   if(borradorDe(tema) === texto) return;
   borradores[tema] = {texto: texto, ts: Math.max(Date.now(), (+(borradores[tema] || {}).ts || 0) + 1)};
-  guardarCache();
+  guardarCachePronto(CACHE_DEBOUNCE);   // el `ya` es para PUBLICAR, no para bajar el cache a disco
   publicarTabs(ya, BORRA_DEBOUNCE);
 }
 // llegaron los borradores del buzon (o del cache): se mezclan uno por uno, gana el `ts` mas nuevo.
@@ -1101,9 +1118,14 @@ function ajustarCaja(){
   txt.style.overflowY = txt.scrollHeight > tope ? "auto" : "hidden";
 }
 // pone un texto en la caja y deja el cursor al final (donde quedo escribiendo en el otro dispositivo)
+// 2149 {pestana}: medir la caja (`getComputedStyle` + `scrollHeight`) fuerza el layout de TODA la pagina, y en
+// un cambio de pestaña eso pasa justo despues de rearmar el historial: era la mitad del tiempo del gesto. si el
+// texto no cambio (las dos pestañas con la caja vacia, que es el caso normal) no hay nada que medir.
 function ponerCaja(t){
-  txt.value = t || "";
-  ajustarCaja();
+  t = t || "";
+  var igual = txt.value === t;
+  txt.value = t;
+  if(!igual) ajustarCaja();
   try{ txt.setSelectionRange(txt.value.length, txt.value.length); }catch(x){}
 }
 // el borrador de esta pestaña cambio en otro dispositivo: se refleja en la caja, salvo que facundo
@@ -1553,9 +1575,13 @@ function pintarTabs(){
   var r = document.createElement("span"); r.className = "relleno";
   barra.appendChild(r);
   $("prompt").textContent = "/";   // 1631: glifo de comandos (antes `f>`)
-  guardarLayout();
+  fueraDelGesto(guardarLayout);   // 2149 {pestana}: guardar y publicar el layout no va adentro del toque
   cajaDeTema(temaActivo());     // cada pestaña se lleva su borrador y trae el suyo
 }
+// 2149 {pestana} (facundo, 2026-09-23: "quiero tocar en la pestaña y que vaya inmediatamente"): lo que no
+// tiene que pasar DENTRO del gesto -guardar el layout, publicarlo, pedir la charla por red- sale despues,
+// cuando el navegador ya pinto. ninguna llamada de red adentro del handler del toque.
+function fueraDelGesto(fn){ setTimeout(fn, 0); }
 
 // ---------- acciones de pestañas ----------
 function abrirTab(tema){
@@ -1563,8 +1589,16 @@ function abrirTab(tema){
   if(!esTema(tema) && tema !== AUTO){ sistema("tema desconocido: " + tema, "error"); return; }
   if(tabs.indexOf(tema) < 0) tabs.push(tema);
   activo = tema;
-  pintarTabs(); render(true); irDonde(true);
-  chatDeTab(tema);          // si nunca se bajo su charla, llega sola
+  // 2149 {pestana}: el toque pinta YA, con lo que hay en memoria (los nodos de esa pestaña siguen armados en
+  // `nodoCache`, asi que es colgarlos de nuevo). el fetch de la charla va fuera del gesto.
+  perfMedir("tab", function(){
+    var t1 = ahoraMs();
+    saltarAncla++;
+    try{ pintarTabs(); render(true); } finally { saltarAncla--; }
+    perf.tabRender = Math.round((ahoraMs() - t1) * 100) / 100;
+    var t2 = ahoraMs(); irDonde(true); perf.tabIr = Math.round((ahoraMs() - t2) * 100) / 100;
+  });
+  fueraDelGesto(function(){ chatDeTab(tema); });   // si nunca se bajo su charla, llega sola
 }
 // renombrar una pestaña (si ya habia una de ese tema, no se duplica). la general ya no se renombra sola
 // (facundo, 2026-09-11); queda por si hace falta renombrar a mano.
@@ -2878,19 +2912,28 @@ function nodoCajas(m, lista_){
     b.addEventListener("pointerup", function(e){
       var t = ini; ini = null;
       if(!t || t.mov || Math.abs(e.clientX - t.x) + Math.abs(e.clientY - t.y) > OPC_UMBRAL) return;
-      tocarCaja(m, caja, o, lista_, e.target);
+      tocarCaja(msgDeCaja(k, m), caja, o, lista_, e.target);
     });
     // teclado (enter / espacio): click sin puntero. sobre una caja que esta preguntando, enter = si
-    b.addEventListener("click", function(e){ if(e.detail === 0) tocarCaja(m, caja, o, lista_, null); });
+    b.addEventListener("click", function(e){ if(e.detail === 0) tocarCaja(msgDeCaja(k, m), caja, o, lista_, null); });
     caja.appendChild(b);
   });
   var e0 = estadoCaja(m);
   marcarHecho(caja, e0.l || "", e0.h);
   return caja;
 }
+// 2149 {pestana}: con el render incremental el nodo de una caja sobrevive al repintado, pero el objeto del
+// mensaje puede ser otro (el poll rearma la lista): el handler no puede quedarse con el que capturo al
+// construirse, porque `cajaVieja` lo busca por identidad en `msgs` y no lo encontraria (y todo saldria con cita).
+function msgDeCaja(k, m0){ return cajaMsg[k] || m0; }
 // la caja no es la ultima de la pestaña (o ya hubo mensajes de f despues): lo que sale lleva la cita
 function cajaVieja(m){
   var i = msgs.indexOf(m), tema = m.tema || temaActivo();
+  if(i < 0){   // 2149: el objeto es otro (el poll rearmo la lista): se lo ubica por la clave de su caja
+    var k0 = claveCajas(m);
+    for(var z = 0; z < msgs.length; z++) if(tieneCajas(msgs[z]) && claveCajas(msgs[z]) === k0){ i = z; break; }
+    if(i < 0) return false;   // ya no esta en el hilo: nada puede venir "despues"
+  }
   for(var j = i + 1; j < msgs.length; j++){
     var x = msgs[j];
     if(deEstaTab(x.tema, tema) && (x.clase === "yo" || tieneCajas(x))) return true;
@@ -2971,10 +3014,12 @@ function arrepentirse(m, caja, lista_, letra){
   (accMandarFn || mandar)(codA || (citaCaja(m) + "me arrepentí: " + letra + ": " + op.texto),
                           m.tema || temaActivo(), false);
 }
+// un mensaje suelto que llega (lo que escribio facundo, la respuesta que baja el poll): se pinta ese nodo y
+// nada mas. 2149 {pestana}: el nodo se marca con su `data-clave` y su `data-firma`, asi el proximo render
+// incremental lo reusa tal cual en vez de rehacerlo.
 function pintarMsg(m, arriba){
   // 1776: la respuesta que cierra el bloque en vuelo se lleva su hilo (lo pintado no desaparece ni se repite)
-  if(!arriba && m.clase === "agente" && !m.tramos && vuelo && vuelo.tramos.length && (m.tag || vuelo.listo) &&
-     fecha(m.iso) >= vuelo.ref - 2000 && deEstaTab(m.tema, vuelo.tema)) m.tramos = tramosSinFinal(vuelo.tramos, m.texto);
+  if(!arriba) adoptarVuelo(m);
   // 1212: respuesta nueva con cajas -> se limpia el estado viejo antes de pintarla (no se hereda una marca)
   if(m.clase === "agente" && tieneCajas(m) && purgarOpc() && !renderando) refrescarCajas();
   // 2096 {codigocaja}: un mensaje de f que es SOLO el codigo de una caja no se pinta como burbuja (la
@@ -2982,7 +3027,9 @@ function pintarMsg(m, arriba){
   // asi los otros dispositivos deducen de el que esa opcion ya salio.
   var oculto = m.clase === "yo" && esCodigoCaja(m.texto);
   if(deEstaTab(m.tema, temaActivo()) && lista && !oculto){
-    if(arriba) lista.insertBefore(nodoMsg(m), lista.firstChild); else lista.appendChild(nodoMsg(m));
+    var n = nodoMsg(m);
+    n.dataset.clave = claveNodo(m); n.dataset.firma = firmaMsg(m);
+    if(arriba) lista.insertBefore(n, lista.firstChild); else lista.appendChild(n);
   }
   // f contesto (1168): ya no se cierran todas las cajas; cada una se deduce de lo que dijo (letra sola = la mas
   // reciente, con cita = la de esa respuesta, `me arrepentí` = la reabre)
@@ -2995,22 +3042,32 @@ function pintarMsg(m, arriba){
 // mensaje de un dia y el primero del siguiente va UNA linea con el dia que empieza (`ayer`, `hoy`, `18/09`).
 // arriba del primer mensaje del hilo nunca va: si la charla arranca hoy no se pinta nada. la dibuja el css
 // (`.diasep`), nunca un `---` de texto. el bloque en vuelo (`#vuelo`, sin `data-dia`) no cuenta.
+// 2149 {pestana}: tambien incremental. antes borraba TODAS las separadoras y las volvia a crear en cada render,
+// asi que aunque no hubiera cambiado nada el dom quedaba sucio y el siguiente `anclaMedir` pagaba un layout
+// entero. ahora la que ya esta donde va se deja tal cual y solo se toca lo que sobra o falta.
 function sepDias(){
   if(!lista) return;
-  [].forEach.call(lista.querySelectorAll(".diasep"), function(n){ n.parentNode.removeChild(n); });
-  var prev = "";
+  var prev = "", vivas = [];
   [].forEach.call(lista.querySelectorAll(".msg[data-dia]"), function(n){
     var d = n.getAttribute("data-dia") || "";
     if(!d) return;
+    var ant = n.previousElementSibling, esSep = !!(ant && ant.className === "diasep");
     if(prev && d !== prev){
-      var s = document.createElement("div");
-      s.className = "diasep"; s.setAttribute("data-dia", d);
-      var t = document.createElement("span");
-      t.textContent = etiquetaDia(d);
-      s.appendChild(t);
-      lista.insertBefore(s, n);
+      if(esSep && ant.getAttribute("data-dia") === d) vivas.push(ant);
+      else {
+        var s = document.createElement("div");
+        s.className = "diasep"; s.setAttribute("data-dia", d);
+        var t = document.createElement("span");
+        t.textContent = etiquetaDia(d);
+        s.appendChild(t);
+        lista.insertBefore(s, n);
+        vivas.push(s);
+      }
     }
     prev = d;
+  });
+  [].forEach.call(lista.querySelectorAll(".diasep"), function(n){
+    if(vivas.indexOf(n) < 0) n.parentNode.removeChild(n);
   });
 }
 var renderando = false;   // el render entero arma cada caja ya con todos los mensajes: no hace falta refrescar
@@ -3082,15 +3139,118 @@ function render(forzar){
   }
   renderYa();
 }
+// 2149 {pestana} (facundo, 2026-09-23: "el board esta lentisimo... eso hace a la interfaz INUSABLE"): el board
+// se mide solo. `perf()` da los ms del ultimo repintado del historial y del ultimo cambio de pestaña, cuantos
+// nodos de mensaje hubo que construir y cuantos se reusaron tal cual. es un contador, no un log: cero red.
+var perf = {render: 0, tab: 0, tabRender: 0, tabIr: 0,
+            nodos: 0, reusados: 0, sacados: 0, movidos: 0, renders: 0, tabs: 0};
+function ahoraMs(){ try{ return performance.now(); }catch(x){ return Date.now(); } }
+function perfMedir(k, fn){
+  var t0 = ahoraMs();
+  try{ return fn(); }
+  finally { perf[k] = Math.round((ahoraMs() - t0) * 100) / 100; perf[k === "render" ? "renders" : "tabs"]++; }
+}
+// 2149 {pestana}: cuando el gesto ya termina con `irDonde()` (abrir, renombrar o cerrar una pestaña), la
+// posicion la pone el `asentarVista` de ahi: medir y reponer el ancla adentro del render seria un segundo
+// layout forzado al pedo, justo despues de cambiar los 200 nodos del historial.
+var saltarAncla = 0;   // (`audPintar` tiene un parametro homonimo: por eso el nombre largo)
 function renderYa(){
-  var ancla = anclaMedir();          // 1805: llego mas charla y se repinta todo: la linea de arriba no se mueve
-  marcarModoAudio();
-  if(lista) lista.innerHTML = "";
-  renderando = true;
-  try{ msgs.forEach(function(m){ pintarMsg(m, false); }); } finally { renderando = false; }
-  sepDias();                         // 2132 {dia}: una sola pasada al final del render, no una por mensaje
-  if(!vueloContestado()) pintarVuelo();
-  if(ancla && !ancla.abajo) anclaPoner(ancla);
+  perfMedir("render", function(){
+    var ancla = saltarAncla ? null : anclaMedir();   // 1805: llego mas charla y se repinta: la linea de arriba queda
+    marcarModoAudio();
+    renderando = true;
+    try{ sincronizarLista(); } finally { renderando = false; }
+    sepDias();                       // 2132 {dia}: una sola pasada al final del render, no una por mensaje
+    if(!vueloContestado()) pintarVuelo();
+    if(ancla && !ancla.abajo) anclaPoner(ancla);
+  });
+}
+// 2149 {pestana}: render incremental por id de mensaje. antes esto era `lista.innerHTML = ""` + `msgs.forEach`,
+// o sea rearmar cientos de burbujas (markdown, cajas, drafts, players) en el hilo principal en CADA tick de 30 s,
+// en cada respuesta y en cada toque de pestaña: 1 a 2 segundos con la interfaz congelada. ahora cada nodo lleva
+// su `data-clave` (el id del mensaje) y su `data-firma` (todo lo que se pinta de el): el que no cambio se reusa
+// tal cual -ni se toca el dom-, el que cambio se rehace solo el, el que ya no va se saca y el orden se arregla
+// moviendo lo justo. si no cambio nada, `sincronizarLista` no escribe una sola vez en el dom.
+function claveNodo(m){
+  if(m.id !== undefined && m.id !== null && m.id !== "") return String(m.id);
+  return m.clase + "|" + (m.iso || "") + "|" + String(m.texto || "").slice(0, 60);
+}
+// todo lo que `nodoMsg` mira para dibujar. si dos firmas son iguales, las dos burbujas son identicas.
+function firmaMsg(m){
+  try{
+    return JSON.stringify([m.clase, m.texto, m.iso, m.quien, m.tag, m.nodo, m.disp, m.modo, m.tema,
+                           m.duracion_s, m.cuello, !!m.enviando, m.audio || null, m.audios || null,
+                           m.opciones || null, m.tramos || null]);
+  }catch(x){ return String(Math.random()); }   // algo raro adentro: se rehace, nunca se reusa de mas
+}
+// los mensajes que van en la pestaña activa, en orden (mismo criterio que tenia `pintarMsg`)
+function msgsVisibles(){
+  return msgs.filter(function(m){
+    // 2096 {codigocaja}: un mensaje de f que es SOLO el codigo de una caja no se pinta como burbuja
+    return deEstaTab(m.tema, temaActivo()) && !(m.clase === "yo" && esCodigoCaja(m.texto));
+  });
+}
+// 2149 {pestana}: el nodo de un mensaje sobrevive a que lo saquen del dom. asi cambiar de pestaña no rearma
+// nada: los mensajes de esa pestaña ya estan construidos y solo se vuelven a colgar. se poda por las claves
+// que hace rato nadie pide, para que la charla vieja no se acumule para siempre.
+var nodoCache = {}, NODO_CACHE_TOPE = 900, renderSello = 0;
+function podarNodoCache(){
+  var ks = Object.keys(nodoCache);
+  if(ks.length <= NODO_CACHE_TOPE) return;
+  ks.sort(function(a, b){ return (nodoCache[a].__visto || 0) - (nodoCache[b].__visto || 0); });
+  ks.slice(0, ks.length - NODO_CACHE_TOPE).forEach(function(k){ delete nodoCache[k]; });
+}
+function sincronizarLista(){
+  if(!lista) return;
+  var vis = msgsVisibles();
+  vis.forEach(adoptarVuelo);                 // 1776: la respuesta que cierra el bloque en vuelo se lleva su hilo
+  var enLista = {};
+  [].forEach.call(lista.querySelectorAll(".msg[data-clave]"), function(n){
+    enLista[n.dataset.clave] = n;
+    if(!nodoCache[n.dataset.clave]) nodoCache[n.dataset.clave] = n;
+  });
+  var quiero = [], nuevos = 0, reusados = 0, ahora = ahoraMs();
+  vis.forEach(function(m){
+    var k = claveNodo(m), f = firmaMsg(m), n = enLista[k] || nodoCache[k];
+    if(enLista[k]) delete enLista[k];
+    if(n && n.dataset.firma === f){ n.__msg = m; adoptarCajas(n, m); reusados++; }
+    else { n = nodoMsg(m); n.dataset.clave = k; n.dataset.firma = f; nuevos++; }
+    n.__visto = ahora;
+    nodoCache[k] = n;
+    quiero.push(n);
+  });
+  // lo que sobra: cualquier burbuja del dom que no este en la lista deseada. se marca la deseada con un sello
+  // de este render en vez de buscarla, y no se mira la clave: dos nodos pueden traer la MISMA clave (el mensaje
+  // cambio y se rehizo su nodo) y el viejo tambien tiene que salir.
+  var sacados = 0, sello = ++renderSello;
+  quiero.forEach(function(n){ n.__sello = sello; });
+  [].forEach.call(lista.querySelectorAll(".msg[data-clave]"), function(n){
+    if(n.__sello !== sello){ lista.removeChild(n); sacados++; }      // sale del dom, queda en `nodoCache`
+  });
+  podarNodoCache();
+  // el orden: se camina la lista deseada contra la real y solo se mueve lo que no coincide
+  var cur = lista.firstChild, movidos = 0;
+  quiero.forEach(function(n){
+    while(cur && cur !== n && !(cur.dataset && cur.dataset.clave)) cur = cur.nextSibling;   // `#vuelo` y demas
+    if(cur === n){ cur = cur.nextSibling; return; }
+    lista.insertBefore(n, cur);
+    movidos++;
+  });
+  perf.nodos = nuevos; perf.reusados = reusados; perf.sacados = sacados; perf.movidos = movidos;
+  // 1212: el estado viejo de las cajas se purga UNA vez por render (antes era una por mensaje) y las cajas
+  // se refrescan porque un nodo reusado trae la marca con la que se pinto, no la de ahora
+  if(vis.some(function(m){ return m.clase === "agente" && tieneCajas(m); })){ purgarOpc(); refrescarCajas(); }
+  vis.forEach(function(m){ if(m.clase === "agente") spConfirmo(m); });   // 1432: la carga del widget de salud
+}
+// 1776: el hilo que facundo ya vio mientras el bloque estaba en vuelo se lo lleva la respuesta que lo cierra
+function adoptarVuelo(m){
+  if(m.clase === "agente" && !m.tramos && vuelo && vuelo.tramos.length && (m.tag || vuelo.listo) &&
+     fecha(m.iso) >= vuelo.ref - 2000 && deEstaTab(m.tema, vuelo.tema)) m.tramos = tramosSinFinal(vuelo.tramos, m.texto);
+}
+// un nodo reusado sigue apuntando al objeto viejo: las cajas leen el mensaje por `cajaMsg`, se reapunta
+function adoptarCajas(n, m){
+  var c = n.querySelector(".opciones");
+  if(c && c.dataset.clave) cajaMsg[c.dataset.clave] = m;
 }
 function alFinal(){ abajo(); }
 // abrir la web, volver al foco o cambiar de pestaña te deja **donde estabas**, no al final (facundo,
@@ -7383,24 +7543,40 @@ function mandar(texto, tema, crudo, tsEnvio){
     if(txt.value.trim() === texto){ txt.value = ""; txt.style.height = ""; }   // la caja se vacia ya
     borrarBorrador(tema); if(caja && caja !== tema) borrarBorrador(caja);      // y su tumba se publica ya
   }
+  // 2149 {pestana} (facundo, 2026-09-23: "antes volvia y aparecia como con menos opacidad mientras venia la
+  // respuesta del server, ahora simplemente se queda congelado 1 o 2 segundos"): la burbuja sale EN EL ACTO,
+  // con la clase `enviando` (opacidad .8, igual que el audio de la 2033) y viva: se puede scrollear, copiar y
+  // seguir tipeando mientras el POST viaja. cuando vuelve, esa misma burbuja toma su id real y se apaga la marca.
+  var m = {id: "env:" + tsEnvio, clase: "yo", quien: QUIEN_F, texto: texto, iso: new Date(tsEnvio).toISOString(),
+           explicito: true, tema: tema, creado: null, enviando: true,
+           disp: dispDe(sacarDesde(cuerpo).desde) || null, modo: modoDe(sacarDesde(cuerpo).desde) || null};
+  if(!aparte){
+    msgsCom.push(m); msgs.push(m); pintarMsg(m, false);
+    alFinal();
+  }
+  function sacarProvisional(){
+    [msgs, msgsCom].forEach(function(l){ var i = l.indexOf(m); if(i >= 0) l.splice(i, 1); });
+    render();
+  }
   return api("POST", "/repos/" + REPO + "/issues/" + ISSUE + "/comments", {body: cuerpo})
     .then(function(r){
       if(r.json && !vistos[r.json.id]){
         vistos[r.json.id] = true;
         // la hora que se pinta es la de ENVIO, no la que le puso github al comentario (1191)
-        var m = {id: r.json.id, clase: "yo", quien: QUIEN_F, texto: texto, iso: new Date(tsEnvio).toISOString(),
-                 explicito: true, tema: tema, creado: r.json.created_at || null, disp: dispDe(sacarDesde(cuerpo).desde) || null,
-                 modo: modoDe(sacarDesde(cuerpo).desde) || null};
-        msgsCom.push(m); msgs.push(m); pintarMsg(m, false);
-        if(!aparte){
+        m.id = r.json.id; m.creado = r.json.created_at || null; m.enviando = false;
+        if(aparte){ msgsCom.push(m); msgs.push(m); pintarMsg(m, false); }
+        else {
+          render();                  // la misma burbuja, ya sin la opacidad: es un solo nodo, no el hilo entero
           vueloIniciar(m, cuerpo);   // spinner + fase + eta hasta que llegue la respuesta
           alFinal();
         }
       }
+      else if(!aparte) sacarProvisional();
       etagCom = null;
     })
     .catch(function(e){
       ultimoTexto = ""; ultimoTs = 0;                           // fallo: se puede reintentar igual
+      if(!aparte) sacarProvisional();                           // la burbuja en vuelo se va con el error
       if(e && e.message === "freno"){ guardarSalida(texto, tema, cuerpo); return; }   // sale solo al levantar
       if(errRed(e)){ guardarSalida(texto, tema, cuerpo, "red"); return; }            // 1631: se corto en el camino
       if(!txt.value.trim()){ ponerCaja(texto); guardarBorrador(caja || tema, texto, true); }
@@ -13508,7 +13684,18 @@ window.__agente = {
     return {id: m.id, tema: m.tema, clase: m.clase, texto: m.texto, iso: m.iso}; }); },
   chatIndex: function(){ return chatIndex; },
   limpiarChat: function(){ msgsHist = {}; msgsCom = []; chatIndex = null; etagChat = {};
-                           msgs = []; render(); },
+                           msgs = []; nodoCache = {}; render(); },
+  // 2149 {pestana}: los contadores del board (ms del ultimo render y del ultimo cambio de pestaña, nodos
+  // construidos vs reusados). `prueba_web_render` mide con esto, sin tocar el dom.
+  perf: function(){ var o = {}; Object.keys(perf).forEach(function(k){ o[k] = perf[k]; });
+                    o.enLista = lista ? lista.querySelectorAll(".msg[data-clave]").length : -1;
+                    o.cache = Object.keys(nodoCache).length; return o; },
+  perfCero: function(){ perf.nodos = perf.reusados = perf.sacados = perf.movidos = 0; },
+  // la prueba compara el gesto contra un render que tiene que rearmar TODAS las burbujas (lo que hacia el
+  // board viejo en cada tick): se vacia el cache y se invalida la firma de lo que esta colgado
+  forzarRearmado: function(){ nodoCache = {};
+    if(lista) [].forEach.call(lista.querySelectorAll(".msg[data-clave]"), function(n){ n.dataset.firma = "x"; }); },
+  sincronizarLista: sincronizarLista, claveNodo: claveNodo, firmaMsg: firmaMsg,
   // el chat es un panel unico: `enPanel()` cuenta los mensajes pintados en la pestaña activa
   enPanel: function(){ return lista ? lista.querySelectorAll(".msg:not(.vuelo)").length : -1; },
   // estado en vivo y una sola respuesta por mensaje (2026-09-13, prueba_web_tabs lo chequea)
