@@ -547,7 +547,10 @@
     transform:scale(3.5);transform-origin:center}
   #seltarjeta .tjppal.confoto .tjini{display:none}
   /* {fotoancha}: varias fotos se caminan de a UNA a ancho completo (swipe horizontal con snap), nunca la tira chica */
-  #selmodal #seltarjeta .tjfotos.tjcarr{display:flex;align-items:flex-start;overflow-x:auto;overflow-y:hidden;
+  /* 2080 {diseno}: la fila del carrusel centra vertical como todas las filas del board; las fotos son todas del
+     mismo cuadro 4:5, asi que centrar se ve igual que el `flex-start` viejo, y una que mida distinto queda al medio
+     en vez de pegada arriba (nunca `stretch`: eso le deformaria el alto al cuadro) */
+  #selmodal #seltarjeta .tjfotos.tjcarr{display:flex;align-items:center;overflow-x:auto;overflow-y:hidden;
     scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;touch-action:pan-x;scrollbar-width:none}
   #selmodal #seltarjeta .tjfotos.tjcarr::-webkit-scrollbar{display:none}
   #selmodal #seltarjeta .tjfotos.tjcarr > .tjppal{flex:0 0 100%;scroll-snap-align:center}
