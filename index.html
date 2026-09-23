@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.450">
-<link rel="manifest" href="manifest.json?v=4.450">
+<meta name="agente-web-version" content="4.451">
+<link rel="manifest" href="manifest.json?v=4.451">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.450">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.451">
 </head>
 <body>
 
@@ -4964,33 +4964,34 @@ function selTrasSubir(col, j){
 // glifos nuevos: el server no cambio de vocabulario, cambio la cara de los botones.
 var TJ_PROCS = {
   "ig-embudo": {nombre: "candidatas", botones: [
-    {q: "ignorar", tipo: "bajar", aria: "no va (a ignoradas)"},
-    {q: "maybe", tipo: "maybe", aria: "maybe"},
-    {q: "queda", tipo: "subir", aria: "queda (a interesan)"}]},
+    {q: "ignorar", tipo: "bajar", aria: "ignorar"},
+    {q: "maybe", tipo: "maybe", aria: "mandar a maybe"},
+    {q: "queda", tipo: "subir", aria: "subir a interesan"}]},
   "ig-seguir": {nombre: "empezar a seguir", botones: [
-    {q: "bajar", tipo: "bajar", aria: "baja a maybe"},
-    {q: "igual", tipo: "igual", aria: "queda en interesan"},
-    {q: "subir", tipo: "subir", aria: "empezar a seguir"}]},
+    {q: "bajar", tipo: "bajar", aria: "bajar a maybe"},
+    {q: "igual", tipo: "igual", aria: "dejar en interesan"},
+    {q: "subir", tipo: "subir", aria: "follow + pasa a follow request sent"}]},
   // 2247 {botones}: el tercero (`3 minimo para TODAS`), la `✕` roja: la ignoro sin dejar de seguirla
   "ig-dejar": {nombre: "dejar de seguir", botones: [
-    {q: "bajar", tipo: "bajar", aria: "dejar de seguir"},
-    {q: "igual", tipo: "igual", aria: "queda igual"},
-    {q: "ignorar", tipo: "no", aria: "la ignoro, la sigo igual"}]},
+    {q: "bajar", tipo: "bajar", aria: "unfollow + bajar a maybe"},
+    {q: "igual", tipo: "igual", aria: "dejar donde está"},
+    {q: "ignorar", tipo: "no", aria: "ignorar, la seguís igual"}]},
   // 1872 {maybe}: el cuarto proceso, la lista `maybe` (lo que junta el `-_-` de candidatas y el `↓` de empezar a seguir)
   // 1928 {arrepenti} (reemplaza la 1873): el quinto proceso es `activa` + `follow` y ya no deshace ningun voto.
   // 2019 {solicitudes}: `follow` son dos listas, `follow_request_sent` y `following` (mas `activar`); la cartita de
   // `follow request sent` trae la accion `cancelar solicitud e ignorar` (`ig cancelar @x`), armada por el server.
   // los DOS de los costados sacan gente, asi que el de la derecha no es la flecha verde que sube: es la `✕` roja
-  // del corte (`dejo de seguirla`, que ademas programa el unfollow en la cola: 2092 {franja}, con el ritmo unico
+  // del corte (`unfollow + ignorar`: la manda a `ignorada` y ademas programa el unfollow en la cola, 2092
+  // {franja}, con el ritmo unico
   // de todo lo de instagram, no de madrugada). el que no mueve a nadie, al medio
   "ig-arrepentir": {nombre: "me arrepentí", botones: [
-    {q: "bajar", tipo: "bajar", aria: "la ignoro"},
-    {q: "igual", tipo: "igual", aria: "no hago nada"},
-    {q: "cortar", tipo: "no", aria: "dejo de seguirla"}]},
+    {q: "bajar", tipo: "bajar", aria: "ignorar"},
+    {q: "igual", tipo: "igual", aria: "dejar donde está"},
+    {q: "cortar", tipo: "no", aria: "unfollow + ignorar"}]},
   "ig-maybe": {nombre: "maybe", botones: [
-    {q: "bajar", tipo: "bajar", aria: "a ignoradas"},
-    {q: "igual", tipo: "igual", aria: "queda en maybe"},
-    {q: "subir", tipo: "subir", aria: "a interesan"}]}
+    {q: "bajar", tipo: "bajar", aria: "ignorar"},
+    {q: "igual", tipo: "igual", aria: "dejar en maybe"},
+    {q: "subir", tipo: "subir", aria: "subir a interesan"}]}
 };
 var TJ_PROC_ORDEN = ["ig-embudo", "ig-seguir", "ig-dejar", "ig-maybe", "ig-arrepentir"];
 function tjProc(col){ return TJ_PROCS[col] || TJ_PROCS["ig-embudo"]; }
@@ -5008,6 +5009,9 @@ var TJ_SVG = {
   no: '<svg viewBox="0 0 20 20" width="23" height="23" aria-hidden="true" focusable="false">' +
     '<path d="M5 5l10 10M15 5 5 15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>'
 };
+// 1812 {botones}: las frases de arriba son la RED DE ABAJO y dicen la accion completa igual que el server
+// (el pie de verdad sale de `personal/botones-listas.json`: `following` vota `unfollow + ignorar` / `ignorar`
+// / `dejar en following`, y el boton que no mueve a nadie dice `dejar en <lista>`).
 // 1883: el orden, el glifo y la frase de cada boton los manda el server (`seleccion.BOTONES_COL`, que viaja en
 // `botones` del json de la votacion): la web no redacta ninguna. `TJ_PROCS` queda como red de abajo para un json
 // viejo o una coleccion que el server todavia no describe.
