@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.443">
-<link rel="manifest" href="manifest.json?v=4.443">
+<meta name="agente-web-version" content="4.444">
+<link rel="manifest" href="manifest.json?v=4.444">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.443">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.444">
 </head>
 <body>
 
@@ -197,6 +197,11 @@
          el contador; el pase de lista de al lado ya se aplico y no tiene nada que deshacer -->
     <div id="selgracia" class="oculta"></div>
     <div id="selextras" class="oculta"></div>
+    <!-- {cambios} paso 3 (facundo, 2026-09-22): "en la cartita de una persona y en el votador, en el celu, un cuadro
+         con hasta 6 botones para mandarla a cualquiera de las otras listas de un toque". los botones los manda el
+         server (`mover` del json de la votacion, de `botones_listas.mover_web`): la web no elige ni redacta ninguno,
+         y cada uno es una decision mas del votador (se vota local y sale con el `enviar`, 2137 {votolocal}) -->
+    <div id="selmover" class="oculta"></div>
     <div id="selacciones" class="oculta"></div>
     <textarea id="seltxt" placeholder="algo para sumar (opcional)" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
     <div class="selbtns mfila"><button id="selaceptar" class="selbtn bverde llena" type="button">aceptar</button><button id="selmandar" class="selbtn bverde llena" type="button">enviar texto</button></div>
@@ -4344,6 +4349,7 @@ function selModoLista(lista){
   $("seltarjeta").classList.toggle("oculta", lista);
   $("selacciones").classList.toggle("oculta", lista);
   $("selextras").classList.toggle("oculta", lista);   // 2247: los chicos son de la tarjeta, no de la lista de checkboxes
+  $("selmover").classList.toggle("oculta", lista);   // {cambios} paso 3: el cuadro de mudanza, igual
   $("selback").classList.toggle("oculta", lista);   // 1657: el back es de las tarjetas, no de la lista de checkboxes
   $("seltxt").classList.toggle("oculta", !lista);   // 1561: en tarjetas no hay campo de texto
   var b = document.querySelector("#selmodal .selbtns");
@@ -4905,9 +4911,39 @@ function tjExtras(e){
   }
   return caja;
 }
+// {cambios} paso 3: el cuadro de mudanza, hasta 6 botones para mandarla a otra lista de un toque. es el MISMO
+// camino de voto que todo lo demas (`tjDecidir` -> `tjVoto`): no manda nada al server, lo manda el `enviar`.
+function tjMudanzaSpec(e){
+  var xs = (e && e.mover) || [];
+  return xs.map(function(b){ return {q: b.q, tipo: b.tipo || "mover", texto: b.texto || b.q, lista: b.lista || ""}; });
+}
+function tjMudanza(e){
+  var caja = $("selmover"), xs = tjMudanzaSpec(e);
+  var firma = (e && e.coleccion || "") + "|" + (sel.filtro || "") + "|" + xs.map(function(b){ return b.q; }).join("|");
+  if(caja.getAttribute("data-firma") !== firma){
+    caja.setAttribute("data-firma", firma);
+    caja.textContent = "";
+    xs.forEach(function(b){
+      var el = document.createElement("button");
+      el.type = "button";
+      el.className = "tjmvbtn";
+      el.setAttribute("data-q", b.q);
+      el.setAttribute("aria-label", "mandarla a " + b.texto);
+      el.title = "mandarla a " + b.texto;
+      var t = document.createElement("span"); t.className = "tjmvtxt"; t.textContent = b.texto;
+      el.appendChild(t);
+      caja.appendChild(el);
+    });
+  }
+  return caja;
+}
 function tjProcQs(e){ return tjBotonesSpec(e).map(function(b){ return b.q; }); }
-// todas las decisiones que se pueden votar en esta tarjeta: los 3 del pie mas los chicos de la lista (2247)
-function tjTodasQs(e){ return tjProcQs(e).concat(tjExtrasSpec(e).map(function(b){ return b.q; })); }
+// todas las decisiones que se pueden votar en esta tarjeta: los 3 del pie, los chicos de la lista (2247) y los
+// hasta 6 del cuadro de mudanza ({cambios} paso 3)
+function tjTodasQs(e){
+  return tjProcQs(e).concat(tjExtrasSpec(e).map(function(b){ return b.q; }))
+                    .concat(tjMudanzaSpec(e).map(function(b){ return b.q; }));
+}
 // 1883 {teclado} + 1893 {mapa}, con las teclas de la 2079 {votador}: votar sin tocar la pantalla. los votos son
 // `a` / `s` / `d` POR POSICION, como se ven al pie, y las flechas `←` / `→` ya no votan: navegan la fila (`tjMover`).
 // lo de abajo queda como estaba para el resto (`tjQMedio`, el backspace de la 1905 y los guards de foco):
@@ -5130,8 +5166,10 @@ function tjPintar(){
   var atras = tjHist(e).length > 0 || !!lis.origen, bk = $("selback");
   tjBotones(e);   // 1801: los botones son los del proceso de esta coleccion
   tjExtras(e);    // 2247: y los chicos de arriba, los de ESTA lista
+  tjMudanza(e);   // {cambios} paso 3: y el cuadro de mudanza (el css lo muestra solo en el celu)
   $("selacciones").classList.toggle("oculta", !c);
   $("selextras").classList.toggle("oculta", !c || !tjExtrasSpec(e).length);
+  $("selmover").classList.toggle("oculta", !c || !tjMudanzaSpec(e).length);
   gracPintar();   // {gracia}: el `deshacer` con su contador vive mientras la ventana corre
   [].forEach.call(document.querySelectorAll("#selacciones .tjbtn"), function(b){
     b.style.visibility = c ? "" : "hidden";
@@ -5297,6 +5335,9 @@ function tjVoto(e, c, q, txt){
   var bq = tjProc(e.coleccion).botones.filter(function(x){ return x.q === q; })[0];
   // 2247: si el voto salio de un boton CHICO, la frase es la del extra (el server la manda en `extras`)
   var xq = tjExtrasSpec(e).filter(function(x){ return x.q === q; })[0];
+  // {cambios} paso 3: si salio del cuadro de mudanza, la frase dice a que lista la mandaste
+  var mq = tjMudanzaSpec(e).filter(function(x){ return x.q === q; })[0];
+  if(mq) xq = {q: mq.q, texto: "a `" + mq.texto + "`"};
   $("selestado").textContent = ((xq && xq.texto) || (bq && bq.aria) || q) + " @" + (c.cuenta || c.id);
   var hs = sel.tjHistorial = sel.tjHistorial || [], i = -1;
   hs.forEach(function(h, k){ if(h.col === e.coleccion && h.c && h.c.id === c.id) i = k; });
@@ -5777,6 +5818,7 @@ function lisPoner(cual, fresco){
   $("sellista").classList.add("oculta");
   $("seltarjeta").classList.add("oculta");
   $("selacciones").classList.add("oculta"); $("selextras").classList.add("oculta");   // 2247
+  $("selmover").classList.add("oculta");   // {cambios} paso 3
   $("selback").classList.add("oculta");
   $("seltxt").classList.add("oculta");
   var b = document.querySelector("#selmodal .selbtns");
@@ -6005,6 +6047,7 @@ function lisModoUna(){
   $("sellista").classList.add("oculta");
   $("seltarjeta").classList.add("oculta");
   $("selacciones").classList.add("oculta"); $("selextras").classList.add("oculta");   // 2247
+  $("selmover").classList.add("oculta");   // {cambios} paso 3
   $("seltxt").classList.add("oculta");
   var b = document.querySelector("#selmodal .selbtns");
   if(b) b.classList.add("oculta");
@@ -6429,6 +6472,26 @@ function lisFicha(p){
     inf.appendChild(tz);
   }
   (f.historial || []).forEach(function(h){ inf.appendChild(lisLinea("fichist", h)); });
+  // {cambios} paso 3 (facundo, 2026-09-22): el cuadro de mudanza, hasta 6 botones para mandarla a cualquiera de las
+  // otras listas de un toque. los botones (cuales, en que orden y con que comando) los manda el server
+  // (`ig_listas.mover_botones`): la web no elige ni redacta ninguno. de un toque y sin `dale`: no toca instagram,
+  // escribe el embudo (`ig mover @cuenta <lista>`, cero tokens) y se deshace con otro toque al boton de vuelta.
+  if((p.mover || []).length){
+    var mv = document.createElement("div"); mv.className = "ficmover";
+    var mvt = document.createElement("div"); mvt.className = "ficmovtit"; mvt.textContent = "mandarla a";
+    mv.appendChild(mvt);
+    var mvg = document.createElement("div"); mvg.className = "ficmovg";
+    p.mover.forEach(function(x){
+      var b = moldeBoton({tipo: "caja", txt: x.texto, clase: "ficmvbtn", accion: function(){
+        (accMandarFn || mandar)(x.comando, "personal", true);
+        if(lisFic) lisFic.cerrar();
+      }});
+      b.setAttribute("data-mover", x.lista || "");
+      mvg.appendChild(b);
+    });
+    mv.appendChild(mvg);
+    inf.appendChild(mv);
+  }
   // bloque 3: las acciones, cada una del molde (`moldeBoton`), abajo de la ficha
   var acc = document.createElement("div"); acc.className = "ficacc";
   (p.acciones || []).forEach(function(a){ var n = lisAccBoton(p, a); if(n) acc.appendChild(n); });
@@ -6783,6 +6846,18 @@ $("seltxt").addEventListener("focus", function(){
 $("selacciones").addEventListener("click", function(ev){
   var b = ev.target.closest && ev.target.closest(".tjbtn[data-q]");
   if(b) tjDecidir(b.getAttribute("data-q"));   // 1657: en esta fila solo hay votos
+});
+// {cambios} paso 3: el cuadro de mudanza vota igual que el pie, con el mismo listener delegado (uno solo, para
+// siempre: los botones se repintan en cada lista). un toque = un voto local, y el `enviar` lo manda (2137).
+$("selmover").addEventListener("click", function(ev){
+  var b = ev.target.closest && ev.target.closest(".tjmvbtn[data-q]");
+  if(b) tjDecidir(b.getAttribute("data-q"));
+});
+// de paso: los botones CHICOS de la 2247 nunca tuvieron listener (se votaban solo con la flecha de ARRIBA del
+// teclado, o sea nunca en el celu, que es donde facundo vota). el mismo delegado los arregla.
+$("selextras").addEventListener("click", function(ev){
+  var b = ev.target.closest && ev.target.closest(".tjxbtn[data-q]");
+  if(b) tjDecidir(b.getAttribute("data-q"));
 });
 // ---------- 2113 {listavotador} paso 2: el swipe del votador (facundo, 2026-09-19) ----------
 // "tiene que poder mover de derecha a izquierda". el dedo de costado hace lo MISMO que las flechas de la 2079

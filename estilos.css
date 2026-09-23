@@ -421,6 +421,21 @@
   #selextras .tjx-subir{border-color:var(--verde);color:var(--verde)}
   #selextras .tjx-no,#selextras .tjx-unfollow{border-color:var(--rojo);color:var(--rojo)}
   #selextras .tjx-follow{border-color:var(--cian);color:var(--cian)}
+  /* {cambios} paso 3 (facundo, 2026-09-22): "en la cartita de una persona y en el votador, en el celu, un cuadro con
+     hasta 6 botones para mandarla a cualquiera de las otras listas de un toque". es el molde de grilla de la 2035
+     {columnas} (dos columnas, `gap` de 10 y `minmax(0,1fr)`) con el control chico del board al 160% de la 2080
+     {diseno}: cada boton entra en el area de dedo de 40 px y el texto no pasa el tope de `--texto-max`.
+     `en el celu`: arriba de 700 px (el mismo corte que usa el pie del votador) el cuadro no se pinta. */
+  #selmover{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;width:100%;max-width:520px;
+    margin:0 auto}
+  #selmover.oculta{display:none!important}
+  #selmover .tjmvbtn{display:flex;align-items:center;justify-content:center;min-height:40px;padding:6px 10px;
+    box-sizing:border-box;border-radius:4px;border:1px solid var(--linea);background:var(--fondo-caja);
+    color:var(--blanco);font:inherit;font-size:13px;line-height:1.15;cursor:pointer;opacity:.9;
+    box-shadow:var(--caja-sombra)}
+  #selmover .tjmvbtn:hover,#selmover .tjmvbtn:focus-visible{opacity:1;border-color:var(--cian);color:var(--cian)}
+  #selmover .tjmvtxt{white-space:normal;overflow-wrap:anywhere;text-align:center}
+  @media (min-width:700px){ #selmover{display:none} }
   /* {gracia} (facundo, 2026-09-20): el voto que dispara follow o unfollow se puede deshacer mientras corre el
      contador. es UNA franja angosta arriba de los botones, con el molde de caja de la 1922, en el amarillo de
      aviso: no compite con los tres votos grandes del pie ni tapa la foto. */
@@ -491,6 +506,9 @@
     #selmodal.pantalla .selpie{order:7}
     #selmodal.pantalla #selextras{order:8;flex:0 0 auto;max-width:none}
     #selmodal.pantalla #selgracia{order:6;flex:0 0 auto;max-width:none}   /* {gracia}: arriba del pie */
+    /* {cambios} paso 3: el cuadro de mudanza queda ARRIBA de todo eso: es la accion de segunda mano, los tres
+       grandes siguen siendo lo ultimo que toca el pulgar */
+    #selmodal.pantalla #selmover{order:5;flex:0 0 auto;max-width:none}
   }
   @media (min-width:700px){
     #selmodal.pantalla #seltarjeta{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr);gap:12px}
@@ -655,6 +673,15 @@
   #lisficha .fictraza{color:var(--gris);font-size:16px;word-break:break-word}
   #lisficha .fictrazatit{color:var(--cian)}
   #lisficha .fichist{color:var(--gris);font-size:15px;opacity:.8;word-break:break-word}
+  /* {cambios} paso 3: el mismo cuadro, en la cartita de una persona. dos columnas, hasta 6, arriba de las acciones */
+  #lisficha .ficmover{margin-top:6px}
+  #lisficha .ficmovtit{font-size:12px;opacity:.6;margin-bottom:4px}
+  #lisficha .ficmovg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  #lisficha .ficmovg .bcaja{width:100%;box-sizing:border-box;min-height:40px;display:flex;align-items:center;
+    justify-content:center;text-align:center}
+  /* facundo pidio el cuadro "en el celu": arriba de 700 px la cartita queda como estaba (las mismas mudanzas
+     siguen estando abajo, en la lista de acciones, con su caja `dale`) */
+  @media (min-width:700px){ #lisficha .ficmover{display:none} }
   #lisficha .ficacc{display:flex;flex-direction:column;gap:6px;margin-top:4px}
   #lisficha .ficacc .bcaja{width:100%;box-sizing:border-box;text-decoration:none;display:flex;align-items:center}
   #lisficha .ficacc .bcaja.toca{border-color:var(--amarillo,#d8b25a);color:var(--amarillo,#d8b25a)}
