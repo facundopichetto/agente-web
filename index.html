@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.453">
-<link rel="manifest" href="manifest.json?v=4.453">
+<meta name="agente-web-version" content="4.454">
+<link rel="manifest" href="manifest.json?v=4.454">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.453">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.454">
 </head>
 <body>
 
@@ -51,6 +51,9 @@
        indice, el html de cada informe y lo que facundo tilda los arma ENTERO el server (`recetas/docs_vista.py`):
        la web solo pinta y manda el toque. -->
   <button id="ver-docs" class="ib" type="button" title="docs" aria-label="docs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 12h6"/><path d="M9 16h6"/></svg></button>
+  <!-- 2190 {vista}: la vista `claves` — la boveda, servida por el server sin que un modelo la toque
+       (`recetas/web_claves.py`, `GET /claves`, `GET /claves/<id>`). el icono es una llave y dice A DONDE VAS. -->
+  <button id="ver-claves" class="ib" type="button" title="claves" aria-label="claves"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="12" r="4"/><path d="M12 12h9"/><path d="M17.5 12v3.5"/><path d="M20.5 12v2.5"/></svg></button>
   <button id="campana" class="ib" type="button" title="notificaciones" aria-label="notificaciones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 8 2.5 8h-17S6 15 6 9"/><path d="M10.3 20.5a2 2 0 0 0 3.4 0"/></svg><span id="badge" class="badge oculta"></span></button>
   <button id="persona" class="ib" type="button" title="cuenta" aria-label="cuenta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></button>
 </div>
@@ -176,6 +179,13 @@
 <div id="vista-docs"><div class="selcaja mcaja">
   <div class="seltit mhead"><button id="docsback" class="bglifo mesquina b-atras oculta" type="button" data-q="atras" aria-label="back" title="back"><span class="mglf">←</span></button><span id="docstitulo">docs</span><span id="docscuenta" class="mcuenta"></span><button id="docsx" class="bglifo mesquina b-x" type="button" aria-label="cerrar" title="cerrar"></button></div>
   <div id="docsvista"></div>
+</div></div>
+<!-- 2190 {vista}: la vista `claves` copia la estructura de `docs` (1676): la misma `.selcaja mcaja`, la misma
+     cabecera con la `✕` a la derecha (2002 {back}) y pantalla entera abajo de la barra de iconos (2133 {tapada}).
+     el contenido lo pinta el modulo suelto `web/widgets/claves.js` (1793 {pedazos}). -->
+<div id="vista-claves"><div class="selcaja mcaja">
+  <div class="seltit mhead"><span id="clavestitulo">claves</span><span id="clavescuenta" class="mcuenta"></span><button id="clavesx" class="bglifo mesquina b-x" type="button" aria-label="cerrar" title="cerrar"></button></div>
+  <div id="clavesvista"></div>
 </div></div>
 <div id="selmodal" class="capa oculta" role="dialog" aria-modal="true" aria-labelledby="seltitulo">
   <div class="selcaja mcaja">
@@ -11027,7 +11037,7 @@ document.addEventListener("keydown", function(e){
 // de un widget ya migrado, se vuelve a cargar ese archivo y se repinta ESA caja (`repintarMod`), sin tocar el
 // chat, su scroll ni lo que este tipeado. si cambio el shell (o algo que no se sabe repintar), el reload de
 // siempre. un modulo no ve el adentro del shell: solo esto.
-var MODULOS = ["gasto", "agent", "sombra", "seguidores", "igcola"];   // widgets migrados, en `web/widgets/<clave>.js` (1832: `models` = clave `sombra`)
+var MODULOS = ["gasto", "agent", "sombra", "seguidores", "igcola", "claves"];   // widgets migrados, en `web/widgets/<clave>.js` (1832: `models` = clave `sombra`)
 var MOD_DATOS = {gasto: "gasto", agent: "agente"};   // de que campo de `widgets.json` come cada uno
 var mods = {}, modsVer = {}, modsTimers = {}, modsError = {}, modCargando = null, modsCargas = 0;
 var visibleForzada = false;   // 1849: las pruebas headless corren con `document.hidden` y fuerzan `B.visible()`
@@ -11053,6 +11063,10 @@ var BOARD = {
   barraUso: barraUso, moldeSwitch: moldeSwitch, moldeSwitchReg: moldeSwitchReg,
   moldeSwitchSacar: function(nombre){ delete MOLDE_SW[nombre]; },
   modalMolde: modalMolde,   // 1806: el modal de una cuenta del widget `gasto` usa el molde (esc cierra, sin borde)
+  // 2190 {vista}: un modulo que es una VISTA (`claves`) pide su json al server por la lan (`GET /claves`) y
+  // copia al portapapeles con el mismo boton de siempre (1214), sin que el valor pase por `sistema()`
+  pedir: function(ruta, opts){ return docsPedir(ruta, opts); },
+  tocarCopiar: tocarCopiar,
   repintarWidgets: repintarWidgets,
   // 1849 {fluida}: un widget puede pedir su pedazo fresco por la lan (nunca por github: sin lan no pide nada),
   // dejar ese dato en `widDatos` para que el repintado de 30 s no lo pise con uno mas viejo, y repintar su caja
@@ -11141,9 +11155,15 @@ function repintarMod(clave, v){
   anclaClavar();                      // 1805: repintar una caja de widget no mueve el chat
   soltarMod(clave);
   return cargarModulo(clave, v).then(function(){
-    var nodo = document.querySelector('#widgets [data-w="' + clave + '"]');
-    if(nodo && mods[clave]) mods[clave].pintar(modDatos(clave), nodo);
-    else repintarWidgets();
+    var m = mods[clave];
+    // 2190 {vista}: un modulo que es una VISTA entera (`claves`) no tiene caja en `#widgets`: su nodo es el
+    // contenedor que declara en `vista`, y se repinta ahi mismo (con lo que ya tenia, sin volver a pedir).
+    if(m && m.vista){ var c = document.getElementById(m.vista); if(c) m.abrir(c, false); }
+    else{
+      var nodo = document.querySelector('#widgets [data-w="' + clave + '"]');
+      if(nodo && m) m.pintar(modDatos(clave), nodo);
+      else repintarWidgets();
+    }
     anclaSoltar();
     return !!mods[clave];
   });
@@ -12639,6 +12659,15 @@ $("docsvista").addEventListener("click", function(e){
   }
 });
 $("ver-docs").addEventListener("click", function(){ vistaPoner("docs"); });
+// 2190 {vista}: la vista `claves`. el contenido lo pinta el modulo `web/widgets/claves.js`: el shell solo
+// le da el nodo y le dice cuando abrir (entrar a la vista = pedir fresco, nunca cache).
+function clavesVista(fresco){
+  var m = mods["claves"], el = $("clavesvista");
+  if(!m || !el) return null;
+  return m.abrir(el, !!fresco);
+}
+$("ver-claves").addEventListener("click", function(){ vistaPoner("claves"); });
+$("clavesx").addEventListener("click", function(){ vistaVolver(); });
 $("docsx").addEventListener("click", function(){ docs.doc = null; vistaVolver(); });
 $("docsback").addEventListener("click", function(){ if(docs.doc) docsCerrarDoc(); else vistaVolver(); });
 
@@ -12654,8 +12683,8 @@ $("docsback").addEventListener("click", function(){ if(docs.doc) docsCerrarDoc()
 // 1933 {instatinder} (facundo, 2026-09-17): la vista del votador de instagram se llama `instatinder` en todo lo
 // que ve facundo (la clave interna sigue siendo `tinder`) y `votar` es una vista propia: las votaciones puntuales
 // que NO son instagram (checkboxes: animaciones, tandas), con su icono fucsia en la barra.
-var VISTAS_TODAS = ["chat", "widgets", "tinder", "votar", "podcast", "home", "docs"];
-var VISTA_SOLAS = ["tinder", "votar", "podcast", "home", "docs"];       // ocupan la pantalla entera, nunca conviven con otra
+var VISTAS_TODAS = ["chat", "widgets", "tinder", "votar", "podcast", "home", "docs", "claves"];
+var VISTA_SOLAS = ["tinder", "votar", "podcast", "home", "docs", "claves"];       // ocupan la pantalla entera, nunca conviven con otra
 var VISTA_LS = "agente_vista";
 // 1930 {barra} (facundo, 2026-09-17): "lo que vos tenes que guardar es, en el caso de que yo me haya ido de la vista
 // de chat, lo que sea que este viendo de las dos opciones en el celular; y si es en el desktop queda por default chat".
@@ -12705,6 +12734,7 @@ function vistaPoner(n){
   if(vistaEs("podcast")) podVistaPintar();
   if(vistaEs("home")) homePintar();   // 2008 paso 10
   if(vistaEs("docs")){ docsPintar(); docsCargarIndice(); }   // 1676 {vista}: la cache pinta, el server manda (2143)
+  if(vistaEs("claves")) clavesVista(true);   // 2190 {vista}: abrir la vista pide el listado fresco al server
   if(vistaEs("chat")){
     var a = vistaAnclas.chat;
     if(a && anclaPoner(a)){
@@ -12854,6 +12884,13 @@ capaRegistrar({nombre: "vista-podcast", el: "vista-podcast", z: 1, abierta: func
 // 1676 {vista}: `esc` adentro de un informe vuelve al indice; desde el indice sale de la vista
 capaRegistrar({nombre: "vista-docs", el: "vista-docs", z: 1, abierta: function(){ return vistaEs("docs"); },
                cerrar: function(){ if(docs.doc) docsCerrarDoc(); else vistaVolver(); }});
+// 2190 {vista}: `esc` con una clave abierta la cierra (el valor deja de estar a la vista); si no hay ninguna,
+// sale de la vista. como toda vista entera, es la capa mas baja: cualquier modal abierto gana.
+capaRegistrar({nombre: "vista-claves", el: "vista-claves", z: 1, abierta: function(){ return vistaEs("claves"); },
+               cerrar: function(){
+                 var m = mods["claves"], e = m && m.estado ? m.estado() : null;
+                 if(e && e.abierta) m.abrirFila(e.abierta); else vistaVolver();
+               }});
 function escTope(){
   var c = capaTope();
   if(!c) return null;
@@ -12876,7 +12913,10 @@ pintarTabs();
 
 // 1793: los widgets migrados viven en `web/widgets/`: se cargan una vez al arrancar y, cuando
 // terminan, repintan su caja (hasta entonces la caja dice "cargando...", nada mas).
-cargarModulos();
+cargarModulos().then(function(){
+  // 2190 {vista}: si la pestaña quedo en la vista `claves`, su modulo pinta apenas termina de cargar
+  if(vistaEs("claves")) clavesVista(true);
+});
 
 pintarWidgets(null);
 
@@ -13015,6 +13055,10 @@ function medirCentro(b){
 window.__agente = {
   // 1676 {vista}: la vista `docs` (`prueba_docs_vista`)
   docsPintar: docsPintar, docsCargarIndice: docsCargarIndice, docsAbrir: docsAbrir, docsCerrarDoc: docsCerrarDoc,
+  // 2190 {vista}: la vista `claves` vive en el modulo; el shell solo la abre y deja mirar su estado (`prueba_web_claves`)
+  clavesVista: clavesVista,
+  clavesEstado: function(){ var m = mods["claves"]; return m && m.estado ? m.estado() : null; },
+  clavesFila: function(id){ var m = mods["claves"]; return m && m.abrirFila ? m.abrirFila(id) : null; },
   docsSolapa: docsSolapa, docsTilde: docsTilde, docsNota: docsNota, docsArchivar: docsArchivar,
   docsAgrupar: docsAgrupar, docsOrden: docsOrden, docsPref: docsPrefLeer, docsFiltrados: docsFiltrados,
   docsBuscar: function(q){ docs.q = q; docsPintarLista(); return docsFiltrados(); },
@@ -13302,10 +13346,11 @@ window.__agente = {
     return {on: vistaSet(), elegida: vistaOn, previa: vistaPrevia, mobile: esVistaMobile(), doble: vistaDoble,
             clases: VISTAS_TODAS.filter(function(n){ return document.body.classList.contains("v-" + n); }),
             iconos: {chat: vis("ver-chat"), widgets: vis("ver-widgets"), tinder: vis("ver-votar"),
-                     votar: vis("ver-votacion"), podcast: vis("ver-podcast"), home: vis("ver-home")},
+                     votar: vis("ver-votacion"), podcast: vis("ver-podcast"), home: vis("ver-home"),
+                     claves: vis("ver-claves")},
             paneles: {chat: vis("panel-chat"), widgets: vis("panel-widgets"), tinder: vis("selmodal"),
                       votar: vis("selmodal") || vis("votar"), podcast: vis("vista-podcast"),
-                      home: vis("vista-home")},
+                      home: vis("vista-home"), claves: vis("vista-claves")},
             guardada: (function(){ try{ return sessionStorage.getItem(VISTA_LS); }catch(x){ return null; } })()};
   },
   estado: function(){ return {tabs: tabs, activo: activo, ts: layoutTs,

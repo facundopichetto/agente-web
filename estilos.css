@@ -1594,7 +1594,8 @@
      `widgets` se vean las DOS lo decide aca el mismo media query de siempre, asi girar el celu o cambiar el tamaño de
      la ventana no puede dejar un layout viejo aunque no llegue ningun evento al js. `tinder` y `podcast` van siempre
      solas, a pantalla completa. cambiar de vista no recarga nada (1793). */
-  body.v-tinder #cuerpo,body.v-podcast #cuerpo,body.v-votar #cuerpo,body.v-docs #cuerpo{display:none}
+  body.v-tinder #cuerpo,body.v-podcast #cuerpo,body.v-votar #cuerpo,body.v-docs #cuerpo,
+  body.v-claves #cuerpo{display:none}
   /* 1933 {instatinder}: la vista `votar` es la misma idea que el tinder: el modal de checkboxes (o el votador de
      animaciones) deja de flotar sobre el chat y es el contenido de la vista, abajo de la barra de iconos */
   body.v-votar #selmodal:not(.pantalla),body.v-votar #votar{position:static;inset:auto;flex:1 1 auto;min-height:0;
@@ -1725,6 +1726,41 @@
   body.v-docs #vista-docs .seltit{width:100%;max-width:none;margin:0}
   body.v-docs #ver-docs{display:none}
   body.v-docs #cuerpo,body.v-docs #panel-chat,body.v-docs #panel-widgets,body.v-docs #sep{display:none}
+  /* ---------- 2190 {vista}: la vista `claves` (facundo, 2026-09-23) ----------
+     mismo molde que `docs` (1676): `.selcaja mcaja` + `.seltit mhead` con la `✕` (2002 {back}), pantalla entera
+     abajo de la barra de iconos (2133 {tapada}). una fila por clave; tocarla la expande y muestra el valor en
+     `code` con su boton de copiar, y tocarla de nuevo lo esconde. */
+  #vista-claves{display:none}
+  body.v-claves #vista-claves{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;
+    background:var(--fondo-chat);padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom) 0}
+  body.v-claves #vista-claves .selcaja{max-width:none;width:100%;flex:1 1 auto;min-height:0;
+    border-radius:0;box-shadow:none;display:flex;flex-direction:column;gap:6px;padding:6px 10px 10px 10px}
+  body.v-claves #vista-claves .seltit{width:100%;max-width:none;margin:0}
+  body.v-claves #ver-claves{display:none}
+  body.v-claves #cuerpo,body.v-claves #panel-chat,body.v-claves #panel-widgets,body.v-claves #sep{display:none}
+  #clavesvista{flex:1 1 auto;min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:6px;width:100%}
+  #clavesvista .cvaviso{color:var(--amarillo,#d8b25a);font-size:16px}
+  #clavesvista .cvq{width:100%;box-sizing:border-box;min-height:40px;background:none;border:1px solid var(--linea);
+    border-radius:4px;color:var(--blanco);font:inherit;font-size:16px;padding:6px 8px}
+  #clavesvista .cvlista{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    display:flex;flex-direction:column;gap:2px;width:100%}
+  #clavesvista .cvvacio{color:var(--gris);font-size:16px;padding:8px 2px}
+  #clavesvista .cvfila{border-bottom:1px solid var(--linea);padding:2px 0}
+  #clavesvista .cvfila.abierta{background:var(--fondo-caja);border-radius:4px}
+  #clavesvista .cvcab{display:flex;align-items:center;gap:8px;width:100%;min-height:40px;background:none;
+    border:0;color:var(--blanco);font:inherit;font-size:16px;text-align:left;cursor:pointer;padding:6px 6px;
+    -webkit-tap-highlight-color:transparent}
+  #clavesvista .cvcab:hover .cvque{color:var(--verde)}
+  #clavesvista .cvque{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #clavesvista .cvmeta{flex:0 0 auto;color:var(--gris);font-size:14px;white-space:nowrap}
+  #clavesvista .cvvalor{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:0 6px 6px 6px}
+  #clavesvista .cvcode{flex:1 1 auto;min-width:0;color:var(--cian);background:#0d1410;border-radius:4px;
+    padding:6px 8px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:16px;
+    word-break:break-all;-webkit-user-select:text;user-select:text}
+  #clavesvista .cvcopiar{flex:0 0 auto;background:#000;color:var(--gris);border:1px solid var(--linea);
+    border-radius:4px;font:inherit;font-size:15px;min-height:36px;padding:4px 12px;cursor:pointer}
+  #clavesvista .cvcopiar.ok{color:var(--verde);border-color:var(--verde)}
+  #clavesvista .cvpie{color:var(--gris);font-size:14px;padding:0 6px 6px 6px}
   /* 1691 {vista} (facundo, 2026-09-22): "deberia ocuparse mejor el ancho en desktop". en desktop el indice es un
      panel fijo a la izquierda y el informe ocupa TODO el ancho que sobra, cada uno con su propio scroll; sin
      informe abierto el indice se queda con la pantalla entera. el celu queda igual que siempre (una columna, el
