@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.445">
-<link rel="manifest" href="manifest.json?v=4.445">
+<meta name="agente-web-version" content="4.446">
+<link rel="manifest" href="manifest.json?v=4.446">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.445">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.446">
 </head>
 <body>
 
@@ -4342,6 +4342,7 @@ function selModoLista(lista){
   $("selmodal").classList.remove("home");          // 2078 {home}: la clase `home` quedo sin uso (1922)
   $("selmodal").classList.remove("sintit");        // 2087: fuera de la home la cabecera vuelve a su renglon
   $("sellistas").classList.add("oculta");          // 1879 {listas}: el votador apaga la home de la vista
+  lisXVer(true);   // {home} paso 5: fuera de la home del tinder la `✕` esta siempre (la escondio `lisPoner`)
   var pie = document.querySelector("#selmodal .selpie");
   if(pie) pie.classList.remove("oculta");
   lis.sub = "votar";
@@ -4489,7 +4490,8 @@ function movVista(d){
     var g = {}, kk;
     for(kk in f) if(Object.prototype.hasOwnProperty.call(f, kk)) g[kk] = f[kk];
     g.gente = movGente(f, f.gente || []);
-    g.n = Math.max(0, (f.n || 0) + movDelta(f));
+    // {home} paso 1: la lista que vino SIN numero sigue sin numero (un `0` inventado es el numero erroneo)
+    if(typeof f.n === "number") g.n = Math.max(0, f.n + movDelta(f));
     return g;
   });
   return out;
@@ -5085,6 +5087,7 @@ function tjFilaFiltrada(e, filtro){
   return cs;
 }
 function tjAbrir(e){
+  lisXVer(true);   // {home} paso 5: el votador siempre tiene su `✕` (2002 {back}: cierra sin enviar)
   e = Object.assign({}, e, {candidatas: tjFilaFiltrada(e, sel.filtro)});
   if(!e.candidatas.length) return false;
   if(e.continua) e.mas = typeof e.pendientes === "number" && e.pendientes > e.candidatas.length;
@@ -5093,6 +5096,7 @@ function tjAbrir(e){
   // 2002 {back}: cada apertura del modal es una SESION con su id. va en cada voto que sube, y es lo que la `✕`
   // manda al server para deshacer exactamente los de ESTA apertura (ni los de una anterior ni los de otra coleccion)
   sel.sesion = lidNuevo(); sel.sesionVotos = [];
+  delete tjVotandoYa[e.coleccion];   // {home} paso 3: cada apertura vuelve a tener su primer voto
   selModoLista(false);
   // 2095 paso 5: con filtro, arriba va el nombre de la LISTA que se esta votando (es lo que facundo toco), no el
   // del proceso, que puede juntar tres listas
@@ -5307,12 +5311,15 @@ function tjPintar(){
 // el dedo (2113) o las flechas (2079)), nunca un voto: es un `GET` que pide el lote y lo apendea (`filaSumar`), y
 // nunca un POST que escriba nada. sin lan no se pide: ahi la fila la suma `widgets.json`.
 var tjPedirUlt = {};
-function tjPedirMas(e){
+// {home} paso 3 (facundo, 2026-09-22: "no importa si no toco en `votar` cuando ya vote 5 veces, es porque estoy
+// votando: ahi ya ponete a cargar la lista"): `forzar` saltea el umbral (no el anti-rebote de `SEL_PEDIR_MS`). lo
+// manda el PRIMER voto de la tirada: desde ese momento el server ya esta armando lo que sigue, no cuando faltan 30.
+function tjPedirMas(e, forzar){
   if(!e || !e.continua || !lan.base || e.agotada) return false;
-  if(!sel.tj) return false;   // recien abierta: la fila es la que acaba de pedir `tjAbrir`, no se pide dos veces
+  if(!sel.tj && !forzar) return false;   // recien abierta: la fila es la que acaba de pedir `tjAbrir`, no se pide dos veces
   // 2137 correccion 11:55 (facundo): el umbral lo pone el, en `personal/ig-cola.json` (`votador.umbral`, 30 hoy),
   // y viaja en la fila; el lote (`votador.lote`, 100) lo arma el server. nada de numeros fijos en el html
-  if((e.candidatas || []).length - sel.tj > (e.umbral || SEL_FLUSH_MIN)) return false;
+  if(!forzar && (e.candidatas || []).length - sel.tj > (e.umbral || SEL_FLUSH_MIN)) return false;
   if(tjPedirUlt[e.coleccion] && Date.now() - tjPedirUlt[e.coleccion] < SEL_PEDIR_MS) return false;
   tjPedirUlt[e.coleccion] = Date.now();
   selPedir(e.coleccion);
@@ -5371,8 +5378,18 @@ function tjVoto(e, c, q, txt){
   }
   sel.tj += 1;
   tjPintar();   // 2137 paso 4: el lote siguiente lo pide el avance de la fila (`tjPedirMas`), nunca el voto
+  tjVotando(e);
   return true;
 }
+// {home} paso 3: empezar a votar YA es la señal de que hace falta mas fila. el primer voto de la tirada pide el
+// lote siguiente sin esperar al umbral (sigue siendo un `GET` que apendea al final, nunca un POST: la tirada sigue
+// siendo local hasta el `enviar`, 2137 {votolocal}).
+function tjVotando(e){
+  if(!e || tjVotandoYa[e.coleccion]) return false;
+  tjVotandoYa[e.coleccion] = true;
+  return tjPedirMas(e, true);
+}
+var tjVotandoYa = {};
 // 2137 {votolocal}: lo votado en esta tirada y todavia sin mandar, listo para el POST del `enviar`. si una tarjeta
 // se voto, se volvio y se voto de nuevo, vale el ultimo (en `tjHistorial` hay una sola entrada por persona).
 function tjRegistros(e){
@@ -5531,15 +5548,28 @@ function selCancelar(){
   selSubir();
   return true;
 }
-// la `✕` de la cabecera del votador. con tarjetas a la vista es el rollback de arriba; en la lista de checkboxes es
-// cerrar sin mandar nada; en el `home` o en `listas` es salir de la vista, que es "cerrar y no hacer nada"
+// la `✕` de la cabecera del votador. con tarjetas a la vista es el rollback de arriba (2002 {back}: cierra sin
+// enviar y deshace los votos de esa sesion); en la lista de checkboxes es cerrar sin mandar nada.
+// {home} paso 5 (facundo, 2026-09-22: "la `✕` de una lista cierra SOLO esa lista y vuelve a la home del tinder,
+// nunca cierra el tinder entero"): parado en UNA lista (la grilla de gente), la `✕` es volver a la home de la
+// vista, igual que el back grande. la vista `tinder` no se cierra con la `✕` de una lista: se cierra desde su home
+// (con `esc` o tocando otro icono de la barra), y ahi la `✕` directamente no se pinta (`lisXVer`).
 function selX(){
   if(sel.actual) return tjPantalla() ? selCancelar() : (selCerrar(), true);
+  if(vistaEs("tinder") && lis.sub === "una") return lisAHome();
   lis.sub = "listas";
   capaOcultar("selmodal");
   vistaVolver();
   selBoton();
   return true;
+}
+// {home} paso 5: la `✕` se pinta en TODO lo que es "una lista" (la grilla de gente y el votador) y NO se pinta en
+// la home del tinder, que es de donde se sale por la barra de iconos: ahi no hay nada que cerrar.
+function lisXVer(hay){
+  var x = $("selx");
+  if(!x) return false;
+  x.classList.toggle("oculta", !hay);
+  return hay;
 }
 function selCerrar(){
   try{ (window.__cierres = window.__cierres || []).push("selCerrar " + new Error().stack.split("\n").slice(1,4).join(" | ")); }catch(x){}
@@ -5555,6 +5585,9 @@ function selCerrar(){
   // las listas; la vista se cierra recien con el segundo `esc` (desde las listas) o tocando otro icono de la barra
   // 2095 paso 5: volver es volver a la LISTA de la que salio el votador (la sub-vista `una`); sin origen, la home
   if(tj && sub !== "listas" && sub !== "una"){ lisVolver(); selBoton(); return; }
+  // {home} paso 5: parado en UNA lista, `esc` cierra esa lista (vuelve a la home del tinder), no la vista entera:
+  // es el mismo gesto que la `✕` y que el back grande. la vista se cierra desde su home
+  if(tj && sub === "una"){ lisAHome(); selBoton(); return; }
   capaOcultar("selmodal");
   if(tj || (vistaEs("votar") && !votacionHay())) vistaVolver();   // 1875: sale de la vista; 1933: tambien `votar`
   selBoton();
@@ -5757,12 +5790,15 @@ function lisCacheLeer(){
   if(lis.datos) return lis.datos;
   try{
     var j = JSON.parse(localStorage.getItem(LIS_LS) || "null");
-    if(j && j.d && j.d.listas){ lis.datos = j.d; lis.ts = 0; }   // `ts: 0`: el cache nunca frena un refresco
+    // `ts: 0`: el cache nunca frena un refresco. `cacheTs` (paso 1) es CUANDO se bajo lo que se esta pintando:
+    // un numero de hace horas es un numero erroneo, y facundo prefiere no ver ninguno
+    if(j && j.d && j.d.listas){ lis.datos = j.d; lis.ts = 0; lis.cacheTs = j.ts || 0; }
   }catch(x){}
   return lis.datos;
 }
 function lisCacheGuardar(d){
-  try{ localStorage.setItem(LIS_LS, JSON.stringify({ts: Date.now(), d: d})); }catch(x){}
+  lis.cacheTs = Date.now();
+  try{ localStorage.setItem(LIS_LS, JSON.stringify({ts: lis.cacheTs, d: d})); }catch(x){}
 }
 function lisBajar(fresco){
   lisCacheLeer();
@@ -5831,6 +5867,7 @@ function lisPoner(cual, fresco){
   $("selmodal").classList.add("sintit");
   $("seltitulo").textContent = "";
   $("selcuenta").textContent = "";
+  lisXVer(false);   // {home} paso 5: la home del tinder no lleva `✕`
   lisPintar();
   // paso 4: entrar a la home SIEMPRE pide fresco (el cache ya esta pintado abajo) y deja el refresco corriendo
   lisBajar(true).then(function(){ if(lis.sub === "listas") lisPintar(); });
@@ -5879,9 +5916,26 @@ function lisVotables(f){
 // el numero del renglon de arriba de la caja. el server manda (es el total de la lista, que es lo que el votador
 // continuo recorre: la fila rota y pide mas, 2140), con UNA correccion: si la fila de esa lista esta cargada y no
 // tiene una sola tarjeta para votar, la caja no puede seguir diciendo un numero que el votador no va a mostrar.
+// {home} paso 1 (facundo, 2026-09-22: "las listas tienen que mostrar el numero automaticamente! para mostrar un
+// numero erroneo prefiero no muestres nada"): `null` = no se sabe, y entonces la caja sale SIN numero.
+// el numero es SIEMPRE el que calcula el server (`ig_listas.armar`, cero tokens, cuenta la gente de esa lista en
+// `embudo.json`); aca no se deduce ni se corrige nada. dos razones para no mostrarlo:
+//   - el json no trae `n` (una lista nueva, un json a medias)
+//   - lo que se esta pintando ya esta VIEJO: es la cache del equipo (la primera pintada, antes de que vuelva el
+//     pedido) o el server hace rato que no contesta (`LIS_NUM_VIEJO` = 5 refrescos seguidos sin respuesta)
+// lo que se fue: la "correccion" de la 1605, que pintaba `0` cuando la FILA del votador no tenia tarjetas. una
+// lista con 149 personas y la fila sin cargar decia `0`, que es exactamente el numero erroneo de arriba. el dato
+// sigue estando: la nota "sin tarjetas para votar ahora" de abajo de la caja, que ahora es la unica que lo dice.
+// lo que NO decide esto es `lis.aviso`: un pedido que no volvio hace 10 segundos no vuelve viejo al numero que ya
+// estaba (para eso esta el renglon de la 2143 arriba de las cajas, que dice que es lo ultimo que bajo).
+var LIS_NUM_VIEJO = 300000;   // ms: mas viejo que esto, lo que se esta viendo no dice numeros
+function lisFresco(){
+  if(!lis.cacheTs) return !!lis.ts;                // sin marca, solo si lo que hay entro en esta sesion
+  return Date.now() - lis.cacheTs < LIS_NUM_VIEJO;
+}
 function lisNum(f){
-  var vt = lisVotables(f);
-  return vt === 0 ? 0 : (f.n || 0);
+  if(!f || typeof f.n !== "number") return null;
+  return lisFresco() ? f.n : null;
 }
 function lisCaja(f){
   var caja = document.createElement("div"); caja.className = "liscaja";
@@ -5891,8 +5945,13 @@ function lisCaja(f){
   if(f.virtual){ caja.classList.add("virt"); caja.setAttribute("data-virtual", "1"); }
   var h = document.createElement("div"); h.className = "listit";
   var t = document.createElement("span"); t.className = "lisnom"; t.textContent = f.titulo || f.clave;
-  var n = document.createElement("span"); n.className = "lisn"; n.textContent = String(lisNum(f));   // 1605 paso 3
-  h.appendChild(t); h.appendChild(n); caja.appendChild(h);
+  h.appendChild(t);
+  var num = lisNum(f);   // {home} paso 1: o el numero del server, o NINGUN numero
+  if(num !== null){
+    var n = document.createElement("span"); n.className = "lisn"; n.textContent = String(num);
+    h.appendChild(n);
+  }
+  caja.appendChild(h);
   // 2095 {instatinder} pasos 5, 6 y 7 (facundo, 2026-09-18: "toco following y lo primero que veo es una que es de
   // `follow request sent`, asi que aca hay algo mal"): tocar una lista YA NO abre el votador de su proceso. varias
   // listas comparten proceso (`following`, `follow request sent` y `activar` son las tres `me arrepentí`), asi que
@@ -5930,8 +5989,9 @@ function lisCaja(f){
   // 2244 {superranking} paso 2: una lista que quedo vacia por algo que se puede arreglar lo DICE en su tarjeta
   // (nunca vacia y callada). la frase y el numero los redacta el server (`ig_super.por_que_vacia`)
   if(f.aviso && f.aviso.motivo) caja.appendChild(lisLinea("lisnota", f.aviso.motivo));
-  // 1605 {vista} paso 3: la lista que tiene gente pero ninguna tarjeta lista para votar tampoco se queda callada:
-  // el numero de arriba ya dice `0` y este renglon dice que el toque igual abre algo (su gente), que es el piso
+  // 1605 {vista} paso 3: la lista que tiene gente pero ninguna tarjeta lista para votar tampoco se queda callada.
+  // {home} paso 1: el numero de arriba ya NO dice `0` (ese era el numero erroneo), asi que este renglon es el
+  // unico que lo cuenta: hay gente, no hay tarjetas, y el toque igual abre algo (su gente), que es el piso
   else if(f.n && lisVotables(f) === 0)
     caja.appendChild(lisLinea("lisnota", "sin tarjetas para votar ahora: el toque abre su gente"));
   // 2247 {botones} paso 3 (facundo, 2026-09-19: "no es lo mismo votar toda la lista que votar una tarjeta
@@ -6054,6 +6114,7 @@ function lisModoUna(){
   $("sellistas").classList.remove("oculta");
   var bk = $("selback");
   bk.classList.remove("oculta"); bk.classList.remove("apagado");
+  lisXVer(true);   // {home} paso 5: adentro de una lista si hay `✕`, y cierra ESA lista
   capaMostrar("selmodal");
   vistaPoner("tinder");
 }
@@ -6082,7 +6143,8 @@ function lisUnaPintar(){
   c.textContent = "";
   c.classList.add("una");
   $("seltitulo").textContent = f.titulo || f.clave;
-  $("selcuenta").textContent = String(f.n || 0);
+  var numU = lisNum(f);   // {home} paso 1: adentro de la lista, el mismo criterio que en la home
+  $("selcuenta").textContent = numU === null ? "" : String(numU);
   var cab = document.createElement("div"); cab.className = "lisunacab";
   if(lis.aviso) cab.appendChild(lisLinea("lisaviso", lis.aviso));   // 2143
   // 1605 {piso}: el toque que no pudo abrir el votador termina ACA, y lo primero que se lee es que paso. la vista
@@ -12779,14 +12841,19 @@ window.__agente = {
   lisUna: function(){ return lis.una ? {clave: lis.una.clave, n: lis.una.n, gente: (lis.una.gente || []).length} : null; },
   lisCache: function(){ try{ return JSON.parse(localStorage.getItem(LIS_LS) || "null"); }catch(x){ return null; } },
   // 2143 {cache}: el pedido fresco de apertura, el aviso del pedido que no salio y la cache de fila (para plantarla vieja)
-  selFresco: selFresco, lisAviso: function(){ return lis.aviso || ""; },
+  // {home} paso 1: con argumento tambien SETEA (la prueba simula el refresco que no volvio y la cache vieja)
+  selFresco: selFresco, lisAviso: function(v){ if(v !== undefined) lis.aviso = v || ""; return lis.aviso || ""; },
+  lisCacheTs: function(v){ if(v !== undefined) lis.cacheTs = v; return lis.cacheTs || 0; },
+  lisFresco: lisFresco,
   filaCachePoner: function(col, lista, cs){ filaCache[cacheClave(col, lista)] = (cs || []).slice(); },
   filaCacheVer: function(col, lista){ return cacheTraer(col, lista).map(function(c){ return c.id; }); },
   lisOlvidar: function(){ lis.datos = null; lis.ts = 0; try{ localStorage.removeItem(LIS_LS); }catch(x){} },
   selFiltro: function(){ return {lista: sel.filtro || null, titulo: sel.filtroTitulo || null}; },
   lisOrigen: function(){ return lis.origen; }, lisScroll: function(){ return lis.scroll; },
   lisSub: function(){ return lis.sub; },
-  lisDatos: function(d){ if(d){ lis.datos = d; lis.ts = Date.now(); } return lis.datos; },
+  // {home} paso 1: meter datos a mano es lo mismo que una bajada que salio bien (fresca y sin aviso): si no, la
+  // home no mostraria ningun numero, que es lo que hace cuando lo que ve es cache vieja o el server no contesto
+  lisDatos: function(d){ if(d){ lis.datos = d; lis.ts = lis.cacheTs = Date.now(); lis.aviso = ""; } return lis.datos; },
   // 1801: los procesos y la fila de botones de cada uno (el dropdown se fue en la 2078)
   votItems: votItems, votMenuAbrir: votMenuAbrir, tinderAbrirCol: tinderAbrirCol,
   tinderHome: tinderHome, tinderSalir: tinderSalir, tjProcQs: tjProcQs, TJ_PROCS: TJ_PROCS,
@@ -12845,7 +12912,7 @@ window.__agente = {
   selEstado: function(){ return {abierto: !!sel.actual, col: sel.actual && sel.actual.coleccion, pend: selLeer("pend", []), fuente: sel.fuente,
                                  marcadas: selMarcadas(), abiertas: sel.abiertas.map(function(a){ return a.coleccion; })}; },
   selFlushMin: function(){ return SEL_FLUSH_MIN; },   // 1836
-  selReset: function(){ sel.actual = null; sel.abiertas = []; sel.ignorada = {}; sel.tjHistorial = []; selTs = 0; sel.agotadas = []; sel.totales = {}; filaCache = {}; salidos = {};
+  selReset: function(){ sel.actual = null; sel.abiertas = []; sel.ignorada = {}; sel.tjHistorial = []; selTs = 0; sel.agotadas = []; sel.totales = {}; filaCache = {}; salidos = {}; tjVotandoYa = {};
                         ["pend", "hechas", "fila"].forEach(function(s){ try{ localStorage.removeItem("agente_sel_" + s); }catch(x){} }); },
   selFila: function(){ return selLeer("fila", {}); },   // correccion 18:12
   animRanking: animRanking, animSpinner: animSpinner, animSinVer: animSinVer, animValida: animValida,
