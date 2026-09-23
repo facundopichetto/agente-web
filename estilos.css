@@ -1869,12 +1869,16 @@
        nunca la letra ni el alto de dedo.
        las cajas de vista van de 30 a 24 px (el glifo sigue en 20 px y el area tactil en 50 px de alto); la campana
        y el tipito NO bajan de 36 px, que es el minimo de dedo de la 1166. */
+    /* 2190 {vista}: con el icono de `claves` la barra tiene un boton mas y los tres labels de los nodos volvian a
+       quedar cortados por 18 px en 390 px. mismo remedio de siempre (2008, 2014, 1676): baja el ANCHO de los
+       iconos de vista, de 24 a 20 px, nunca la letra ni el alto de dedo (50 px) ni el glifo (20 px). la campana
+       y el tipito siguen en 36 px, que es el minimo de dedo de la 1166. */
     /* 1676 {vista}: en el celu el `tema · fecha` de la cabecera se come el titulo del informe (queda `Pla…`);
        ahi no se pinta, porque la linea de abajo ya dice la ruta entera con su tema y cuantas filas tildaste */
     body.v-docs #docscuenta{display:none}
     #cabecera{gap:1px;padding-left:3px;padding-right:3px}
     /* dedo: campana, persona, filas de la campana y el menu de persona con 40px (1166) */
-    .ib{width:24px;height:50px;margin:-4px 0}
+    .ib{width:20px;height:50px;margin:-4px 0}
     #campana,#persona{width:36px}
     .ib svg{width:20px;height:20px}
     .ib .badge{top:4px;right:0}   /* afuera del icono de 16px, que no lo tape (1342) */
