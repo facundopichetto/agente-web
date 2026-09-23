@@ -552,6 +552,8 @@
   #selmodal #seltarjeta .tjfotos.tjcarr::-webkit-scrollbar{display:none}
   #selmodal #seltarjeta .tjfotos.tjcarr > .tjppal{flex:0 0 100%;scroll-snap-align:center}
   #seltarjeta .tjfnum{color:var(--gris);font-size:16px}
+  /* 2277 {foto}: la tarjeta que entro a la fila sin la foto bajada lo dice, con el mismo tono gris de los datos */
+  #seltarjeta .tjfotopend{color:var(--gris);font-size:16px}
   /* 1879 {listas} (facundo, 2026-09-17): la vista `tinder` son DOS sub-vistas, `votar` y `listas`; desde la 2078
      {home} `listas` es la HOME (se entra directo aca) y el votador se abre tocando una fila o el titulo de una
      lista, sin ningun boton de sub-vista. `listas` es una grilla de cajas, una por lista del embudo: titulo, cuantos son y

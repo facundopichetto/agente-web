@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.446">
-<link rel="manifest" href="manifest.json?v=4.446">
+<meta name="agente-web-version" content="4.447">
+<link rel="manifest" href="manifest.json?v=4.447">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.446">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.447">
 </head>
 <body>
 
@@ -4372,7 +4372,12 @@ var TJ_BACK_MS = 120;
 // correccion de facundo 18:12: la votada sale de la fila tambien en el `localStorage` (`agente_sel_fila`), asi cerrar
 // y reabrir (o recargar) no la vuelve a mostrar aunque el server tarde en sacarla. se olvida a los 7 dias.
 var FILA_RECUERDA_MS = 7 * 86400000;
-function tjConFoto(c){ return !!(c && c.fotos && /^img\//.test(c.fotos[0] || "")); }
+// 2277 {foto} (facundo, 2026-09-23: "entro a interesan y no me deja votar y si toco en la unica tarjeta, me salta el
+// modal viejo"): la falta de foto NO saca a nadie de la fila. `interesan` tenia una sola persona y todavia sin foto
+// bajada: la fila quedaba en cero, el votador no abria y el toque caia al plan B, que es `lisCartita` (el modal
+// viejo). la tarjeta entra igual, con el cuadrito vacio y el aviso de que la foto se esta bajando (`foto_pendiente`,
+// que manda el server). lo unico que sigue siendo obligatorio es la persona (`id`)
+function tjSirve(c){ return !!(c && c.id); }
 // 2137 {votolocal}, correccion de facundo (11:55 am): lo que ya se bajo se GUARDA en memoria del browser POR LISTA
 // (tambien la virtual `super candidatas`) mientras el board este abierto: volver atras, cerrar con la `✕` y reabrir
 // la misma lista, o cambiar de lista y volver, reusa lo bajado y no vuelve a pedir nada que ya se tenga. nada se
@@ -4657,7 +4662,7 @@ function filaSumar(e, soloSacar){
       // lo ya votado y SUBIDO en otra tirada (`filaVotadas`) no vuelve; lo de esta tirada sigue en la fila
       if(ya[c.id] || v[c.id] || fuera[c.id] || fall.indexOf(c.id) >= 0) return;
       // 2095 paso 5: lo que repone el server entra solo si es de la lista abierta (`tjEnFiltro`)
-      if(!tjConFoto(c) || !tjEnFiltro(c)) return;
+      if(!tjSirve(c) || !tjEnFiltro(c)) return;   // 2277 {foto}
       ya[c.id] = true; nuevas.push(c);
     });
     a.candidatas = a.candidatas.concat(tjOrdenSuper(nuevas));   // 2134: la virtual apendea por puntaje
@@ -4757,7 +4762,7 @@ function filaFresca(col, lista, j){
   var fuera = salioSet(col, lista), fall = sel.tjFallidas || [], ya = {}, cs = [];
   (j.candidatas || []).forEach(function(c){
     if(ya[c.id] || v[c.id] || fuera[c.id] || fall.indexOf(c.id) >= 0) return;
-    if(!tjConFoto(c) || !tjEnFiltro(c)) return;
+    if(!tjSirve(c) || !tjEnFiltro(c)) return;   // 2277 {foto}
     ya[c.id] = true; cs.push(c);
   });
   if(!cs.length) return false;   // el server no tiene nada que mostrar: queda lo cacheado (punto 3)
@@ -5076,7 +5081,7 @@ function tjFilaFiltrada(e, filtro){
   try{
     var v = e.continua && !e.circular ? filaVotadas(e.coleccion) : {};   // 1567: lo votado aca que el server no saco
     var fuera = salioSet(e.coleccion, sel.filtro);
-    var sirve = function(c){ return !v[c.id] && !fuera[c.id] && tjConFoto(c) && tjEnFiltro(c); };
+    var sirve = function(c){ return !v[c.id] && !fuera[c.id] && tjSirve(c) && tjEnFiltro(c); };
     // 2137 correccion 11:55: primero lo que ya estaba bajado de ESA lista (en su orden), despues lo que trae el server
     cs = (e.continua ? cacheTraer(e.coleccion, sel.filtro) : []).filter(sirve);
     var ya = {};
@@ -5215,10 +5220,13 @@ function tjPintar(){
   // {fotoancha2} (facundo, 2026-09-21): la que NO TRAE NINGUNA foto (el caso de `@_solabdala`) no pinta el cuadro:
   // la tarjeta arranca directo con el nombre y los datos, sin un bloque vacio del alto de una foto. el placeholder
   // con la inicial de la 1580 se queda para la foto que existe y todavia no bajo (o que no baja), que es otra cosa.
+  // 2277 {foto}: la que esta ESPERANDO la foto (`foto_pendiente`) si pinta el cuadro, con la inicial adentro: es
+  // exactamente el caso de la 1580 (la foto existe y todavia no bajo), no el de `@_solabdala` (no tiene ninguna)
   var fotos = (c.fotos || []).filter(Boolean);
-  if(fotos.length > 1) fs.classList.add("tjcarr");
+  var cuadros = fotos.length ? fotos : (c.foto_pendiente ? [""] : []);
+  if(cuadros.length > 1) fs.classList.add("tjcarr");
   var pp = null;
-  fotos.forEach(function(foto, i){
+  cuadros.forEach(function(foto, i){
     var x = document.createElement(ppUrl ? "a" : "div"); x.className = "tjppal";
     if(ppUrl){ x.href = ppUrl; x.target = "_blank"; x.rel = "noopener"; }
     // 1772: el alto sale del css (cuadrado); si la candidata trae `ratio` (ancho/alto) el placeholder ya nace con ese.
@@ -5242,7 +5250,7 @@ function tjPintar(){
     if(foto) tjBajarFoto(c.id, foto, x, i === 0);
     if(!i) pp = x;
   });
-  if(fotos.length) t.appendChild(fs);   // {fotoancha2}: sin foto no hay bloque (ni hueco)
+  if(cuadros.length) t.appendChild(fs);   // {fotoancha2}: sin foto (y sin foto en camino) no hay bloque (ni hueco)
   // 1874: todo lo que no es la foto vive en UN bloque (`.tjinfo`): abajo de la foto en mobile, al lado en wide
   var info = document.createElement("div"); info.className = "tjinfo"; t.appendChild(info);
   if(fotos.length > 1){   // 1580: en que foto va, en el bloque de datos (la foto no lleva nada encima)
@@ -5253,6 +5261,14 @@ function tjPintar(){
     };
     fnPintar(); fs.addEventListener("scroll", fnPintar, {passive: true});
     info.appendChild(fn);
+  }
+  // 2277 {foto}: la que entro a la fila sin foto bajada lo DICE en la tarjeta, arriba de todo: sin esto la tarjeta
+  // se ve igual a una cuenta que no tiene foto de perfil y no se entiende por que falta. la lectura que la trae ya
+  // esta al frente de la cola (`ig_embudo.alimentar`): el cartel se va solo en cuanto la foto llega
+  if(c.foto_pendiente){
+    var fp = document.createElement("div"); fp.className = "tjfotopend";
+    fp.textContent = "bajando la foto…";
+    info.appendChild(fp);
   }
   tjPrecargar(e, sel.tj);   // 1772: las dos tarjetas siguientes bajan mientras vota esta
   var nom = document.createElement("div"); nom.className = "tjnom"; nom.textContent = c.titulo || c.id;
@@ -6263,7 +6279,7 @@ function lisVotar(f, p, desde){
 function lisEnFila(col, id){
   var e = (sel.abiertas || []).filter(function(a){ return a.coleccion === col; })[0];
   if(!e || !e.candidatas) return false;
-  return e.candidatas.some(function(c){ return String(c.id) === String(id) && tjConFoto(c); });
+  return e.candidatas.some(function(c){ return String(c.id) === String(id); });
 }
 // el modal de la accion: el molde de siempre (`modalMolde` + `moldeBoton`), nunca un diseño nuevo. lo de lectura
 // sale directo; lo que toca afuera (instagram) muestra el comando exacto y UNA caja verde `dale`, sin caja `no`
