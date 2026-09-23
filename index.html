@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.444">
-<link rel="manifest" href="manifest.json?v=4.444">
+<meta name="agente-web-version" content="4.445">
+<link rel="manifest" href="manifest.json?v=4.445">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.444">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.445">
 </head>
 <body>
 
@@ -8065,7 +8065,11 @@ function mandarFoto(file, pieTexto, tsEnvio){
     return ruta;
   });
 }
-$("camara").addEventListener("click", function(){ $("foto").click(); });
+$("camara").addEventListener("click", function(){
+  // {enviar}: grabando, la camara es la cruz verde que cancela ese audio; en reposo, la foto de siempre
+  if(grabador){ terminarGrabacion(false); return; }
+  $("foto").click();
+});
 $("foto").addEventListener("change", function(e){
   var f = (e.target.files || [])[0];
   if(f) adjuntarFoto(f);
@@ -8132,7 +8136,7 @@ function adjuntarFoto(file){
 }
 function adjuntarAudio(blob, mime, ms, dicho){
   if(!blob || !blob.size) return null;
-  if(subiendoFoto || subiendoAudio) return null;
+  if(subiendoFoto) return null;   // {enviar}: un audio subiendo ya no descarta al siguiente (se encola solo)
   descartarAdjunto();
   adjunto = {tipo: "aud", blob: blob, mime: mime || blob.type || "audio/webm",
              nombre: "audio", ms: ms || 0, url: URL.createObjectURL(blob),
@@ -8279,6 +8283,9 @@ var MIMES = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/aac", "
 var grabador = null, trozosAudio = [], stream = null, desdeGrab = 0, relojGrab = null, cortarGrab = null;
 var vacioStub = false;        // `prueba_web_audio`: simula un micro que no dejo ni un byte (ios peleando el audio)
 var subiendoAudio = false;
+var colaAudios = [];          // {enviar}: los audios que llegaron con otro en vuelo, en orden
+var cerrandoGrab = false;     // {enviar}: la grabacion se esta cerrando (el `stop()` no se llama dos veces)
+var grabApretado = false;     // {enviar}: el dedo sigue sobre el micro (encadenar el audio siguiente)
 
 function mimeAudio(){
   if(typeof MediaRecorder === "undefined") return null;
@@ -8312,14 +8319,23 @@ function pararPistas(st){
 function hayGrabacion(){
   return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && mimeAudio() !== null);
 }
-// {enviar} (facundo, 2026-09-22): mientras el micro esta abierto, el `enviar` del pie deja de ser el avioncito
-// verde y pasa a ser una flecha roja apuntando arriba, empujando (el loop suave lo pone `#mandar.grabando` en el
-// css). al terminar o cancelar la grabacion vuelve al avioncito de siempre: el resto del pie no se toca.
+// {enviar} (facundo, 2026-09-22, ordenes 1859 y 1789): mientras el micro esta abierto los
+// dos botones del pie cambian de funcion. el de la derecha deja de ser el avioncito y pasa a ser una flecha que
+// empuja hacia arriba (el loop suave lo pone `#mandar.grabando` en el css) y manda **ese** audio ya; el de la
+// izquierda, que en reposo es la camara, pasa a ser una cruz que cancela esa grabacion. los dos van en VERDE, el
+// mismo verde del avioncito (facundo, textual: "esa roja la cruz y esa roja" no va): la flecha roja de la 1859 se
+// fue. al mandar o cancelar, los dos vuelven a lo de siempre y el resto del pie no se toca.
 var MANDAR_SVG = {
   avion: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
     'stroke-linejoin="round" aria-hidden="true"><path d="M21 3 10 14"/><path d="M21 3 14 21l-4-7-7-4z"/></svg>',
   flecha: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
     'stroke-linejoin="round" aria-hidden="true"><path d="M12 20V4"/><path d="M5 11l7-7 7 7"/></svg>'
+};
+var CAMARA_SVG = {
+  foto: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
+    'stroke-linejoin="round" aria-hidden="true"><path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="3.5"/></svg>',
+  cruz: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" ' +
+    'stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg>'
 };
 function pintarMandar(grab){
   var b = $("mandar");
@@ -8331,6 +8347,32 @@ function pintarMandar(grab){
   b.innerHTML = grab ? MANDAR_SVG.flecha : MANDAR_SVG.avion;
   b.setAttribute("aria-label", grab ? "mandar el audio" : "mandar");
   b.title = b.getAttribute("aria-label");
+}
+// {enviar}: la camara del pie es la cancelacion del audio mientras se graba (cruz verde), y vuelve a ser camara
+// apenas el micro se cierra. no se toca el `input file`: el click de verdad se decide en el handler.
+function pintarCancelar(grab){
+  var b = $("camara");
+  if(!b) return;
+  grab = !!grab;
+  if(b.dataset.grab === (grab ? "1" : "0")) return;
+  b.dataset.grab = grab ? "1" : "0";
+  b.classList.toggle("grabando", grab);
+  b.innerHTML = grab ? CAMARA_SVG.cruz : CAMARA_SVG.foto;
+  b.setAttribute("aria-label", grab ? "cancelar el audio" : "foto");
+  b.title = grab ? "cancelar el audio" : "foto (camara o galeria)";
+}
+// los dos juntos: nunca queda uno de los botones en el modo del otro
+function pintarPieAudio(grab){ pintarMandar(grab); pintarCancelar(grab); }
+// lo que mira `prueba_web_audio` de un boton del pie: el svg, el color y la animacion
+function infoBtnPie(m){
+  var cs = m ? getComputedStyle(m) : null, d = m ? m.querySelector("path") : null;
+  return {grabando: !!(m && m.classList.contains("grabando")), color: cs ? cs.color : "",
+          anim: cs ? (cs.animationName || "") : "", dur: cs ? (cs.animationDuration || "") : "",
+          iter: cs ? (cs.animationIterationCount || "") : "",
+          d: d ? (d.getAttribute("d") || "") : "",
+          paths: [].map.call(m ? m.querySelectorAll("path") : [], function(x){ return x.getAttribute("d") || ""; }),
+          circulo: !!(m && m.querySelector("circle")),
+          aria: m ? (m.getAttribute("aria-label") || "") : ""};
 }
 // **lo que abro lo cierro**: la grabacion se suelta siempre, aunque la subida falle. va en el `finally` de
 // todos los caminos, y para **todas** las pistas del micro (1372): no queda ningun stream vivo.
@@ -8345,7 +8387,7 @@ function soltarMicro(){
   $("grabar").classList.remove("grabando");
   $("grabinfo").classList.remove("viendo");
   $("grabinfo").textContent = "";
-  pintarMandar(false);                // {enviar}: el avioncito verde vuelve apenas se cierra el micro
+  pintarPieAudio(false);              // {enviar}: el avioncito y la camara vuelven al cerrarse el micro
   // 1970: el micro se cerro (pausa, descarte, error o irse de la pagina): la barra vuelve a reposo y lo que
   // estaba sonando cuando arranco la grabacion retoma donde quedo
   if(typeof audPintar === "function"){ audPintar(); audSeguirSonando(); }
@@ -8355,7 +8397,8 @@ function relojTexto(ms){
   return "● " + Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2);
 }
 function empezarGrabacion(){
-  if(grabador || subiendoAudio) return Promise.resolve(false);
+  // {enviar}: `subiendoAudio` ya NO frena: el segundo audio se puede arrancar mientras el primero viaja
+  if(grabador || cerrandoGrab) return Promise.resolve(false);
   if(!hayGrabacion()){ sistema("este navegador no graba audio", "error"); return Promise.resolve(false); }
   return abrirMicro().then(function(st){
     stream = st; microUltimo = st;
@@ -8368,7 +8411,7 @@ function empezarGrabacion(){
     marcarOcupado("grabando", true);   // el daemon no reinicia mientras el micro esta abierto (1204)
     desdeGrab = Date.now();
     $("grabar").classList.add("grabando");
-    pintarMandar(true);                // {enviar}: el `enviar` pasa a flecha roja mientras dura la grabacion
+    pintarPieAudio(true);              // {enviar}: flecha que manda y cruz que cancela, mientras dura
     $("grabinfo").classList.add("viendo");
     $("grabinfo").textContent = relojTexto(0);
     relojGrab = setInterval(function(){
@@ -8385,14 +8428,19 @@ function empezarGrabacion(){
   });
 }
 // soltar manda; `enviar=false` (arrastrar el dedo afuera, o un toque de menos de AUDIO_MIN_MS) descarta.
-function terminarGrabacion(enviar){
-  if(!grabador) return Promise.resolve(null);
+// `ya=true` ({enviar}): vino de la flecha del pie, asi que el audio **sale solo**, no queda de adjunto pendiente.
+function terminarGrabacion(enviar, ya){
+  // el mismo audio se puede cerrar por dos lados a la vez (la flecha del pie y el dedo que suelta el micro):
+  // el primero lo cierra y el segundo no vuelve a llamar a `stop()` sobre un grabador que ya se fue ({enviar})
+  if(!grabador || cerrandoGrab) return Promise.resolve(null);
+  cerrandoGrab = true;
   var g = grabador, ms = Date.now() - desdeGrab, mime = g.mimeType || mimeAudio() || "audio/webm";
   if(enviar && ms < AUDIO_MIN_MS){ enviar = false; sistema("mantené apretado para grabar", "sistema"); }
   return new Promise(function(res){
     g.onstop = function(){ res(new Blob(vacioStub ? [] : trozosAudio, {type: mime})); };
     try{ g.stop(); }catch(e){ res(null); }
   }).then(function(blob){
+    cerrandoGrab = false;
     soltarMicro();
     var pg = podGrabando; podGrabando = false;   // 1939: el audio es una respuesta del episodio, no un mensaje del chat
     if(!enviar){ audioDestino = null; cortarDictado(); return null; }
@@ -8415,6 +8463,9 @@ function terminarGrabacion(enviar){
     return terminarDictado().then(function(d){
       // 1939: el audio de la vista `podcast` no sale: queda en la fila del episodio, borrable, hasta el `enviar`
       if(pg) return podSumarAudio(blob, mime, ms, d);
+      // {enviar}: la flecha del pie manda ESTE audio ya (con lo que haya escrito en la caja) y deja el micro
+      // libre en el acto; no pasa por el adjunto pendiente, asi el siguiente no lo pisa ni lo borra
+      if(ya && !audioDestino) return mandarAudio(blob, mime, undefined, undefined, d);
       // 1970: con la barra grande prendida el audio queda pre mandado arriba de ella hasta el `enviar`;
       // apagada (1573 {teclado}) el celu vuelve al camino de siempre: adjunto pendiente con play y `×`
       if(audPieGrande() && !audioDestino) return audSumar(blob, mime, ms, d);
@@ -8430,13 +8481,25 @@ function terminarGrabacion(enviar){
       // no se manda al soltar (facundo, 2026-09-12): queda como adjunto pendiente con play y `×`
       return adjuntarAudio(blob, mime, ms, d);
     });
-  }, function(){ audioDestino = null; soltarMicro(); cortarDictado(); return null; });
+  }, function(){ cerrandoGrab = false; audioDestino = null; soltarMicro(); cortarDictado(); return null; });
+}
+// {enviar}: la flecha verde del pie mientras se graba. manda el audio que se esta grabando y, si el dedo sigue
+// apretando el micro, arranca el siguiente de una: asi se encadenan audios sin soltar ni perder el anterior.
+function mandarGrabacionYa(){
+  if(!grabador || cerrandoGrab) return Promise.resolve(null);
+  return terminarGrabacion(true, true).then(function(r){
+    if(grabApretado && !grabador) empezarGrabacion();
+    return r;
+  });
 }
 function nombreAudio(hash, mime){ return "audio/" + hash + "." + extAudio(mime); }
 // el camino entero: blob -> hash -> subir al buzon -> mandar el mensaje de la pestaña activa.
 // `destino` {tema, cita} (1350): viene del modal de una push; no toca la caja ni la pestaña activa.
+// {enviar} (la 1789): dos audios seguidos ya no se pisan. el que llega con otro en vuelo
+// **no se descarta**: se encola y sale apenas termina el anterior, con su burbuja `enviando` a la vista desde el
+// primer momento y con su propia hora. el pie (el texto de la caja) se lee aca, al encolar, no al subir: asi el
+// segundo audio no se lleva lo que facundo escribio despues.
 function mandarAudio(blob, mime, pieTexto, tsEnvio, dicho, destino){
-  if(subiendoAudio) return Promise.resolve(null);
   // subir el audio y transcribirlo tarda: la hora del mensaje es esta, no la de cuando termina (1191)
   tsEnvio = tsEnvio || Date.now();
   if(!token && !fotoStub){ sistema("no se puede subir el audio sin token", "error"); return Promise.resolve(null); }
@@ -8444,9 +8507,22 @@ function mandarAudio(blob, mime, pieTexto, tsEnvio, dicho, destino){
     sistema("el audio pesa " + Math.round(blob.size / 1024) + " kb, es mucho", "error");
     return Promise.resolve(null);
   }
-  subiendoAudio = true; $("grabar").disabled = true;
-  marcarOcupado("subiendo", true);    // y tampoco mientras el m4a viaja al server
-  var prov = burbujaEnviando(blob, pieTexto, tsEnvio, destino);   // 1650: se ve ya, a .8, en vez de "subiendo..."
+  var pie = destino ? "" : (pieTexto !== undefined ? pieTexto : txt.value || "").trim();
+  if(!destino && pieTexto === undefined){ txt.value = ""; txt.style.height = ""; }   // la caja se vacia al encolar
+  var prov = burbujaEnviando(blob, pie, tsEnvio, destino);   // 1650: se ve ya, a .8, en vez de "subiendo..."
+  var t = {blob: blob, mime: mime, pie: pie, ts: tsEnvio, dicho: dicho, destino: destino, prov: prov};
+  if(subiendoAudio) return new Promise(function(res){ colaAudios.push({t: t, res: res}); });
+  return subirAudioYa(t);
+}
+function siguienteAudio(){
+  var n = colaAudios.shift();
+  if(!n){ marcarOcupado("subiendo", false); return; }
+  subirAudioYa(n.t).then(n.res, function(){ n.res(null); });
+}
+function subirAudioYa(t){
+  var blob = t.blob, mime = t.mime, tsEnvio = t.ts, dicho = t.dicho, destino = t.destino, prov = t.prov;
+  subiendoAudio = true;
+  marcarOcupado("subiendo", true);    // y tampoco se reinicia mientras el m4a viaja al server
   var ruta;
   // **el audio va por la lan y no al buzon** (1209): si la lan no esta marcada se prueba una vez antes de
   // subir, asi el archivo no sale a internet por no haber preguntado. el buzon queda solo de respaldo, para
@@ -8470,8 +8546,7 @@ function mandarAudio(blob, mime, pieTexto, tsEnvio, dicho, destino){
                       destino.tema, false, tsEnvio);
       }finally{ mandarAparte = false; }
     }
-    var pie = (pieTexto !== undefined ? pieTexto : txt.value || "").trim();
-    txt.value = ""; txt.style.height = "";
+    var pie = t.pie;
     return mandar((pie ? pie + "\n" : "") + (dictado_ ? MARCA_CELU + dictado_ + "\n" : "") +
                   "[audio](" + ruta + ")", temaActivo(), false, tsEnvio);
   }).catch(function(e){
@@ -8479,8 +8554,8 @@ function mandarAudio(blob, mime, pieTexto, tsEnvio, dicho, destino){
     ruta = null;                                  // fallo: el audio vuelve a quedar pendiente
   }).then(function(){
     sacarEnviando(prov);                          // la real ya se pinto (a 1); si fallo, el audio vuelve al pie
-    subiendoAudio = false; $("grabar").disabled = false;
-    marcarOcupado("subiendo", false);
+    subiendoAudio = false;                        // el micro nunca se apago: se puede grabar mientras esto viaja
+    siguienteAudio();                             // {enviar}: el que esperaba sale ahora (y apaga `subiendo` si no hay)
     return ruta;
   });
 }
@@ -8491,7 +8566,7 @@ function burbujaEnviando(blob, pieTexto, tsEnvio, destino){
   try{
     var src = "audio/enviando-" + tsEnvio + "." + extAudio(blob.type || "audio/webm");
     audioUrls[src] = URL.createObjectURL(blob);
-    var pie = destino ? "" : (pieTexto !== undefined ? pieTexto : txt.value || "").trim();
+    var pie = destino ? "" : (pieTexto || "").trim();
     var m = {id: "env:" + tsEnvio, clase: "yo", quien: QUIEN_F, texto: (pie ? pie + "\n" : "") + "[audio](" + src + ")",
              iso: new Date(tsEnvio).toISOString(), explicito: true, tema: destino ? destino.tema : temaActivo(),
              enviando: true, src: src};
@@ -8513,14 +8588,14 @@ function sacarEnviando(m){
   var b = $("grabar"), apretado = false;
   b.addEventListener("pointerdown", function(e){
     e.preventDefault();
-    apretado = true;
+    apretado = grabApretado = true;
     if(b.setPointerCapture && e.pointerId != null){ try{ b.setPointerCapture(e.pointerId); }catch(err){} }
     empezarGrabacion();
   });
   function soltar(enviar){
     return function(e){
       if(!apretado) return;
-      apretado = false;
+      apretado = grabApretado = false;
       if(e){ e.preventDefault(); }
       terminarGrabacion(enviar);
     };
@@ -9131,7 +9206,11 @@ document.addEventListener("paste", function(e){
 })();
 
 alfinal.addEventListener("click", abajo);
-$("mandar").addEventListener("click", function(){ enviarMensaje(txt.value); txt.focus(); });
+$("mandar").addEventListener("click", function(){
+  // {enviar}: grabando, la flecha manda ESE audio (y encadena el siguiente si el dedo sigue en el micro)
+  if(grabador){ mandarGrabacionYa(); return; }
+  enviarMensaje(txt.value); txt.focus();
+});
 // 1657 {pelado}: tocar la caja de escribir tampoco mueve el chat. el salto al fondo de los 250 ms es
 // para el teclado del celu (al abrirse `#hist` se achica y lo de abajo queda fuera de pantalla), asi que
 // se mide ANTES de que el teclado suba y solo se va al fondo si ya estaba al final.
@@ -13087,6 +13166,7 @@ window.__agente = {
   // 1970 {grabar} + 2044: la barra de tres botones del celu (todas las pestañas) y los audios pre mandados
   audGrabar: audGrabar, audSumar: audSumar, audBorrar: audBorrar, audEnviar: audEnviar,
   audTeclado: audTeclado, audPintar: audPintar, audSvg: AUD_SVG, audPieGrande: audPieGrande,
+  infoBtnPie: infoBtnPie,
   audBarra: function(){
     var caja = $("audbarra"), pie = $("pie"), r = caja.getBoundingClientRect();
     return {
@@ -13097,14 +13177,9 @@ window.__agente = {
       enviarOn: !audBtn("der") || !audBtn("der").disabled,
       // 1573 {teclado}: el pie del celu es el input de siempre; el micro, un `.ico` chico al lado del `enviar`
       pieGrande: audPieGrande(), celu: pie.classList.contains("celu"),
-      // {enviar}: el `enviar` del pie mientras se graba (flecha roja que empuja) y en reposo (avioncito verde)
-      mandar: (function(m){
-        var cs = m ? getComputedStyle(m) : null, d = m ? m.querySelector("path") : null;
-        return {grabando: !!(m && m.classList.contains("grabando")), color: cs ? cs.color : "",
-                anim: cs ? (cs.animationName || "") : "", dur: cs ? (cs.animationDuration || "") : "",
-                iter: cs ? (cs.animationIterationCount || "") : "",
-                d: d ? (d.getAttribute("d") || "") : "", aria: m ? (m.getAttribute("aria-label") || "") : ""};
-      })($("mandar")),
+      // {enviar}: los dos botones del pie, grabando (flecha que manda, cruz que cancela, las dos
+      // verdes) y en reposo (avioncito verde y camara cian)
+      mandar: infoBtnPie($("mandar")), camara: infoBtnPie($("camara")),
       chicos: [].map.call([$("txt"), $("grabar"), $("camara"), $("mandar")], function(n){
         var x = n.getBoundingClientRect();
         return {id: n.id, w: Math.round(x.width), h: Math.round(x.height), izq: Math.round(x.left),
@@ -13148,6 +13223,11 @@ window.__agente = {
                                             (sonando.dataset && sonando.dataset.id) || "algo" : null; },
   audPausadoPorGrab: function(){ return !!audPausado; },
   empezarGrabacion: empezarGrabacion, terminarGrabacion: terminarGrabacion,
+  // {enviar}: la flecha del pie mandando el audio de esta grabacion, y la cola de subidas encadenadas
+  mandarGrabacionYa: mandarGrabacionYa, tocarMandar: function(){ $("mandar").click(); },
+  tocarCamara: function(){ $("camara").click(); },
+  audioEnVuelo: function(){ return {subiendo: subiendoAudio, cola: colaAudios.length}; },
+  dedoEnMicro: function(v){ grabApretado = !!v; },
   // dictado en el celu (1209): la prueba enchufa un reconocedor falso y chequea los dos caminos
   hayDictado: hayDictado, prepararDictado: prepararDictado, empezarDictado: empezarDictado,
   terminarDictado: terminarDictado, cortarDictado: cortarDictado, marcaCelu: MARCA_CELU, sinDictado: sinDictado,
