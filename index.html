@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.455">
-<link rel="manifest" href="manifest.json?v=4.455">
+<meta name="agente-web-version" content="4.456">
+<link rel="manifest" href="manifest.json?v=4.456">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.455">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.456">
 </head>
 <body>
 
@@ -1029,32 +1029,23 @@ function esTactil(){
   return (navigator.maxTouchPoints || 0) > 0;
 }
 
-// ---------- teclado fisico: quien decide de verdad si enter manda (facundo, 2026-09-16, orden 1789) ----------
-// el ipad reporta touch igual que el celu, asi que `esTactil()` no alcanza: facundo escribe desde el ipad
-// en la pwa con teclado fisico y ahi enter tiene que mandar. lo que se detecta es el TECLADO, no la
-// pantalla, con dos señales que un teclado en pantalla nunca da:
-//   1) una tecla que ios/android no emiten: `Tab`, las flechas, `Escape`, inicio/fin, o un combo
-//      meta/ctrl/alt con una letra (lo escucha todo el documento, no solo el textarea);
-//   2) enfocar un campo sin que el viewport se achique: con teclado en pantalla `visualViewport` pierde
-//      media pantalla, con teclado fisico solo la barra de sugerencias (~55 px).
-// el flag queda en `localStorage` por dispositivo y no se apaga solo; se limpia con
-// `window.__agente.tecladoFisico(false)`. mientras NO este prendido el comportamiento es el de hoy
-// (enter = salto de linea, se manda con el boton), asi que en el celu sin teclado nada puede empeorar.
-var TECLADO_LS = "agente_teclado_fisico";
-var TECLADO_BAJA = 100;          // px que puede achicarse el viewport y seguir siendo teclado fisico
-var tecladoFlag = null;
-function tecladoFisico(v){
-  if(v !== undefined){
-    tecladoFlag = !!v;
-    try{ if(tecladoFlag) localStorage.setItem(TECLADO_LS, "1"); else localStorage.removeItem(TECLADO_LS); }catch(x){}
-    tecladoHint();
-    return tecladoFlag;
-  }
-  if(!esTactil()) return true;   // mouse y teclado: enter manda desde siempre
-  if(tecladoFlag === null){
-    try{ tecladoFlag = localStorage.getItem(TECLADO_LS) === "1"; }catch(x){ tecladoFlag = false; }
-  }
-  return tecladoFlag;
+// ---------- teclado fisico: quien decide si enter manda (facundo, 2026-09-23, orden 2150 {enter}) ----------
+// en una pantalla tactil enter NUNCA manda: hace salto de linea y el mensaje sale con el boton de enviar.
+// la 1789 trataba de adivinar el teclado (una tecla que el de pantalla no tiene, el viewport que no se
+// achica) y lo dejaba prendido en `localStorage`: en el iphone eso daba falso positivo y el enter volvia a
+// mandar sin querer, con el mensaje a medio escribir. ahora la señal es una que un teclado en pantalla no
+// puede falsear y se lee EN CADA keydown, sin flag persistido y sin medir nada: `(pointer: fine)` +
+// `(hover: hover)`, o sea hay puntero fino y hover de verdad (mouse o trackpad). en el iphone y en el ipad
+// con el teclado en pantalla las dos dan false; en una notebook dan true y enter manda como siempre.
+function tecladoFisico(){
+  try{
+    if(window.matchMedia && window.matchMedia("(pointer: fine)").matches
+       && window.matchMedia("(hover: hover)").matches) return true;   // mouse o trackpad: es una compu
+    // `coarse` o touch = pantalla tactil, y ahi enter NUNCA manda
+    if(window.matchMedia && window.matchMedia("(pointer: coarse)").matches) return false;
+  }catch(x){}
+  // el navegador no contesta ninguna de las dos (`pointer: none`: chrome headless, kioscos, tv): manda el hardware
+  return !esTactil();
 }
 // el teclado de ios muestra `intro` o `enviar` segun lo que enter vaya a hacer de verdad. solo en pantalla
 // tactil: en la compu no hay teclado en pantalla y el atributo queda como viene del html (`enter`).
@@ -1064,32 +1055,6 @@ function tecladoHint(){
     if(t && esTactil()) t.setAttribute("enterkeyhint", tecladoFisico() ? "send" : "enter");
   }catch(x){}
 }
-var TECLAS_FISICAS = {Tab: 1, Escape: 1, ArrowUp: 1, ArrowDown: 1, ArrowLeft: 1, ArrowRight: 1,
-                      PageUp: 1, PageDown: 1, Home: 1, End: 1};
-function tecladoMirarTecla(e){
-  if(!e || tecladoFisico()) return false;
-  var k = String(e.key || "");
-  if(TECLAS_FISICAS[k] !== 1 && !((e.metaKey || e.ctrlKey || e.altKey) && k.length === 1)) return false;
-  tecladoFisico(true);
-  return true;
-}
-// enfocar un campo es el otro momento en que se puede medir: si el viewport no se achica, no hay
-// teclado en pantalla. solo se mide cuando arranca sin teclado abierto (si ya habia uno, no dice nada).
-var tecladoFoco = 0;
-function tecladoMirarFoco(el, ms){
-  if(tecladoFisico() || !window.visualViewport) return false;
-  var vv = window.visualViewport, alto0 = vv.height;
-  if(alto0 < window.innerHeight - TECLADO_BAJA) return false;   // ya estaba abierto el teclado en pantalla
-  var t = ++tecladoFoco;
-  setTimeout(function(){
-    if(t !== tecladoFoco || tecladoFisico()) return;
-    if(el && document.activeElement !== el) return;             // se fue el foco antes de medir
-    if(vv.height >= alto0 - TECLADO_BAJA) tecladoFisico(true);
-  }, ms === undefined ? 700 : ms);
-  return true;
-}
-// una tecla que el teclado en pantalla no tiene, en cualquier parte de la pagina, marca el dispositivo
-document.addEventListener("keydown", tecladoMirarTecla, true);
 // el hint se recalcula cuando puede haber cambiado el hardware (enchufar un mouse, otra ventana): es
 // un atributo, no un estado, y tiene que decir siempre lo que enter va a hacer de verdad
 window.addEventListener("resize", tecladoHint);
@@ -1110,7 +1075,7 @@ function esStandalone(){
 }
 function marcarStandalone(){ document.body.classList.toggle("standalone", esStandalone()); }
 marcarStandalone();
-tecladoHint();          // 1789: `enviar` en el teclado del ipad si ya sabemos que tiene teclado fisico
+tecladoHint();          // 2150 {enter}: en pantalla tactil el teclado dice `intro`, porque enter no manda
 try{
   if(window.matchMedia){
     var mqPwa = window.matchMedia("(display-mode: standalone)");
@@ -4435,7 +4400,6 @@ Array.prototype.forEach.call(document.querySelectorAll("#animmenu .ambtn[data-ti
   });
 });
 $("amguardar").addEventListener("click", function(){ animGusto("nota", $("amtxt").value); });
-$("amtxt").addEventListener("focus", function(){ tecladoMirarFoco($("amtxt")); });
 $("amtxt").addEventListener("keydown", function(ev){
   if(ev.key !== "Enter" || ev.shiftKey || ev.isComposing || ev.keyCode === 229) return;
   if(!tecladoFisico()) return;           // mismo criterio que el chat: sin teclado se guarda con el boton
@@ -7214,8 +7178,13 @@ $("seltarjeta").addEventListener("touchmove", function(e){
   if(!s || !p) return;
   var dx = p.clientX - s.x, dy = p.clientY - s.y;
   if(!s.lado){
-    if(Math.abs(dy) > 10 && Math.abs(dy) >= Math.abs(dx)){ tjSw = null; return; }   // era el scroll de la tarjeta
-    if(Math.abs(dx) < 10) return;
+    var ady = Math.abs(dy), adx = Math.abs(dx);
+    if(ady > 10 && ady >= adx){ tjSw = null; return; }   // era el scroll de la tarjeta
+    if(adx < 10) return;
+    // 2286 {celu}: llegar a 10 px de costado no alcanza para quedarse con el gesto. el pulgar que arranca a
+    // scrollear sale siempre un poco en diagonal (dx 11, dy 8 y el swipe se comia el scroll de la tarjeta, que
+    // en el celu es casi toda foto): el costado tiene que GANARLE claro al vertical, y si no, se espera.
+    if(adx < ady * 1.5) return;
     s.lado = true;
   }
   e.preventDefault();   // agarrado de costado, el dedo mueve la tarjeta y ya no scrollea
@@ -7399,7 +7368,6 @@ function rastroMenu(t){
   var ta = document.createElement("textarea");
   ta.placeholder = "preguntame por este paso";
   ta.setAttribute("autocomplete", "off"); ta.setAttribute("autocapitalize", "off"); ta.setAttribute("spellcheck", "false");
-  ta.addEventListener("focus", function(){ try{ tecladoMirarFoco(ta); }catch(x){} });
   cu.appendChild(ta);
   var botones = [];
   if(t.voto){
@@ -8315,7 +8283,6 @@ $("nmmandar").addEventListener("click", function(){
   var t = $("nmtxt");
   if(responderNotiPush(t.value)) t.value = ""; else t.focus();
 });
-$("nmtxt").addEventListener("focus", function(){ tecladoMirarFoco($("nmtxt")); });
 $("nmtxt").addEventListener("keydown", function(e){
   // 1789: lo decide el teclado, no el ancho de la ventana (`esVistaMobile` miraba la vista)
   if(e.key !== "Enter" || e.shiftKey || e.isComposing || e.keyCode === 229) return;
@@ -9543,7 +9510,6 @@ $("mandar").addEventListener("click", function(){
 txt.addEventListener("focus", function(){
   var pego = pegadoAbajo();
   setTimeout(function(){ if(pego) abajo(); }, 250);
-  tecladoMirarFoco(txt);
 });
 txt.addEventListener("keydown", function(e){
   if(e.key !== "Enter" || e.shiftKey) return;
@@ -13323,8 +13289,8 @@ window.__agente = {
   esClave: esClave, ponerCopiar: ponerCopiar,   // 1214: botones copiar (prueba_web_copiar)
   // enter en el celu hace salto de linea, no manda (prueba_web_tabs lo chequea)
   esTactil: esTactil, ajustarCaja: ajustarCaja, topeLineas: TOPE_LINEAS,
-  // 1789: con teclado fisico (ipad con magic keyboard) enter manda; el flag es por dispositivo
-  tecladoFisico: tecladoFisico, tecladoMirarTecla: tecladoMirarTecla, tecladoMirarFoco: tecladoMirarFoco,
+  // 2150 {enter}: enter manda solo con teclado fisico de verdad (`pointer: fine` + `hover: hover`), leido en cada tecla
+  tecladoFisico: tecladoFisico,
   // pwa en la pantalla de inicio: sin barra de safari arriba del teclado (prueba_web_tabs lo chequea)
   esStandalone: esStandalone, marcarStandalone: marcarStandalone,
   // de donde se escribe: viaja como `[desde: celu abc123 ios/safari]` al final del mensaje

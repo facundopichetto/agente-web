@@ -341,7 +341,8 @@
   #selmodal .selbtn{flex:1 1 0}
   /* 1440 (facundo, 2026-09-15, por audio): modo `tarjetas`. de a UNA candidata: foto grande, el estado arriba, la
      marca publica/privada y las etiquetas, y cuatro botones grandes abajo. nada de grillas ni de listas largas. */
-  #seltarjeta{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:8px}
+  #seltarjeta{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;
+    display:flex;flex-direction:column;gap:8px}   /* 2286 {celu}: el `contain` es el mismo de `#sellistas` */
   #seltarjeta.oculta,#sellista.oculta{display:none!important}
   /* 2113 {listavotador}: el swipe del votador. mientras el dedo la lleva la tarjeta va sin transicion (pegada al
      dedo) y al soltar vuelve sola a su lugar: la clase `tjsw` es "agarrada", sacarla es lo que anima la vuelta */
@@ -568,7 +569,13 @@
   /* 2095 {instatinder} paso 2 (facundo, 2026-09-18: "hacelo 100% ancho en desktop. hay bordes en los costados"):
      la grilla deja de tener ancho maximo. las dos columnas de la 2035 se reparten TODO el ancho de la pantalla
      (el unico margen que queda es el padding de la caja, 10 px), y en el celu no cambia nada. */
-  #sellistas{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  /* 2286 {celu}: `overscroll-behavior-y:contain`, lo mismo que tienen `#hist`, `#panel-widgets` y la campana, y
+     lo que le faltaba a las dos vistas del tinder. con el documento trabado (`html` y `body` en `position:fixed`,
+     `overflow:hidden`) ios encadena el gesto del scroller de adentro al de afuera, que no se mueve, y el de
+     adentro se siente muerto al dedo aunque `scrollTop` se mueva por js. era la unica diferencia de estas dos
+     contra `#hist`, el scroller que en el iphone de facundo SI anda: no esta probado en el aparato (el touch de
+     verdad no se puede sintetizar en el server), pero es el sospechoso que explica las dos a la vez. */
+  #sellistas{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;
     display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-content:start;
     width:100%;max-width:none;margin:0}
   #sellistas.oculta{display:none!important}
@@ -1615,8 +1622,16 @@
   /* el votador deja de ser un modal encima del chat: es un hermano de `#cuerpo` que ocupa lo que queda abajo de la
      cabecera (por eso `position:static`, no `fixed`: la barra de iconos sigue arriba y se puede cambiar de vista).
      el molde no cambia (`.capa` + `.mcaja`, `esc` cierra por la pila) y los dos bloques son los de la 1874. */
-  body.v-tinder #selmodal.pantalla{position:static;inset:auto;flex:1 1 auto;min-height:0;
-    background:var(--fondo-chat);padding:0;z-index:auto}
+  /* 2286 {celu} paso 3: el `padding:0` de aca pisaba el `env(safe-area-inset-bottom)` de `#selmodal.pantalla`
+     (arriba lo repone `#cabecera`, abajo no lo reponia nadie): en el iphone los 34 px de la franja del home
+     indicator se comian el pie de los 3 botones grandes, que ademas es la zona donde ios se queda con el gesto.
+     el de arriba sigue en 0: lo reserva la cabecera y sumarlo dos veces deja el hueco negro del notch. */
+  body.v-tinder #selmodal.pantalla{position:static;inset:auto;flex:1 1 auto;min-height:0;height:auto;
+    background:var(--fondo-chat);padding:0 0 env(safe-area-inset-bottom) 0;z-index:auto}
+  /* 2286 {celu}: el `height:auto` de arriba es el guard del teclado. `body.teclado #selmodal{height:var(--alto)}`
+     le da el alto ENTERO del viewport a un modal que aca arranca DEBAJO de la cabecera: la vista se pasaba de
+     largo los ~60 px de la barra de iconos y el pie de los 3 botones se iba abajo del borde, sin scroll que lo
+     alcanzara (`body` va `overflow:hidden`). llegar con el teclado abierto del chat y cambiar a `tinder` bastaba. */
   /* 1922 {vistatinder}: el podcast es una vista de verdad, con la MISMA estructura y el mismo diseño que el
      tinder (facundo: "NO ME PONGAS EL WIDGET DE MIERDA, HACEME UNA VISTA PARA EL PODCAST, POR AHORA IGUAL A LA
      OTRA PERO CON EL DISENIO DE ESTO"): la misma `.selcaja`, la misma cabecera con el `←`, el `home` con los

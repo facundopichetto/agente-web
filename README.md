@@ -253,32 +253,26 @@ devolvia tactil con `innerWidth <= 899`, asi que en la compu con la ventana ango
 lo chequea `recetas/prueba_web_tabs` (emula touch y metricas por cdp, cero tokens) en las cuatro ramas:
 desktop ancho, desktop angosto (600px, enter manda igual), tactil ancho (1200px, enter no manda) y celu.
 
-**pero lo que decide es el TECLADO, no la pantalla** (facundo, 2026-09-16, orden 1789: "quiero que el enter
-del teclado del ipad envie, shift enter si nueva linea"). el ipad con teclado fisico reporta touch igual que
-el celu, asi que `esTactil()` no alcanzaba y en la pwa del ipad enter metia un salto de linea. ahora el
-handler mira `tecladoFisico()`:
+**lo que habilita enter es un teclado fisico de verdad, no la pantalla** (facundo, 2026-09-23, orden 1857
+{enter}: "che el teclsdo del celu otra vez envia con enter, arreglalo"). la 1789 adivinaba el teclado (una tecla
+que el de pantalla no tiene, el viewport que no se achicaba al enfocar) y guardaba el resultado en `localStorage`:
+en el iphone con la pwa eso daba falso positivo y no se apagaba nunca. ahora el handler llama a `tecladoFisico()`,
+que es una lectura **en cada keydown**, sin estado:
 
-- en la compu (`!esTactil()`) siempre es `true`: enter manda, como siempre.
-- en pantalla tactil arranca en `false` (**el comportamiento de hoy, nada puede empeorar en el celu**) y se
-  prende con dos señales que un teclado en pantalla no puede dar: **1)** un `keydown` de `Tab`, `Escape`, una
-  flecha, `Inicio`/`Fin`/`AvPag`/`RePag` o un combo `meta`/`ctrl`/`alt` + letra, escuchado en todo el
-  documento en fase de captura (`tecladoMirarTecla`); **2)** enfocar un campo sin que el viewport se
-  achique: con teclado en pantalla `visualViewport.height` pierde media pantalla, con teclado fisico solo la
-  barra de sugerencias, asi que `tecladoMirarFoco(el, ms)` compara a los 700 ms contra `TECLADO_BAJA` (100
-  px) y solo mide si al enfocar no habia ya un teclado abierto.
-- el flag vive en `localStorage` (`agente_teclado_fisico`), **por dispositivo**, y no se apaga solo; se
-  resetea con `window.__agente.tecladoFisico(false)`.
-- con el flag prendido `enterkeyhint` pasa a `send` (`tecladoHint()`, solo en tactil: en la compu el
-  atributo queda como viene del html); se recalcula en `resize` y cuando cambia `(pointer: coarse)`.
+- `matchMedia("(pointer: fine)")` **y** `matchMedia("(hover: hover)")` = compu (mouse o trackpad): enter manda.
+- `pointer: coarse` = pantalla tactil: enter hace salto de linea, el mensaje sale con el boton `>_`. no hay forma
+  de prenderlo desde un teclado en pantalla, ni con una tecla rara ni enfocando.
+- si el navegador no contesta ninguna de las dos (`pointer: none`: chrome headless, kioscos) manda `!esTactil()`.
+- `enterkeyhint` sigue diciendo lo que enter va a hacer (`tecladoHint()`, solo en tactil); se recalcula en
+  `resize` y cuando cambia `(pointer: coarse)`.
 - `shift+enter` **nunca** manda, y `e.isComposing` / `keyCode 229` tampoco: mientras se compone un acento o
   kana, enter cierra la composicion.
+- un ipad con magic keyboard (trackpad) cae del lado de la compu, que es lo que la 1789 queria de entrada.
 
-el mismo criterio lo usan los otros dos textarea de una linea: la respuesta del modal de notificacion
-(`nmtxt`, que antes miraba `esVistaMobile()`, o sea el ancho de la ventana, justo lo que la 1789 dice que no
-decide nada) y la nota del modal del spinner (`amtxt`, donde enter mandaba siempre). lo chequea
-`recetas/prueba_web_teclado` (chrome headless, cero tokens, 33 chequeos: celu sin flag, cada tecla que lo
-prende, una letra que no, `localStorage`, hint, `isComposing`, el viewport que se achica y el que no, y la
-compu).
+el mismo criterio lo usan los otros dos textarea de una linea: la respuesta del modal de notificacion (`nmtxt`) y
+la nota del modal del spinner (`amtxt`). lo chequean `recetas/prueba_web_teclado` (chrome headless, cero tokens:
+celu, las teclas que antes prendian el flag y ya no, compu, y volver a tactil sin recargar) y
+`recetas/prueba_web_render` (que en el fuente no queden ni `agente_teclado_fisico` ni `tecladoMirarFoco`).
 
 ## widget usage: barras contra la linea (facundo, 2026-09-11)
 
