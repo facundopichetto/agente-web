@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.458">
-<link rel="manifest" href="manifest.json?v=4.458">
+<meta name="agente-web-version" content="4.459">
+<link rel="manifest" href="manifest.json?v=4.459">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.458">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.459">
 </head>
 <body>
 
@@ -9991,8 +9991,56 @@ function cajaTickets(t){
   var ese = '<span class="c b">' + mine.length + "</span> " +
             '<span class="g">asignado' + (mine.length === 1 ? "" : "s") +
             (filtro && filtro !== "todos" ? " \u00b7 " + esc(filtro) : "") + "</span>" +
-            (t.cache_s > 1800 ? ' <span class="g">cache ' + haceSeg(t.cache_s) + "</span>" : "");
+            (t.cache_s > 1800 ? ' <span class="g">cache ' + haceSeg(t.cache_s) + "</span>" : "") +
+            (ticAviso ? ' <span class="a" title="' + esc(ticAviso) + '">cache</span>' : "");
   return caja("my tickets", ese, filas.join("\n"), false, "tickets");
+}
+
+// 1883 {periodo} (facundo): el widget `my tickets` no se conforma con el cache. el script `jira_mine` pasa a
+// correr cada 60 s (antes 15 min) y, ademas, ABRIR la caja (desplegarla) o TOCARLA pide `tickets.json?fresco=1`
+// por la lan: el daemon le vuelve a pegar a jira en el momento (`recetas/jira_mine_fresco.py`, tres jql por la
+// rest api, cero tokens) y recien con ESE json se repinta la caja, en vez de servir lo que dejo el script.
+// regla {cache}: la cache pinta el primer frame, el server manda. si no hay lan, si el pedido falla o si jira no
+// contesta, queda a la vista lo cacheado con lo que haya y la marca `cache` en el header: el widget no se rompe
+// ni queda en blanco nunca. `TIC_TTL` evita que dos gestos seguidos disparen dos pedidos (el server tiene su
+// propio freno de 10 s) y `TIC_HOLD` evita que el repintado de 30 s pise lo fresco con el widgets.json anterior.
+var TIC_TTL = 5000, TIC_HOLD = 20000;
+var ticPidiendo = false, ticUlt = 0, ticAviso = null, ticFresco = null;
+function ticGirar(on){
+  if(refrescando) return;   // el `[↻]` ya maneja su propia animacion
+  var b = document.querySelector('#widgets .caja[data-w="tickets"] button[data-ref]');
+  if(b) b.classList[on ? "add" : "remove"]("girando");
+}
+function ticPintar(){
+  var n = document.querySelector('#widgets .caja[data-w="tickets"]');
+  if(!n || !widDatos) return repintarWidgets();
+  anclaClavar();              // 1813: repintar una caja no puede mover el chat
+  try{
+    var t = document.createElement("div");
+    t.innerHTML = cajaTickets(widDatos.tickets || {});
+    var nuevo = t.firstElementChild;
+    if(nuevo) n.parentNode.replaceChild(nuevo, n);
+  } finally { anclaSoltar(); }
+}
+function ticketsFresco(motivo, forzar){
+  if(!lan.base) return Promise.resolve(false);          // sin lan no hay a quien pedirle: queda el cache
+  if(ticPidiendo) return Promise.resolve(false);
+  if(!forzar && Date.now() - ticUlt < TIC_TTL) return Promise.resolve(false);
+  ticPidiendo = true; ticUlt = Date.now();
+  ticGirar(true);
+  return apiLan("GET", "/repos/" + REPO + "/contents/tickets.json?fresco=1", null, null,
+                "application/vnd.github.raw+json").then(function(r){
+    var j = r && r.json;
+    if(!j || !j.tickets) return false;
+    ticAviso = j.aviso || null;
+    ticFresco = {t: Date.now(), d: j.tickets};
+    if(widDatos) widDatos.tickets = j.tickets;
+    ticPintar();
+    return !!j.fresco;
+  }, function(){ return false; }).then(function(v){
+    ticPidiendo = false; ticGirar(false);
+    return v;
+  });
 }
 
 // 2144 {oportunidades}: el widget `opportunities` (y su caja `decided`) se fueron del board a pedido
@@ -11279,6 +11327,8 @@ function pintarWidgets(d, err){
   }
   if(d) widDatos = d;
   d = widDatos;
+  // 1883 {periodo}: lo que acaba de bajar fresco de jira manda sobre el `widgets.json` del script de 60 s
+  if(d && ticFresco && Date.now() - ticFresco.t < TIC_HOLD) d.tickets = ticFresco.d;
   itemsW = {}; itemN = 0;            // los items del repintado anterior ya no existen
   var t0 = fecha(d.ts);
   var edad = t0 ? haceSeg((Date.now() - t0) / 1000) : "?";
@@ -11343,7 +11393,9 @@ function refrescarWidgets(clave){
     var n = document.querySelector('#widgets [data-ref="' + (clave || "").replace(/"/g, "") + '"]');
     if(n) n.classList.remove("girando");
   }
-  return cargarWidgets(true).catch(function(e){
+  // 1883 {periodo}: el `[↻]` de `my tickets` primero le pega a jira (asi `widgets.json` se arma con lo de recien)
+  var antes = clave === "tickets" ? ticketsFresco("[↻]", true) : Promise.resolve(false);
+  return antes.then(function(){ return cargarWidgets(true); }).catch(function(e){
     if(ruidoso(e)) pintarWidgets(null, e.message);
   }).then(listo, function(e){ listo(); throw e; });
 }
@@ -11563,6 +11615,10 @@ widgetsEl.addEventListener("touchmove", function(e){
 
 widgetsEl.addEventListener("click", function(e){
   if(Date.now() - arrUlt < 300){ e.stopPropagation(); return; }   // el click que viene atras del arrastre
+  // 1883 {periodo}: tocar `my tickets` (el header, una fila, desplegarla) pide el json fresco de jira. el `[↻]`
+  // va por `refrescarWidgets` y los botones que no miran datos (ocultar, settings) no disparan nada.
+  if(e.target.closest && e.target.closest('.caja[data-w="tickets"]') &&
+     !e.target.closest("button[data-ref],button[data-ocultar],button[data-set]")) ticketsFresco("toque");
   if(Date.now() - qvUlt < 400){ e.stopPropagation(); e.preventDefault(); return; }   // idem atras de un swipe
   var qvb = e.target.closest("button[data-qvacc]");       // `que ver` en desktop: visto / no me interesa
   if(qvb){ qvAplicar(qvb.closest(".qv"), qvb.dataset.qvacc, qvb.dataset.qvacc === "visto" ? 1 : -1); return; }
@@ -13748,6 +13804,8 @@ window.__agente = {
   // envio idempotente: dos enter rapidos no mandan dos veces (prueba_web_tabs lo chequea)
   envios: function(){ return {enviando: enviando, ultimo: ultimoTexto, repeMs: REPE_MS}; },
   stubApi: function(f){ apiStub = f || null; },
+  // 1883 {periodo}: `prueba_web_tabs` suelta el freno del pedido fresco de `my tickets` para probar el caso malo
+  ticUlt: function(v){ ticUlt = +v || 0; ticFresco = null; return ticUlt; },
   // lan primero (prueba_web_tabs simula el endpoint vivo y caido)
   stubLan: function(f){ lanStub = f || null; }, probarLan: probarLan, lanPoner: lanPoner, lanCandidatos: lanCandidatos,
   // la prueba corre sin login: un token de mentira solo mientras se arma el PUT (el stub de la lan no lo mira)
