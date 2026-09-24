@@ -515,6 +515,13 @@
      "detector": true
     },
     {
+     "cmd": "es_cmd_renombra",
+     "que": "detector nuevo en daemon.py, sin descripción todavía",
+     "escribe": null,
+     "offline": "cola",
+     "detector": true
+    },
+    {
      "cmd": "ig_listas_cmd",
      "que": "detector nuevo en daemon.py, sin descripción todavía",
      "escribe": null,

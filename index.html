@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.461">
-<link rel="manifest" href="manifest.json?v=4.461">
+<meta name="agente-web-version" content="4.462">
+<link rel="manifest" href="manifest.json?v=4.462">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.461">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.462">
 </head>
 <body>
 
@@ -492,6 +492,13 @@ var RE_TEMA = /^\s*tema\s+([\w\/#-]+)\s*:\s*/i;
 // viven en el server (`pestanas_clon.json`, `GET/POST/DELETE /clones`): esta lista **no** se edita a mano.
 var RE_CLON = /^(.+?)#(\d+)$/;
 var CLONES = [];                       // los que el server dio de alta (se pide al abrir y despues de crear/borrar)
+// 2300 {visible} (facundo, 2026-09-24): un clon puede tener un **nombre visible** (`t/impresora` para
+// `tools#2`). es SOLO lo que se pinta: `data-tema`, el `tema x:` que se manda, el carril de la cola y
+// `logs/chat-tools#2.jsonl` siguen con el id. el mapa lo manda el server en `/clones` (`visibles`).
+var CLON_VIS = {};                     // {id: visible}, solo los clones con nombre puesto
+// lo que se PINTA de una pestaña. nadie imprime el id crudo: la general tiene su etiqueta, un clon con
+// nombre su visible, y el resto es su propio nombre.
+function visibleTab(t){ return ETIQUETA[t] || CLON_VIS[normTema(t)] || t; }
 function esClon(t){ return RE_CLON.test(normTema(t)); }
 function baseTema(t){ var m = RE_CLON.exec(normTema(t)); return m ? m[1] : normTema(t); }
 function clonN(t){ var m = RE_CLON.exec(normTema(t)); return m ? parseInt(m[2], 10) : 0; }
@@ -1566,13 +1573,15 @@ function pintarTabs(){
   // 2299 {ordentabs}: mientras se arrastra una pestaña no se le puede sacar el nodo de abajo del dedo
   // (un poll del buzon repinta la barra cuando quiere). el repintado queda anotado y sale al soltar.
   if(arrT){ arrT.repintar = true; return; }
+  // 2300 {visible}: lo mismo con el input del nombre: un poll del buzon no le saca el teclado a facundo
+  if(tabEdit && document.activeElement === tabEdit.input) return;
   barra.innerHTML = "";
   tabs.forEach(function(t){
     var b = document.createElement("button");
     b.type = "button";
     b.className = "tab" + (t === temaActivo() ? " activo" : "");
     b.dataset.tema = t;
-    b.textContent = ETIQUETA[t] || t;
+    b.textContent = visibleTab(t);        // 2300 {visible}: el visible del clon, nunca el id crudo
     // 2265 {clon}: la pestaña de tema activa lleva un `+` que crea el clon siguiente (`awtomic#2`,
     // `awtomic#3`). va en la pestaña, no en la barra: el `+` de la barra sigue siendo "pestaña nueva".
     if(t === temaActivo() && clonable(t)){
@@ -1627,6 +1636,7 @@ function clonPedir(ruta, opts){ return clonStub ? clonStub(ruta, opts) : docsPed
 function clonesPedir(){
   return clonPedir("/clones").then(function(j){
     CLONES = (j && j.clones) || [];
+    clonVisPoner(j && j.visibles);
     return CLONES;
   }).catch(function(){ return CLONES; });
 }
@@ -1636,6 +1646,7 @@ function clonCrear(tema){
     .then(function(j){
       if(!j || !j.ok){ sistema("no pude crear la pestaña: " + ((j && j.motivo) || "?"), "error"); return null; }
       CLONES = j.clones || CLONES;
+      clonVisPoner(j.visibles);
       abrirTab(j.nombre);
       sistema("pestaña " + j.nombre + " lista");
       return j.nombre;
@@ -1660,6 +1671,7 @@ function clonBorrar(tema, forzar){
         return null;
       }
       CLONES = j.clones || [];
+      clonVisPoner(j.visibles);
       if(tabs.indexOf(tema) >= 0) cerrarTab(tema);
       sistema("pestaña " + tema + " borrada (el tema " + baseTema(tema) + " no se toca)");
       return tema;
@@ -1667,6 +1679,63 @@ function clonBorrar(tema, forzar){
       sistema("no pude borrar la pestaña (" + ((e && e.message) || e) + ")", "error");
       return null;
     });
+}
+// ---------- 2300 {visible}: el nombre visible de un clon (doble toque en la pestaña) ----------
+// el registro lo manda el server (`pestanas_clon.json`): la web pinta lo que vuelve. nada de un nombre que
+// exista solo en este navegador (el chat, la cola y la tui tienen que ver el mismo).
+function clonVisPoner(m){
+  if(!m || typeof m !== "object") return CLON_VIS;
+  CLON_VIS = {};
+  Object.keys(m).forEach(function(k){ if(m[k]) CLON_VIS[normTema(k)] = m[k]; });
+  return CLON_VIS;
+}
+function clonRenombrar(tema, nombre, sacar){
+  return clonPedir("/clones", {method: "POST", headers: {"content-type": "application/json"},
+                               body: JSON.stringify({renombrar: tema, nombre: nombre || "", sacar: !!sacar})})
+    .then(function(j){
+      if(!j || !j.ok){ sistema("no pude renombrar la pestaña: " + ((j && j.motivo) || "?"), "error"); return null; }
+      clonVisPoner(j.visibles);
+      if(j.clones) CLONES = j.clones;
+      pintarTabs();                    // solo la barra: ni el scroll del chat ni lo tipeado se tocan
+      return j.visible || null;
+    }).catch(function(e){
+      sistema("no pude renombrar la pestaña (" + ((e && e.message) || e) + ")", "error");
+      return null;
+    });
+}
+// el input inline: reemplaza el texto de ESA pestaña y nada mas. enter confirma, esc cancela, perder el foco
+// cancela. la pestaña activa no cambia (el editor no abre pestaña) y el borrador de la caja no se toca.
+var tabEdit = null;
+function tabEditar(tema){
+  tema = normTema(tema);
+  if(!esClon(tema)) return false;               // el nombre visible es de los clones (un tema ya tiene nombre)
+  var nodo = document.querySelector('#tabs .tab[data-tema="' + tema + '"]');
+  if(!nodo || tabEdit) return false;
+  var inp = document.createElement("input");
+  inp.type = "text"; inp.className = "tabnom"; inp.value = (CLON_VIS[tema] || "").split("/").pop();
+  inp.setAttribute("aria-label", "nombre de la pestaña " + tema);
+  inp.maxLength = 24;                           // el mismo tope que `pestanas_clon.TOPE_NOMBRE`
+  inp.size = Math.max(6, (inp.value || tema).length + 1);
+  nodo.textContent = "";
+  nodo.appendChild(inp);
+  tabEdit = {tema: tema, input: inp};
+  inp.focus(); inp.select();
+  function cerrar(){ tabEdit = null; pintarTabs(); }
+  inp.addEventListener("keydown", function(e){
+    if(e.key === "Enter"){
+      e.preventDefault(); e.stopPropagation();
+      var val = inp.value.trim();
+      tabEdit = null;
+      clonRenombrar(tema, val, !val);          // vacio = volver al id de siempre (`tools#2`)
+      pintarTabs();
+    } else if(e.key === "Escape"){
+      e.preventDefault(); e.stopPropagation();
+      cerrar();
+    }
+  });
+  inp.addEventListener("blur", function(){ if(tabEdit && tabEdit.input === inp) cerrar(); });
+  inp.addEventListener("click", function(e){ e.stopPropagation(); });
+  return true;
 }
 // el `×` de un clon: cerrar la pestaña (el clon queda vivo) o borrar el clon del server
 function cerrarOClon(tema){
@@ -12452,11 +12521,11 @@ function menuTab(nodo, x, y){
     ops.push(["renombrar tema", function(){
       var op = [];
       TEMAS.forEach(function(otro){ if(otro !== t) op.push([otro, otro]); });
-      dd("renombrar «" + (ETIQUETA[t] || t) + "» a...", op, function(n){ renombrarTab(t, n); });
+      dd("renombrar «" + visibleTab(t) + "» a...", op, function(n){ renombrarTab(t, n); });
     }]);
   }
   ops.push(["cerrar la pestaña", function(){ cerrarTab(t); }]);
-  return menu(x, y, "pestaña " + (ETIQUETA[t] || t), ops, nodo);
+  return menu(x, y, "pestaña " + visibleTab(t), ops, nodo);
 }
 function pedirMenuMsg(target, x, y){
   if(target && target.closest && target.closest(".cp,.copiar")) return false;   // 1214: el hold del boton no abre menu
@@ -13094,6 +13163,27 @@ $("tabs").addEventListener("click", function(e){
     if(esVistaMobile()) verPanel("chat");   // la pestaña que se toca es la que se ve
   }
 });
+// 2300 {visible}: doble toque sobre una pestaña clon = editarle el nombre. con mouse es el `dblclick` del
+// navegador; en el celu son dos `touchend` sobre la MISMA pestaña dentro de `TAP2_MS` (el `dblclick` de
+// touch no es confiable y el hold ya lo agarra el arrastre). el `+` y la `×` siguen siendo botones.
+var TAP2_MS = 320, tab2 = null;
+$("tabs").addEventListener("dblclick", function(e){
+  var n = tabDeTarget(e.target);
+  if(!n) return;
+  if(tabEditar(n.dataset.tema)){ e.preventDefault(); e.stopPropagation(); }
+});
+$("tabs").addEventListener("touchend", function(e){
+  if(arrT) return;                                  // lo que se esta arrastrando no se edita
+  var n = tabDeTarget(e.target);
+  if(!n){ tab2 = null; return; }
+  var t = n.dataset.tema, ahora = Date.now();
+  if(tab2 && tab2.tema === t && ahora - tab2.ts < TAP2_MS){
+    tab2 = null;
+    if(tabEditar(t)){ e.preventDefault(); }
+    return;
+  }
+  tab2 = {tema: t, ts: ahora};
+}, {passive: false});
 // la ventana cambio de forma (ancho, alto, girar el celu): el css ya cambio de vista solo, aca
 // se acomoda lo que el css no puede. sin recargar y sin leer `innerWidth` por su cuenta.
 function sincronizarVista(){
@@ -13678,7 +13768,12 @@ window.__agente = {
   // 2265 {clon}: las pestañas clonadas (`recetas/prueba_web_tabs`). `clonesPoner` es lo que deja la
   // respuesta del server sin pedirla por red; `clonar` es lo que hace el `+` de la pestaña.
   clones: function(){ return CLONES.slice(); },
-  clonesPoner: function(l){ CLONES = l || []; pintarTabs(); },
+  clonesPoner: function(l, vis){ CLONES = l || []; if(vis) clonVisPoner(vis); pintarTabs(); },
+  // 2300 {visible}: el nombre visible de un clon (`recetas/prueba_web_tabs`)
+  clonVisibles: function(){ return JSON.parse(JSON.stringify(CLON_VIS)); },
+  clonVisPoner: function(m){ clonVisPoner(m); pintarTabs(); return CLON_VIS; },
+  visibleTab: visibleTab, tabEditar: tabEditar, clonRenombrar: clonRenombrar,
+  tabEditando: function(){ return tabEdit ? tabEdit.tema : null; },
   esClon: esClon, baseTema: baseTema, clonable: clonable, esTema: esTema, padreTema: padreTema,
   clonar: function(t){ return clonCrear(t); }, clonBorrar: clonBorrar, cerrarOClon: cerrarOClon,
   clonStub: function(fn){ clonStub = fn; },
