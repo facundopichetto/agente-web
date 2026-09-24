@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.460">
-<link rel="manifest" href="manifest.json?v=4.460">
+<meta name="agente-web-version" content="4.461">
+<link rel="manifest" href="manifest.json?v=4.461">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.460">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.461">
 </head>
 <body>
 
@@ -1563,6 +1563,9 @@ function btnBarra(texto, accion){
 function pintarTabs(){
   var barra = $("tabs");
   if(!barra) return;
+  // 2299 {ordentabs}: mientras se arrastra una pestaña no se le puede sacar el nodo de abajo del dedo
+  // (un poll del buzon repinta la barra cuando quiere). el repintado queda anotado y sale al soltar.
+  if(arrT){ arrT.repintar = true; return; }
   barra.innerHTML = "";
   tabs.forEach(function(t){
     var b = document.createElement("button");
@@ -12247,11 +12250,15 @@ function menu(x, y, titulo, opciones, nodo){
 }
 // el gesto, delegado en el contenedor (los mensajes se repintan enteros en cada render).
 // `pedir(target, x, y)` devuelve true si abrio un menu.
-function gestos(el, pedir){
+// 2299 {ordentabs}: `soloMouse` = el tap and hold de este contenedor lo maneja otro (en la barra de
+// pestañas el mismo hold es el que agarra la pestaña para moverla, y el menu sale si el dedo se levanta
+// sin moverse). el click derecho del mouse sigue siendo de aca.
+function gestos(el, pedir, soloMouse){
   if(!el) return;
   el.addEventListener("contextmenu", function(e){
     if(pedir(e.target, e.clientX, e.clientY)) e.preventDefault();
   });
+  if(soloMouse) return;
   var t = null, x0 = 0, y0 = 0, blanco = null;
   function cancelar(){ if(t){ clearTimeout(t); t = null; } }
   el.addEventListener("touchstart", function(e){
@@ -12464,7 +12471,7 @@ gestos($("widgets"), function(target, x, y){
 gestos($("tabs"), function(target, x, y){
   var n = target && target.closest && target.closest("[data-tema]");
   return n ? menuTab(n, x, y) : false;
-});
+}, true);   // 2299 {ordentabs}: el hold del dedo lo atiende el arrastre, que abre este mismo menu si no se movio
 $("ctxfondo").addEventListener("click", function(){ if(Date.now() - menuTs > MENU_MS) cerrarMenu(); });
 $("ctxfondo").addEventListener("contextmenu", function(e){ e.preventDefault(); cerrarMenu(); });
 // scroll no burbujea: con captura se ve el de cualquier panel
@@ -12922,8 +12929,156 @@ $("ver-votacion").addEventListener("click", votacionAbrir);   // 1933 {instatind
 vistaOn = vistaInicial();
 vistaPintar();
 
+// ---------- 2299 {ordentabs}: las pestañas se reacomodan arrastrandolas (facundo, 2026-09-23) ----------
+// "las pestanas del chat deberian poder reacomodarse via drag and drop". mismo molde que las cajas de
+// widgets (2026-09-12) pero en horizontal: en la compu arranca al mover `TAB_PX` con el boton apretado,
+// en el celu con tap and hold de `HOLD_MS` (el mismo del menu, que ahora sale del hold que se levanta SIN
+// mover). el orden nuevo es el array `tabs`, o sea que se guarda y se publica con lo de siempre
+// (`pintarTabs` -> `guardarLayout`: localStorage `agente_tabs` + `tabs.json` del server, resuelto por `ts`),
+// asi sobrevive a un reload y a un repintado por pedazos. dos cosas que el arrastre NO hace: cambiar de
+// pestaña activa (el click que viene atras se corta con `arrTUlt`, y `activo` no se toca nunca) y perder lo
+// tipeado (`cajaDeTema` recibe siempre el mismo tema, asi que ni guarda ni cambia el borrador).
+var TAB_PX = 6;                    // cuanto tiene que moverse el mouse para que sea un arrastre y no un click
+var arrT = null, arrTUlt = 0, arrTHold = null, arrTTocado = null;
+// la pestaña que se agarra: la `×`, el `+` del clon y los botones de la barra siguen siendo botones
+function tabDeTarget(target){
+  if(!target || !target.closest) return null;
+  if(target.closest("[data-cerrar],[data-clonar],.barrabtn")) return null;
+  var n = target.closest("#tabs .tab[data-tema]");
+  return n && n.dataset.tema ? n : null;
+}
+function arrTEmpezar(nodo, x){
+  var barra = $("tabs");
+  if(arrT || !barra || !nodo.parentNode) return;
+  var r = nodo.getBoundingClientRect();
+  var ph = document.createElement("span");
+  ph.className = "tabfantasma";
+  ph.style.width = r.width + "px";
+  barra.insertBefore(ph, nodo);
+  nodo.classList.add("arrastrando");
+  nodo.style.position = "fixed";
+  nodo.style.left = r.left + "px";
+  nodo.style.top = r.top + "px";
+  nodo.style.width = r.width + "px";
+  nodo.style.height = r.height + "px";
+  nodo.style.zIndex = "60";
+  arrT = {tema: nodo.dataset.tema, nodo: nodo, ph: ph, dx: x - r.left, movio: false, repintar: false};
+  document.body.classList.add("arrastrando-tab");
+}
+// donde caeria: la primera pestaña cuyo centro queda a la derecha del dedo
+function arrTMover(x){
+  if(!arrT) return;
+  arrT.movio = true;
+  arrT.nodo.style.left = (x - arrT.dx) + "px";
+  var barra = $("tabs");
+  var ts = [].filter.call(barra.children, function(c){
+    return c !== arrT.nodo && c !== arrT.ph && c.dataset && c.dataset.tema;
+  });
+  for(var i = 0; i < ts.length; i++){
+    var r = ts[i].getBoundingClientRect();
+    if(x < r.left + r.width / 2){
+      if(arrT.ph.nextSibling !== ts[i]) barra.insertBefore(arrT.ph, ts[i]);
+      return;
+    }
+  }
+  if(ts.length) barra.insertBefore(arrT.ph, ts[ts.length - 1].nextSibling);
+}
+// suelta la pestaña donde quedo el hueco y se queda con ese orden. devuelve el nodo que se solto.
+function arrTSoltar(){
+  if(!arrT) return null;
+  var a = arrT; arrT = null; arrTUlt = Date.now();
+  document.body.classList.remove("arrastrando-tab");
+  a.nodo.classList.remove("arrastrando");
+  a.nodo.removeAttribute("style");
+  a.ph.parentNode.insertBefore(a.nodo, a.ph);
+  a.ph.parentNode.removeChild(a.ph);
+  var orden = [].map.call($("tabs").children, function(c){ return (c.dataset || {}).tema || ""; })
+                .filter(function(t){ return t; });
+  if(!ordenarTabs(orden) && a.repintar) pintarTabs();   // el repintado que se quedo esperando el dedo
+  return a.nodo;
+}
+function arrTCancelarHold(){ if(arrTHold){ clearTimeout(arrTHold); arrTHold = null; } arrTTocado = null; }
+// el orden nuevo de la barra al array `tabs`: solo mueve de lugar. lo que no este en `tabs` se ignora y lo
+// que la barra no nombre queda atras, en su orden (una pestaña nueva nunca se pierde).
+function ordenarTabs(orden){
+  var res = [];
+  (orden || []).forEach(function(t){ if(tabs.indexOf(t) >= 0 && res.indexOf(t) < 0) res.push(t); });
+  tabs.forEach(function(t){ if(res.indexOf(t) < 0) res.push(t); });
+  if(res.join("\n") === tabs.join("\n")) return false;
+  tabs = res;
+  pintarTabs();          // el que guarda y publica (`fueraDelGesto(guardarLayout)`), sin tocar `activo`
+  return true;
+}
+
+(function(){
+  var barra = $("tabs");
+  if(!barra) return;
+  barra.addEventListener("pointerdown", function(e){
+    if(e.pointerType === "touch" || e.button !== 0) return;    // el celu va por touchstart (hold)
+    var n = tabDeTarget(e.target);
+    if(!n) return;
+    var x0 = e.clientX, listo = false;
+    function mover(ev){
+      if(!listo){
+        if(Math.abs(ev.clientX - x0) < TAB_PX) return;
+        listo = true;
+        arrTEmpezar(n, x0);
+      }
+      arrTMover(ev.clientX);
+      ev.preventDefault();
+    }
+    function fin(){
+      document.removeEventListener("pointermove", mover);
+      document.removeEventListener("pointerup", fin);
+      document.removeEventListener("pointercancel", fin);
+      if(listo) arrTSoltar();
+    }
+    document.addEventListener("pointermove", mover);
+    document.addEventListener("pointerup", fin);
+    document.addEventListener("pointercancel", fin);
+  });
+  barra.addEventListener("touchstart", function(e){
+    arrTCancelarHold();
+    if(e.touches.length !== 1 || arrT) return;
+    var n = tabDeTarget(e.target);
+    if(!n) return;
+    var t = e.touches[0];
+    arrTTocado = {nodo: n, x: t.clientX, y: t.clientY};
+    arrTHold = setTimeout(function(){
+      arrTHold = null;
+      if(!arrTTocado) return;
+      arrTEmpezar(arrTTocado.nodo, arrTTocado.x);
+      try{ if(navigator.vibrate) navigator.vibrate(8); }catch(x){}
+    }, HOLD_MS);
+  }, {passive: true});
+  // no pasivo a proposito: una vez agarrada la pestaña, el dedo la mueve y no scrollea la barra
+  barra.addEventListener("touchmove", function(e){
+    var p = e.touches[0];
+    if(!p) return;
+    if(arrTHold && arrTTocado &&
+       (Math.abs(p.clientX - arrTTocado.x) > HOLD_PX || Math.abs(p.clientY - arrTTocado.y) > HOLD_PX)){
+      arrTCancelarHold();      // era un scroll de la barra, no un arrastre
+      return;
+    }
+    if(arrT){ arrTMover(p.clientX); e.preventDefault(); }
+  }, {passive: false});
+  ["touchend", "touchcancel"].forEach(function(ev){
+    barra.addEventListener(ev, function(e){
+      arrTCancelarHold();
+      if(!arrT) return;
+      var movio = arrT.movio, t = (e.changedTouches || [])[0];
+      var nodo = arrTSoltar();
+      // hold y levantar el dedo sin moverlo = el menu de la pestaña de siempre (renombrar / cerrar),
+      // que en el celu salia de este mismo gesto antes de que el hold agarrara la pestaña
+      if(!movio && ev === "touchend" && nodo && t) menuTab(nodo, t.clientX, t.clientY);
+    }, {passive: true});
+  });
+})();
+
 // ---------- barra de pestañas: click y el foco del input ----------
 $("tabs").addEventListener("click", function(e){
+  // 2299 {ordentabs}: el click que viene atras de un arrastre no cambia de pestaña
+  if(Date.now() - arrTUlt < 300){ e.stopPropagation(); e.preventDefault(); return; }
   var c = e.target.closest("[data-clonar]");
   if(c){ clonCrear(c.dataset.clonar); return; }        // 2265 {clon}: el `+` de la pestaña
   var x = e.target.closest("[data-cerrar]");
@@ -13528,6 +13683,32 @@ window.__agente = {
   clonar: function(t){ return clonCrear(t); }, clonBorrar: clonBorrar, cerrarOClon: cerrarOClon,
   clonStub: function(fn){ clonStub = fn; },
   tabs: function(){ return {tabs: tabs.slice(), activo: activo}; },
+  // 2299 {ordentabs}: reordenar las pestañas arrastrandolas (`recetas/prueba_web_tabs`). `ordenTabs` es lo
+  // que se ve en la barra, `arrastrarTab` mueve `tema` a la posicion `i` de las otras como lo haria el mouse.
+  ordenTabs: function(){
+    return [].map.call(document.querySelectorAll('#tabs .tab[data-tema]'), function(c){ return c.dataset.tema; });
+  },
+  ordenarTabs: ordenarTabs, arrastrandoTab: function(){ return !!arrT; }, pintarTabs: pintarTabs,
+  arrastrarTab: function(tema, i){
+    var nodo = document.querySelector('#tabs .tab[data-tema="' + tema + '"]');
+    var otras = [].filter.call(document.querySelectorAll('#tabs .tab[data-tema]'), function(c){
+      return c.dataset.tema !== tema;
+    });
+    if(!nodo || i < 0 || !otras.length) return false;
+    var r0 = nodo.getBoundingClientRect();
+    var destino = otras[Math.min(i, otras.length - 1)];
+    var rd = destino.getBoundingClientRect();
+    var x = i >= otras.length ? rd.right - 2 : rd.left + 2;
+    function ptr(tipo, cx){
+      return new PointerEvent(tipo, {bubbles: true, cancelable: true, clientX: cx,
+                                     clientY: r0.top + r0.height / 2, button: 0, pointerType: "mouse"});
+    }
+    nodo.dispatchEvent(ptr("pointerdown", r0.left + 4));
+    document.dispatchEvent(ptr("pointermove", r0.left + 4 + TAB_PX + 2));
+    document.dispatchEvent(ptr("pointermove", x));
+    document.dispatchEvent(ptr("pointerup", x));
+    return true;
+  },
   // header de cada widget: [↻] actualizar, [⚙] settings, plegar tocando el titulo
   wsets: function(){ return wsetsLimpias(); },
   wset: wset, setsDe: setsDe, guardarWset: guardarWset, recibirWsets: recibirWsets,

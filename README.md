@@ -399,7 +399,7 @@ facundo: "y esa caja de input deberia sugerir respuestas".
 - probado en `recetas/prueba_web_tabs` (chips de A/B/C con su titulo, `dale N`, si/no, `op N X` con las
   opciones del json, la fila oculta sin respuesta previa, y que tocar un chip llene la caja sin mandar).
 
-## el chat es un panel unico: las pestañas no se arrastran (facundo, 2026-09-12)
+## el chat es un panel unico: una pestaña no se manda al lado (facundo, 2026-09-12)
 
 > "che lo de los paneles del ui con el drag and drop por ahora sacalo. al menos las pestanas del chat
 > no tienen que poder ser dragandropeables. el chat es un panel unico (como lo es los widgets)"
@@ -422,7 +422,38 @@ antes una pestaña se podia arrastrar hasta los widgets y quedaba como segundo p
   drag and drop de pestañas.
 - se prueba en `recetas/prueba_web_tabs` (chrome headless, cero tokens): no existe el boton de split,
   ni `draggable`, ni `window.__arrastre`, ni `#zona-drop`, ni `#panel-lado`, y arrastrar una pestaña
-  con el mouse hasta los widgets **no** pinta fantasma ni abre ningun panel.
+  con el mouse hasta los widgets **no** abre ningun panel.
+- **corregido el 2026-09-23** (orden 2299 {ordentabs}, facundo: "las pestanas del chat deberian poder
+  reacomodarse via drag and drop"): mover una pestaña **de lugar en su propia barra** si se puede; lo que
+  sigue afuera es partir el chat en dos paneles. ver el bloque de abajo.
+
+## las pestañas se reacomodan arrastrandolas (facundo, 2026-09-23, orden 2299 {ordentabs})
+
+> "1- las pestanas del chat deberian poder reacomodarse via drag and drop
+> 2- las pestañasd el chat deberian tener un color hover, un verde no tan fuerte como el que muestra
+> pestaña seleccionada"
+
+- **el arrastre** (`arrT*` en `web/index.html`, mismo molde que las cajas de widgets pero horizontal): con el
+  mouse arranca al mover `TAB_PX` (6 px) con el boton apretado; en el celu con **tap and hold** de `HOLD_MS`
+  (500 ms) y el dedo la lleva. la pestaña se levanta (`position:fixed`, `.tab.arrastrando`) y en su lugar queda
+  un hueco del mismo ancho (`.tabfantasma`): las demas no saltan. **no** usa el `draggable` nativo del html.
+- **el orden nuevo es el array `tabs`**: se guarda y se publica con lo de siempre (`pintarTabs` ->
+  `guardarLayout`: localStorage `agente_tabs` + `tabs.json`, gana el `ts` mas nuevo), asi que sobrevive a un
+  reload, a un repintado por pedazos y se ve igual en el celu y en la mac.
+- **el arrastre no se lleva nada puesto**: `activo` no se toca, el click que viene atras se corta 300 ms
+  (`arrTUlt`), lo tipeado en el input no se mueve (`cajaDeTema` recibe el mismo tema) y `pintarTabs` **no
+  corre** mientras el dedo tiene una pestaña agarrada (un poll del buzon se la sacaba de abajo).
+- **el menu de la pestaña no se pierde en el celu**: el hold que se levanta **sin mover** abre el menu de
+  siempre (renombrar / cerrar), por eso `gestos($("tabs"), ..., true)` ahora es solo mouse. la `×`, el `+` del
+  clon y los botones de la barra no arrancan ningun arrastre.
+- **hover** (punto 2): `#tabs .tab:not(.activo):hover` va con letra `--verde-tenue` (`#1f7a12`) y fondo el
+  `--verde` al 8%; la activa sigue con el `--verde` pleno sobre `--fondo-caja`. el mismo verde de la paleta
+  bajado de intensidad, sin `@media (hover:hover)` (en el celu la pestaña tocada pasa a activa y la regla deja
+  de aplicarle sola).
+- se prueba en `recetas/prueba_web_tabs` (bloque 2299, cero tokens): el arrastre con el mouse del navegador y
+  con `Touch`/`TouchEvent` de verdad, el orden en `tabs` / localStorage / `tabs.json` con el `ts` mas nuevo, el
+  repintado abajo del dedo, el click de atras, el hold sin mover que abre el menu, y el color computado con el
+  mouse encima y despues afuera.
 
 ## camara: una foto desde el celu o la compu (facundo, 2026-09-11)
 

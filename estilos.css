@@ -1954,9 +1954,27 @@
     white-space:nowrap;display:inline-flex;align-items:center;
   }
   #tabs .tab.enpanel{color:var(--cian)}
+  /* 2299 {ordentabs} punto 2 (facundo, 2026-09-23: "deberian tener un color hover, un verde no tan fuerte
+     que el que muestra pestaña seleccionada"): el verde del hover sale del mismo `--verde` de la paleta
+     bajado de intensidad -`--verde-tenue` para la letra y ese verde al 8% para el fondo-, asi nunca compite
+     con la activa (que va `--verde` pleno sobre `--fondo-caja`). el estado seleccionado no se toca: la regla
+     es `:not(.activo)`. sin `@media (hover:hover)` a proposito: en el celu un hover pegado no se ve (la
+     pestaña que se toca pasa a ser la activa y la regla deja de aplicarle), y el media query dejaba el color
+     sin poder chequear (chrome headless se declara sin mouse: `hover: none`). */
+  #tabs .tab:not(.activo):hover{color:var(--verde-tenue);background:rgba(57,255,20,.08)}
   #tabs .tab.activo{
     color:var(--verde);background:var(--fondo-caja);
   }
+  /* 2299 {ordentabs} punto 1: arrastrar una pestaña para reacomodarla. mismo molde que las cajas de widgets
+     (2026-09-12) pero en horizontal: la que se lleva el dedo va `position:fixed` desde el js y en su lugar
+     queda el hueco, del mismo ancho, asi las demas no saltan. `grab` / `grabbing` solo donde hay mouse. */
+  #tabs .tab.arrastrando{
+    opacity:.95;background:#121a14;box-shadow:0 6px 18px rgba(0,0,0,.6);
+    pointer-events:none;cursor:grabbing;
+  }
+  #tabs .tabfantasma{flex:0 0 auto;align-self:stretch;background:#0d1411;border-radius:4px 4px 0 0}
+  body.arrastrando-tab{user-select:none;-webkit-user-select:none;cursor:grabbing}
+  body.arrastrando-tab #tabs{overflow-x:hidden}
   #tabs .tab .x{color:#555;margin-left:7px}
   /* 2265 {clon}: el `+` de la pestaña activa (crea `tema#2`, `tema#3`). mismo tamaño y mismo lugar que la
      `×`, a su izquierda: los dos son del mismo control, no botones sueltos de la barra. */
