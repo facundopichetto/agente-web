@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.457">
-<link rel="manifest" href="manifest.json?v=4.457">
+<meta name="agente-web-version" content="4.458">
+<link rel="manifest" href="manifest.json?v=4.458">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.457">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.458">
 </head>
 <body>
 
@@ -2199,16 +2199,26 @@ var msgs = [], msgsHist = {}, msgsCom = [];
 // el tema de un mensaje: el que ya trae explicito, el `[tema]` con el que contesto el daemon, el
 // `tema x:` que escribio facundo, las palabras clave, y si no hay nada, el del mensaje anterior
 // (lo mismo que hace el daemon con `.ultimo-tema`).
-function temaDe(m, prev){
+// 1875 {clonvista}: una respuesta SIN tag hereda el tema del ultimo mensaje **de facundo**, no el del
+// mensaje anterior cualquiera. con varias pestañas del mismo tema abiertas (`awtomic#2`, `#3`, `#4`) la
+// linea de tiempo mezcla las respuestas de todas, asi que heredar "la anterior" le ponia a la respuesta
+// de un clon el tema de OTRO clon y quedaba pintada en la pestaña equivocada (y su caja, al tocarla,
+// salia con ese tema). los comandos sin modelo, que son los que contestan sin tag, siguen cayendo donde
+// se escribieron: en la pestaña del mensaje de facundo que contestan.
+function temaDe(m, prev, prevF){
   if(m.explicito) return m.tema;
   if(m.tag) return m.tag;
-  if(m.clase === "agente") return prev || "tools";
+  if(m.clase === "agente") return prevF || prev || "tools";
   var c = clasificar(m.texto);
-  return c.tema || prev || "tools";
+  return c.tema || prevF || prev || "tools";
 }
 function recalcularTemas(){
-  var prev = null;
-  msgs.forEach(function(m){ m.tema = temaDe(m, prev); prev = m.tema; });
+  var prev = null, prevF = null;
+  msgs.forEach(function(m){
+    m.tema = temaDe(m, prev, prevF);
+    prev = m.tema;
+    if(m.clase === "yo") prevF = m.tema;
+  });
 }
 // el mismo mensaje puede venir por las dos fuentes (el daemon publica la charla despues de contestar,
 // el comentario ya estaba): se compara texto normalizado y fecha cercana, y gana el del historial.
@@ -2304,7 +2314,7 @@ function sinDobles(l){
 // nodo y modelo de cada respuesta (2026-09-13): el daemon los manda en `<!--nodo:cloud modelo:fable dur:12
 // cuello:modelo-->` abajo de la marca, y en `chat/<tema>.json` como campos. la misma logica que
 // `recetas/chat_estado.leer_meta` (tambien entiende el `[cloud]` viejo en el cuerpo).
-var RE_META = /^\s*<!--nodo:([^>]*?)-->\s*\n?/, RE_NODO_VIEJO = /^((?:\s*\[[\w\/-]+\])?)\s*\[(mac|cloud|nube)\]\s*/i;
+var RE_META = /^\s*<!--nodo:([^>]*?)-->\s*\n?/, RE_NODO_VIEJO = /^((?:\s*\[[\w\/#-]+\])?)\s*\[(mac|cloud|nube)\]\s*/i;
 function leerMeta(cuerpo){
   cuerpo = String(cuerpo || "");
   var meta = {}, m = RE_META.exec(cuerpo);
@@ -2788,7 +2798,7 @@ function citaCaja(m){
 }
 // {cita, cuerpo} de un mensaje de f (sin el `tema x:` de la pestaña)
 function partirCita(texto){
-  var t = String(texto || "").replace(/^\s*tema\s+[\w\/-]+\s*:\s*/i, "");
+  var t = String(texto || "").replace(/^\s*tema\s+[\w\/#-]+\s*:\s*/i, "");
   var mm = /^((?:[ \t]*>[^\n]*(?:\n|$))+)\s*/.exec(t);
   return mm ? {cita: mm[1], cuerpo: t.slice(mm[0].length).trim()} : {cita: "", cuerpo: t.trim()};
 }
@@ -2797,7 +2807,7 @@ function citaEsDe(cita, m){
   // 24 h: las dos se normalizan antes de comparar, asi una cita de ayer sigue enganchando con su mensaje.
   var mm = /^\s*>\s*[fc]laudio\s+(\d{1,2}:\d\d(?:\s*[ap]m)?)\s*:\s*(.*)$/m.exec(cita || "");
   if(!mm || norm12(mm[1]) !== norm12(hhmmDe(m))) return false;
-  var q = normCita(mm[2].replace(/^\[[\w\/-]+\]\s*/, "")).replace(/…$/, "").slice(0, 24), ls = lineasCita(m);
+  var q = normCita(mm[2].replace(/^\[[\w\/#-]+\]\s*/, "")).replace(/…$/, "").slice(0, 24), ls = lineasCita(m);
   return !q || normCita(ls[0] || "").indexOf(q) === 0;
 }
 function letrasDe(txt){ return (String(txt).match(/[ABC]/g) || []).filter(function(l, i, a){ return a.indexOf(l) === i; }).sort().join(""); }
@@ -3058,7 +3068,8 @@ function mandarCaja(m, caja, lista_, marcar, decir){
   decir = letrasDe(decir || marcar);
   var ops = lista_.filter(function(o){ return decir.indexOf(o.letra) >= 0; });
   if(!ops.length) return;
-  var vieja = cajaVieja(m), tema = m.tema || temaActivo();
+  // 1875 {clonvista}: el tema es el de la pestaña que EMITIO la caja (nunca el de la pestaña activa)
+  var vieja = cajaVieja(m), tema = m.tema || m.tag || temaActivo();
   // 1203: la hora es la de ESTE envio, y solo para las letras nuevas: la que ya estaba conserva la suya
   var horas = conHoras(estadoCaja(m), marcar, Date.now());
   guardarOpc(k, marcar, horas);
@@ -3086,7 +3097,7 @@ function arrepentirse(m, caja, lista_, letra){
   marcarHecho(caja, quedan, horas);
   var codA = cajaCod(m, letra, true);   // 2096: `#k7f2-A`
   (accMandarFn || mandar)(codA || (citaCaja(m) + "me arrepentí: " + letra + ": " + op.texto),
-                          m.tema || temaActivo(), false);
+                          m.tema || m.tag || temaActivo(), false);
 }
 // un mensaje suelto que llega (lo que escribio facundo, la respuesta que baja el poll): se pinta ese nodo y
 // nada mas. 2149 {pestana}: el nodo se marca con su `data-clave` y su `data-firma`, asi el proximo render
@@ -3730,7 +3741,7 @@ function agregar(c, arriba){
   if(b.indexOf(MARCA) === 0){
     // `<!--nodo:cloud modelo:fable dur:12 cuello:modelo-->` va al header, no al cuerpo
     var lm = leerMeta(b.slice(MARCA.length).replace(/^\n/, "")), mm = lm.meta;
-    var cuerpo = lm.cuerpo, mt = /^\[([\w\/-]+)\]\s*/.exec(cuerpo), tag = null;
+    var cuerpo = lm.cuerpo, mt = /^\[([\w\/#-]+)\]\s*/.exec(cuerpo), tag = null;
     // 1237: los `aviso: ...` que el daemon viejo comentaba en el buzon no se pintan: van a la campanita
     if(/^aviso: /.test(cuerpo)) return null;
     if(mt && esTema(mt[1])){ tag = normTema(mt[1]); cuerpo = cuerpo.slice(mt[0].length); }
@@ -3819,7 +3830,7 @@ function recibirChat(tema, d){
     if(f.pregunta && !propia) out.push({id: "h:" + base + ":q", clase: "yo", quien: QUIEN_F, texto: f.pregunta,
                              iso: f.ts, tema: t, explicito: true, disp: dispDe(f.desde) || null,
                              modo: modoDe(f.desde) || null});
-    var r = String(f.respuesta || ""), mt = /^\s*\[([\w\/-]+)\]\s*/.exec(r);
+    var r = String(f.respuesta || ""), mt = /^\s*\[([\w\/#-]+)\]\s*/.exec(r);
     if(/^aviso: /.test(r)) return;   // 1237: los avisos van solo a la campanita, nunca al chat
     if(mt && esTema(mt[1])) r = r.slice(mt[0].length);   // el `[tema]` ya lo dice la pestaña
     var lm = leerMeta(r), nodo = f.nodo || lm.meta.nodo || null;   // el `[cloud]` viejo sale del cuerpo
@@ -7395,7 +7406,7 @@ function pintarVuelo(){
 // el `paso` siguen sin dejar rastro. un `salida` (con `cmd`) de un daemon viejo no se pinta nunca. la frase la escribe el server
 // (el modelo o `reglas_chat.haciendo`): la web no tiene vocabulario propio.
 function normTramo(t){
-  return String(t || "").replace(/^\s*\[[\w\/-]+\]\s*/, "").replace(/\s+/g, " ").trim();
+  return String(t || "").replace(/^\s*\[[\w\/#-]+\]\s*/, "").replace(/\s+/g, " ").trim();
 }
 function tipoTramo(t){
   if(!t) return "texto";
@@ -13849,6 +13860,16 @@ window.__agente = {
     for(var i = 0; i < ns.length; i++)
       if((ns[i].textContent || "").indexOf(sel) >= 0){ ns[i].click(); return true; }
     return false;
+  },
+  // 1875 {clonvista}: el tema con el que saldria el toque de una caja (el de la pestaña que la emitio),
+  // el mismo calculo que hace `cajaTocar`. lo mira `recetas/prueba_web_tabs.py`.
+  cajaTema: function(q){
+    for(var i = msgs.length - 1; i >= 0; i--){
+      var m = msgs[i];
+      if(m.clase === "agente" && tieneCajas(m) && String(m.texto || "").indexOf(q) >= 0)
+        return m.tema || m.tag || temaActivo();
+    }
+    return null;
   },
   cargar: function(coms){
     msgsCom = []; vistos = {};
