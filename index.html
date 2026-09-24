@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.463">
-<link rel="manifest" href="manifest.json?v=4.463">
+<meta name="agente-web-version" content="4.464">
+<link rel="manifest" href="manifest.json?v=4.464">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.463">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.464">
 </head>
 <body>
 
@@ -857,7 +857,11 @@ var WSETS = {
   salud:       [{k: "solo_problemas", et: "solo rojo y amarillo", tipo: "bool", def: false}],
   gasto:       [{k: "cuentas", et: "cuentas", tipo: "opciones", def: "todas", ops: ["todas"]}],
   agent:       [{k: "cola", et: "mostrar la cola", tipo: "bool", def: true}],
-  tickets:     [{k: "estado", et: "filtro de estado", tipo: "opciones", def: "todos", ops: ["todos"]}],
+  // 1932 {jira}: CX ya viene filtrada por estado del server (need eng / in progress), asi que no lleva filtro.
+  // MVP y QA arrancan en `abiertos` (esconden los cerrados de los ultimos 14 dias que trae la jql).
+  tickets_cx:  [],
+  tickets_mvp: [{k: "estado", et: "filtro de estado", tipo: "opciones", def: "abiertos", ops: ["abiertos"]}],
+  tickets_qa:  [{k: "estado", et: "filtro de estado", tipo: "opciones", def: "abiertos", ops: ["abiertos"]}],
   propuestas:  [{k: "tema", et: "filtro de tema", tipo: "opciones", def: "todos", ops: ["todos"]}],
   podcast:     [{k: "abierto", et: "abierto por default", tipo: "bool", def: false}],
   dj:          [{k: "cola", et: "mostrar la cola", tipo: "bool", def: true}],
@@ -872,7 +876,7 @@ var WSETS = {
 // 2144 {oportunidades}: widgets retirados del board. la clave puede seguir en el `tabs.json` del buzon
 // (o en el cache de localStorage) de cuando existian: se filtra al leer y al publicar, asi la config
 // guardada queda limpia sola en la primera pasada y nada la vuelve a resucitar.
-var WIDGETS_FUERA = {oportunidades: 1, decided: 1};
+var WIDGETS_FUERA = {oportunidades: 1, decided: 1, tickets: 1};   // `tickets` se partio en tres (1932 {jira})
 function widgetFuera(c){ return !!WIDGETS_FUERA[c]; }
 // 2175 {gasto}: el widget `usage` pasa a llamarse `gasto` (ya no es solo claude). la clave vieja puede
 // seguir viva en el `tabs.json` del buzon o en el cache de localStorage: se traduce al leer, asi la
@@ -887,7 +891,7 @@ function setsDe(clave){
   return WSETS_COMUNES.concat(WSETS[clave] || []).map(function(s){
     var o = {}; for(var k in s) o[k] = s[k];
     if(s.k === "cuentas") o.ops = ["todas"].concat(cuentasConocidas());
-    if(s.k === "estado" && clave === "tickets") o.ops = ["todos"].concat(estadosConocidos());
+    if(s.k === "estado" && ticEsCaja(clave)) o.ops = ["abiertos", "todos"].concat(estadosConocidos(clave));
     if(s.k === "tema" && clave === "propuestas") o.ops = ["todos"].concat(temasPropuestas());
     if(s.k === "fuentes" && clave === "que_ver") o.ops = ["todas"].concat(fuentesQueVer());
     return o;
@@ -9868,9 +9872,9 @@ function cuentasConocidas(){
   return ((widDatos || {}).gasto || {}).cuentas ?
          (widDatos.gasto.cuentas || []).map(function(c){ return c.nombre; }) : [];
 }
-function estadosConocidos(){
+function estadosConocidos(clave){
   var vs = [];
-  (((widDatos || {}).tickets || {}).mine || []).forEach(function(t){
+  ((((widDatos || {})[clave || "tickets_mvp"]) || {}).filas || []).forEach(function(t){
     if(t.estado && vs.indexOf(t.estado) < 0) vs.push(t.estado);
   });
   return vs;
@@ -10068,54 +10072,87 @@ function cajaVerif(v){
       ' · running <span class="' + (v.running ? "a" : "v") + ' b">' + v.running + "</span>"), false, "verificaciones");
 }
 
-function cajaTickets(t){
-  if(t.sin_datos) return caja("my tickets", "", vacio("sin jira_mine.json"), false, "tickets");
-  var mine = t.mine || [], filtro = wset("tickets", "estado");
-  if(filtro && filtro !== "todos") mine = mine.filter(function(x){ return x.estado === filtro; });
-  var filas = mine.map(function(x){
-    return it({tipo: "ticket", tema: "awtomic", d: x},
-      '<span class="c b">' + esc(x.key) + '</span> <span class="a">' + esc(x.estado) + '</span> ' +
-      '<span class="g">' + haceSeg(x.hace_s) + "</span> " + esc(x.titulo));
-  });
-  filas = limFilas("tickets", filas);
-  if(!filas.length) filas.push(vacio(filtro && filtro !== "todos" ? "nada en " + filtro : "nada asignado en curso"));
-  if(t.total > (t.mine || []).length) filas.push('<span class="g">+' + (t.total - t.mine.length) + " mas</span>");
-  if(t.ultimo) filas.push('<span class="g">ultimo</span> <span class="b">' + esc(t.ultimo.key) + '</span> <span class="g">hace ' + haceSeg(t.ultimo.hace_s) + "</span>");
-  if(t.cx_total) filas.push('<span class="g">cx sin asignar</span> <span class="m b">' + t.cx_total + '</span> <span class="g">' +
-                            esc((t.cx[0] || {}).key || "") + " " + haceSeg((t.cx[0] || {}).hace_s) + "</span>");
-  // dato esencial: cuantos tengo asignados (y el cache si esta viejo)
-  var ese = '<span class="c b">' + mine.length + "</span> " +
-            '<span class="g">asignado' + (mine.length === 1 ? "" : "s") +
-            (filtro && filtro !== "todos" ? " \u00b7 " + esc(filtro) : "") + "</span>" +
-            (t.cache_s > 1800 ? ' <span class="g">cache ' + haceSeg(t.cache_s) + "</span>" : "") +
-            (ticAviso ? ' <span class="a" title="' + esc(ticAviso) + '">cache</span>' : "");
-  return caja("my tickets", ese, filas.join("\n"), false, "tickets");
+// 1932 {jira} (facundo, 2026-09-24: "hay que partir el widget de tickets en 3 widgets"): el widget `my tickets`
+// se fue y en su lugar hay TRES cajas, cada una con su clave (`tickets_cx`, `tickets_mvp`, `tickets_qa`), su fila
+// en widgets.json, su plegado y su `[↻]`. las tres salen de UNA sola consulta a jira (el server la reparte en
+// memoria, `widgets_json._tickets_datos`), asi que un toque en cualquiera refresca a las tres.
+//   CX  -> cx en `need eng` o `in progress` de facundo, de nadie o de emily, con ASIGNADO y REPORTER en la fila
+//   MVP -> los MVP donde facundo es el asignado, por default solo los abiertos (filtro de estado en la caja)
+//   QA  -> los MVP donde facundo es el Verifier, igual: abiertos por default y el filtro en la caja
+var TIC_CAJAS = {tickets_cx: "CX", tickets_mvp: "MVP", tickets_qa: "QA"};
+function ticGente(x){
+  var p = [];
+  if(x.assignee) p.push('<span class="g">a</span> ' + esc(x.assignee));
+  if(x.reporter) p.push('<span class="g">r</span> ' + esc(x.reporter));
+  return p.length ? " " + p.join(" ") : "";
 }
+// una fila de ticket: la misma en las tres cajas (el modal `ticket` no cambia). `gente` solo en CX.
+function ticFila(x, gente){
+  return it({tipo: "ticket", tema: "awtomic", d: x},
+    '<span class="c b">' + esc(x.key) + '</span> <span class="' + (x.cerrado ? "v" : "a") + '">' +
+    esc(x.estado) + '</span> <span class="g">' + haceSeg(x.hace_s) + "</span>" +
+    (gente ? ticGente(x) : "") + " " + esc(x.titulo));
+}
+// `abiertos` (el default de MVP y QA) esconde los cerrados; `todos` los muestra; un estado filtra por ese estado.
+function ticFiltrar(clave, filas){
+  var f = wset(clave, "estado");
+  if(!f || f === "abiertos") return filas.filter(function(x){ return !x.cerrado; });
+  if(f === "todos") return filas;
+  return filas.filter(function(x){ return x.estado === f; });
+}
+function cajaTic(clave, d){
+  var tit = TIC_CAJAS[clave];
+  if(!d || d.sin_datos) return caja(tit, "", vacio("sin jira_mine.json"), false, clave);
+  var gente = clave === "tickets_cx";
+  var vis = ticFiltrar(clave, d.filas || []);
+  var filas = limFilas(clave, vis.map(function(x){ return ticFila(x, gente); }));
+  var f = wset(clave, "estado");
+  if(!filas.length) filas.push(vacio(f && f !== "abiertos" && f !== "todos" ? "nada en " + f : "nada en curso"));
+  var ese = '<span class="c b">' + vis.length + "</span> " +
+            '<span class="g">ticket' + (vis.length === 1 ? "" : "s") +
+            (f && f !== "abiertos" ? " \u00b7 " + esc(f) : "") + "</span>" +
+            (d.cache_s > 1800 ? ' <span class="g">cache ' + haceSeg(d.cache_s) + "</span>" : "") +
+            (ticAviso ? ' <span class="a" title="' + esc(ticAviso) + '">cache</span>' : "");
+  return caja(tit, ese, filas.join("\n"), false, clave);
+}
+function cajaTicCX(d){ return cajaTic("tickets_cx", d); }
+function cajaTicMVP(d){ return cajaTic("tickets_mvp", d); }
+function cajaTicQA(d){ return cajaTic("tickets_qa", d); }
 
-// 1883 {periodo} (facundo): el widget `my tickets` no se conforma con el cache. el script `jira_mine` pasa a
-// correr cada 60 s (antes 15 min) y, ademas, ABRIR la caja (desplegarla) o TOCARLA pide `tickets.json?fresco=1`
-// por la lan: el daemon le vuelve a pegar a jira en el momento (`recetas/jira_mine_fresco.py`, tres jql por la
-// rest api, cero tokens) y recien con ESE json se repinta la caja, en vez de servir lo que dejo el script.
+// 1883 {periodo} (facundo): las cajas de jira no se conforman con el cache. el script `jira_mine` corre cada
+// 60 s y, ademas, ABRIR una caja (desplegarla) o TOCARLA pide `tickets.json?fresco=1` por la lan: el daemon le
+// vuelve a pegar a jira en el momento (`recetas/jira_mine_fresco.py`, 1932 {jira}: UNA jql por la rest api, cero
+// tokens) y recien con ESE json se repintan las TRES cajas, en vez de servir lo que dejo el script. un solo
+// pedido las refresca a las tres, porque en el server salen todas de la misma consulta.
 // regla {cache}: la cache pinta el primer frame, el server manda. si no hay lan, si el pedido falla o si jira no
-// contesta, queda a la vista lo cacheado con lo que haya y la marca `cache` en el header: el widget no se rompe
+// contesta, queda a la vista lo cacheado con lo que haya y la marca `cache` en el header: la caja no se rompe
 // ni queda en blanco nunca. `TIC_TTL` evita que dos gestos seguidos disparen dos pedidos (el server tiene su
 // propio freno de 10 s) y `TIC_HOLD` evita que el repintado de 30 s pise lo fresco con el widgets.json anterior.
 var TIC_TTL = 5000, TIC_HOLD = 20000;
 var ticPidiendo = false, ticUlt = 0, ticAviso = null, ticFresco = null;
+function ticClaves(){ return Object.keys(TIC_CAJAS); }
+function ticEsCaja(c){ return !!TIC_CAJAS[c]; }
 function ticGirar(on){
   if(refrescando) return;   // el `[↻]` ya maneja su propia animacion
-  var b = document.querySelector('#widgets .caja[data-w="tickets"] button[data-ref]');
-  if(b) b.classList[on ? "add" : "remove"]("girando");
+  ticClaves().forEach(function(c){
+    var b = document.querySelector('#widgets .caja[data-w="' + c + '"] button[data-ref]');
+    if(b) b.classList[on ? "add" : "remove"]("girando");
+  });
 }
 function ticPintar(){
-  var n = document.querySelector('#widgets .caja[data-w="tickets"]');
-  if(!n || !widDatos) return repintarWidgets();
+  if(!widDatos) return repintarWidgets();
+  var faltan = ticClaves().filter(function(c){ return !document.querySelector('#widgets .caja[data-w="' + c + '"]'); });
+  if(faltan.length === ticClaves().length) return repintarWidgets();
   anclaClavar();              // 1813: repintar una caja no puede mover el chat
   try{
-    var t = document.createElement("div");
-    t.innerHTML = cajaTickets(widDatos.tickets || {});
-    var nuevo = t.firstElementChild;
-    if(nuevo) n.parentNode.replaceChild(nuevo, n);
+    ticClaves().forEach(function(c){
+      var n = document.querySelector('#widgets .caja[data-w="' + c + '"]');
+      if(!n) return;          // oculta o plegada fuera del dom: nada que repintar
+      var t = document.createElement("div");
+      t.innerHTML = cajaTic(c, widDatos[c] || {});
+      var nuevo = t.firstElementChild;
+      if(nuevo) n.parentNode.replaceChild(nuevo, n);
+    });
   } finally { anclaSoltar(); }
 }
 function ticketsFresco(motivo, forzar){
@@ -10127,10 +10164,12 @@ function ticketsFresco(motivo, forzar){
   return apiLan("GET", "/repos/" + REPO + "/contents/tickets.json?fresco=1", null, null,
                 "application/vnd.github.raw+json").then(function(r){
     var j = r && r.json;
-    if(!j || !j.tickets) return false;
+    if(!j || !ticClaves().some(function(c){ return j[c]; })) return false;
     ticAviso = j.aviso || null;
-    ticFresco = {t: Date.now(), d: j.tickets};
-    if(widDatos) widDatos.tickets = j.tickets;
+    var d = {};
+    ticClaves().forEach(function(c){ if(j[c]) d[c] = j[c]; });
+    ticFresco = {t: Date.now(), d: d};
+    if(widDatos) ticClaves().forEach(function(c){ if(d[c]) widDatos[c] = d[c]; });
     ticPintar();
     return !!j.fresco;
   }, function(){ return false; }).then(function(v){
@@ -11424,7 +11463,8 @@ function pintarWidgets(d, err){
   if(d) widDatos = d;
   d = widDatos;
   // 1883 {periodo}: lo que acaba de bajar fresco de jira manda sobre el `widgets.json` del script de 60 s
-  if(d && ticFresco && Date.now() - ticFresco.t < TIC_HOLD) d.tickets = ticFresco.d;
+  if(d && ticFresco && Date.now() - ticFresco.t < TIC_HOLD)
+    for(var kt in ticFresco.d) d[kt] = ticFresco.d[kt];
   itemsW = {}; itemN = 0;            // los items del repintado anterior ya no existen
   var t0 = fecha(d.ts);
   var edad = t0 ? haceSeg((Date.now() - t0) / 1000) : "?";
@@ -11437,7 +11477,9 @@ function pintarWidgets(d, err){
     ["salud", cajaSalud(d.salud || {})],
     ["agent", modHtml("agent")],
     ["verificaciones", cajaVerif(d.verificaciones || {})],
-    ["tickets", cajaTickets(d.tickets || {})],
+    ["tickets_cx", cajaTicCX(d.tickets_cx || {})],
+    ["tickets_mvp", cajaTicMVP(d.tickets_mvp || {})],
+    ["tickets_qa", cajaTicQA(d.tickets_qa || {})],
     ["sombra", modHtml("sombra")],
     ["propuestas", cajaPropuestas(d.propuestas || [])],
     ["podcast", cajaPodcast(d.podcast || {})],
@@ -11489,8 +11531,8 @@ function refrescarWidgets(clave){
     var n = document.querySelector('#widgets [data-ref="' + (clave || "").replace(/"/g, "") + '"]');
     if(n) n.classList.remove("girando");
   }
-  // 1883 {periodo}: el `[↻]` de `my tickets` primero le pega a jira (asi `widgets.json` se arma con lo de recien)
-  var antes = clave === "tickets" ? ticketsFresco("[↻]", true) : Promise.resolve(false);
+  // 1883 {periodo}: el `[↻]` de una caja de jira primero le pega a jira (asi `widgets.json` se arma con lo de recien)
+  var antes = ticEsCaja(clave) ? ticketsFresco("[↻]", true) : Promise.resolve(false);
   return antes.then(function(){ return cargarWidgets(true); }).catch(function(e){
     if(ruidoso(e)) pintarWidgets(null, e.message);
   }).then(listo, function(e){ listo(); throw e; });
@@ -11711,9 +11753,9 @@ widgetsEl.addEventListener("touchmove", function(e){
 
 widgetsEl.addEventListener("click", function(e){
   if(Date.now() - arrUlt < 300){ e.stopPropagation(); return; }   // el click que viene atras del arrastre
-  // 1883 {periodo}: tocar `my tickets` (el header, una fila, desplegarla) pide el json fresco de jira. el `[↻]`
+  // 1883 {periodo}: tocar una caja de jira (el header, una fila, desplegarla) pide el json fresco. el `[↻]`
   // va por `refrescarWidgets` y los botones que no miran datos (ocultar, settings) no disparan nada.
-  if(e.target.closest && e.target.closest('.caja[data-w="tickets"]') &&
+  if(e.target.closest && e.target.closest('.caja[data-w^="tickets_"]') &&
      !e.target.closest("button[data-ref],button[data-ocultar],button[data-set]")) ticketsFresco("toque");
   if(Date.now() - qvUlt < 400){ e.stopPropagation(); e.preventDefault(); return; }   // idem atras de un swipe
   var qvb = e.target.closest("button[data-qvacc]");       // `que ver` en desktop: visto / no me interesa
@@ -11793,7 +11835,7 @@ function accHablar(o, contexto){
 // del widget y deja una cita `> widget <nombre>: ...` + linea vacia en el input, sin mandar nada. el
 // daemon la separa del pedido con `marcas_chat` (igual que `responder`) y se la pasa al modelo.
 var TEMA_WIDGET = {server: "server", salud: "tools", gasto: "tools", agent: "tools", cola: "tools", verificaciones: "awtomic/qa",
-                   tickets: "awtomic", sombra: "tools",
+                   tickets_cx: "awtomic", tickets_mvp: "awtomic", tickets_qa: "awtomic/qa", sombra: "tools",
                    propuestas: "tools", podcast: "podcast", dj: "fuzzer", mail: "fuzzer",
                    que_ver: "personal", salud_personal: "personal"};
 var ESC_CHARS = 300;
@@ -14105,7 +14147,7 @@ window.__agente = {
   // envio idempotente: dos enter rapidos no mandan dos veces (prueba_web_tabs lo chequea)
   envios: function(){ return {enviando: enviando, ultimo: ultimoTexto, repeMs: REPE_MS}; },
   stubApi: function(f){ apiStub = f || null; },
-  // 1883 {periodo}: `prueba_web_tabs` suelta el freno del pedido fresco de `my tickets` para probar el caso malo
+  // 1883 {periodo}: `prueba_web_tabs` suelta el freno del pedido fresco de las cajas de jira (caso malo)
   ticUlt: function(v){ ticUlt = +v || 0; ticFresco = null; return ticUlt; },
   // lan primero (prueba_web_tabs simula el endpoint vivo y caido)
   stubLan: function(f){ lanStub = f || null; }, probarLan: probarLan, lanPoner: lanPoner, lanCandidatos: lanCandidatos,

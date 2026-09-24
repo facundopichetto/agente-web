@@ -9,6 +9,10 @@
     /* 1541 (facundo, 2026-09-15): ningun texto del board mas grande que el del chat (`.msg`); lo que resalta usa peso o color.
        1938 (facundo, 2026-09-17: "agranda 2 puntos TODAS LAS FUENTES DEL BOARD"): el tope pasa de 12 a 14 px, como todo lo demas */
     --texto-max:18px;
+    /* 2333 {panel} (facundo, 2026-09-24: "bajar TODO el texto del panel del chat a 14 px parejo"): el chat
+       tiene su propio tamaño, no una resta del tope del board. `--texto-max` (18 px) sigue mandando en
+       widgets, vistas y modales; adentro de `#panel-chat` manda este. */
+    --texto-chat:14px;
     /* molde de componentes (1558): el fondo de las capas y la sombra de los modales, un solo lugar */
     --capa-fondo:rgba(0,0,0,.9);
     /* 1652 (facundo, 2026-09-15): modales sin borde de color, solo una sombra suave clara que los despega del fondo negro */
@@ -89,7 +93,7 @@
     flex:1 1 auto;min-height:0;overflow-y:auto;padding:10px 12px;
     -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
   }
-  .msg{margin:0 0 14px 0;white-space:pre-wrap;word-break:break-word;font-size:16px}
+  .msg{margin:0 0 14px 0;white-space:pre-wrap;word-break:break-word;font-size:var(--texto-chat)}
   .msg .ts{color:var(--gris);font-size:13px}
   /* 2132 {dia} (facundo, 2026-09-19): la linea que separa un dia del siguiente en el hilo. nunca un `---` de
      texto: una linea fina a cada lado del dia, fuente chica (la de `.ts`) y opacidad baja. */
@@ -755,7 +759,7 @@
   .drafts{margin:6px 0 2px 0}
   .drafts .draft{position:relative;margin:4px 0}
   .drafts pre{margin:0;padding:6px 8px;background:#07222a;color:var(--cian);border:1px solid #1f3a44;border-radius:4px;
-    white-space:pre-wrap;word-break:break-word;font:inherit;font-size:16px;user-select:text;-webkit-user-select:text}
+    white-space:pre-wrap;word-break:break-word;font:inherit;font-size:var(--texto-chat);user-select:text;-webkit-user-select:text}
   .drafts .copiar{position:absolute;top:3px;right:3px;background:#000;color:var(--gris);border:1px solid #1f3a44;
     border-radius:3px;font:inherit;font-size:13px;padding:1px 6px;cursor:pointer}
   /* 1214: `copiar` chico al lado de cada link, clave o `code` copiable de una respuesta de claudio. un toque copia
@@ -935,7 +939,7 @@
   .cmdfila.nuevo .cmdq{color:var(--naranja)}
   #txt{
     flex:1 1 auto;background:transparent;color:var(--blanco);border:0;
-    border-radius:0;padding:5px 4px;font:inherit;font-size:16px;line-height:1.4;
+    border-radius:0;padding:5px 4px;font:inherit;font-size:var(--texto-chat);line-height:1.4;
     resize:none;max-height:28dvh;min-height:28px;box-sizing:border-box;align-self:center;
   }
   #txt:focus{outline:none;border:0}
@@ -1042,7 +1046,7 @@
   #audbarra.oculta{display:none}
   #audbarra .audbtn{
     width:100%;min-height:80px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;
-    gap:4px;flex-direction:column;font-size:calc(var(--texto-max) - 2px);padding:4px 6px;line-height:1.3;
+    gap:4px;flex-direction:column;font-size:var(--texto-chat);padding:4px 6px;line-height:1.3;
   }
   #audbarra .audbtn svg{width:33px;height:33px;display:block;pointer-events:none}
   #audbarra .audbtn{text-align:center}                      /* 1974: `.bterm` viene con `text-align:left` */
@@ -1064,7 +1068,7 @@
   }
   #audpend .audcard.sonando{border-color:var(--amarillo)}
   #audpend .audcbtn{flex:0 0 auto;min-height:48px;min-width:48px;display:flex;align-items:center;
-    justify-content:center;font-size:calc(var(--texto-max) - 2px);color:var(--gris)}
+    justify-content:center;font-size:var(--texto-chat);color:var(--gris)}
   #audpend .audcplay{color:var(--verde)}
   #audpend .audcx{color:var(--rojo)}
   #audpend .audcbtn svg{width:23px;height:23px;display:block;pointer-events:none}
@@ -1096,15 +1100,20 @@
   /* ---------- web 2: dos paneles (chat | widgets) ---------- */
   #cuerpo{flex:1 1 auto;min-height:0;display:flex;flex-direction:row}
   /* 1667 {bajar} (facundo, 2026-09-21: "bajame 1 px el tamaño del chat porfa"; 1930, 2026-09-24: "achicame
-     1px el tamaño de la fuente del chat", otro pixel mas): TODO el panel del chat va 2 px
-     por debajo del resto del board. la base NO baja en `body` (eso arrastraria widgets, vistas y modales): baja
-     aca, en el panel, y ademas cada regla del chat con `font-size` propio baja su propio pixel (`.msg`, `.ts`,
-     `.diasep`, los tramos del hilo, las cajas `OPCION`, los drafts, el input, el pie de audio y `#sync`). el tope
-     de la 1541/2014 sigue siendo `--texto-max` (18 px) para el resto del board; el chat es ese tope menos 2.
-     lo que NO baja: los iconos del pie (`.ico`, `#mandar`: ahi el tamaño es el glifo, no la letra) y la letra de
-     las pestañas, que la 2080 punto 2 dejo clavada en 16 px. */
+     1px el tamaño de la fuente del chat", otro pixel mas): TODO el panel del chat va por debajo del resto del
+     board. la base NO baja en `body` (eso arrastraria widgets, vistas y modales): baja aca, en el panel.
+     2333 {panel} (facundo, 2026-09-24: "bajar TODO el texto del panel del chat a 14 px parejo"): el chat deja de
+     ser una resta del tope del board (`--texto-max` - 2 = 16 px) y pasa a tener su propio valor, `--texto-chat`
+     (14 px): asi cambiarle el tamaño al chat nunca mueve el resto del board ni al reves. parejo quiere decir que
+     todo lo que tenia 16 px propios adentro del panel cae a 14: `.msg` (y con el, el nombre `.msg .quien` y todo
+     lo que hereda), los drafts (`.drafts pre`), el input del pie (`#txt`) y los botones con texto del pie
+     (`#audbarra .audbtn`, `#audpend .audcbtn`). el tope de la 1541/2014 sigue siendo `--texto-max` (18 px) para
+     el resto del board.
+     lo que NO baja: lo que ya era mas chico a proposito (la hora `.ts`, `.diasep`, `.nodo`/`.mini` y el `.dur` en
+     13 px, los tramos del hilo en 12), los iconos del pie (`.ico`, `#mandar`: ahi el tamaño es el glifo, no la
+     letra) y la letra de las pestañas, que la 2080 punto 2 dejo clavada en 16 px. */
   #panel-chat{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;background:var(--fondo-chat);
-    font-size:calc(var(--texto-max) - 2px)}
+    font-size:var(--texto-chat)}
   /* sin bordes (orden 1188): el panel de widgets va un tono arriba del chat y cada caja otro tono mas */
   #panel-widgets{
     flex:0 0 420px;min-width:0;overflow-y:auto;background:var(--fondo-panel);
