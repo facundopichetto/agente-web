@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.462">
-<link rel="manifest" href="manifest.json?v=4.462">
+<meta name="agente-web-version" content="4.463">
+<link rel="manifest" href="manifest.json?v=4.463">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.462">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.463">
 </head>
 <body>
 
@@ -458,11 +458,11 @@ var alfinal = $("alfinal"), envoltorio = $("envoltorio");
 // una copia GENERADA de esa receta: se actualiza con `python3 -m recetas.clasificar_tema --sync-web`
 // y `recetas/prueba_web` falla si quedo vieja. no editarla a mano.
 /* TEMAS-JS: generado por `python3 -m recetas.clasificar_tema --sync-web`, no editar a mano */
-var TEMAS = ["tools", "awtomic", "awtomic/qa", "flabs", "fuzzer", "juegos", "plata", "server", "personal", "podcast", "mesa", "flaudio", "tinder", "gemini", "groq", "groq-tandas", "mistral"];
-var PRIORIDAD = ["awtomic/qa", "flabs", "podcast", "mesa", "tinder", "server", "juegos", "plata", "fuzzer", "awtomic", "flaudio", "tools"];
+var TEMAS = ["tools", "awtomic", "awtomic/qa", "flabs", "fuzzer", "juegos", "plata", "server", "personal", "podcast", "mesa", "flaudio", "tinder", "board", "gemini", "groq", "groq-tandas", "mistral"];
+var PRIORIDAD = ["awtomic/qa", "flabs", "podcast", "mesa", "tinder", "board", "server", "juegos", "plata", "fuzzer", "awtomic", "flaudio", "tools"];
 var MODOS_TAB = [];
 var PROVEEDORES_TAB = ["gemini", "groq", "groq-tandas", "mistral"];
-var PESTANAS_TAB = [["awtomic", "awtomic"], ["awtomic/qa", "awtomic/qa"], ["flabs", "flabs"], ["flaudio", "flaudio"], ["fuzzer", "fuzzer"], ["gemini", "gemini"], ["juegos", "juegos"], ["mesa", "mesa"], ["mistral", "mistral"], ["personal", "personal"], ["plata", "plata"], ["podcast", "podcast"], ["server", "server"], ["tinder", "tinder"], ["tools", "tools"]];
+var PESTANAS_TAB = [["awtomic", "awtomic"], ["awtomic/qa", "awtomic/qa"], ["board", "board"], ["flabs", "flabs"], ["flaudio", "flaudio"], ["fuzzer", "fuzzer"], ["gemini", "gemini"], ["juegos", "juegos"], ["mesa", "mesa"], ["mistral", "mistral"], ["personal", "personal"], ["plata", "plata"], ["podcast", "podcast"], ["server", "server"], ["tinder", "tinder"], ["tools", "tools"]];
 var ALIAS = {"awtomic-qa": "awtomic/qa", "claudio": "flaudio", "consejo": "mesa"};
 var RE_CORTE_SRC = "(\\n+)|([.;!?]\\s+)|(^|[\\s,;:])(?:y\\s+otra\\s+cosa|otra\\s+cosa|aparte|adem[a\u00e1]s|tambi[e\u00e9]n)(?!\\w)";
 var PALABRAS = {
@@ -477,6 +477,7 @@ var PALABRAS = {
   "flaudio": ["filosof\\wa", "principio", "principios", "a futuro", "ideas? a futuro", "visi\\wn", "claudio en general", "flaudio en general"],
   "mesa": ["mesa", "consejo", "panel de modelos", "panel", "proveedores?", "groq", "mistral", "gemini", "modelos gratis", "free tier", "troceado", "juicio a ciegas", "contexto empaquetado"],
   "tinder": ["instatinder", "votador", "embudo", "candidatas?", "super candidatas", "unfollow", "unfollows", "dejar de seguir", "cartita", "igcola", "ig cola", "follow", "follows", "seguidores", "ignorada", "ignoradas", "maybe", "activar", "activa", "follow[ _]request[ _]sent", "following"],
+  "board": ["board", "tablero", "vista del board", "barra de iconos"],
   "tools": ["claude", "iterm", "fish", "chrome", "tui", "consola", "daemon", "agente", "receta", "recetas", "skill", "terminal", "tmux", "widget", "widgets", "web terminal", "mision", "modelo", "tokens", "cola", "launchd", "pesta[\u00f1n]a", "pesta[\u00f1n]as", "interfaz", "chat"],
 };
 /* /TEMAS-JS */
@@ -1706,13 +1707,20 @@ function clonRenombrar(tema, nombre, sacar){
 // el input inline: reemplaza el texto de ESA pestaña y nada mas. enter confirma, esc cancela, perder el foco
 // cancela. la pestaña activa no cambia (el editor no abre pestaña) y el borrador de la caja no se toca.
 var tabEdit = null;
+// 1930 {visible} (facundo, 2026-09-24: "quiero poder renombrar las que ya hay!! o cualquier pestaña... si
+// renombro una pestana principal, que renombre el tema; y si es una sub, que renombre el x/nombre"): el
+// editor es el mismo para las dos, un input de texto libre adentro de la pestaña, precargado con el nombre
+// que se ve. lo que cambia es que guarda el server: un clon se pinta `<inicial>/<nombre>` y un tema
+// principal con el nombre pelado. la pestaña general (`auto`) no se renombra nunca (es la puerta de entrada).
 function tabEditar(tema){
   tema = normTema(tema);
-  if(!esClon(tema)) return false;               // el nombre visible es de los clones (un tema ya tiene nombre)
+  if(tema === AUTO) return false;
   var nodo = document.querySelector('#tabs .tab[data-tema="' + tema + '"]');
   if(!nodo || tabEdit) return false;
   var inp = document.createElement("input");
-  inp.type = "text"; inp.className = "tabnom"; inp.value = (CLON_VIS[tema] || "").split("/").pop();
+  inp.type = "text"; inp.className = "tabnom";
+  // el precargado es lo que facundo lee hoy en la pestaña: de un clon, solo la parte editable del `x/nombre`
+  inp.value = esClon(tema) ? (CLON_VIS[tema] || "").split("/").pop() : (CLON_VIS[tema] || tema);
   inp.setAttribute("aria-label", "nombre de la pestaña " + tema);
   inp.maxLength = 24;                           // el mismo tope que `pestanas_clon.TOPE_NOMBRE`
   inp.size = Math.max(6, (inp.value || tema).length + 1);
@@ -1774,7 +1782,8 @@ function nuevaTab(){
   var ops = [["general (sin tema, la puerta de entrada)", AUTO]];
   lista.forEach(function(m){
     if(tabs.indexOf(m[0]) >= 0) return;   // ya la tenés abierta
-    ops.push([m[1], m[0]]);
+    // 1930 {visible}: si el tema tiene nombre puesto, el menu lo nombra como se ve en la barra
+    ops.push([visibleTab(m[0]) !== m[0] ? visibleTab(m[0]) : m[1], m[0]]);
   });
   // 2265 {clon}: los clones ya creados son pestañas como cualquier otra (el `+` de la pestaña crea uno nuevo)
   CLONES.forEach(function(t){ if(tabs.indexOf(t) < 0 && esTema(t)) ops.push([t, t]); });
@@ -12518,10 +12527,11 @@ function menuTab(nodo, x, y){
   if(!t) return false;
   var ops = [];
   if(t !== AUTO){          // la general no se renombra nunca (es la puerta de entrada)
-    ops.push(["renombrar tema", function(){
-      var op = [];
-      TEMAS.forEach(function(otro){ if(otro !== t) op.push([otro, otro]); });
-      dd("renombrar «" + visibleTab(t) + "» a...", op, function(n){ renombrarTab(t, n); });
+    // 1930 {visible}: antes esto abria el dropdown de "pestaña nueva" (una lista de los OTROS temas), que
+    // no renombraba nada: cambiaba la pestaña de tema. ahora abre el input inline de la 2300, precargado
+    // con el nombre actual, y el server decide si renombra el tema o el `x/nombre` del clon.
+    ops.push([esClon(t) ? "renombrar la sub-pestaña" : "renombrar el tema", function(){
+      setTimeout(function(){ tabEditar(t); }, 0);   // el menu ya se cerro: el input toma el foco despues
     }]);
   }
   ops.push(["cerrar la pestaña", function(){ cerrarTab(t); }]);
@@ -13163,7 +13173,7 @@ $("tabs").addEventListener("click", function(e){
     if(esVistaMobile()) verPanel("chat");   // la pestaña que se toca es la que se ve
   }
 });
-// 2300 {visible}: doble toque sobre una pestaña clon = editarle el nombre. con mouse es el `dblclick` del
+// 2300 {visible}, 1930: doble toque sobre CUALQUIER pestaña = editarle el nombre. con mouse es el `dblclick` del
 // navegador; en el celu son dos `touchend` sobre la MISMA pestaña dentro de `TAP2_MS` (el `dblclick` de
 // touch no es confiable y el hold ya lo agarra el arrastre). el `+` y la `×` siguen siendo botones.
 var TAP2_MS = 320, tab2 = null;

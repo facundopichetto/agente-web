@@ -89,15 +89,15 @@
     flex:1 1 auto;min-height:0;overflow-y:auto;padding:10px 12px;
     -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
   }
-  .msg{margin:0 0 14px 0;white-space:pre-wrap;word-break:break-word;font-size:17px}
-  .msg .ts{color:var(--gris);font-size:14px}
+  .msg{margin:0 0 14px 0;white-space:pre-wrap;word-break:break-word;font-size:16px}
+  .msg .ts{color:var(--gris);font-size:13px}
   /* 2132 {dia} (facundo, 2026-09-19): la linea que separa un dia del siguiente en el hilo. nunca un `---` de
      texto: una linea fina a cada lado del dia, fuente chica (la de `.ts`) y opacidad baja. */
-  .diasep{display:flex;align-items:center;gap:8px;margin:0 0 14px 0;color:var(--gris);font-size:14px;
+  .diasep{display:flex;align-items:center;gap:8px;margin:0 0 14px 0;color:var(--gris);font-size:13px;
     opacity:.55;user-select:none;text-align:center}
   .diasep:before,.diasep:after{content:"";flex:1 1 auto;height:1px;background:var(--gris)}
   /* nodo · modelo y mini estado de cada respuesta (2026-09-13) */
-  .msg .nodo,.msg .mini{color:var(--gris);font-size:14px;user-select:none}
+  .msg .nodo,.msg .mini{color:var(--gris);font-size:13px;user-select:none}
   .msg .mini{margin-left:6px}
   /* mensaje en vuelo: spinner de texto, fase y eta mientras contesta el agente */
   .msg.vuelo .cuerpo{color:var(--gris)}
@@ -113,21 +113,21 @@
   .msg .hilo{color:var(--blanco)}
   .msg .hilo:empty{display:none}
   .msg .hilo .tramo{margin:0 0 8px 0}
-  .msg .hilo .tramo.hecho{color:var(--gris);font-size:13px;opacity:.7;margin:0 0 2px 0}
+  .msg .hilo .tramo.hecho{color:var(--gris);font-size:12px;opacity:.7;margin:0 0 2px 0}
   .msg .hilo .tramo.hecho + .tramo.texto{margin-top:8px}
   .msg .hilo .tramo.hecho:last-child{margin-bottom:8px}
   /* 1931 (facundo, 2026-09-17: "cuando cambie, la anterior queda arriba en la linea de arriba como ya paso, en
      gris [...] quiero poder votar, quiero tocar y decirte mas de esto, menos de esto, o escribir"): el rastro de la
      bolita. cada linea de estado que se fue queda con el mismo estilo apagado que un `hecho`, y las dos son
      tocables: abren el menu de voto (`rastroMenu`). lo tocable parece tocable (1808) */
-  .msg .hilo .tramo.paso{color:var(--gris);font-size:13px;opacity:.7;margin:0 0 2px 0}
+  .msg .hilo .tramo.paso{color:var(--gris);font-size:12px;opacity:.7;margin:0 0 2px 0}
   .msg .hilo .tramo.paso + .tramo.texto{margin-top:8px}
   .msg .hilo .tramo.paso:last-child{margin-bottom:8px}
   .msg .hilo .tramo.paso, .msg .hilo .tramo.hecho{cursor:pointer}
   .msg .hilo .tramo.paso:hover, .msg .hilo .tramo.hecho:hover{opacity:1}
-  #rastromenu .rmfrase{color:var(--gris);font-size:15px;margin:0 0 8px 0}
+  #rastromenu .rmfrase{color:var(--gris);font-size:14px;margin:0 0 8px 0}
   #rastromenu textarea{width:100%;box-sizing:border-box;min-height:56px;background:transparent;color:var(--blanco);
-    border:1px solid var(--linea-clara);border-radius:6px;padding:6px;font:inherit;font-size:17px}
+    border:1px solid var(--linea-clara);border-radius:6px;padding:6px;font:inherit;font-size:16px}
   .msg.vuelo .hilo + .cuerpo{margin-top:2px}
   /* animaciones de caracteres (1373): una linea, todos los cuadros del mismo ancho (`Nch` lo pone animPoner), el
      alto fijo de una linea: ni saltan de costado ni empujan el renglon.
@@ -755,14 +755,14 @@
   .drafts{margin:6px 0 2px 0}
   .drafts .draft{position:relative;margin:4px 0}
   .drafts pre{margin:0;padding:6px 8px;background:#07222a;color:var(--cian);border:1px solid #1f3a44;border-radius:4px;
-    white-space:pre-wrap;word-break:break-word;font:inherit;font-size:17px;user-select:text;-webkit-user-select:text}
+    white-space:pre-wrap;word-break:break-word;font:inherit;font-size:16px;user-select:text;-webkit-user-select:text}
   .drafts .copiar{position:absolute;top:3px;right:3px;background:#000;color:var(--gris);border:1px solid #1f3a44;
-    border-radius:3px;font:inherit;font-size:14px;padding:1px 6px;cursor:pointer}
+    border-radius:3px;font:inherit;font-size:13px;padding:1px 6px;cursor:pointer}
   /* 1214: `copiar` chico al lado de cada link, clave o `code` copiable de una respuesta de claudio. un toque copia
      (sin hold en el iphone) y dice `copiado` 1 s. el texto va por ::after asi no ensucia el textContent del mensaje.
      el hold sobre el boton no abre ni el menu propio ni el callout de ios. */
   .cuerpo .cp{display:inline-block;vertical-align:1px;margin:0 0 0 4px;background:#000;color:var(--gris);
-    border:1px solid #1f3a44;border-radius:3px;font:inherit;font-size:13px;line-height:1.3;padding:0 5px;
+    border:1px solid #1f3a44;border-radius:3px;font:inherit;font-size:12px;line-height:1.3;padding:0 5px;
     cursor:pointer;white-space:nowrap}
   .cuerpo .cp::after{content:attr(data-t)}
   .copiar,.cuerpo .cp{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation;
@@ -772,7 +772,7 @@
   .opciones .opc{
     position:relative;
     flex:1 1 0;min-width:0;box-sizing:border-box;background:#000;border:1px solid;border-radius:4px;
-    padding:6px 8px;font:inherit;font-size:15px;line-height:1.35;text-align:left;cursor:pointer;
+    padding:6px 8px;font:inherit;font-size:14px;line-height:1.35;text-align:left;cursor:pointer;
     min-height:40px;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
     touch-action:pan-y;word-break:break-word;
   }
@@ -797,7 +797,7 @@
   .opciones .opc .l{font-weight:600;margin-right:5px}
   /* 1203: hora de envio del mensaje que salio al tocar esa caja (hh:mm de buenos aires). chiquita, a la
      derecha; cada letra lleva la suya (al sumar `A y C`, la A conserva la hora de su toque). */
-  .opciones .opc .hh{margin-left:6px;font-size:13px;opacity:.75;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .opciones .opc .hh{margin-left:6px;font-size:12px;opacity:.75;font-variant-numeric:tabular-nums;white-space:nowrap}
   .opciones .opc .hh:empty{display:none}
   .opciones .opc.conf .hh{display:none}       /* mientras pregunta, la caja es solo la pregunta */
   .opciones .opc.A{color:var(--verde);border-color:var(--verde)}
@@ -855,7 +855,7 @@
     display:block;max-width:100%;max-height:42vh;border:1px solid var(--linea-clara);
     border-radius:4px;background:#000;cursor:zoom-in
   }
-  .cuerpo .img .pie{display:block;color:var(--gris);font-size:14px;margin-top:2px}
+  .cuerpo .img .pie{display:block;color:var(--gris);font-size:13px;margin-top:2px}
   .cuerpo .img .cargando{color:var(--cian)}
   /* 1805: el hueco de una imagen que todavia no bajo, con el mismo alto que va a tener (aspect-ratio
      inline con las medidas guardadas): asi el chat no pega el salto cuando la foto termina de cargar */
@@ -896,7 +896,7 @@
     width:44px;height:44px;object-fit:cover;border:1px solid var(--linea-clara);
     border-radius:4px;background:#000;flex:0 0 auto
   }
-  #adjunto .adj-info{flex:1 1 auto;min-width:0;color:var(--gris);font-size:14px;line-height:1.35}
+  #adjunto .adj-info{flex:1 1 auto;min-width:0;color:var(--gris);font-size:13px;line-height:1.35}
   #adjunto .adj-info .n{color:var(--cian);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   /* lo que transcribio el celu antes de mandar (1209): se lee y se puede descartar con la × */
   #adjunto .adj-info .adj-dicho{display:block;color:var(--verde);margin-top:2px;overflow:hidden;
@@ -904,7 +904,7 @@
   #adjunto .adj-play{flex:0 0 auto}
   #adjunto .adj-x{
     flex:0 0 auto;background:#000;color:var(--rojo);border:1px solid transparent;border-radius:4px;
-    font:inherit;font-size:17px;line-height:1.3;padding:2px 5px;cursor:pointer;letter-spacing:0;
+    font:inherit;font-size:16px;line-height:1.3;padding:2px 5px;cursor:pointer;letter-spacing:0;
   }
   #adjunto .adj-x:hover{border-color:var(--rojo)}
   /* la fila de comandos rapidos se saco (facundo, 2026-09-11): esos comandos quedan en el widget `agent` */
@@ -935,7 +935,7 @@
   .cmdfila.nuevo .cmdq{color:var(--naranja)}
   #txt{
     flex:1 1 auto;background:transparent;color:var(--blanco);border:0;
-    border-radius:0;padding:5px 4px;font:inherit;font-size:17px;line-height:1.4;
+    border-radius:0;padding:5px 4px;font:inherit;font-size:16px;line-height:1.4;
     resize:none;max-height:28dvh;min-height:28px;box-sizing:border-box;align-self:center;
   }
   #txt:focus{outline:none;border:0}
@@ -974,20 +974,20 @@
   #grabar:disabled{color:var(--gris)}
   @keyframes lat{50%{opacity:.55}}
   #grabinfo{
-    flex:0 0 auto;color:var(--rojo);font-size:15px;user-select:none;display:none;
+    flex:0 0 auto;color:var(--rojo);font-size:14px;user-select:none;display:none;
   }
   #grabinfo.viendo{display:block}
   /* el [▶] de texto: 2044 {audiotodas} ya no va en la cabecera de las respuestas (se fue el audio chiquito);
      queda para los audios pre mandados, el podcast y las voces. look terminal, nada de controles nativos. */
   .play{
     background:#000;color:var(--verde);border:1px solid transparent;border-radius:4px;
-    font:inherit;font-size:14px;line-height:1.3;padding:0 3px;cursor:pointer;letter-spacing:0;
+    font:inherit;font-size:13px;line-height:1.3;padding:0 3px;cursor:pointer;letter-spacing:0;
   }
   .play:disabled{color:var(--gris);cursor:default}
   .play.sonando{color:var(--amarillo)}
   .cuerpo .aud{display:inline-flex;align-items:center;gap:6px;color:var(--cian)}
   .cuerpo .aud .play{color:var(--cian)}
-  .cuerpo .aud .dur{color:var(--gris);font-size:14px}
+  .cuerpo .aud .dur{color:var(--gris);font-size:13px}
   /* 1963 {player}: el reproductor completo al pie de cada mensaje con audio (2044: en todas las pestañas).
      molde de `docs/componentes-web.md`
      (`moldeBoton` -> `.bterm`), nunca `<audio controls>` nativo. 100% del ancho de la caja en el celu y
@@ -1007,7 +1007,7 @@
   /* 1974 {centrado}: el glifo va centrado de verdad, vertical y horizontal, en cualquier ancho. `.bterm`
      trae `text-align:left`, y desde que la fila es alta y rectangular (1968) el `-10s`/`▶`/`+10s` quedaba
      corrido arriba y a la izquierda. flex center en el boton, padding parejo y sin line-height heredado. */
-  .player .plbtn{font-size:14px;padding:2px 6px;line-height:1;
+  .player .plbtn{font-size:13px;padding:2px 6px;line-height:1;
     display:flex;align-items:center;justify-content:center;text-align:center;
     min-height:58px;width:100%;box-sizing:border-box}
   /* ojo: `margin:auto` NO va aca. en un flex column un `margin:auto` se come el espacio libre y rompe
@@ -1018,7 +1018,7 @@
   .player .plrell{position:absolute;left:0;top:7px;height:2px;width:0;background:var(--verde)}
   .player .plpunto{position:absolute;top:4px;left:0;width:8px;height:8px;margin-left:-4px;border-radius:50%;
     background:var(--verde)}
-  .player .pltiempo{color:var(--gris);font-size:14px;white-space:nowrap;font-variant-numeric:tabular-nums;
+  .player .pltiempo{color:var(--gris);font-size:13px;white-space:nowrap;font-variant-numeric:tabular-nums;
     flex:0 0 auto}
   .player.roto .pltiempo{color:var(--rojo)}
   .player.sonando .plrell,.player.sonando .plpunto{background:var(--amarillo)}
@@ -1042,7 +1042,7 @@
   #audbarra.oculta{display:none}
   #audbarra .audbtn{
     width:100%;min-height:80px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;
-    gap:4px;flex-direction:column;font-size:calc(var(--texto-max) - 1px);padding:4px 6px;line-height:1.3;
+    gap:4px;flex-direction:column;font-size:calc(var(--texto-max) - 2px);padding:4px 6px;line-height:1.3;
   }
   #audbarra .audbtn svg{width:33px;height:33px;display:block;pointer-events:none}
   #audbarra .audbtn{text-align:center}                      /* 1974: `.bterm` viene con `text-align:left` */
@@ -1050,7 +1050,7 @@
   #audbarra .audizq.descartar{color:var(--rojo)}
   #audbarra .audcen{color:var(--rojo)}
   #audbarra .audcen.grabando{animation:lat 1s steps(2,start) infinite}
-  #audbarra .audcen .audreloj{font-size:14px;line-height:1;color:var(--rojo);font-variant-numeric:tabular-nums}
+  #audbarra .audcen .audreloj{font-size:13px;line-height:1;color:var(--rojo);font-variant-numeric:tabular-nums}
   #audbarra .audder{color:var(--gris)}
   #audbarra .audder.prendido{color:var(--verde)}
   #audbarra .audbtn:disabled{color:var(--gris);cursor:default}
@@ -1064,7 +1064,7 @@
   }
   #audpend .audcard.sonando{border-color:var(--amarillo)}
   #audpend .audcbtn{flex:0 0 auto;min-height:48px;min-width:48px;display:flex;align-items:center;
-    justify-content:center;font-size:calc(var(--texto-max) - 1px);color:var(--gris)}
+    justify-content:center;font-size:calc(var(--texto-max) - 2px);color:var(--gris)}
   #audpend .audcplay{color:var(--verde)}
   #audpend .audcx{color:var(--rojo)}
   #audpend .audcbtn svg{width:23px;height:23px;display:block;pointer-events:none}
@@ -1072,7 +1072,7 @@
   #audpend .audcbarra{flex:1 1 auto;min-width:30px;height:4px;border-radius:2px;background:var(--linea);
     position:relative;overflow:hidden}
   #audpend .audcrell{position:absolute;left:0;top:0;height:4px;width:0;background:var(--verde)}
-  #audpend .audcdur{flex:0 0 auto;color:var(--gris);font-size:15px;font-variant-numeric:tabular-nums}
+  #audpend .audcdur{flex:0 0 auto;color:var(--gris);font-size:14px;font-variant-numeric:tabular-nums}
   /* alineacion estilo whatsapp (1963), en todas las pestañas solo en el celu (2044): el mensaje entero */
   #lista.modoaudio .msg.yo{margin-left:5%;text-align:right}
   #lista.modoaudio .msg.agente{margin-right:5%}
@@ -1084,7 +1084,7 @@
   #alfinal{
     position:absolute;right:12px;bottom:8px;z-index:5;display:none;
     background:#001a00;color:var(--verde);border:1px solid var(--verde);
-    border-radius:14px;padding:6px 12px;font:inherit;font-size:15px;cursor:pointer;
+    border-radius:14px;padding:6px 12px;font:inherit;font-size:14px;cursor:pointer;
   }
   #envoltorio{position:relative;flex:1 1 auto;min-height:0;display:flex}
   #login{padding:16px;display:none;flex-direction:column;gap:10px}
@@ -1095,15 +1095,16 @@
   }
   /* ---------- web 2: dos paneles (chat | widgets) ---------- */
   #cuerpo{flex:1 1 auto;min-height:0;display:flex;flex-direction:row}
-  /* 1667 {bajar} (facundo, 2026-09-21: "bajame 1 px el tamaño del chat porfa"): TODO el panel del chat va 1 px
+  /* 1667 {bajar} (facundo, 2026-09-21: "bajame 1 px el tamaño del chat porfa"; 1930, 2026-09-24: "achicame
+     1px el tamaño de la fuente del chat", otro pixel mas): TODO el panel del chat va 2 px
      por debajo del resto del board. la base NO baja en `body` (eso arrastraria widgets, vistas y modales): baja
      aca, en el panel, y ademas cada regla del chat con `font-size` propio baja su propio pixel (`.msg`, `.ts`,
      `.diasep`, los tramos del hilo, las cajas `OPCION`, los drafts, el input, el pie de audio y `#sync`). el tope
-     de la 1541/2014 sigue siendo `--texto-max` (18 px) para el resto del board; el chat es ese tope menos 1.
+     de la 1541/2014 sigue siendo `--texto-max` (18 px) para el resto del board; el chat es ese tope menos 2.
      lo que NO baja: los iconos del pie (`.ico`, `#mandar`: ahi el tamaño es el glifo, no la letra) y la letra de
      las pestañas, que la 2080 punto 2 dejo clavada en 16 px. */
   #panel-chat{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;background:var(--fondo-chat);
-    font-size:calc(var(--texto-max) - 1px)}
+    font-size:calc(var(--texto-max) - 2px)}
   /* sin bordes (orden 1188): el panel de widgets va un tono arriba del chat y cada caja otro tono mas */
   #panel-widgets{
     flex:0 0 420px;min-width:0;overflow-y:auto;background:var(--fondo-panel);
@@ -2014,7 +2015,7 @@
      al abrir la web o al volver al foco, el cache de localStorage no se pinta como si fuera el
      estado real: mientras baja el buzon se ve esta linea y lo cacheado queda apagado. */
   #sync{
-    flex:0 0 auto;padding:2px 10px;font-size:14px;color:var(--cian);
+    flex:0 0 auto;padding:2px 10px;font-size:13px;color:var(--cian);
     background:var(--fondo-panel);
   }
   #sync.oculta{display:none}
@@ -2027,7 +2028,7 @@
     content:"soltar la imagen acá";position:absolute;inset:6px;z-index:55;pointer-events:none;
     display:flex;align-items:center;justify-content:center;
     border:1px dashed var(--verde);border-radius:6px;background:rgba(0,255,120,.10);
-    color:var(--verde);font-size:15px;letter-spacing:.04em;
+    color:var(--verde);font-size:14px;letter-spacing:.04em;
   }
   /* dropdown: pestaña nueva y la pregunta de "esto parece de otro tema" */
   #ddfondo{position:fixed;inset:0;z-index:19;background:rgba(0,0,0,.45)}
