@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.459">
-<link rel="manifest" href="manifest.json?v=4.459">
+<meta name="agente-web-version" content="4.460">
+<link rel="manifest" href="manifest.json?v=4.460">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.459">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.460">
 </head>
 <body>
 
@@ -3856,15 +3856,30 @@ function recibirChat(tema, d){
   if(notiPush) setTimeout(refrescarNotiPush, 0);   // 1350: llego la fila de la tarea del modal abierto
   return out.length;
 }
+// 2278 {pestana} (facundo, 2026-09-24: "la pestaña `awtomic#3` se abre en negro"): un 404 del historial
+// dejaba el panel VACIO y en silencio, asi que no se distinguia "esta pestaña no tiene charla todavia" de
+// "el archivo con la charla no esta". si el indice (`chat/index.json`) dice que ese tema TIENE intercambios
+// y su archivo igual da 404, el panel lo dice una vez, con el nombre del archivo que falta.
+var chat404 = {};
 function cargarChatTema(tema){
   var arch = archivoChat(tema), t = normTema(tema);
   return crudo(arch, etagChat[arch]).then(function(r){
     if(r.status === 304) return (msgsHist[t] || []).length;
     etagChat[arch] = r.etag;
+    delete chat404[t];
     return recibirChat(t, r.json);
   }).catch(function(e){
     var m = (e && e.message) || "";
-    if(/http 404/.test(m)){ msgsHist[t] = msgsHist[t] || []; return 0; }   // tema sin charla todavia
+    if(/http 404/.test(m)){
+      msgsHist[t] = msgsHist[t] || [];
+      var n = ((chatIndex || {})[t] || {}).n || 0;
+      if(n && !chat404[t] && t === temaActivo()){   // la linea se pinta en la pestaña activa: solo la de ella
+        chat404[t] = true;
+        sistema("no encuentro el historial de `" + t + "` (" + arch + " no está en el buzón): " +
+                "el panel queda vacío hasta que el server lo publique.", "error");
+      }
+      return 0;   // tema sin charla todavia
+    }
     if(m === "401" || m === "freno") return 0;
     throw e;
   });
