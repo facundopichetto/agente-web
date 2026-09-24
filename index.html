@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.456">
-<link rel="manifest" href="manifest.json?v=4.456">
+<meta name="agente-web-version" content="4.457">
+<link rel="manifest" href="manifest.json?v=4.457">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.456">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.457">
 </head>
 <body>
 
@@ -483,12 +483,42 @@ var PALABRAS = {
 var AUTO = "auto";
 // la general: puerta de entrada sin tema fijo. en el layout se guarda como `auto`, se muestra `general`
 var ETIQUETA = {auto: "general"};
-var RE_TEMA = /^\s*tema\s+([\w\/-]+)\s*:\s*/i;
+var RE_TEMA = /^\s*tema\s+([\w\/#-]+)\s*:\s*/i;
 // nombres (NOMBRES.md): un **motor** es `tema/motor` (`awtomic/qa`) y vive adentro de su tema padre:
 // comparte el log del padre y la pestaña del padre lo muestra. `awtomic-qa` es el alias viejo.
-function normTema(t){ t = (t || "").trim().toLowerCase(); return (ALIAS && ALIAS[t]) || t; }
-function padreTema(t){ return normTema(t).split("/")[0]; }
-function esTema(t){ return TEMAS.indexOf(normTema(t)) >= 0; }
+// 2265 {clon} (facundo, 2026-09-23: "dos pestañas de awtomic a la vez"): un **clon** es `tema#N`
+// (`awtomic#2`). es la MISMA pestaña dos veces: mismo tema, misma carpeta, mismas reglas, misma cuenta;
+// lo unico propio es la charla (`logs/chat-awtomic#2.jsonl`) y el carril de la cola. el alta y la baja
+// viven en el server (`pestanas_clon.json`, `GET/POST/DELETE /clones`): esta lista **no** se edita a mano.
+var RE_CLON = /^(.+?)#(\d+)$/;
+var CLONES = [];                       // los que el server dio de alta (se pide al abrir y despues de crear/borrar)
+function esClon(t){ return RE_CLON.test(normTema(t)); }
+function baseTema(t){ var m = RE_CLON.exec(normTema(t)); return m ? m[1] : normTema(t); }
+function clonN(t){ var m = RE_CLON.exec(normTema(t)); return m ? parseInt(m[2], 10) : 0; }
+function normTema(t){
+  t = (t || "").trim().toLowerCase();
+  var m = RE_CLON.exec(t);
+  if(!m) return (ALIAS && ALIAS[t]) || t;
+  return ((ALIAS && ALIAS[m[1]]) || m[1]) + "#" + parseInt(m[2], 10);
+}
+// el padre de un motor (`awtomic/qa` -> `awtomic`). un clon **no tiene padre**: es su propia pestaña, si no
+// lo que se escribe en `awtomic#2` se pintaria tambien en `awtomic` (`deEstaTab`) y el clon no serviria.
+function padreTema(t){ t = normTema(t); return esClon(t) ? t : t.split("/")[0]; }
+// un clon vale como pestaña si su base es un tema. no se exige que este en `CLONES`: sin lan (o antes de
+// que llegue la lista) el layout guardado tiene que seguir pintando sus pestañas igual.
+function esTema(t){
+  t = normTema(t);
+  if(TEMAS.indexOf(t) >= 0) return true;
+  return esClon(t) && TEMAS.indexOf(baseTema(t)) >= 0 && !esProveedorTab(baseTema(t));
+}
+function esProveedorTab(t){
+  return (typeof PROVEEDORES_TAB !== "undefined" ? PROVEEDORES_TAB : []).indexOf(normTema(t)) >= 0;
+}
+// una pestaña que puede tener clones: un tema de verdad (ni la general, ni un modo, ni un proveedor)
+function clonable(t){
+  return t && t !== AUTO && !esClon(t) && TEMAS.indexOf(normTema(t)) >= 0
+         && !esProveedorTab(t) && !esModo(t);
+}
 // 1959 {audio}: un **modo** es una pestaña que existe pero no clasifica nada (`MODOS_TAB`, generado con
 // el resto del bloque). 2044 {audiotodas}: `audio` dejo de ser pestaña y tema (facundo, 2026-09-18), la
 // lista queda vacia y esto es siempre false; el audio es un modo de TODAS las pestañas (ver `audModo`).
@@ -1540,6 +1570,14 @@ function pintarTabs(){
     b.className = "tab" + (t === temaActivo() ? " activo" : "");
     b.dataset.tema = t;
     b.textContent = ETIQUETA[t] || t;
+    // 2265 {clon}: la pestaña de tema activa lleva un `+` que crea el clon siguiente (`awtomic#2`,
+    // `awtomic#3`). va en la pestaña, no en la barra: el `+` de la barra sigue siendo "pestaña nueva".
+    if(t === temaActivo() && clonable(t)){
+      var mas = document.createElement("span");
+      mas.className = "mas"; mas.textContent = "+"; mas.dataset.clonar = t;
+      mas.title = "otra pestaña de " + t;
+      b.appendChild(mas);
+    }
     if(t === temaActivo() && tabs.length > 1 && !esModo(t)){   // 1959: un modo es fijo, no se cierra
       var x = document.createElement("span");
       x.className = "x"; x.textContent = "×"; x.dataset.cerrar = t;
@@ -1576,6 +1614,64 @@ function abrirTab(tema){
   });
   fueraDelGesto(function(){ chatDeTab(tema); });   // si nunca se bajo su charla, llega sola
 }
+// ---------- clones (2265 {clon}) ----------
+// el alta y la baja las hace el SERVER (`pestanas_clon.json`): la web pide y pinta lo que vuelve. sin lan
+// no se crea ni se borra nada (un clon que solo existiera en este navegador no tendria ni log ni carril).
+// `recetas/prueba_web_tabs` enchufa aca las respuestas del server para probar el `+` sin lan.
+// en produccion es null y esto es `docsPedir` pelado.
+var clonStub = null;
+function clonPedir(ruta, opts){ return clonStub ? clonStub(ruta, opts) : docsPedir(ruta, opts); }
+function clonesPedir(){
+  return clonPedir("/clones").then(function(j){
+    CLONES = (j && j.clones) || [];
+    return CLONES;
+  }).catch(function(){ return CLONES; });
+}
+function clonCrear(tema){
+  return clonPedir("/clones", {method: "POST", headers: {"content-type": "application/json"},
+                               body: JSON.stringify({tema: tema})})
+    .then(function(j){
+      if(!j || !j.ok){ sistema("no pude crear la pestaña: " + ((j && j.motivo) || "?"), "error"); return null; }
+      CLONES = j.clones || CLONES;
+      abrirTab(j.nombre);
+      sistema("pestaña " + j.nombre + " lista");
+      return j.nombre;
+    }).catch(function(e){
+      sistema("no pude crear la pestaña (" + ((e && e.message) || e) + ")", "error");
+      return null;
+    });
+}
+function clonBorrar(tema, forzar){
+  return clonPedir("/clones", {method: "POST", headers: {"content-type": "application/json"},
+                               body: JSON.stringify({borrar: tema, forzar: !!forzar})})
+    .then(function(j){
+      if(!j || !j.ok){
+        // la unica razon por la que el server se niega: le queda cola pendiente (2265 paso 5)
+        if(j && j.cola){
+          dd(tema + " tiene " + j.cola + " orden(es) en la cola", [
+            ["borrar igual (la cola sigue corriendo)", "si"], ["dejarlo", "no"]],
+            function(r){ if(r === "si") clonBorrar(tema, true); });
+          return null;
+        }
+        sistema("no pude borrar la pestaña: " + ((j && j.motivo) || "?"), "error");
+        return null;
+      }
+      CLONES = j.clones || [];
+      if(tabs.indexOf(tema) >= 0) cerrarTab(tema);
+      sistema("pestaña " + tema + " borrada (el tema " + baseTema(tema) + " no se toca)");
+      return tema;
+    }).catch(function(e){
+      sistema("no pude borrar la pestaña (" + ((e && e.message) || e) + ")", "error");
+      return null;
+    });
+}
+// el `×` de un clon: cerrar la pestaña (el clon queda vivo) o borrar el clon del server
+function cerrarOClon(tema){
+  if(!esClon(tema)) return cerrarTab(tema);
+  dd(tema + ": qué hago?", [["cerrar la pestaña (el clon queda)", "cerrar"],
+                            ["borrar el clon " + tema, "borrar"]],
+     function(r){ if(r === "cerrar") cerrarTab(tema); else if(r === "borrar") clonBorrar(tema, false); });
+}
 // renombrar una pestaña (si ya habia una de ese tema, no se duplica). la general ya no se renombra sola
 // (facundo, 2026-09-11); queda por si hace falta renombrar a mano.
 function renombrarTab(viejo, nuevo){
@@ -1608,6 +1704,8 @@ function nuevaTab(){
     if(tabs.indexOf(m[0]) >= 0) return;   // ya la tenés abierta
     ops.push([m[1], m[0]]);
   });
+  // 2265 {clon}: los clones ya creados son pestañas como cualquier otra (el `+` de la pestaña crea uno nuevo)
+  CLONES.forEach(function(t){ if(tabs.indexOf(t) < 0 && esTema(t)) ops.push([t, t]); });
   dd("pestaña nueva: cuál?", ops, abrirTab);
 }
 // ---------- dropdown (pestaña nueva / esto parece de otro tema) ----------
@@ -3419,6 +3517,9 @@ function lanPoner(x){
   // los etag del endpoint y los de github no se mezclan
   if(antes !== lan.base){ etagCom = null; etagWid = null; etagIssue = null; etagChat = {}; etagEstado = null; lan.sinGithub = false; }
   pintarVia();
+  // 2265 {clon}: la lista de clones vive en el server. en cuanto hay endpoint se pide una vez, asi el menu
+  // del `MAS` y `sanearLayout` ven las pestañas que se crearon desde el celu o desde otra maquina.
+  if(lan.base && antes !== lan.base) clonesPedir();
 }
 function probarLan(){
   if(!token && !lanStub) return Promise.resolve(null);
@@ -3692,7 +3793,10 @@ var CHAT_INDEX = "chat/index.json";
 var chatUlt = 0;           // ultima bajada del historial por el tick (el sync al abrir lo resetea)
 var chatIndex = null;      // {tema: {ts, n}}
 var etagChat = {};         // etag por archivo del buzon
-function archivoChat(tema){ return "chat/" + normTema(tema).replace(/\//g, "-") + ".json"; }
+// 2265 {clon}: el `#` de un clon pasa a `~` en el nombre del archivo del buzon. un `#` crudo en una url
+// arranca el fragmento, asi que `chat/awtomic#2.json` se pediria como `chat/awtomic`. mismo mapeo que
+// `clasificar_tema.slug_web()` del lado del server, que es quien lo escribe.
+function archivoChat(tema){ return "chat/" + normTema(tema).replace(/\//g, "-").replace(/#/g, "~") + ".json"; }
 function crudo(ruta, etag){
   return api("GET", "/repos/" + REPO + "/contents/" + ruta, null, etag,
              "application/vnd.github.raw+json");
@@ -7229,8 +7333,8 @@ window.addEventListener("keydown", function(ev){
 var GIRO = ["-", "\\", "|", "/"], VUELO_MAX_MS = 600000, VUELO_LISTO_MS = 15000;
 var vuelo = null, vueloGiro = null, vueloPoll = null, etagEstado = null;
 function claveEstado(cuerpo){
-  var m = /^\s*tema\s+([\w\/-]+)\s*:/i.exec(cuerpo || "");
-  return m ? m[1].toLowerCase().replace(/\//g, "-") : "auto";
+  var m = /^\s*tema\s+([\w\/#-]+)\s*:/i.exec(cuerpo || "");
+  return m ? m[1].toLowerCase().replace(/\//g, "-").replace(/#/g, "~") : "auto";
 }
 // `t` = reloj del celu (eta, tope); `ref` = reloj del server/github (`created_at` del POST): con eso se compara
 // lo que publica el daemon. 1259: el iphone iba ~90 s adelantado, el estado y la respuesta parecian "de antes"
@@ -12738,8 +12842,10 @@ vistaPintar();
 
 // ---------- barra de pestañas: click y el foco del input ----------
 $("tabs").addEventListener("click", function(e){
+  var c = e.target.closest("[data-clonar]");
+  if(c){ clonCrear(c.dataset.clonar); return; }        // 2265 {clon}: el `+` de la pestaña
   var x = e.target.closest("[data-cerrar]");
-  if(x){ cerrarTab(x.dataset.cerrar); return; }
+  if(x){ cerrarOClon(x.dataset.cerrar); return; }
   var b = e.target.closest("[data-accion]");
   if(b){
     if(b.dataset.accion === "nueva_tab") nuevaTab();
@@ -13332,6 +13438,14 @@ window.__agente = {
   recibirLlegadas: recibirLlegadas, borrarLlegadas: function(){ llegadas = {}; guardarCache(); },
   hhmmIso: desde, fecha: fecha,
   abrirTab: abrirTab, renombrarTab: renombrarTab,
+  // 2265 {clon}: las pestañas clonadas (`recetas/prueba_web_tabs`). `clonesPoner` es lo que deja la
+  // respuesta del server sin pedirla por red; `clonar` es lo que hace el `+` de la pestaña.
+  clones: function(){ return CLONES.slice(); },
+  clonesPoner: function(l){ CLONES = l || []; pintarTabs(); },
+  esClon: esClon, baseTema: baseTema, clonable: clonable, esTema: esTema, padreTema: padreTema,
+  clonar: function(t){ return clonCrear(t); }, clonBorrar: clonBorrar, cerrarOClon: cerrarOClon,
+  clonStub: function(fn){ clonStub = fn; },
+  tabs: function(){ return {tabs: tabs.slice(), activo: activo}; },
   // header de cada widget: [↻] actualizar, [⚙] settings, plegar tocando el titulo
   wsets: function(){ return wsetsLimpias(); },
   wset: wset, setsDe: setsDe, guardarWset: guardarWset, recibirWsets: recibirWsets,
