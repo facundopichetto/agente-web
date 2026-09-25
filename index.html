@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.471">
-<link rel="manifest" href="manifest.json?v=4.471">
+<meta name="agente-web-version" content="4.472">
+<link rel="manifest" href="manifest.json?v=4.472">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.471">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.472">
 </head>
 <body>
 
@@ -1645,6 +1645,70 @@ function abrirTab(tema){
 // en produccion es null y esto es `docsPedir` pelado.
 var clonStub = null;
 function clonPedir(ruta, opts){ return clonStub ? clonStub(ruta, opts) : docsPedir(ruta, opts); }
+// 2038 {sinlan}: el server es el unico que puede dar de alta, borrar o renombrar una sub pestaña, pero
+// que no conteste EN ESE INSTANTE ya no pierde el pedido. el transporte caido (sin lan, timeout, 5xx) deja
+// la operacion en una cola local (`agente_clon_pend`, localStorage, sobrevive al reload) y sale sola apenas
+// vuelve la base: al reconectar (`lanPoner`) y, mientras tanto, cada `CLON_PEND_CADA`. un `ok:false` del
+// server (nombre repetido, cola pendiente) NO se encola: eso es una respuesta, no una caida.
+var CLON_PEND_LS = "agente_clon_pend", CLON_PEND_CADA = 15000, clonPendTimer = null, clonPendCorriendo = false;
+var CLON_SIN = {sinLan: true};          // el marcador que devuelve una operacion que quedo encolada
+function clonPendLeer(){
+  try{ var l = JSON.parse(localStorage.getItem(CLON_PEND_LS) || "[]"); return l && l.length ? l : []; }
+  catch(x){ return []; }
+}
+function clonPendGuardar(l){
+  try{ localStorage.setItem(CLON_PEND_LS, JSON.stringify(l || [])); }catch(x){}
+  return l || [];
+}
+function clonPendProgramar(){
+  if(clonPendTimer || !clonPendLeer().length) return;
+  clonPendTimer = setInterval(function(){
+    if(!clonPendLeer().length){ clearInterval(clonPendTimer); clonPendTimer = null; return; }
+    clonPendFlush();
+  }, CLON_PEND_CADA);
+}
+// el catch comun de las tres: encola, avisa QUE paso de verdad y que se reintenta solo
+function clonSinServer(e, cuerpo, que, dePend){
+  if(dePend) return CLON_SIN;                  // ya esta en la cola: se reintenta en la proxima vuelta
+  var l = clonPendLeer();
+  l.push({cuerpo: cuerpo, que: que, ts: Date.now()});
+  clonPendGuardar(l);
+  clonPendProgramar();
+  var motivo = (e && e.message) || e || "?";
+  sistema("no llegué al server para " + que + " (" + motivo + "). quedó encolado acá y sale solo apenas " +
+          "vuelva la conexión; lo reintento cada " + Math.round(CLON_PEND_CADA / 1000) + " s.", "error");
+  return CLON_SIN;
+}
+function clonAplicar(it){
+  var c = (it && it.cuerpo) || {};
+  if(c.borrar) return clonBorrar(c.borrar, c.forzar, true);
+  if(c.renombrar) return clonRenombrar(c.renombrar, c.nombre, c.sacar, true);
+  if(c.tema) return clonCrear(c.tema, true);
+  return Promise.resolve(null);                // fila ilegible: se descarta
+}
+// vacia la cola en orden (el orden importa: crear y despues renombrar esa misma pestaña). la primera que
+// sigue sin server corta la vuelta y deja el resto para la proxima.
+function clonPendFlush(){
+  if(clonPendCorriendo || !clonPendLeer().length) return Promise.resolve(0);
+  clonPendCorriendo = true;
+  var hechas = 0;
+  function sig(){
+    var l = clonPendLeer();
+    if(!l.length) return Promise.resolve(hechas);
+    return Promise.resolve(clonAplicar(l[0])).then(function(r){
+      if(r === CLON_SIN) return hechas;        // sigue caido: la fila se queda donde esta
+      clonPendGuardar(clonPendLeer().slice(1));
+      hechas++;
+      return sig();
+    });
+  }
+  return sig().then(function(n){
+    clonPendCorriendo = false;
+    if(n) sistema("volvió la conexión: salieron " + n + " pedido(s) de pestaña que estaban encolados.");
+    return n;
+  }, function(){ clonPendCorriendo = false; return hechas; });
+}
+clonPendProgramar();   // lo que quedo encolado en una sesion anterior sigue vivo
 function clonesPedir(){
   return clonPedir("/clones").then(function(j){
     CLONES = (j && j.clones) || [];
@@ -1652,7 +1716,7 @@ function clonesPedir(){
     return CLONES;
   }).catch(function(){ return CLONES; });
 }
-function clonCrear(tema){
+function clonCrear(tema, dePend){
   return clonPedir("/clones", {method: "POST", headers: {"content-type": "application/json"},
                                body: JSON.stringify({tema: tema})})
     .then(function(j){
@@ -1663,11 +1727,10 @@ function clonCrear(tema){
       sistema("pestaña " + j.nombre + " lista");
       return j.nombre;
     }).catch(function(e){
-      sistema("no pude crear la pestaña (" + ((e && e.message) || e) + ")", "error");
-      return null;
+      return clonSinServer(e, {tema: tema}, "crear la pestaña de " + tema, dePend);
     });
 }
-function clonBorrar(tema, forzar){
+function clonBorrar(tema, forzar, dePend){
   return clonPedir("/clones", {method: "POST", headers: {"content-type": "application/json"},
                                body: JSON.stringify({borrar: tema, forzar: !!forzar})})
     .then(function(j){
@@ -1688,8 +1751,7 @@ function clonBorrar(tema, forzar){
       sistema("pestaña " + tema + " borrada (el tema " + baseTema(tema) + " no se toca)");
       return tema;
     }).catch(function(e){
-      sistema("no pude borrar la pestaña (" + ((e && e.message) || e) + ")", "error");
-      return null;
+      return clonSinServer(e, {borrar: tema, forzar: !!forzar}, "borrar la pestaña " + tema, dePend);
     });
 }
 // ---------- 2300 {visible}: el nombre visible de un clon (doble toque en la pestaña) ----------
@@ -1701,7 +1763,7 @@ function clonVisPoner(m){
   Object.keys(m).forEach(function(k){ if(m[k]) CLON_VIS[normTema(k)] = m[k]; });
   return CLON_VIS;
 }
-function clonRenombrar(tema, nombre, sacar){
+function clonRenombrar(tema, nombre, sacar, dePend){
   return clonPedir("/clones", {method: "POST", headers: {"content-type": "application/json"},
                                body: JSON.stringify({renombrar: tema, nombre: nombre || "", sacar: !!sacar})})
     .then(function(j){
@@ -1711,8 +1773,8 @@ function clonRenombrar(tema, nombre, sacar){
       pintarTabs();                    // solo la barra: ni el scroll del chat ni lo tipeado se tocan
       return j.visible || null;
     }).catch(function(e){
-      sistema("no pude renombrar la pestaña (" + ((e && e.message) || e) + ")", "error");
-      return null;
+      return clonSinServer(e, {renombrar: tema, nombre: nombre || "", sacar: !!sacar},
+                           "renombrar la pestaña " + tema, dePend);
     });
 }
 // el input inline: reemplaza el texto de ESA pestaña y nada mas. enter confirma, esc cancela, perder el foco
@@ -3679,7 +3741,8 @@ function lanPoner(x){
   pintarVia();
   // 2265 {clon}: la lista de clones vive en el server. en cuanto hay endpoint se pide una vez, asi el menu
   // del `MAS` y `sanearLayout` ven las pestañas que se crearon desde el celu o desde otra maquina.
-  if(lan.base && antes !== lan.base) clonesPedir();
+  // 2038 {sinlan}: y lo que quedo encolado sin server sale ahora, antes de repedir la lista
+  if(lan.base && antes !== lan.base) clonPendFlush().then(clonesPedir, clonesPedir);
 }
 function probarLan(){
   if(!token && !lanStub) return Promise.resolve(null);
@@ -4590,7 +4653,16 @@ function votMandarTexto(){
   votCerrar();
   return true;
 }
-function votLan(){ return lan.base ? Promise.resolve(lan.base) : probarLan(); }
+// 2038 {sinlan}: el endpoint se vuelve a probar EN EL MOMENTO, sin esperar los 60 s de `LAN_CADA`, y una
+// segunda vez si la primera vuelve vacia (la sonda en vuelo puede ser de antes de que volviera la red).
+function votLan(reintentos){
+  if(lan.base) return Promise.resolve(lan.base);
+  var n = reintentos === undefined ? 1 : reintentos;
+  return probarLan().then(function(b){
+    if(b || n <= 0) return b || null;
+    return votLan(n - 1);
+  });
+}
 // sube lo pendiente (votos y `basta`) y trae el estado del server; sin nada pendiente es un GET
 function votSubir(){
   if(votSubiendo){ votOtra = true; return votSubiendo; }
@@ -14036,6 +14108,8 @@ window.__agente = {
   tabEditando: function(){ return tabEdit ? tabEdit.tema : null; },
   esClon: esClon, baseTema: baseTema, clonable: clonable, esTema: esTema, padreTema: padreTema,
   clonar: function(t){ return clonCrear(t); }, clonBorrar: clonBorrar, cerrarOClon: cerrarOClon,
+  clonPendientes: function(){ return clonPendLeer(); }, clonPendFlush: clonPendFlush,
+  clonPendLimpiar: function(){ return clonPendGuardar([]); },
   clonStub: function(fn){ clonStub = fn; },
   tabs: function(){ return {tabs: tabs.slice(), activo: activo}; },
   // 2299 {ordentabs}: reordenar las pestañas arrastrandolas (`recetas/prueba_web_tabs`). `ordenTabs` es lo
