@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.469">
-<link rel="manifest" href="manifest.json?v=4.469">
+<meta name="agente-web-version" content="4.470">
+<link rel="manifest" href="manifest.json?v=4.470">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.469">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.470">
 </head>
 <body>
 
@@ -74,7 +74,11 @@
 <div id="sync" class="oculta">sincronizando…</div>
 <div id="envoltorio">
   <div id="hist"><div id="lista"></div></div>
-  <button id="alfinal" type="button">ir al final</button>
+  <!-- 1997 {pestana} punto 3 (facundo, 2026-09-25): "si scrolleo 2000px para arriba, me gustaria que en el
+       chat, abajo en el centro y flotando, a 50px de la barra del input, [una flecha] que al tocarla lleve al
+       final de todo". el boton ya existia (escondido y sin nadie que lo mostrara nunca): ahora es la flecha,
+       va centrado y lo prende/apaga `pintarAlFinal()`. -->
+  <button id="alfinal" type="button" title="ir al final" aria-label="ir al final de todo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12l7 7 7-7"/></svg></button>
 </div>
 <!-- 2151 {tira} (facundo, 2026-09-19: "las notificaciones EN EL CHAT te habia dicho que las saques. no
      quiero verlas mas. aparecen abajo ahora"): aca vivia la tira `#notis` del ultimo aviso sin leer (1162).
@@ -1626,7 +1630,9 @@ function abrirTab(tema){
   perfMedir("tab", function(){
     var t1 = ahoraMs();
     saltarAncla++;
-    try{ pintarTabs(); render(true); } finally { saltarAncla--; }
+    // 1997 {pestana}: si quedo charla bajada sin mezclar, se mezcla ANTES de pintar. si no, volver a una
+    // pestaña mostraba `msgs` viejo y la respuesta que ya estaba en memoria no aparecia nunca.
+    try{ mezclarSiFalta(); pintarTabs(); render(true); } finally { saltarAncla--; }
     perf.tabRender = Math.round((ahoraMs() - t1) * 100) / 100;
     var t2 = ahoraMs(); irDonde(true); perf.tabIr = Math.round((ahoraMs() - t2) * 100) / 100;
   });
@@ -1873,8 +1879,27 @@ function abajo(){
   if(selTxViva()) return;
   hist.scrollTop = hist.scrollHeight;
   // segunda pasada: el teclado y el autosize del textarea cambian el alto despues del layout
-  requestAnimationFrame(function(){ hist.scrollTop = hist.scrollHeight; });
-  alfinal.style.display = "none";
+  requestAnimationFrame(function(){ hist.scrollTop = hist.scrollHeight; pintarAlFinal(); });
+  pintarAlFinal(false);
+}
+// 1997 {pestana} punto 3: la flecha se ve SOLO cuando facundo no esta al final (con el mismo criterio de
+// siempre, `pegadoAbajo()`, o sea que una charla que no scrollea nunca la muestra). sin argumento se decide
+// midiendo; con argumento lo fuerza el que ya midio.
+function pintarAlFinal(ver){
+  if(!alfinal) return false;
+  if(ver === undefined) ver = !!(hist && hist.clientHeight) && !pegadoAbajo();
+  alfinal.classList.toggle("vis", !!ver);
+  return !!ver;
+}
+// dentro de un render el alto todavia esta cambiando (nodos que entran, el vuelo, `anclaPoner`), asi que
+// medir ahi puede dejar la flecha prendida aunque el chat termine pegado abajo. se vuelve a medir en el
+// frame siguiente, una sola vez por rafaga: es una medicion y un `classList.toggle`.
+var alFinalRaf = 0;
+function pintarAlFinalPronto(){
+  pintarAlFinal();
+  if(alFinalRaf) return;
+  alFinalRaf = 1;
+  requestAnimationFrame(function(){ alFinalRaf = 0; pintarAlFinal(); });
 }
 // el margen de 80 px es la tolerancia de "estoy abajo": tapa el alto de una linea del textarea que
 // crece, el redondeo del zoom y el rebote del scroll del celu, y es mucho menos que un mensaje corto.
@@ -1904,8 +1929,8 @@ function anotarVista(){
   vistaTimer = setTimeout(function(){ vistaTimer = null; guardarVista(); }, 400);
 }
 hist.addEventListener("scroll", function(){
-  if(pegadoAbajo()){ alfinal.style.display = "none"; subioAManoSoltar(); }   // 1645: volvio al fondo
-  else subioAManoPoner();                                                    // 1645: subio a mano
+  if(pegadoAbajo()){ pintarAlFinal(false); subioAManoSoltar(); }   // 1645: volvio al fondo
+  else { subioAManoPoner(); pintarAlFinal(true); }                 // 1645: subio a mano (1997: y aparece la flecha)
   anclaMirar();      // 1805: la linea de arriba, medida antes de que algo mueva el layout
   anotarVista();
 });
@@ -2373,6 +2398,7 @@ function mezclar(){
   if(sueltos.length) listas.push(sueltos);
   msgs = sinDobles(mezclarOrdenadas(listas)).filter(function(m){ return !esEstadoTransitorio(m); });
   recalcularTemas();
+  chatMezclado = chatSello; chatCambio = false;   // 1997 {pestana}: hasta aca esta mezclado
   return msgs.length;
 }
 // dos respuestas al mismo mensaje (facundo, 2026-09-13): si contestaron el server y cloud, se ve solo la de
@@ -3370,6 +3396,7 @@ function renderYa(){
     sepDias();                       // 2132 {dia}: una sola pasada al final del render, no una por mensaje
     if(!vueloContestado()) pintarVuelo();
     if(ancla && !ancla.abajo) anclaPoner(ancla);
+    pintarAlFinalPronto();           // 1997 {pestana}: llego charla abajo y facundo esta arriba -> la flecha
   });
 }
 // 2149 {pestana}: render incremental por id de mensaje. antes esto era `lista.innerHTML = ""` + `msgs.forEach`,
@@ -3935,9 +3962,20 @@ function crudo(ruta, etag){
              "application/vnd.github.raw+json");
 }
 // el archivo de un tema convertido en mensajes: cada fila del log es pregunta + respuesta completa.
-var chatCambio = false;    // `recibirChat` la prende: el tick solo repinta si de verdad llego algo
+// 1997 {pestana}: `chatCambio` era UN booleano que ponia en false el que arrancaba la pasada y prendia
+// `recibirChat`. dos problemas, y los dos dejaban una respuesta ADENTRO de `msgsHist` sin llegar nunca a
+// `msgs` (o sea: invisible en su pestaña, para siempre): la pasada que fallaba en una sola charla no
+// mezclaba NINGUNA, y una pasada que arrancaba encima de otra le apagaba la marca. ahora es un sello que
+// solo crece: `recibirChat` lo sube y `mezclar` anota hasta donde mezclo. mientras los dos numeros no
+// coincidan hay charla bajada sin mezclar, y eso lo mira tambien el cambio de pestaña.
+var chatCambio = false;    // (queda por compatibilidad: lo que decide es el sello)
+var chatSello = 0, chatMezclado = 0;
+function chatPendiente(){ return chatSello !== chatMezclado; }
+// mezcla SOLO si hay algo bajado sin mezclar: en el caso normal no cuesta nada (2149 {pestana}: el toque
+// de una pestaña no puede pagar una pasada por la charla entera al pedo)
+function mezclarSiFalta(){ if(!chatPendiente()) return false; mezclar(); return true; }
 function recibirChat(tema, d){
-  chatCambio = true;
+  chatCambio = true; chatSello++;
   var t = normTema(tema), filas = ((d && d.filas) || []).slice(), out = [], resp = {};
   // por la hora de ENVIO (1191): el daemon ya las publica ordenadas asi, esto cubre los archivos viejos
   filas.sort(function(a, b){ return fecha(a.ts) - fecha(b.ts); });
@@ -4030,21 +4068,54 @@ function temasACargar(){
   tabs.forEach(sumar);
   return out;
 }
+// 1997 {pestana}: una charla que se cae NO se lleva a las demas. antes era un `Promise.all` pelado, asi
+// que un `http 500` (o un json cortado, o un parpadeo de red) en CUALQUIERA de las charlas -con la pestaña
+// general abierta se piden las ~25 del indice- rechazaba la pasada entera: las que si bajaron quedaban en
+// `msgsHist` y nunca se mezclaban, o sea que la respuesta estaba en memoria y no se pintaba en ninguna
+// pestaña. cada tema se atrapa solo, el que falla lo dice UNA vez (como el 404 de la 2278) y lo que bajo
+// bien se mezcla igual. `cargarChatIndex` ya no puede tumbar la pasada: sin indice se piden las pestañas
+// abiertas, que es lo que le importa a facundo.
+var chatFalla = {};
+function cargarChatTemaSuave(t){
+  return cargarChatTema(t).then(function(n){
+    if(chatFalla[t]){ delete chatFalla[t]; }
+    return n;
+  }, function(e){
+    var m = (e && e.message) || "?";
+    if(!chatFalla[t]){
+      chatFalla[t] = m;
+      if(m !== "401" && m !== "freno")
+        sistema("no pude bajar la charla de `" + t + "` (" + m + "): las otras pestañas siguen andando.", "error");
+    }
+    return 0;
+  });
+}
 function cargarChat(){
-  return cargarChatIndex().then(function(){
-    return Promise.all(temasACargar().map(cargarChatTema));
+  return cargarChatIndex().then(function(idx){ delete chatFalla[CHAT_INDEX]; return idx; }, function(e){
+    if(!chatFalla[CHAT_INDEX]){
+      chatFalla[CHAT_INDEX] = true;
+      var m = (e && e.message) || "?";
+      if(m !== "401" && m !== "freno") sistema("no pude bajar el índice del chat (" + m + ").", "error");
+    }
+    return chatIndex || {};
+  }).then(function(){
+    return Promise.all(temasACargar().map(cargarChatTemaSuave));
   }).then(function(ns){
     return (ns || []).reduce(function(a, b){ return a + (b || 0); }, 0);
   });
 }
-// abrir una pestaña que nunca se bajo: su charla llega sola, sin esperar al proximo sync
+// volver a una pestaña le pide SU charla (1997 {pestana}: "tan dificil es mantener las pestañas como una
+// conversacion?"). antes solo se bajaba la de una pestaña que nunca se habia abierto (`msgsHist[t]` ya
+// cargado cortaba), asi que al volver se veia lo que quedo del ultimo tick de 30 s y la respuesta que
+// llego en el medio no aparecia hasta el siguiente. va con el etag de siempre, o sea que lo normal es un
+// 304 de la lan, y fuera del gesto: el toque de la pestaña pinta igual de rapido.
 function chatDeTab(tema){
   var t = normTema(tema);
-  if(!token || t === AUTO || msgsHist[t]) return Promise.resolve(0);
-  return cargarChatTema(t).then(function(n){
-    if(n){ mezclar(); render(); irDonde(); }
+  if(!token || t === AUTO) return Promise.resolve(0);
+  return cargarChatTemaSuave(t).then(function(n){
+    if(mezclarSiFalta()){ render(); irDonde(); }
     return n;
-  }).catch(function(){ return 0; });
+  });
 }
 
 function tick(){
@@ -4073,9 +4144,8 @@ function tick(){
   // con etag esto es un 304 y no gasta rate limit; solo repinta si `recibirChat` trajo algo.
   if(token && Date.now() - chatUlt > cada){
     chatUlt = Date.now();
-    chatCambio = false;
     cargarChat().then(function(){
-      if(!chatCambio) return;
+      if(!chatPendiente()) return;   // 1997 {pestana}: el sello, no un booleano que otra pasada puede apagar
       var pego = seguirAlFinal();
       mezclar(); render();
       if(pego) alFinal(); else restaurarVistas();   // 1645/1650: subio a mano -> se queda donde esta
@@ -9802,7 +9872,14 @@ document.addEventListener("paste", function(e){
   }
 })();
 
-alfinal.addEventListener("click", abajo);
+// 1997 {pestana} punto 3: el toque lleva al final de TODO. suelta la marca de "subio a mano" (si no, el
+// proximo mensaje nuevo no lo seguiria) y limpia la seleccion, que es lo unico que frena a `abajo()`.
+alfinal.addEventListener("click", function(){
+  try{ var sl = window.getSelection && window.getSelection(); if(sl && sl.removeAllRanges) sl.removeAllRanges(); }catch(x){}
+  selTxSoltar();
+  subioAManoSoltar();
+  abajo();
+});
 $("mandar").addEventListener("click", function(){
   // {enviar}: grabando, la flecha manda ESE audio (y encadena el siguiente si el dedo sigue en el micro)
   if(grabador){ mandarGrabacionYa(); return; }
@@ -14374,6 +14451,17 @@ window.__agente = {
   // 1622 {seleccion}: la pausa del repintado del historial (`prueba_web_seleccion`)
   selTxViva: selTxViva, selTxEstado: selTxEstado, selTxSoltar: selTxSoltar, renderYa: renderYa,
   temasACargar: temasACargar, archivoChat: archivoChat, mezclar: mezclar, claveMsg: claveMsg,
+  // 1997 {pestana}: el sello de lo bajado sin mezclar y la flecha `ir al final` (`prueba_web_tabs`)
+  chatPendiente: chatPendiente, mezclarSiFalta: mezclarSiFalta, chatFallas: function(){ return Object.keys(chatFalla); },
+  alFinalBoton: function(){ var b = $("alfinal"), r = b.getBoundingClientRect(), h = hist.getBoundingClientRect();
+    var pie = $("pie").getBoundingClientRect(), cs = getComputedStyle(b);
+    return {vis: b.classList.contains("vis") && r.height > 0, alPie: Math.round(pie.top - r.bottom),
+            centro: Math.round((r.left + r.right) / 2 - (h.left + h.right) / 2),
+            redondo: cs.borderRadius, svg: !!b.querySelector("svg"), color: cs.color}; },
+  alFinalTocar: function(){ $("alfinal").click(); return hist.scrollTop; },
+  // headless no dispara `scroll` cuando el test le escribe `scrollTop` (0 eventos, medido): la prueba
+  // vuelve a medir a mano, igual que hace con `guardarVista(true)`
+  alFinalMirar: function(){ return pintarAlFinal(); },
   hist: function(t){ return (msgsHist[normTema(t)] || []).map(function(m){
     return {id: m.id, tema: m.tema, clase: m.clase, texto: m.texto, iso: m.iso, audio: m.audio || null}; }); },
   charla: function(){ return msgs.map(function(m){
