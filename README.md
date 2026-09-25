@@ -752,7 +752,7 @@ cada caja de la derecha tiene una fila de header:
 - **izquierda**: el titulo (tocarlo **pliega y despliega** la caja) y un **dato esencial de una
   linea**, el que resume el widget sin abrirlo:
   `server` vivo/apagado + cpu, `usage` la barra mas cerca de la linea **por cuenta**, `agent` la
-  cuenta activa + que esta corriendo, `verification agent` / `my tickets` / `propuestas` / `avisos`
+  cuenta activa + que esta corriendo, `verification agent` / `CX` / `MVP` / `QA` / `propuestas` / `avisos`
   la cantidad, `podcast` el episodio de
   arriba, `dj` si suena algo y cuantos bloques van, `models` el ultimo veredicto.
 - **derecha**: `hace Xs` (la edad del `widgets.json` que se esta viendo), **`[↻]`** y **`[⚙]`**.
@@ -772,10 +772,15 @@ en el momento y el modal se queda abierto:
 | `server` | | `mostrar el log` |
 | `usage` | | `cuentas` (todas o una) |
 | `agent` | | `mostrar la cola` |
-| `my tickets` | | `filtro de estado` (los estados que hay ahora) |
+| `CX` | | (nada: el server ya la filtra por estado) |
+| `MVP` / `QA` | | `filtro de estado` (`abiertos`, `todos` o uno de los que hay ahora) |
 | `propuestas` | | `filtro de tema` |
 | `podcast` | | `abierto por default` |
 | `dj` | | `mostrar la cola` |
+
+el widget `my tickets` **se partio en tres** (facundo, 2026-09-24, orden 1932 {jira}): `tickets_cx` (`CX`),
+`tickets_mvp` (`MVP`) y `tickets_qa` (`QA`), cada uno con su clave, su plegado, su filtro y su `[↻]`; las tres
+salen de UNA sola consulta a jira y un toque en cualquiera las refresca a las tres.
 
 `opportunities` y su caja `decided` **ya no estan** (facundo, 2026-09-19, orden
 2144 {oportunidades}: "saca el widget oportunidades es feo y no tiene sentido"). el dato sigue viajando en
@@ -1109,7 +1114,7 @@ cuentas!). idealmente el widget deberia llevarme al contenido".
 "los widgets tienen que tener una opcion que sea escribir, asi te puedo decir algo ahi y ya tenes el contexto".
 
 - **header**: `[✎]` a la izquierda de `[↻]` y `[⚙]`. lleva a la pestaña del tema del widget (`TEMA_WIDGET`:
-  `server` -> server, `usage`/`agent`/`avisos`/`propuestas` -> tools, `tickets` -> awtomic, `verificaciones` ->
+  `server` -> server, `usage`/`agent`/`avisos`/`propuestas` -> tools, `tickets_cx`/`tickets_mvp` -> awtomic, `tickets_qa`/`verificaciones` ->
   awtomic/qa, `podcast` -> podcast, `dj`/`mail` -> fuzzer, `que_ver` -> personal; lo que no esta, tools) y deja
   `> widget <nombre>: <dato esencial del header>` + linea vacia, cursor al final. **no manda nada**. tocarlo de
   nuevo no apila otra cita.

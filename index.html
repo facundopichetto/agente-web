@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.464">
-<link rel="manifest" href="manifest.json?v=4.464">
+<meta name="agente-web-version" content="4.465">
+<link rel="manifest" href="manifest.json?v=4.465">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.464">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.465">
 </head>
 <body>
 
@@ -2482,13 +2482,18 @@ function nodoMsg(m){
   var dr = draftsDe(ops && ops.cuerpo !== null ? ops.cuerpo : textoSinAcc);
   var cuerpoTxt = m.clase === "agente" && dr.bloques.length ? dr.cuerpo : (ops && ops.cuerpo !== null ? ops.cuerpo : (m.clase === "yo" ? sinDictado(m.texto) : textoSinAcc));
   b.innerHTML = resaltar(auds.length ? sinMarcaAudio(cuerpoTxt) : cuerpoTxt);
+  // 2336 {cambios} (facundo, 2026-09-23: "el mensaje deberia estar antes de las cajas de decision. las cajas de
+  // decision siempre lo ultimo. incluso despues del audio. que el audio se inyecte antes, cuando este listo"):
+  // el orden de un mensaje es SIEMPRE texto -> drafts -> audio -> cajas. el audio llega en un poll posterior al
+  // texto, asi que al repintarse el mensaje se mete en el medio y las cajas bajan solas: nunca quedan arriba.
   div.appendChild(cab); if(hilo) div.appendChild(hilo); div.appendChild(b);
+  // el reproductor completo, uno por audio (2044: en todas las pestañas), abajo del texto y ARRIBA de toda
+  // caja de decision. los drafts copiables siguen abajo de las cajas, como los dejo la 1240.
+  auds.forEach(function(sa){ div.appendChild(playerAudio(sa, "escuchar")); });
   if(acc && acc.lista.length) div.appendChild(nodoAcciones(m, acc.lista));
   if(ops && ops.lista.length) div.appendChild(nodoCajas(m, ops.lista));
   if(m.clase === "agente" && dr.bloques.length) div.appendChild(nodoDrafts(dr.bloques));
   div.__msg = m;          // el menu contextual (delegado) lee el mensaje del nodo
-  // el reproductor completo, uno por audio, al final del mensaje (2044: en todas las pestañas)
-  auds.forEach(function(sa){ div.appendChild(playerAudio(sa, "escuchar")); });
   if(m.clase === "agente") ponerCopiar(b);   // 1214: `copiar` de un toque en links, claves y code
   cargarImagenes(b);
   cargarAudios(b);
@@ -2660,8 +2665,14 @@ function nodoAcciones(m, lista_){
       if(b.disabled) return;
       if(!b.classList.contains("selec")){ b.classList.add("selec"); return; }
       b.classList.remove("selec");
-      b.disabled = true; b.classList.add("hecho"); accMarcar(a.id);
-      (accMandarFn || mandar)("dale " + a.id, m.tema || temaActivo(), true);
+      // 2334 {caja}: la caja se apaga (`hecho` + el checkmark) SOLO si el envio vuelve ok; mientras viaja
+      // queda deshabilitada para no mandarla dos veces, y si falla vuelve a estar tocable con el error.
+      b.disabled = true;
+      alEnviar((accMandarFn || mandar)("dale " + a.id, m.tema || temaActivo(), true), function(ok, r){
+        if(ok){ b.classList.add("hecho"); accMarcar(a.id); return; }
+        b.disabled = false;
+        cajaError(d, r.motivo);
+      });
     });
     d.appendChild(t); d.appendChild(b);
     if(a.segundos){                       // contador: la caja dice cuanto falta y tocarla lo adelanta
@@ -3112,6 +3123,7 @@ function cajaVieja(m){
 // un toque sobre una caja (1202). sin marca en esa respuesta: manda y queda marcada. con marca: no manda
 // nada todavia, pregunta adentro de la caja tocada y espera el tap en `sí` (o `no` para dejar todo como esta).
 function tocarCaja(m, caja, o, lista_, target){
+  if(caja.dataset.vuelo) return;   // 2334 {caja}: hay un envio de ESTA caja en el aire, no sale dos veces
   var b = opcBoton(caja, o.letra), ahora = Date.now();
   var dobleMs = window.__opcDobleMs != null ? window.__opcDobleMs : OPC_DOBLE_MS;
   if(b){
@@ -3157,19 +3169,40 @@ function mandarCaja(m, caja, lista_, marcar, decir){
   var vieja = cajaVieja(m), tema = m.tema || m.tag || temaActivo();
   // 1203: la hora es la de ESTE envio, y solo para las letras nuevas: la que ya estaba conserva la suya
   var horas = conHoras(estadoCaja(m), marcar, Date.now());
-  guardarOpc(k, marcar, horas);
-  marcarHecho(caja, marcar, horas);
+  // 2334 {caja} (facundo, 2026-09-24: "mira la queue. NO ENTRA NADA NUEVO DESDE HACE HORAS"): la caja se
+  // marcaba `enviada` ANTES de mandar, y `mandar()` tenia salidas mudas (otro mensaje saliendo, el mismo
+  // texto repetido) donde no postea nada: quedaba el checkmark y el mensaje no salia nunca. ahora la marca
+  // se pone SOLO cuando el envio vuelve ok; si falla, la caja queda sin marcar y el error se ve en el momento.
+  var siSalio = function(x){
+    caja.dataset.vuelo = "1";
+    return alEnviar(x, function(ok, r){
+      delete caja.dataset.vuelo;
+      if(ok){ cajaSinError(caja); guardarOpc(k, marcar, horas); marcarHecho(caja, marcar, horas); return; }
+      limpiarSelec(caja);
+      cajaError(caja, r.motivo);
+    });
+  };
   if(ops.some(function(o){ return o.cmd; })){          // `op N X`: crudo, uno por linea (el daemon los corre todos)
-    (accMandarFn || mandar)(ops.map(function(o){ return o.cmd || (o.letra + ": " + o.texto); }).join("\n"), tema, true);
-    return;
+    return siSalio((accMandarFn || mandar)(ops.map(function(o){ return o.cmd || (o.letra + ": " + o.texto); }).join("\n"), tema, true));
   }
   // 2096 {codigocaja}: con `opc_id` sale el codigo pelado (sin texto y sin cita: el id ya dice de que
   // respuesta es). sin el (una caja vieja ya pintada, o el celu con el html de antes), el formato de siempre.
   var cod = cajaCod(m, decir, false);
-  if(cod){ (accMandarFn || mandar)(cod, tema, false); return; }
+  if(cod) return siSalio((accMandarFn || mandar)(cod, tema, false));
   var txt = decir.split("").join(" y ") + ": " + ops.map(function(o){ return o.texto; }).join(" / ");
   // 2080: el mismo enganche de `accMandar` que las cajas `dale`, para que la prueba mire lo que saldria
-  (accMandarFn || mandar)((vieja ? citaCaja(m) : "") + txt, tema, false);
+  return siSalio((accMandarFn || mandar)((vieja ? citaCaja(m) : "") + txt, tema, false));
+}
+// 2334 {caja}: el error de un envio queda A LA VISTA en la caja tocada, no solo en la consola: facundo tiene
+// que enterarse en el momento de que no salio, en vez de creer que mando porque la vio marcada.
+function cajaError(caja, motivo){
+  var e = caja.querySelector(".opcerr");
+  if(!e){ e = document.createElement("div"); e.className = "opcerr"; caja.appendChild(e); }
+  e.textContent = "no salió (" + (motivo || "error") + ") · tocá de nuevo";
+}
+function cajaSinError(caja){
+  var e = caja.querySelector(".opcerr");
+  if(e) e.remove();
 }
 // confirmado el `revertir?`: esa letra se desmarca (las otras, si habia sumadas, quedan) y sale `me arrepentí`
 function arrepentirse(m, caja, lista_, letra){
@@ -3178,11 +3211,14 @@ function arrepentirse(m, caja, lista_, letra){
   if(!op || letras.indexOf(letra) < 0) return;
   var quedan = letras.split("").filter(function(l){ return l !== letra; }).join("");
   var horas = conHoras(estadoCaja(m), quedan, Date.now());   // 1203: la desmarcada pierde su hora
-  guardarOpc(k, quedan, horas);
-  marcarHecho(caja, quedan, horas);
   var codA = cajaCod(m, letra, true);   // 2096: `#k7f2-A`
-  (accMandarFn || mandar)(codA || (citaCaja(m) + "me arrepentí: " + letra + ": " + op.texto),
-                          m.tema || m.tag || temaActivo(), false);
+  // 2334 {caja}: igual que al mandar, la caja no se toca hasta que el `me arrepentí` salio de verdad
+  return alEnviar((accMandarFn || mandar)(codA || (citaCaja(m) + "me arrepentí: " + letra + ": " + op.texto),
+                                          m.tema || m.tag || temaActivo(), false),
+                  function(ok, r){
+                    if(!ok){ cajaError(caja, r.motivo); return; }
+                    cajaSinError(caja); guardarOpc(k, quedan, horas); marcarHecho(caja, quedan, horas);
+                  });
 }
 // un mensaje suelto que llega (lo que escribio facundo, la respuesta que baja el poll): se pinta ese nodo y
 // nada mas. 2149 {pestana}: el nodo se marca con su `data-clave` y su `data-firma`, asi el proximo render
@@ -7758,14 +7794,27 @@ function vueloContestado(){
 }
 var REPE_MS = 2000;
 var ultimoTexto = "", ultimoTs = 0;
+// 2334 {caja}: el resultado de un envio, siempre una promesa. `envioNo` es la salida que antes era muda
+// (un `return` pelado); `alEnviar` normaliza lo que devuelve el que manda de verdad, tambien el hook de las
+// pruebas (`accMandarFn`, que no devuelve nada) y un `mandar` viejo cacheado que resuelva a `undefined`.
+function envioNo(motivo){ return Promise.resolve({ok: false, motivo: motivo}); }
+function alEnviar(x, fn){
+  return Promise.resolve(x).then(function(r){ r = (r && typeof r === "object") ? r : {ok: true, via: "hook"};
+                                              fn(r.ok !== false, r); return r; },
+                           function(e){ var r = {ok: false, motivo: (e && e.message) || "error"};
+                                        fn(false, r); return r; });
+}
 // `tsEnvio` (1191): cuando facundo apreto mandar. lo pasan la foto y el audio, que salen recien
 // despues de subirse; para un texto es ahora mismo. de ahi sale el `[enviado: ...]` y la hora que se pinta.
 function mandar(texto, tema, crudo, tsEnvio){
   var aparte = mandarAparte;   // 1350: sale del modal de una push: no toca la caja, ni borradores, ni el scroll
   texto = (texto || "").trim();
-  if(!texto) return;
-  if(enviando) return;                                          // hay uno saliendo: este enter no cuenta
-  if(texto === ultimoTexto && Date.now() - ultimoTs < REPE_MS) return;
+  // 2334 {caja}: `mandar()` NUNCA sale muda. siempre devuelve una promesa con `{ok, via, motivo}`, asi el que
+  // la llamo (una caja de decision, una caja `dale`) sabe si el mensaje salio de verdad o si se cayo por el
+  // camino. `via` es `post` (entro al buzon), `espera` (quedo en `salida` y sale solo) o `hook` (una prueba).
+  if(!texto) return envioNo("el mensaje estaba vacio");
+  if(enviando) return envioNo("hay otro mensaje saliendo");     // hay uno saliendo: este enter no cuenta
+  if(texto === ultimoTexto && Date.now() - ultimoTs < REPE_MS) return envioNo("repetido, esperá un segundo");
   tema = tema || temaActivo();
   tsEnvio = tsEnvio || Date.now();
   var cuerpo = cuerpoMsg(texto, tema, crudo, tsEnvio);
@@ -7777,7 +7826,7 @@ function mandar(texto, tema, crudo, tsEnvio){
       borrarBorrador(tema); if(caja && caja !== tema) borrarBorrador(caja);
     }
     guardarSalida(texto, tema, cuerpo);
-    return Promise.resolve();
+    return Promise.resolve({ok: true, via: "espera", motivo: "github frenado"});
   }
   if(sinRed()){                                                  // 1631: pwa sin conexion: queda en espera y sale al volver
     if(!aparte){
@@ -7785,7 +7834,7 @@ function mandar(texto, tema, crudo, tsEnvio){
       borrarBorrador(tema); if(caja && caja !== tema) borrarBorrador(caja);
     }
     guardarSalida(texto, tema, cuerpo, "red");
-    return Promise.resolve();
+    return Promise.resolve({ok: true, via: "espera", motivo: "sin conexión"});
   }
   enviando++;
   if(!aparte) subioAManoSoltar();   // 1645: mandar un mensaje apaga la marca de "subio a mano"
@@ -7809,6 +7858,7 @@ function mandar(texto, tema, crudo, tsEnvio){
     [msgs, msgsCom].forEach(function(l){ var i = l.indexOf(m); if(i >= 0) l.splice(i, 1); });
     render();
   }
+  var res = {ok: true, via: "post"};
   return api("POST", "/repos/" + REPO + "/issues/" + ISSUE + "/comments", {body: cuerpo})
     .then(function(r){
       if(r.json && !vistos[r.json.id]){
@@ -7828,12 +7878,15 @@ function mandar(texto, tema, crudo, tsEnvio){
     .catch(function(e){
       ultimoTexto = ""; ultimoTs = 0;                           // fallo: se puede reintentar igual
       if(!aparte) sacarProvisional();                           // la burbuja en vuelo se va con el error
-      if(e && e.message === "freno"){ guardarSalida(texto, tema, cuerpo); return; }   // sale solo al levantar
-      if(errRed(e)){ guardarSalida(texto, tema, cuerpo, "red"); return; }            // 1631: se corto en el camino
+      if(e && e.message === "freno"){ guardarSalida(texto, tema, cuerpo);             // sale solo al levantar
+                                      res = {ok: true, via: "espera", motivo: "github frenado"}; return; }
+      if(errRed(e)){ guardarSalida(texto, tema, cuerpo, "red");                       // 1631: se corto en el camino
+                     res = {ok: true, via: "espera", motivo: "sin conexión"}; return; }
+      res = {ok: false, motivo: (e && e.message) || "no se pudo mandar"};
       if(!txt.value.trim()){ ponerCaja(texto); guardarBorrador(caja || tema, texto, true); }
       if(ruidoso(e)) sistema("no se pudo mandar: " + e.message, "error");
     })
-    .then(function(){ enviando = Math.max(0, enviando - 1); $("mandar").disabled = false; });
+    .then(function(){ enviando = Math.max(0, enviando - 1); $("mandar").disabled = false; return res; });
 }
 // github frenado (403 secondary rate limit, 2026-09-12): el mensaje no vuelve a la caja ni se pierde.
 // queda en `salida` (localStorage `agente_salida`, sobrevive a recargar) y `vaciarSalida` lo manda solo
