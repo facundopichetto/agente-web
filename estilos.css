@@ -15,7 +15,7 @@
        lo que es icono se lee de aca, nunca de `--texto-max`. */
     --icono-max:18px;
     /* 2333 {panel} (facundo, 2026-09-24: "bajar TODO el texto del panel del chat a 14 px parejo"): el chat
-       tiene su propio tamaño, no una resta del tope del board. `--texto-max` (18 px) sigue mandando en
+       tiene su propio tamaño, no una resta del tope del board. `--texto-max` (14 px desde la 2334) sigue mandando en
        widgets, vistas y modales; adentro de `#panel-chat` manda este. */
     --texto-chat:14px;
     /* molde de componentes (1558): el fondo de las capas y la sombra de los modales, un solo lugar */
