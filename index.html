@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.468">
-<link rel="manifest" href="manifest.json?v=4.468">
+<meta name="agente-web-version" content="4.469">
+<link rel="manifest" href="manifest.json?v=4.469">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.468">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.469">
 </head>
 <body>
 
@@ -4674,7 +4674,12 @@ $("vtcerrar").addEventListener("click", votCerrar);
 // un resumen de flaudio. `cerrar` solo la esconde
 // hasta recargar; `aceptar` la cierra para todos.
 var SEL_CADA = 30000;
-var sel = {abiertas: [], actual: null, tj: 0, subiendo: null, otra: false, timer: null, ignorada: {}, wid: null, widFresco: null, fuente: null};
+var sel = {abiertas: [], actual: null, tj: 0, subiendo: null, otra: false, timer: null, ignorada: {}, wid: null, widFresco: null, fuente: null,
+           // 2325 {votador}: de que LISTA se bajo la fila que hay cargada de cada proceso (`null` = el proceso
+           // entero, que es lo que sirve el poll). sin esto, la fila de `following` se abria como si fuera la de
+           // `following not followers` (misma coleccion, mismo slot) y el votador salia con la gente y el pie de
+           // la otra lista.
+           filaDe: {}};
 function selLeer(s, def){
   try{ var v = localStorage.getItem("agente_sel_" + s); return v === null ? def : JSON.parse(v); }catch(x){ return def; }
 }
@@ -5161,6 +5166,7 @@ function selPedir(col, arranque){
 }
 function filaAplicar(col, j){
   if(!j || j.coleccion !== col) return false;
+  sel.filaDe[col] = sel.filtro || null;   // 2325 {votador}: esta fila es la de ESTA lista, no la del proceso
   var i = -1;
   sel.abiertas.forEach(function(a, k){ if(a.coleccion === col) i = k; });
   if(j.abierta){ if(i >= 0) sel.abiertas[i] = j; else sel.abiertas.push(j); }
@@ -6733,6 +6739,17 @@ function lisVotar(f, p, desde){
   // 2095 paso 5: el votador se abre FILTRADO a esta lista (`f.clave`): la fila del proceso mezcla varias
   return tinderAbrirCol(col, p && p.id, carta, f.clave, f.titulo || f.clave);
 }
+// 2325 {votador}: hay al menos UNA tarjeta de esa lista en la fila que ya esta cargada para el proceso? es lo que
+// decide si el votador puede abrirse con lo que hay o si primero hay que pedirle al server la fila de la lista.
+// mide con el mismo filtro que usa la apertura (`tjFilaFiltrada`), asi que nunca dice que si sobre algo que
+// `tjAbrir` despues descarta.
+function filaDeLista(col, lista){
+  lista = lista || null;
+  var de = sel.filaDe[col] || null;
+  if(de && de !== lista) return false;   // esa fila se bajo para OTRA lista del mismo proceso: no es la de esta
+  var e = (sel.abiertas || []).filter(function(a){ return a.coleccion === col; })[0];
+  return !!e && tjFilaFiltrada(e, lista).length > 0;
+}
 // esta esa persona en la fila que el server tiene abierta para ese proceso? (2277 {foto}: la foto ya no cuenta,
 // el server sirve igual a quien la esta esperando, asi que el toque nunca cae a la cartita vieja por eso)
 function lisEnFila(col, id){
@@ -7195,8 +7212,14 @@ function tinderAbrirCol(col, desde, falla, lista, titulo){
   // ENTERA, asi que la fila se pide de nuevo antes de pintar nada; sin lan se abre con lo que ya hay
   // 2137 correccion 11:55: con lo de esa lista ya bajado, reabrirla NO vuelve a pedir el primer lote: se abre con
   // la cache (el `arranque` de la 1975 es para armar la fila la primera vez, no para volver a bajar lo mismo)
-  if(selArranca(col) && !cacheTiene(col, sel.filtro)){
-    selPedir(col, true).then(function(){
+  // 2325 {votador} (facundo, 2026-09-24: "toco en las listas y no puedo votar [...] es mas creo que ninguna lista
+  // vota"): la fila que deja el poll es la del PROCESO, no la de la lista, y varias listas comparten proceso. si
+  // esa fila no trae ni una tarjeta de la lista tocada (el poll de `ig-arrepentir` servia `follow request sent`,
+  // no `following`), abrir con lo que hay es abrir cero tarjetas: el votador no abria y el toque caia al plan B.
+  // ahora, cuando la fila cargada no sirve para ESA lista, se le pide al server la suya (`?lista=<clave>`, que ya
+  // sabe servirla) antes de decidir nada. lo que ya esta bajado sigue abriendo igual de rapido y sin pedir nada.
+  if(!cacheTiene(col, sel.filtro) && (selArranca(col) || !filaDeLista(col, sel.filtro))){
+    selPedir(col, selArranca(col)).then(function(){
       // la fila recien pedida puede no traer a la persona tocada (la 1960 exige `seguidores`, la 1495 foto): ahi no
       // se abre el votador en otra persona, se cae al plan B del toque (su cartita)
       if(desde && !lisEnFila(col, desde)){ atras(); return falla ? falla() : lisVolver(); }
@@ -7293,6 +7316,7 @@ function selLimpiar(){
 function selPoner(abiertas, fuente, auto){
   sel.abiertas = abiertas || [];
   sel.fuente = fuente;
+  sel.filaDe = {};   // 2325 {votador}: lo que trae el poll es la fila del PROCESO, de ninguna lista en particular
   if(auto !== false) selLimpiar();
   if(sel.actual){
     var fresca = sel.abiertas.filter(function(a){ return a.coleccion === sel.actual.coleccion; })[0];
@@ -13725,9 +13749,10 @@ window.__agente = {
   votSembrar: function(o){ Object.keys(o || {}).forEach(function(k){ votEscribir(k, o[k]); }); },
   selPutStub: function(f){ selPutStub = f; },
   selEstado: function(){ return {abierto: !!sel.actual, col: sel.actual && sel.actual.coleccion, pend: selLeer("pend", []), fuente: sel.fuente,
+                                 n: sel.actual ? (sel.actual.candidatas || []).length : 0,   // 2325 {votador}: cuantas tarjetas quedaron en la fila abierta
                                  marcadas: selMarcadas(), abiertas: sel.abiertas.map(function(a){ return a.coleccion; })}; },
   selFlushMin: function(){ return SEL_FLUSH_MIN; },   // 1836
-  selReset: function(){ sel.actual = null; sel.abiertas = []; sel.ignorada = {}; sel.tjHistorial = []; selTs = 0; sel.agotadas = []; sel.totales = {}; filaCache = {}; salidos = {}; tjVotandoYa = {};
+  selReset: function(){ sel.actual = null; sel.abiertas = []; sel.ignorada = {}; sel.filaDe = {}; sel.tjHistorial = []; selTs = 0; sel.agotadas = []; sel.totales = {}; filaCache = {}; salidos = {}; tjVotandoYa = {};
                         ["pend", "hechas", "fila"].forEach(function(s){ try{ localStorage.removeItem("agente_sel_" + s); }catch(x){} }); },
   selFila: function(){ return selLeer("fila", {}); },   // correccion 18:12
   animRanking: animRanking, animSpinner: animSpinner, animSinVer: animSinVer, animValida: animValida,
