@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.467">
-<link rel="manifest" href="manifest.json?v=4.467">
+<meta name="agente-web-version" content="4.468">
+<link rel="manifest" href="manifest.json?v=4.468">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.467">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.468">
 </head>
 <body>
 
@@ -871,6 +871,7 @@ var WSETS = {
                 {k: "solo_nuevos", et: "solo lo nuevo", tipo: "bool", def: false},
                 {k: "falta_login", et: "avisar que fuente falta", tipo: "bool", def: true}],
   igcola:      [{k: "hechas", et: "mostrar las que ya salieron", tipo: "bool", def: true}],
+  madrugada:   [{k: "filas", et: "cu\u00e1ntas filas", tipo: "opciones", def: 0, ops: [0, 3, 5, 10]}],
   verificaciones: [], sombra: []
 };
 // 2144 {oportunidades}: widgets retirados del board. la clave puede seguir en el `tabs.json` del buzon
@@ -11365,7 +11366,7 @@ document.addEventListener("keydown", function(e){
 // de un widget ya migrado, se vuelve a cargar ese archivo y se repinta ESA caja (`repintarMod`), sin tocar el
 // chat, su scroll ni lo que este tipeado. si cambio el shell (o algo que no se sabe repintar), el reload de
 // siempre. un modulo no ve el adentro del shell: solo esto.
-var MODULOS = ["gasto", "agent", "sombra", "seguidores", "igcola", "claves"];   // widgets migrados, en `web/widgets/<clave>.js` (1832: `models` = clave `sombra`)
+var MODULOS = ["gasto", "agent", "sombra", "seguidores", "igcola", "claves", "madrugada"];   // widgets migrados, en `web/widgets/<clave>.js` (1832: `models` = clave `sombra`)
 var MOD_DATOS = {gasto: "gasto", agent: "agente"};   // de que campo de `widgets.json` come cada uno
 var mods = {}, modsVer = {}, modsTimers = {}, modsError = {}, modCargando = null, modsCargas = 0;
 var visibleForzada = false;   // 1849: las pruebas headless corren con `document.hidden` y fuerzan `B.visible()`
@@ -11553,6 +11554,7 @@ function pintarWidgets(d, err){
     ["salud_personal", d.salud_personal ? cajaSaludPersonal(d.salud_personal) : ""],
     ["seguidores", d.seguidores ? modHtml("seguidores") : ""],
     ["igcola", d.igcola ? modHtml("igcola") : ""],
+    ["madrugada", d.madrugada ? modHtml("madrugada") : ""],
     ["reglas", d.reglas ? cajaReglas(d.reglas) : ""]
   ];
   var mapa = {}, hay = [];

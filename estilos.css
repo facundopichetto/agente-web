@@ -1461,6 +1461,15 @@
   /* 1681 {cuelgue}: una pendiente esperando hace mas de 2 h va en rojo, para ver el atasco antes de que se acumule */
   .igtab .qvieja{color:var(--rojo);opacity:1}
   .igpie{font-size:14px;margin-top:3px}
+  /* 1959: el widget `madrugada`. la tabla es la misma `.igtab` (cuatro columnas: tarea, arranca, dura, semana),
+     asi que lo unico propio es el boton de largar la cola, la ficha de una tarea y sus dos campos. las fuentes
+     salen de `--texto-max` (14 px) y no hay ningun tamaño nuevo. */
+  .madpie{margin:0 0 4px} .madtab .qnom{cursor:pointer;touch-action:manipulation}
+  .madtxt{white-space:pre-wrap;color:var(--gris);margin:6px 0;max-height:30vh;overflow:auto}
+  .madlbl{display:flex;flex-direction:column;gap:3px;margin-top:6px}
+  .madlbl input,.madlbl textarea{background:#000;color:var(--texto);border:1px solid var(--linea);
+                                 border-radius:4px;padding:6px;font:inherit;font-size:var(--texto-max);width:100%}
+  .madlbl input:focus,.madlbl textarea:focus{outline:none;border-color:var(--cian)}
   @media (max-width:430px){ .igtab{font-size:14px;column-gap:3px} }
   /* 1832: la escalera de modelos del widget `models`: grid de 7 columnas, entra en el celu sin scroll horizontal */
   .esctab{display:grid;grid-template-columns:minmax(0,8fr) 3fr 12fr 3fr 3fr 6fr 8fr;width:100%;column-gap:6px;row-gap:1px;
