@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.466">
-<link rel="manifest" href="manifest.json?v=4.466">
+<meta name="agente-web-version" content="4.467">
+<link rel="manifest" href="manifest.json?v=4.467">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.466">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.467">
 </head>
 <body>
 
@@ -5497,9 +5497,20 @@ var SUPER_LISTA = "super";
 // `candidata` por `ig_candidatais` y las dos servidas con `sup` en la tarjeta: el votador las trata igual.
 var VIRT_LISTAS = [SUPER_LISTA, "candidatais"];
 function tjEsSuper(){ return VIRT_LISTAS.indexOf(String(sel.filtro || "")) >= 0; }
+// 1957 {fnf}: la OTRA clase de lista virtual, la de conjunto (`following not followers` = `following` + las
+// `ignorada` que facundo sigue). no es un ranking: el server marca cada tarjeta con las virtuales a las que
+// pertenece (`c.virt`), asi que aca no se deduce nada. una tarjeta vieja que todavia viene sin `virt` no se tira si
+// su lista es `following` (la mitad de la virtual): un server sin actualizar no puede dejar el votador vacio.
+var VIRT_CONJ = ["following_not_followers"];
+function tjEsConj(){ return VIRT_CONJ.indexOf(String(sel.filtro || "")) >= 0; }
 function tjEnFiltro(c){
   if(!sel.filtro) return true;
   if(tjEsSuper()) return !!(c && c.sup);
+  if(tjEsConj()){
+    if(!c) return false;
+    if(c.virt && c.virt.length) return c.virt.indexOf(String(sel.filtro)) >= 0;
+    return String(c.lista || "") === "following";
+  }
   var l = c && c.lista;
   return !l || String(l) === String(sel.filtro);
 }
