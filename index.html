@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.470">
-<link rel="manifest" href="manifest.json?v=4.470">
+<meta name="agente-web-version" content="4.471">
+<link rel="manifest" href="manifest.json?v=4.471">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.470">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.471">
 </head>
 <body>
 
@@ -2398,7 +2398,7 @@ function mezclar(){
   if(sueltos.length) listas.push(sueltos);
   msgs = sinDobles(mezclarOrdenadas(listas)).filter(function(m){ return !esEstadoTransitorio(m); });
   recalcularTemas();
-  chatMezclado = chatSello; chatCambio = false;   // 1997 {pestana}: hasta aca esta mezclado
+  chatMezclado = chatSello;        // 1997 {pestana}: hasta aca esta mezclado
   return msgs.length;
 }
 // dos respuestas al mismo mensaje (facundo, 2026-09-13): si contestaron el server y cloud, se ve solo la de
@@ -3968,14 +3968,13 @@ function crudo(ruta, etag){
 // mezclaba NINGUNA, y una pasada que arrancaba encima de otra le apagaba la marca. ahora es un sello que
 // solo crece: `recibirChat` lo sube y `mezclar` anota hasta donde mezclo. mientras los dos numeros no
 // coincidan hay charla bajada sin mezclar, y eso lo mira tambien el cambio de pestaña.
-var chatCambio = false;    // (queda por compatibilidad: lo que decide es el sello)
 var chatSello = 0, chatMezclado = 0;
 function chatPendiente(){ return chatSello !== chatMezclado; }
 // mezcla SOLO si hay algo bajado sin mezclar: en el caso normal no cuesta nada (2149 {pestana}: el toque
 // de una pestaña no puede pagar una pasada por la charla entera al pedo)
 function mezclarSiFalta(){ if(!chatPendiente()) return false; mezclar(); return true; }
 function recibirChat(tema, d){
-  chatCambio = true; chatSello++;
+  chatSello++;
   var t = normTema(tema), filas = ((d && d.filas) || []).slice(), out = [], resp = {};
   // por la hora de ENVIO (1191): el daemon ya las publica ordenadas asi, esto cubre los archivos viejos
   filas.sort(function(a, b){ return fecha(a.ts) - fecha(b.ts); });
@@ -5016,6 +5015,14 @@ function movVista(d){
   });
   return out;
 }
+// 2026 {vista} (facundo, 2026-09-25: "toco en `following not followers` y [...] una vista con la misma lista
+// maximizada y sin contenido"): hay DOS clases de lista virtual y la regla de abajo es de UNA sola. en un RANKING
+// (`super candidatas`, `candidatAIs`, 2134) la gente sale de `candidata`, asi que la que se movio de lista ya no
+// esta ahi. en una virtual de CONJUNTO (`following not followers`, 1957) los miembros son `following` MAS las
+// `ignorada` que facundo sigue: votar a alguien a `ignorada` NO la saca de la lista. tratar a las dos igual sacaba
+// de `following not followers` a toda persona votada en los ultimos 7 dias (los `movs` viven ese tiempo), o sea
+// justo la gente que facundo acababa de mirar: con 200 votos encima la lista de 566 quedaba pelada.
+function virtRanking(f){ return !!(f && f.virtual) && VIRT_CONJ.indexOf(String((f || {}).clave || "")) < 0; }
 // cuanto cambia el numero de una lista por lo que facundo acaba de votar
 function movDelta(f){
   var n = 0, tiene = {};
@@ -5023,9 +5030,10 @@ function movDelta(f){
   movTodos().forEach(function(m){
     if(m.destino === f.clave){ if(!tiene[m.id]) n += 1; return; }
     if(m.desde === f.clave){ n -= 1; return; }
-    // 2134 {supervirtual}: una lista virtual (`super candidatas`) no es un destino de nadie, pero su gente sale del
+    // 2134 {supervirtual}: una lista virtual de RANKING no es un destino de nadie, pero su gente sale del
     // embudo: la que se movio de lista ya no esta ahi. solo se descuenta si de verdad venia en el json
-    if(f.virtual && tiene[m.id]) n -= 1;
+    // 2026 {vista}: en una virtual de CONJUNTO no (`virtRanking`): ahi la `ignorada` que facundo sigue es miembro
+    if(virtRanking(f) && tiene[m.id]) n -= 1;
   });
   return n;
 }
@@ -5033,7 +5041,7 @@ function movGente(f, gente){
   var fuera = {}, dentro = [];
   movTodos().forEach(function(m){
     if(m.destino === f.clave) dentro.push(m);
-    else if(m.desde === f.clave || f.virtual) fuera[m.id] = true;
+    else if(m.desde === f.clave || virtRanking(f)) fuera[m.id] = true;   // 2026 {vista}: la de conjunto, no
   });
   var g = gente.filter(function(p){ return !fuera[String(p.id)]; });
   dentro.forEach(function(m){
@@ -5213,6 +5221,16 @@ var SEL_PEDIR_MS = 2500, selPedirT = null;
 // lista": las dos dejan al votador sin abrir, pero no son lo mismo y facundo tiene que poder distinguirlas.
 var selFallos = {}, SEL_FALLO_MS = 60000;
 function selFallo(col){ var t = selFallos[col]; return !!t && Date.now() - t < SEL_FALLO_MS; }
+// 2026 {vista} (facundo, 2026-09-25: "toco en `following not followers` y espero poder votar. sin embargo entro a
+// una vista con la misma lista maximizada y sin contenido"): la TERCERA razon por la que el votador de una lista
+// no abre, y la unica que dejaba la pantalla MINTIENDO. la via por la que habla el board no siempre es el server
+// que tiene el embudo: por la nube (`claudio-nube`, 1668) el pedido de la fila CONTESTA 200, pero con la seleccion
+// VACIA de ese nodo (`modo: checkbox`, `continua: null`, `abierta: false`), porque las listas de instagram viven
+// solo en el server de casa (`daemon.local_json` no las sirve en un nodo remoto). el board lo leia como "no hay
+// nadie para votar en esta lista hoy" sobre una lista que en la home dice 566. no es la lista: es la via.
+// se mide por la RESPUESTA, nunca por el nombre de la via: por tailscale contesta el server de casa y anda igual.
+var selSinFilas = {};
+function selSinFila(col){ return !!selSinFilas[col]; }
 function selPedir(col, arranque){
   if(arranque){
     var f = selLeer("fila", {});
@@ -5237,6 +5255,8 @@ function selPedir(col, arranque){
 function filaAplicar(col, j){
   if(!j || j.coleccion !== col) return false;
   sel.filaDe[col] = sel.filtro || null;   // 2325 {votador}: esta fila es la de ESTA lista, no la del proceso
+  // 2026 {vista}: contesto, pero no con una fila de tarjetas: ese server no tiene esta coleccion (ver `selSinFila`)
+  if(j.continua) delete selSinFilas[col]; else selSinFilas[col] = Date.now();
   var i = -1;
   sel.abiertas.forEach(function(a, k){ if(a.coleccion === col) i = k; });
   if(j.abierta){ if(i >= 0) sel.abiertas[i] = j; else sel.abiertas.push(j); }
@@ -6683,6 +6703,12 @@ function lisUnaFila(){
 function lisPisoTexto(motivo, hayGente, n){
   if(motivo === "error")
     return hayGente ? "no se pudo leer la lista: te muestro lo último que bajó" : "no se pudo leer la lista";
+  // 2026 {vista}: la lista TIENE gente; el que contesto es otro server. nunca decir que no hay nadie cuando el
+  // numero de la home dice que hay: lo que falta es la via, y la pantalla lo dice con el numero real adelante
+  if(motivo === "sinvia")
+    return (n ? "son " + n + ", pero las" : "las") + " listas de instagram las tiene el server de casa" +
+           (lan.base && lan.via !== "lan" ? " y estás hablando por `" + lan.via + "`" : "") +
+           ": desde acá no se puede votar";
   if(hayGente) return "no hay nadie para votar en esta lista hoy: te muestro su gente";
   // la lista que el server dice que tiene gente (`n`) no esta vacia: lo que no hay es nada para votar AHORA
   return n ? "no hay nadie para votar en esta lista hoy" : "no hay nadie en esta lista hoy";
@@ -6721,7 +6747,11 @@ function lisUnaPintar(){
     // (`u.fallo`: 404 del buzon, json sin `gente`, red caida) dice eso y no "no hay nadie", que seria mentira
     if(u.bajando) c.appendChild(lisLinea("lisvacio", "buscando la gente de la lista…"));
     else if(!(avSuper && !f.n) && !piso)
-      c.appendChild(lisLinea("lisvacio", u.fallo ? "no se pudo leer la lista" :
+      // 2026 {vista}: la gente de una lista grande la sirve el server de casa (`listas/<clave>.json`); por la nube
+      // eso es un 404 y la lista quedaba muda. si la fila de su proceso tambien vino sin tarjetas, es la via
+      c.appendChild(lisLinea("lisvacio",
+                             u.fallo ? (f.proceso && selSinFila(f.proceso) ? lisPisoTexto("sinvia", false, f.n || 0)
+                                                                          : "no se pudo leer la lista") :
                              (f.n ? "son " + f.n + ": no pude traer la lista entera (sin lan)" :
                               "no hay nadie en esta lista hoy")));
     return true;
@@ -7272,7 +7302,12 @@ function tinderAbrirCol(col, desde, falla, lista, titulo){
   // la pantalla muda: `error` = el pedido de la fila no volvio (`selFallo`), `vacia` = volvio y no hay ninguna
   // tarjeta de esa lista. lo lee `lisEntrar` (la gente de esa misma lista); el plan B de una persona tocada abre
   // su cartita, que ya explica sola, asi que ahi no se escribe nada.
-  var porque = function(){ lis.piso = {clave: lista || null, motivo: selFallo(col) ? "error" : "vacia"}; };
+  // 2026 {vista}: y `sinvia` = contesto un server que no tiene las listas de instagram (la nube). solo se mira con
+  // una lista puesta: sin `lista` esto no es el votador del instatinder (`animaciones`) y ahi `checkbox` es lo normal
+  var porque = function(){
+    lis.piso = {clave: lista || null,
+                motivo: selFallo(col) ? "error" : (lista && selSinFila(col) ? "sinvia" : "vacia")};
+  };
   // 2095 paso 5: de que lista es la fila que se va a ver. lo pone el toque en la lista y lo respetan `tjAbrir` (la
   // apertura) y `filaSumar` (todo lo que el server manda despues): en el votador de `following` no entra nunca
   // nadie de `follow request sent`, aunque el server sirva las dos en la misma coleccion.
@@ -13765,6 +13800,11 @@ window.__agente = {
   filaCacheVer: function(col, lista){ return cacheTraer(col, lista).map(function(c){ return c.id; }); },
   lisOlvidar: function(){ lis.datos = null; lis.ts = 0; try{ localStorage.removeItem(LIS_LS); }catch(x){} },
   selFiltro: function(){ return {lista: sel.filtro || null, titulo: sel.filtroTitulo || null}; },
+  // 2026 {vista}: por que no abrio el votador de esta lista (`error` / `vacia` / `sinvia`) y su texto en pantalla
+  // el de la vista que se quedo (`lisEntrar` lo consume y lo pinta) o el que acaba de dejar el toque
+  lisPiso: function(){ return lis.piso ? {clave: lis.piso.clave, motivo: lis.piso.motivo} :
+                              (lis.una && lis.una.piso ? {clave: lis.una.clave, motivo: lis.una.piso} : null); },
+  selSinFila: selSinFila, lisPisoTexto: lisPisoTexto, virtRanking: virtRanking,
   lisOrigen: function(){ return lis.origen; }, lisScroll: function(){ return lis.scroll; },
   lisSub: function(){ return lis.sub; },
   // {home} paso 1: meter datos a mano es lo mismo que una bajada que salio bien (fresca y sin aviso): si no, la
