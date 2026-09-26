@@ -2,7 +2,8 @@
 //
 // facundo, 2026-09-23: "escribime el valor de manera que sea un script el que me lo dice y no una AI".
 // el listado viene SIN valores (`GET /claves`) y el valor de una clave se pide de a uno, y solo cuando
-// facundo toca esa fila (`GET /claves/<id>`, que la lan sirve nada mas que al board local). el modelo no
+// facundo toca esa fila (`GET /claves/<id>`, con el token del board, por cualquier via: desde el
+// 2026-09-26 tambien por la url publica, orden 2131 {publica}). el modelo no
 // toca nada de esto y ningún valor queda en `log.md`.
 //
 // es un modulo suelto para entrar en el repintado por pedazos (1793 {pedazos}): sin `export`, se registra
@@ -45,8 +46,9 @@
       if(st.abierta === id) pintar();
       return st.valores[id];
     }, function(){
+      // 2131 {publica}: `null` = error real del server (caido, 404, 5xx); ya no hay un 403 por la via
       st.valores[id] = null;
-      st.aviso = "no pude leer esa clave";
+      st.aviso = "no pude leer esa clave: el server no contesto";
       pintar();
       return null;
     });

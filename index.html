@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.479">
-<link rel="manifest" href="manifest.json?v=4.479">
+<meta name="agente-web-version" content="4.480">
+<link rel="manifest" href="manifest.json?v=4.480">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.479">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.480">
 </head>
 <body>
 
@@ -8282,6 +8282,9 @@ function enviarMensaje(texto){
   // adjunto pendiente (foto o audio): sale un solo mensaje con el archivo y el texto, sin clasificar
   // ni preguntar por tema (siempre a la pestaña activa, como antes de que fuera pendiente).
   if(adjunto) return mandarAdjunto(texto);
+  // 2124 {audios}: `enviar` tocado apenas se solto el micro, con el audio todavia cerrandose (la gracia del
+  // dictado): antes no habia adjunto y el toque no hacia nada. ahora espera a que el audio llegue al pie y sale.
+  if(cierreGrab) return cierreGrab.then(function(){ if(adjunto) return mandarAdjunto(texto); if(texto) return enviarMensaje(texto); });
   if(!texto) return;
   if(cmdLocal(texto)){ if(txt.value.trim() === texto){ txt.value = ""; txt.style.height = ""; } return; }   // 1631: sin red
   if(RE_CRUDO.test(texto)){ mandar(texto, temaActivo(), true); return; }
@@ -9013,7 +9016,9 @@ function adjuntarFoto(file){
 function adjuntarAudio(blob, mime, ms, dicho){
   if(!blob || !blob.size) return null;
   if(subiendoFoto) return null;   // {enviar}: un audio subiendo ya no descarta al siguiente (se encola solo)
-  descartarAdjunto();
+  // 2124 {audios}: dos audios seguidos. si ya hay uno esperando en el pie, ese sale (en orden, por la cola de
+  // subida) y el nuevo toma su lugar: nunca se descarta un audio que facundo grabo
+  if(adjunto && adjunto.tipo === "aud") mandarAdjunto(txt.value); else descartarAdjunto();
   adjunto = {tipo: "aud", blob: blob, mime: mime || blob.type || "audio/webm",
              nombre: "audio", ms: ms || 0, url: URL.createObjectURL(blob),
              // lo que entendio el celu (1209): viaja en el mensaje, nunca se muestra (1650)
@@ -9162,6 +9167,11 @@ var subiendoAudio = false;
 var colaAudios = [];          // {enviar}: los audios que llegaron con otro en vuelo, en orden
 var cerrandoGrab = false;     // {enviar}: la grabacion se esta cerrando (el `stop()` no se llama dos veces)
 var grabApretado = false;     // {enviar}: el dedo sigue sobre el micro (encadenar el audio siguiente)
+// 2124 {audios}: el cierre del audio anterior (el `stop()` MAS la gracia del dictado, hasta DICT_GRACIA) es una
+// promesa que siempre resuelve; el cierre siguiente y el `enviar` la esperan, asi el segundo audio nunca llega al
+// pie antes que el primero ni lo pisa.
+var cierreGrab = null;
+var paradaGrab = null;        // 2124: solo el `stop()` del grabador (sin la gracia): el dedo que vuelve al micro la espera
 
 function mimeAudio(){
   if(typeof MediaRecorder === "undefined") return null;
@@ -9274,8 +9284,17 @@ function relojTexto(ms){
 }
 function empezarGrabacion(){
   // {enviar}: `subiendoAudio` ya NO frena: el segundo audio se puede arrancar mientras el primero viaja
-  if(grabador || cerrandoGrab) return Promise.resolve(false);
+  if(grabador && !cerrandoGrab) return Promise.resolve(false);
+  // 2124 {audios}: el dedo volvio al micro con el `stop()` del anterior todavia en curso (en ios cerrar el mp4
+  // tarda): antes se devolvia `false` y la grabacion nueva no arrancaba nunca. ahora espera ese `stop()` y
+  // arranca, siempre que el dedo siga en el micro (si ya lo solto, no hay nada que grabar).
+  if(cerrandoGrab) return (paradaGrab || Promise.resolve()).then(function(){
+    return grabApretado && !grabador && !cerrandoGrab ? empezarGrabacion() : false; });
   if(!hayGrabacion()){ sistema("este navegador no graba audio", "error"); return Promise.resolve(false); }
+  // 2124 {audios}: grabar de nuevo con un audio esperando en el pie es "quiero mandar dos": el que espera sale
+  // ya (con lo que haya en la caja), se encola detras del que este subiendo y el nuevo no lo pisa. antes
+  // `adjuntarAudio` del segundo hacia `descartarAdjunto()` y el primero se perdia sin aviso.
+  if(adjunto && adjunto.tipo === "aud" && !subiendoFoto) mandarAdjunto(txt.value);
   return abrirMicro().then(function(st){
     stream = st; microUltimo = st;
     var mime = mimeAudio();
@@ -9312,18 +9331,34 @@ function terminarGrabacion(enviar, ya){
   cerrandoGrab = true;
   var g = grabador, ms = Date.now() - desdeGrab, mime = g.mimeType || mimeAudio() || "audio/webm";
   if(enviar && ms < AUDIO_MIN_MS){ enviar = false; sistema("mantené apretado para grabar", "sistema"); }
-  return new Promise(function(res){
+  // 2124 {audios}: el cierre anterior puede seguir esperando su dictado (hasta DICT_GRACIA) mientras este ya
+  // se cierra: este espera a aquel antes de tocar el pie, asi los dos llegan en el orden en que se grabaron
+  var previo = cierreGrab || Promise.resolve(null);
+  var parada = new Promise(function(res){
     g.onstop = function(){ res(new Blob(vacioStub ? [] : trozosAudio, {type: mime})); };
     try{ g.stop(); }catch(e){ res(null); }
-  }).then(function(blob){
+  });
+  paradaGrab = parada.then(function(){ paradaGrab = null; }, function(){ paradaGrab = null; });
+  var cierre = parada.then(function(blob){
     cerrandoGrab = false;
-    soltarMicro();
+    soltarMicro();                               // el micro se suelta ya: el siguiente puede arrancar
     var pg = podGrabando; podGrabando = false;   // 1939: el audio es una respuesta del episodio, no un mensaje del chat
     if(!enviar){ audioDestino = null; cortarDictado(); return null; }
+    var dictadoProm = terminarDictado();         // el dictado de ESTE audio se cierra ahora, no despues del anterior
+    return previo.then(function(){ return dictadoProm; }).then(function(d){ return cerrarAudio(blob, d, ms, mime, pg, ya); });
+  }, function(){ cerrandoGrab = false; audioDestino = null; soltarMicro(); cortarDictado(); return null; });
+  var mio = cierre.then(function(r){ if(cierreGrab === mio) cierreGrab = null; return r; },
+                        function(){ if(cierreGrab === mio) cierreGrab = null; return null; });
+  cierreGrab = mio;
+  return cierre;
+}
+// lo que pasa con el audio ya cerrado y con su dictado: sale, queda en el pie o va a la fila del podcast
+function cerrarAudio(blob, d, ms, mime, pg, ya){
+  return Promise.resolve().then(function(){
     if(!blob || !blob.size){
       // el micro no dejo nada (en ios el reconocedor puede pelearle la sesion de audio): si el celu igual
       // entendio algo, el texto **no se pierde**, queda escrito en el input para mandarlo a mano
-      return terminarDictado().then(function(d){
+      return Promise.resolve(d).then(function(d){
         var ad = audioDestino; audioDestino = null;
         if(ad && d && d.texto){                    // desde el modal de una push: el texto queda en su caja
           $("nmtxt").value = (($("nmtxt").value || "") + " " + d.texto).trim();
@@ -9335,8 +9370,8 @@ function terminarGrabacion(enviar, ya){
         return null;
       });
     }
-    // el texto del celu se espera aca (1209): al soltar ya casi siempre esta, y como mucho DICT_GRACIA
-    return terminarDictado().then(function(d){
+    // el texto del celu ya se espero (1209): al soltar ya casi siempre esta, y como mucho DICT_GRACIA
+    return Promise.resolve(d).then(function(d){
       // 1939: el audio de la vista `podcast` no sale: queda en la fila del episodio, borrable, hasta el `enviar`
       if(pg) return podSumarAudio(blob, mime, ms, d);
       // {enviar}: la flecha del pie manda ESTE audio ya (con lo que haya escrito en la caja) y deja el micro
@@ -9357,7 +9392,7 @@ function terminarGrabacion(enviar, ya){
       // no se manda al soltar (facundo, 2026-09-12): queda como adjunto pendiente con play y `×`
       return adjuntarAudio(blob, mime, ms, d);
     });
-  }, function(){ cerrandoGrab = false; audioDestino = null; soltarMicro(); cortarDictado(); return null; });
+  });
 }
 // {enviar}: la flecha verde del pie mientras se graba. manda el audio que se esta grabando y, si el dedo sigue
 // apretando el micro, arranca el siguiente de una: asi se encadenan audios sin soltar ni perder el anterior.
@@ -10091,8 +10126,8 @@ alfinal.addEventListener("click", function(){
 });
 $("mandar").addEventListener("click", function(){
   // {enviar}: grabando, la flecha manda ESE audio (y encadena el siguiente si el dedo sigue en el micro)
-  if(grabador){ mandarGrabacionYa(); return; }
-  enviarMensaje(txt.value); txt.focus();
+  if(grabador && !cerrandoGrab){ mandarGrabacionYa(); return; }
+  enviarMensaje(txt.value); txt.focus();     // 2124: cerrandose, `enviarMensaje` espera al audio y lo manda
 });
 // 1657 {pelado}: tocar la caja de escribir tampoco mueve el chat. el salto al fondo de los 250 ms es
 // para el teclado del celu (al abrirse `#hist` se achica y lo de abajo queda fuera de pantalla), asi que
