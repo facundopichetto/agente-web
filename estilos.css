@@ -233,6 +233,9 @@
      que `✕` / `🔥`: el color es lo unico que cambia */
   .bglifo.b-bajar{color:#ff4d4d;color:var(--rojo)}
   .bglifo.b-subir{color:#4ad07d;color:var(--verde)}
+  /* 2051 {votador}: el `+` del cuarto grande (`follow`) en el mismo verde que el que sube: es el voto que mas
+     sube a una persona (le manda el follow), y se pinta como glifo, nunca como caja verde llena */
+  .bglifo.b-follow{color:#4ad07d;color:var(--verde)}
   .bglifo.b-igual{color:#e8e8e8;color:var(--blanco)}
   .bglifo.b-atras{color:#e8e8e8;color:var(--blanco)}
   .bglifo.b-atras.apagado{color:#666;color:var(--gris)}
@@ -461,6 +464,19 @@
   #selgracia .bcaja{min-height:34px;padding:5px 14px;border-radius:17px;font-size:14px;line-height:1.1;
     border-color:var(--amarillo);color:var(--amarillo);width:auto;text-align:center}
   #selgracia .gracmas{color:var(--gris);font-size:13px;opacity:.85}
+  /* 2051 {votador} paso 4: la franja de la persona del celu. molde de `docs/componentes-web.md`: el arroba en cian
+     como el `@cuenta` de la tarjeta (verde con link, gris sin el), los datos en cian y una sola linea con ellipsis (el dato entero sigue en la
+     tarjeta, que scrollea). en compu no se pinta */
+  #selficha{display:none}
+  #selficha.oculta{display:none!important}
+  #selficha .tjfila{display:flex;align-items:center;gap:6px;min-width:0}
+  #selficha .tjfcta{color:var(--verde);font-size:var(--texto-max);text-decoration:none;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto}
+  #selficha span.tjfcta{color:var(--gris)}   /* 1515: sin link (cuenta sin url) no se pinta como link */
+  #selficha .tjfnom{color:var(--blanco);opacity:.85;font-size:var(--texto-max);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  #selficha .tjfdatos{color:var(--cian);font-size:var(--texto-max);line-height:1.15;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #selacciones{display:flex;flex-wrap:wrap;gap:6px}
   #selacciones.oculta,#selmodal #seltxt.oculta{display:none!important}
   /* 1922 {vistatinder}: en el `home` de la vista no hay tarjeta que deshacer ni texto que enviar */
@@ -516,12 +532,26 @@
      fila pasa a grilla y se manda al final del orden de la caja (`order`), asi el pulgar la encuentra siempre en
      el mismo lugar. el piso de 46 px (1841), el texto `.tjtxt` (1883) y el svg del glifo no cambian. */
   @media (max-width:699px){
-    #selmodal.pantalla #selacciones{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;
+    /* 2051 {votador} paso 2 (facundo, 2026-09-25): `super candidatas` vota con CUATRO grandes, asi que las
+       columnas ya no son 3 fijas: las cuenta el server y las manda `tjBotones` en `--tjcols`. con cuatro el
+       cuadrado se hace mas chico (93 px en 390 px de ancho) en vez de empujar scroll horizontal, y la frase de
+       cada uno es corta a proposito (`ignore` / `maybe` / `interested` / `follow`, las nombro facundo) */
+    #selmodal.pantalla #selacciones{display:grid;grid-template-columns:repeat(var(--tjcols,3),minmax(0,1fr));gap:6px;
       order:9;flex:0 0 auto;margin-top:auto;max-width:none}
     #selmodal.pantalla #selacciones .tjbtn{aspect-ratio:1/1;min-height:58px;width:100%;box-sizing:border-box}
+    /* con cuatro el cuadrado es chico: el glifo no se agranda tanto y el padding lateral se va, asi la frase
+       entera entra sin desbordar el cuadrado */
+    #selmodal.pantalla #selacciones[data-n="4"] .tjbtn{padding:4px 2px}
+    #selmodal.pantalla #selacciones[data-n="4"] .tjbtn .tjglf{transform:scale(1.1)}
     /* 2247: los chicos van pegados ARRIBA de los tres grandes, y el pie de `enviar` queda por encima de ellos */
     #selmodal.pantalla .selpie{order:7}
     #selmodal.pantalla #selextras{order:8;flex:0 0 auto;max-width:none}
+    /* 2051 {votador} paso 4 (facundo, 2026-09-25: "en mobile de `super` no se ve el arroba: poner info de la
+       persona donde estaban esos botones chicos"): la franja con el arroba y los datos ocupa EL LUGAR de esos
+       chicos, justo arriba de los votos grandes, y no scrollea con la tarjeta: la foto al 100% del ancho
+       ({fotoancha}) deja los datos abajo del pliegue y facundo votaba sin saber a quien */
+    #selmodal.pantalla #selficha{order:8;flex:0 0 auto;max-width:none;display:flex;flex-direction:column;gap:2px;
+      padding:2px 10px 4px 10px;box-sizing:border-box}
     #selmodal.pantalla #selgracia{order:6;flex:0 0 auto;max-width:none}   /* {gracia}: arriba del pie */
     /* {cambios} paso 3: el cuadro de mudanza queda ARRIBA de todo eso: es la accion de segunda mano, los tres
        grandes siguen siendo lo ultimo que toca el pulgar */

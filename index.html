@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.472">
-<link rel="manifest" href="manifest.json?v=4.472">
+<meta name="agente-web-version" content="4.473">
+<link rel="manifest" href="manifest.json?v=4.473">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.472">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.473">
 </head>
 <body>
 
@@ -210,6 +210,12 @@
     <!-- {gracia} (facundo, 2026-09-20): el voto que dispara follow o unfollow se puede deshacer mientras corre
          el contador; el pase de lista de al lado ya se aplico y no tiene nada que deshacer -->
     <div id="selgracia" class="oculta"></div>
+    <!-- 2051 {votador} paso 4 (facundo, 2026-09-25: "en mobile de `super` no se ve el arroba: poner info de la
+         persona donde estaban esos botones chicos"): en el celu la foto va al 100% del ancho (1580 {fotoancha}) y
+         los datos quedan abajo del pliegue, asi que el arroba y lo minimo para decidir viajan a ESTA franja, que
+         vive pegada arriba de los votos grandes y no scrollea. es la MISMA info que ya pinta la tarjeta (nada se
+         redacta aca de nuevo) y en compu no existe: ahi los datos estan al lado de la foto -->
+    <div id="selficha" class="oculta"></div>
     <div id="selextras" class="oculta"></div>
     <!-- {cambios} paso 3 (facundo, 2026-09-22): "en la cartita de una persona y en el votador, en el celu, un cuadro
          con hasta 6 botones para mandarla a cualquiera de las otras listas de un toque". los botones los manda el
@@ -312,7 +318,11 @@ function capaOcultar(id, fondo){ $(id).classList.add("oculta"); if(fondo) $(fond
 // la izquierda (baja de lista), el medio sin movimiento (`-_-` maybe en candidatas, `=` en los otros dos) y flecha
 // verde hacia arriba a la derecha (sube de lista). que lista es cada una la decide el server (`ig_embudo.PROCESOS`)
 var GLIFOS = {no: ["✕", "no va"], maybe: ["-_-", "maybe"], queda: ["🔥", "queda"], atras: ["←", "back"],
-  bajar: ["↓", "baja de lista"], igual: ["=", "queda igual"], subir: ["↑", "sube de lista"]};
+  bajar: ["↓", "baja de lista"], igual: ["=", "queda igual"], subir: ["↑", "sube de lista"],
+  // 2051 {votador}: `follow` es un voto grande desde que `super candidatas` tiene cuatro (antes solo vivia en el
+  // renglon chico, que se pinta con su propio molde). sin esto caia en el `else` de `moldeBoton` y salia como una
+  // caja verde llena al lado de tres glifos: un boton del pie se pinta como los otros tres del pie
+  follow: ["+", "le mando el follow"]};
 // 2002 {back} (facundo, 2026-09-18): "igual de grande, arriba a la derecha una X. esa X en votar significa cerrar
 // ese modal sin enviar los votos actuales. FACIL. todos los modales tienen que tener estas cosas". la `✕` (y el `←`)
 // son parte del molde: svg con `currentColor` y nunca un glifo de fuente ni un emoji (1883: el iphone no los dibuja),
@@ -5333,6 +5343,19 @@ function filaAplicar(col, j){
   sel.abiertas.forEach(function(a, k){ if(a.coleccion === col) i = k; });
   if(j.abierta){ if(i >= 0) sel.abiertas[i] = j; else sel.abiertas.push(j); }
   else if(i >= 0) sel.abiertas.splice(i, 1);
+  // 2051 {votador}: el pie, el renglon chico y el cuadro de mudanza son de la LISTA abierta, no del proceso. el
+  // pedido sale con `?lista=` (`selPedir`, `selFresco`), asi que lo que vuelve es el pie de ESA lista: si el
+  // votador ya esta abierto en esta coleccion, su `sel.actual` lo adopta. sin esto se quedaba con el pie del poll
+  // del proceso (`abiertas`, que viene sin lista) y una lista mostraba el pie de otra: `activate` decia `dejar
+  // donde está` en vez de `dejar en activate` y `super candidatas` pintaba tres botones en vez de cuatro.
+  var act = sel.actual, cambio = false;
+  if(act && act.coleccion === col && act !== j){
+    ["botones", "extras", "mover"].forEach(function(k){
+      if(!j[k]) return;
+      if(JSON.stringify(act[k] || null) !== JSON.stringify(j[k])){ act[k] = j[k]; cambio = true; }
+    });
+  }
+  if(cambio && tjPantalla()) tjPintar();   // el pie cambio: se repinta ya, no en el voto siguiente
   var ok = sel.actual && sel.actual.coleccion === col && sel.actual.continua ? filaSumar(j, false) : false;
   selBoton();
   return ok;
@@ -5455,7 +5478,11 @@ var TJ_SVG = {
   // 1928 {arrepenti}: la `✕` del corte, por el mismo motivo que las flechas: ninguna fuente la dibuja igual en los
   // tres tamaños (el iphone es el que falla). el color sigue siendo del molde (`.bglifo.b-no`, rojo)
   no: '<svg viewBox="0 0 20 20" width="23" height="23" aria-hidden="true" focusable="false">' +
-    '<path d="M5 5l10 10M15 5 5 15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>'
+    '<path d="M5 5l10 10M15 5 5 15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>',
+  // 2051 {votador}: el `+` del cuarto grande de `super candidatas`, svg como los otros tres (1883: el iphone no
+  // dibuja igual un glifo de fuente en los tres tamaños)
+  follow: '<svg viewBox="0 0 20 20" width="23" height="23" aria-hidden="true" focusable="false">' +
+    '<path d="M10 4.2v11.6M4.2 10h11.6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>'
 };
 // 1812 {botones}: las frases de arriba son la RED DE ABAJO y dicen la accion completa igual que el server
 // (el pie de verdad sale de `personal/botones-listas.json`: `following` vota `unfollow + ignorar` / `ignorar`
@@ -5476,6 +5503,11 @@ function tjBotones(e){
   if(caja.getAttribute("data-firma") === firma) return caja;
   caja.setAttribute("data-firma", firma);
   caja.setAttribute("data-col", e && e.coleccion || "");
+  // 2051 {votador} paso 2 (facundo, 2026-09-25): `super candidatas` tiene CUATRO grandes al pie, no tres. cuantos
+  // son lo dice el server (el pie de la lista, `personal/botones-listas.json`), y el css los reparte con esta
+  // variable: nada de un numero fijo en la hoja de estilos ni de una lista cableada en el html
+  caja.style.setProperty("--tjcols", bs.length || 3);
+  caja.setAttribute("data-n", bs.length);
   caja.textContent = "";
   bs.forEach(function(b){
     var el = moldeBoton({tipo: b.tipo, aria: b.aria, clase: "tjbtn " + b.q});
@@ -5527,6 +5559,38 @@ function tjExtras(e){
       }
       caja.appendChild(el);
     });
+  }
+  return caja;
+}
+// 2051 {votador} paso 4: la franja de la persona que vive arriba de los votos grandes (solo celu, por css).
+// es un ESPEJO de lo que ya pinta la tarjeta: el arroba (link al perfil, como el de arriba) y una linea con lo que
+// el server ya mando en `datos` (seguidores, en comun, ...) mas el puntaje cuando la lista es de ranking. no calcula
+// ni redacta nada nuevo, y sin tarjeta a la vista no se pinta.
+function tjFicha(e, c){
+  var caja = $("selficha");
+  caja.textContent = "";
+  if(!c) return caja;
+  var fila = document.createElement("div"); fila.className = "tjfila";
+  var esLink = c.link && /^https:\/\//.test(c.link);
+  if(c.cuenta){
+    var k = document.createElement(esLink ? "a" : "span");
+    k.className = "tjfcta"; k.textContent = "@" + c.cuenta;
+    if(esLink){ k.href = c.link; k.target = "_blank"; k.rel = "noopener";
+      k.addEventListener("click", function(ev){ ev.stopPropagation(); }); }
+    fila.appendChild(k);
+  }
+  var nom = String(c.titulo || "").trim();
+  if(nom && nom.toLowerCase() !== String(c.cuenta || "").trim().toLowerCase()){
+    var n = document.createElement("span"); n.className = "tjfnom"; n.textContent = nom;
+    fila.appendChild(n);
+  }
+  caja.appendChild(fila);
+  var partes = (c.datos || []).slice(0);
+  if(c.sup && tjEsSuper()) partes.unshift("puntaje " + c.sup.puntaje + " de " + (c.sup.de || 100) + " · #" + c.sup.puesto);
+  if(c.privada) partes.unshift("privada");
+  if(partes.length){
+    var d = document.createElement("div"); d.className = "tjfdatos"; d.textContent = partes.join(" · ");
+    caja.appendChild(d);
   }
   return caja;
 }
@@ -5801,6 +5865,7 @@ function tjPintar(){
   tjMudanza(e);   // {cambios} paso 3: y el cuadro de mudanza (el css lo muestra solo en el celu)
   $("selacciones").classList.toggle("oculta", !c);
   $("selextras").classList.toggle("oculta", !c || !tjExtrasSpec(e).length);
+  $("selficha").classList.toggle("oculta", !c);   // 2051 paso 4: la franja de la persona (el css la muestra solo en el celu)
   $("selmover").classList.toggle("oculta", !c || !tjMudanzaSpec(e).length);
   gracPintar();   // {gracia}: el `deshacer` con su contador vive mientras la ventana corre
   [].forEach.call(document.querySelectorAll("#selacciones .tjbtn"), function(b){
@@ -5943,6 +6008,7 @@ function tjPintar(){
     c.historial.forEach(function(x){ var y = document.createElement("div"); y.textContent = x; hs.appendChild(y); });
     info.appendChild(hs);
   }
+  tjFicha(e, c);   // 2051 paso 4: y su espejo chico, el que queda a la vista arriba de los votos en el celu
   t.scrollTop = 0; info.scrollTop = 0;
   tjPedirMas(e);   // 2137 paso 4: quedan pocas adelante -> se pide el lote siguiente (GET), y entra al final
 }
@@ -6496,6 +6562,7 @@ function lisPoner(cual, fresco){
   $("sellista").classList.add("oculta");
   $("seltarjeta").classList.add("oculta");
   $("selacciones").classList.add("oculta"); $("selextras").classList.add("oculta");   // 2247
+  $("selficha").classList.add("oculta");   // 2051 paso 4
   $("selmover").classList.add("oculta");   // {cambios} paso 3
   $("selback").classList.add("oculta");
   $("seltxt").classList.add("oculta");
@@ -6749,6 +6816,7 @@ function lisModoUna(){
   $("sellista").classList.add("oculta");
   $("seltarjeta").classList.add("oculta");
   $("selacciones").classList.add("oculta"); $("selextras").classList.add("oculta");   // 2247
+  $("selficha").classList.add("oculta");   // 2051 paso 4
   $("selmover").classList.add("oculta");   // {cambios} paso 3
   $("seltxt").classList.add("oculta");
   var b = document.querySelector("#selmodal .selbtns");
