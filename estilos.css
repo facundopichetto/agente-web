@@ -1627,7 +1627,8 @@
   #menutitulo{color:var(--verde);font-size:var(--texto-max)}
   #menulista{display:flex;flex-direction:column;gap:2px;flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
   #menulista .ib{width:100%;height:auto;min-height:44px;margin:0;padding:0 10px;box-sizing:border-box;
-    justify-content:flex-start;gap:12px;border-radius:4px;text-transform:lowercase}
+    justify-content:flex-start;gap:12px;border-radius:4px;text-transform:lowercase;
+    font:inherit;font-size:var(--icono-max)}   /* un <button> no hereda la fuente: el nombre va en la del board */
   #menulista .ib svg{width:20px;height:20px;flex:0 0 auto}
   #menulista .ib .badge{position:static;margin-left:auto}
   #menulista .mvtxt{font-size:var(--texto-max);line-height:1.2;color:var(--blanco);white-space:nowrap}
