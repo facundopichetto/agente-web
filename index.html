@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.473">
-<link rel="manifest" href="manifest.json?v=4.473">
+<meta name="agente-web-version" content="4.474">
+<link rel="manifest" href="manifest.json?v=4.474">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.473">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.474">
 </head>
 <body>
 
@@ -1587,6 +1587,24 @@ function btnBarra(texto, accion){
   b.type = "button"; b.className = "barrabtn"; b.textContent = texto; b.dataset.accion = accion;
   return b;
 }
+// 2073 {pestana}: la pestaña con un mensaje de una tarea sin contestar va cyan (clase `espera`) hasta que
+// facundo contesta AHI. la verdad la tiene el server: `espera: true` en la entrada de ese tema de
+// `chat/index.json` (`recetas/pestana_espera.py`), asi que sobrevive a recargar y la ven todos los
+// dispositivos. `esperaApagar` es solo el adelanto local al mandar: el server la apaga de verdad al recibir.
+function esperaTab(t){
+  t = normTema(t);
+  return !!(chatIndex && chatIndex[t] && chatIndex[t].espera);
+}
+function esperaTabs(){
+  return Object.keys(chatIndex || {}).filter(function(t){ return !!chatIndex[t].espera; }).sort();
+}
+function esperaApagar(tema){
+  var t = normTema(tema);
+  if(!(chatIndex && chatIndex[t] && chatIndex[t].espera)) return false;
+  delete chatIndex[t].espera;
+  pintarTabs();
+  return true;
+}
 function pintarTabs(){
   var barra = $("tabs");
   if(!barra) return;
@@ -1599,7 +1617,7 @@ function pintarTabs(){
   tabs.forEach(function(t){
     var b = document.createElement("button");
     b.type = "button";
-    b.className = "tab" + (t === temaActivo() ? " activo" : "");
+    b.className = "tab" + (t === temaActivo() ? " activo" : "") + (esperaTab(t) ? " espera" : "");
     b.dataset.tema = t;
     b.textContent = visibleTab(t);        // 2300 {visible}: el visible del clon, nunca el id crudo
     // 2265 {clon}: la pestaña de tema activa lleva un `+` que crea el clon siguiente (`awtomic#2`,
@@ -4120,7 +4138,9 @@ function cargarChatIndex(){
   return crudo(CHAT_INDEX, etagChat[CHAT_INDEX]).then(function(r){
     if(r.status === 304) return chatIndex;
     etagChat[CHAT_INDEX] = r.etag;
+    var antes = esperaTabs().join(",");
     chatIndex = (r.json && r.json.temas) || {};
+    if(esperaTabs().join(",") !== antes) pintarTabs();   // 2073 {pestana}: solo la barra, el chat no se toca
     return chatIndex;
   }).catch(function(e){
     var m = (e && e.message) || "";
@@ -8098,6 +8118,7 @@ function mandar(texto, tema, crudo, tsEnvio){
   if(texto === ultimoTexto && Date.now() - ultimoTs < REPE_MS) return envioNo("repetido, esperá un segundo");
   tema = tema || temaActivo();
   tsEnvio = tsEnvio || Date.now();
+  esperaApagar(tema);   // 2073 {pestana}: contestar en la pestaña la saca del cyan ya; el server confirma
   var cuerpo = cuerpoMsg(texto, tema, crudo, tsEnvio);
   var caja = temaCaja;
   ultimoTexto = texto; ultimoTs = Date.now();
@@ -14649,6 +14670,9 @@ window.__agente = {
   charla: function(){ return msgs.map(function(m){
     return {id: m.id, tema: m.tema, clase: m.clase, texto: m.texto, iso: m.iso}; }); },
   chatIndex: function(){ return chatIndex; },
+  // 2073 {pestana}: la marca cyan de la pestaña que espera (`recetas/prueba_pestana_espera`)
+  chatIndexPoner: function(idx){ chatIndex = idx || {}; pintarTabs(); return chatIndex; },
+  esperaTabs: esperaTabs, esperaTab: esperaTab, esperaApagar: esperaApagar,
   limpiarChat: function(){ msgsHist = {}; msgsCom = []; chatIndex = null; etagChat = {};
                            msgs = []; nodoCache = {}; render(); },
   // 2149 {pestana}: los contadores del board (ms del ultimo render y del ultimo cambio de pestaña, nodos

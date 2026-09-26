@@ -2059,6 +2059,12 @@
   #tabs .tab.activo{
     color:var(--verde);background:var(--fondo-caja);
   }
+  /* 2073 {pestana} (facundo, 2026-09-26: "quiero que la pestaña se ponga cyan hasta que eso sea respondido"):
+     la pestaña donde cayo un mensaje de una tarea (`recetas/bloqueado_chat.py`) lleva `espera` hasta que
+     facundo contesta AHI. es el MISMO `--cian` de `enpanel` (arriba), que no se toca; va despues de `.activo`
+     a proposito: la pestaña sigue cyan aunque sea la que esta abierta, porque lo que la apaga es contestar,
+     no mirarla. la marca la manda el server (`espera: true` en `chat/index.json`), no este navegador. */
+  #tabs .tab.espera,#tabs .tab.espera.activo{color:var(--cian)}
   /* 2299 {ordentabs} punto 1: arrastrar una pestaña para reacomodarla. mismo molde que las cajas de widgets
      (2026-09-12) pero en horizontal: la que se lleva el dedo va `position:fixed` desde el js y en su lugar
      queda el hueco, del mismo ancho, asi las demas no saltan. `grab` / `grabbing` solo donde hay mouse. */
