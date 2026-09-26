@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.476">
-<link rel="manifest" href="manifest.json?v=4.476">
+<meta name="agente-web-version" content="4.477">
+<link rel="manifest" href="manifest.json?v=4.477">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,35 +27,44 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.476">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.477">
 </head>
 <body>
 
 <div id="cabecera" title="el board habla por: buzón">
-  <div id="nodos"></div>
-  <!-- 2008 {ahorro} paso 10: el `home` del board, una vista de SOLO LECTURA que dice que esta pasando (la cola,
-       las ordenes que esperan el dale, instagram, el podcast, la plata de hoy, las reglas). el json lo arma
-       entero el server (`recetas/home_board.py`): la web no calcula ni una hora. -->
-  <button id="ver-home" class="ib" type="button" title="home" aria-label="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10.5L12 4l8 6.5"/><path d="M6 10v10h12V10"/><path d="M10 20v-5h4v5"/></svg></button>
+  <!-- 2118 {barra} (facundo, 2026-09-26, por audio): la hamburguesa a la IZQUIERDA con todas las vistas adentro
+       (`#menuvistas`, abajo), afuera solo la campana (siempre) y el toggle chat | widgets (`#vistas`, solo en el
+       celu), y las tres bolitas de nodo a la DERECHA. las tres lineas pasan a `✕` con una transicion css. -->
+  <button id="hamb" class="ib" type="button" title="menu" aria-label="menu" aria-expanded="false" aria-controls="menuvistas"><span class="hamb" aria-hidden="true"><i></i><i></i><i></i></span></button>
+  <button id="campana" class="ib" type="button" title="notificaciones" aria-label="notificaciones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 8 2.5 8h-17S6 15 6 9"/><path d="M10.3 20.5a2 2 0 0 0 3.4 0"/></svg><span id="badge" class="badge oculta"></span></button>
   <div id="vistas">
     <button id="ver-chat" class="ib" type="button" title="chat" aria-label="chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5h16v10.5H8.5L4 20z"/><path d="M8 9.5h8"/><path d="M8 12.5h5"/></svg></button>
     <button id="ver-widgets" class="ib" type="button" title="widgets" aria-label="widgets"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg></button>
   </div>
-  <!-- 1933 {instatinder}: el fueguito es el icono de la vista `instatinder` (nada de lo que ve facundo dice
-       "tinder" a secas); al lado, en fucsia, el icono de la vista `votar`: las votaciones puntuales que NO son
-       instagram (checkboxes: animaciones, tandas), un voto a pedido. -->
-  <button id="ver-votacion" class="ib oculta" type="button" title="votar" aria-label="votar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="3"/><path d="M8 12.2l2.9 2.9L16.6 9"/></svg></button>
-  <button id="ver-votar" class="ib bglifo oculta" type="button" title="instatinder" aria-label="instatinder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22c-4 0-7-2.8-7-6.5 0-2.6 1.4-4.6 2.8-6.3.3 1.3 1 2.3 2 2.9-.3-3 .9-6.2 4.2-8.1-.2 2.6.9 4.2 2.4 5.7 1.5 1.6 2.6 3.3 2.6 5.8 0 3.7-3 6.5-7 6.5z"/><path d="M12 22c-1.7 0-3-1.3-3-3 0-1.4.8-2.4 1.6-3.3.5.9 1.1 1.4 1.9 1.7.8-.5 1.2-1.3 1.3-2.2.8 1.1 1.2 2.2 1.2 3.8 0 1.7-1.3 3-3 3z"/></svg></button>
-    <button id="ver-podcast" class="ib" type="button" title="podcast" aria-label="podcast"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v4"/></svg></button>
-  <!-- 1676 {vista}: la vista `docs`, los informes en markdown que el agente escribe en `~/.claudio/<tema>/`. el
-       indice, el html de cada informe y lo que facundo tilda los arma ENTERO el server (`recetas/docs_vista.py`):
-       la web solo pinta y manda el toque. -->
-  <button id="ver-docs" class="ib" type="button" title="docs" aria-label="docs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 12h6"/><path d="M9 16h6"/></svg></button>
-  <!-- 2190 {vista}: la vista `claves` — la boveda, servida por el server sin que un modelo la toque
-       (`recetas/web_claves.py`, `GET /claves`, `GET /claves/<id>`). el icono es una llave y dice A DONDE VAS. -->
-  <button id="ver-claves" class="ib" type="button" title="claves" aria-label="claves"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="12" r="4"/><path d="M12 12h9"/><path d="M17.5 12v3.5"/><path d="M20.5 12v2.5"/></svg></button>
-  <button id="campana" class="ib" type="button" title="notificaciones" aria-label="notificaciones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 8 2.5 8h-17S6 15 6 9"/><path d="M10.3 20.5a2 2 0 0 0 3.4 0"/></svg><span id="badge" class="badge oculta"></span></button>
-  <button id="persona" class="ib" type="button" title="cuenta" aria-label="cuenta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></button>
+  <div id="nodos"></div>
+</div>
+<!-- 2118 {barra}: el menu de la hamburguesa. molde de `docs/componentes-web.md`: `.capa` + `.mcaja` + `.mhead` con el
+     back grande a la izquierda y la `✕` a la derecha (2002 {back}), `esc` cierra por la pila de capas. en el celu
+     ocupa la pantalla entera; en la mac es un dropdown abajo del icono (lo decide el css con el media query de
+     siempre). cada item dice A DONDE VAS (1930 {barra}): el de la vista activa no se pinta (mismas reglas css que
+     tenian en la barra), y tocar uno cambia la vista al instante y cierra el menu.
+     2008 {ahorro} paso 10: el `home` es una vista de SOLO LECTURA (`recetas/home_board.py`). 1933 {instatinder}: el
+     fueguito es la vista `instatinder` y `votar` las votaciones puntuales que NO son instagram. 1676 {vista}: `docs`,
+     los informes en markdown (`recetas/docs_vista.py`). 2190 {vista}: `claves`, la boveda (`recetas/web_claves.py`). -->
+<div id="menuvistas" class="capa oculta" role="dialog" aria-modal="true" aria-label="ir a">
+  <div class="mcaja mmenu">
+    <div class="mhead"><button id="menuback" class="bglifo mesquina b-atras" type="button" aria-label="back" title="back"><span class="mglf">←</span></button><span id="menutitulo">ir a</span><button id="menux" class="bglifo mesquina b-x" type="button" aria-label="cerrar" title="cerrar"></button></div>
+    <div id="menulista">
+      <button id="ver-home" class="ib mvi" type="button" title="home" aria-label="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10.5L12 4l8 6.5"/><path d="M6 10v10h12V10"/><path d="M10 20v-5h4v5"/></svg><span class="mvtxt">home</span></button>
+      <button id="mv-chat" class="ib mvi" type="button" title="chat" aria-label="chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5h16v10.5H8.5L4 20z"/><path d="M8 9.5h8"/><path d="M8 12.5h5"/></svg><span class="mvtxt">chat</span></button>
+      <button id="ver-votacion" class="ib mvi oculta" type="button" title="votar" aria-label="votar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="3"/><path d="M8 12.2l2.9 2.9L16.6 9"/></svg><span class="mvtxt">votar</span></button>
+      <button id="ver-votar" class="ib mvi bglifo oculta" type="button" title="instatinder" aria-label="instatinder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22c-4 0-7-2.8-7-6.5 0-2.6 1.4-4.6 2.8-6.3.3 1.3 1 2.3 2 2.9-.3-3 .9-6.2 4.2-8.1-.2 2.6.9 4.2 2.4 5.7 1.5 1.6 2.6 3.3 2.6 5.8 0 3.7-3 6.5-7 6.5z"/><path d="M12 22c-1.7 0-3-1.3-3-3 0-1.4.8-2.4 1.6-3.3.5.9 1.1 1.4 1.9 1.7.8-.5 1.2-1.3 1.3-2.2.8 1.1 1.2 2.2 1.2 3.8 0 1.7-1.3 3-3 3z"/></svg><span class="mvtxt">instatinder</span></button>
+      <button id="ver-podcast" class="ib mvi" type="button" title="podcast" aria-label="podcast"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v4"/></svg><span class="mvtxt">podcast</span></button>
+      <button id="ver-docs" class="ib mvi" type="button" title="docs" aria-label="docs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 12h6"/><path d="M9 16h6"/></svg><span class="mvtxt">docs</span></button>
+      <button id="ver-claves" class="ib mvi" type="button" title="claves" aria-label="claves"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="12" r="4"/><path d="M12 12h9"/><path d="M17.5 12v3.5"/><path d="M20.5 12v2.5"/></svg><span class="mvtxt">claves</span></button>
+      <button id="persona" class="ib mvi" type="button" title="cuenta" aria-label="cuenta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span class="mvtxt">cuenta</span></button>
+    </div>
+  </div>
 </div>
 
 <div id="login">
@@ -472,11 +481,11 @@ var alfinal = $("alfinal"), envoltorio = $("envoltorio");
 // una copia GENERADA de esa receta: se actualiza con `python3 -m recetas.clasificar_tema --sync-web`
 // y `recetas/prueba_web` falla si quedo vieja. no editarla a mano.
 /* TEMAS-JS: generado por `python3 -m recetas.clasificar_tema --sync-web`, no editar a mano */
-var TEMAS = ["tools", "awtomic", "awtomic/qa", "flabs", "fuzzer", "juegos", "plata", "server", "personal", "podcast", "mesa", "flaudio", "tinder", "board", "gemini", "groq", "groq-tandas", "mistral"];
-var PRIORIDAD = ["awtomic/qa", "flabs", "podcast", "mesa", "tinder", "board", "server", "juegos", "plata", "fuzzer", "awtomic", "flaudio", "tools"];
+var TEMAS = ["tools", "awtomic", "awtomic/qa", "flabs", "fuzzer", "juegos", "plata", "server", "personal", "podcast", "mesa", "flaudio", "tinder", "board", "modelos", "gemini", "groq", "groq-tandas", "mistral"];
+var PRIORIDAD = ["awtomic/qa", "flabs", "podcast", "mesa", "tinder", "board", "modelos", "server", "juegos", "plata", "fuzzer", "awtomic", "flaudio", "tools"];
 var MODOS_TAB = [];
 var PROVEEDORES_TAB = ["gemini", "groq", "groq-tandas", "mistral"];
-var PESTANAS_TAB = [["awtomic", "awtomic"], ["awtomic/qa", "awtomic/qa"], ["board", "board"], ["flabs", "flabs"], ["flaudio", "flaudio"], ["fuzzer", "fuzzer"], ["gemini", "gemini"], ["juegos", "juegos"], ["mesa", "mesa"], ["mistral", "mistral"], ["personal", "personal"], ["plata", "plata"], ["podcast", "podcast"], ["server", "server"], ["tinder", "tinder"], ["tools", "tools"]];
+var PESTANAS_TAB = [["awtomic", "awtomic"], ["awtomic/qa", "awtomic/qa"], ["board", "board"], ["flabs", "flabs"], ["flaudio", "flaudio"], ["fuzzer", "fuzzer"], ["gemini", "gemini"], ["juegos", "juegos"], ["mesa", "mesa"], ["mistral", "mistral"], ["modelos", "modelos"], ["personal", "personal"], ["plata", "plata"], ["podcast", "podcast"], ["server", "server"], ["tinder", "tinder"], ["tools", "tools"]];
 var ALIAS = {"awtomic-qa": "awtomic/qa", "claudio": "flaudio", "consejo": "mesa"};
 var RE_CORTE_SRC = "(\\n+)|([.;!?]\\s+)|(^|[\\s,;:])(?:y\\s+otra\\s+cosa|otra\\s+cosa|aparte|adem[a\u00e1]s|tambi[e\u00e9]n)(?!\\w)";
 var PALABRAS = {
@@ -492,7 +501,8 @@ var PALABRAS = {
   "mesa": ["mesa", "consejo", "panel de modelos", "panel", "proveedores?", "groq", "mistral", "gemini", "modelos gratis", "free tier", "troceado", "juicio a ciegas", "contexto empaquetado"],
   "tinder": ["instatinder", "votador", "embudo", "candidatas?", "super candidatas", "unfollow", "unfollows", "dejar de seguir", "cartita", "igcola", "ig cola", "follow", "follows", "seguidores", "ignorada", "ignoradas", "maybe", "activar", "activa", "follow[ _]request[ _]sent", "following"],
   "board": ["board", "tablero", "vista del board", "barra de iconos"],
-  "tools": ["claude", "iterm", "fish", "chrome", "tui", "consola", "daemon", "agente", "receta", "recetas", "skill", "terminal", "tmux", "widget", "widgets", "web terminal", "mision", "modelo", "tokens", "cola", "launchd", "pesta[\u00f1n]a", "pesta[\u00f1n]as", "interfaz", "chat"],
+  "modelos": ["modelos?", "tokens", "usage", "fable", "opus", "haiku", "sonnet", "reparto", "escalera", "banco", "faacuu", "orugote", "cuentas? de claude", "week", "tope 99", "switch de cuenta", "claude code"],
+  "tools": ["claude", "iterm", "fish", "chrome", "tui", "consola", "daemon", "agente", "receta", "recetas", "skill", "terminal", "tmux", "widget", "widgets", "web terminal", "mision", "cola", "launchd", "pesta[\u00f1n]a", "pesta[\u00f1n]as", "interfaz", "chat"],
 };
 /* /TEMAS-JS */
 var AUTO = "auto";
@@ -11660,13 +11670,16 @@ function notiFila(){
 }
 function abrirPersona(){
   cerrarCampana();
-  var r = $("persona").getBoundingClientRect(), cu = cuentaEnUso(), auto = cu.modo === "auto";
+  // 2118 {barra}: el tipito vive adentro del menu de la hamburguesa, asi que su dropdown cuelga de la
+  // hamburguesa (siempre a la vista), pegado al borde izquierdo, y el menu se cierra antes
+  menuVCerrar();
+  var r = $("hamb").getBoundingClientRect(), cu = cuentaEnUso(), auto = cu.modo === "auto";
   var ops = [];
   ops.push({nodo: notiFila(), nombre: NOTI_ETIQUETA});
   ops.push(["settings del board", function(){ pintarModal(modalBoard()); }]);
   ops.push(["reinicia", function(){ pintarModal(modalReinicia()); }]);
   ops.push(["salir", function(){ pintarModal(modalSalir()); }]);
-  return menu(Math.round(r.right - 210), Math.round(r.bottom + 4),
+  return menu(Math.max(4, Math.round(r.left)), Math.round(r.bottom + 4),
               "cuenta en uso: " + (cu.elegida || "?") + (auto ? " (auto)" : ""), ops, null);
 }
 $("persona").addEventListener("click", abrirPersona);
@@ -13433,6 +13446,46 @@ $("ver-chat").addEventListener("click", function(){ vistaPoner("chat"); });
 $("ver-widgets").addEventListener("click", function(){ vistaPoner("widgets"); });
 $("ver-podcast").addEventListener("click", function(){ vistaPoner("podcast"); });
 $("ver-home").addEventListener("click", function(){ vistaPoner("home"); });   // 2008 paso 10
+$("mv-chat").addEventListener("click", function(){ vistaPoner("chat"); });   // 2118 {barra}: el `chat` del menu (mac)
+// ---------- 2118 {barra} (facundo, 2026-09-26, por audio): la hamburguesa ----------
+// "los tres botoncitos de cloud, server, mac del lado de la derecha, y todos los botones excepto la campanita en
+// una hamburger del lado izquierdo, desplegable: en mobile la toco y pantalla completa, en esto un dropdown".
+// `#menuvistas` es una capa del molde (`.capa` + `.mcaja`, `esc` por la pila): en el celu pantalla entera, en la
+// mac un dropdown que cuelga del icono (el css decide con el media query de siempre; el js solo le pasa DONDE esta
+// la hamburguesa). tocar un item cambia la vista al instante y cierra el menu; tocar afuera del dropdown, tambien.
+var menuVAbierto = false;
+function menuVAbrir(){
+  if(menuVAbierto) return false;
+  cerrarMenu(); cerrarCampana();
+  var r = $("hamb").getBoundingClientRect(), m = $("menuvistas");
+  m.style.setProperty("--menu-top", Math.round(r.bottom + 4) + "px");
+  m.style.setProperty("--menu-left", Math.max(4, Math.round(r.left)) + "px");
+  capaMostrar("menuvistas");
+  $("hamb").classList.add("on");
+  $("hamb").setAttribute("aria-expanded", "true");
+  menuVAbierto = true;
+  return true;
+}
+function menuVCerrar(){
+  if(!menuVAbierto) return false;
+  menuVAbierto = false;
+  capaOcultar("menuvistas");
+  $("hamb").classList.remove("on");
+  $("hamb").setAttribute("aria-expanded", "false");
+  return true;
+}
+$("hamb").addEventListener("click", function(){ if(menuVAbierto) menuVCerrar(); else menuVAbrir(); });
+$("menuback").addEventListener("click", function(){ menuVCerrar(); });   // 2002 {back}: el back y la `✕` cierran
+$("menux").addEventListener("click", function(){ menuVCerrar(); });
+capaRegistrar({nombre: "menuvistas", el: "menuvistas", cerrar: function(){ menuVCerrar(); }});
+// un item ya hizo lo suyo (su propio handler corrio antes, en el boton): el menu se va
+$("menulista").addEventListener("click", function(ev){ if(ev.target.closest && ev.target.closest("button")) menuVCerrar(); });
+// mac: el dropdown se cierra tocando afuera (en el celu la capa tapa todo, asi que nunca hay "afuera")
+document.addEventListener("click", function(ev){
+  if(!menuVAbierto || !ev.target.closest) return;
+  if(ev.target.closest("#menuvistas") || ev.target.closest("#hamb")) return;
+  menuVCerrar();
+}, true);
 $("homex").addEventListener("click", function(){ vistaVolver(); });
 $("ver-votacion").addEventListener("click", votacionAbrir);   // 1933 {instatinder}
 vistaOn = vistaInicial();
@@ -14191,15 +14244,22 @@ window.__agente = {
   // 1875: las cuatro vistas enteras. `iconos` dice cual se pinta en la barra (el de la vista activa se esconde)
   vistaPoner: vistaPoner, vistaVolver: vistaVolver, vistaSet: vistaSet, podVistaPintar: podVistaPintar,
   vistaEstado: function(){
-    var vis = function(id){ var e = document.getElementById(id); return !!e && e.getBoundingClientRect().width > 0; };
+    // 2118 {barra}: los iconos de vista viven adentro de la hamburguesa (cerrada casi siempre), asi que "se ve" es
+    // "sus reglas css lo pintan": display propio distinto de `none` (el de la vista activa sigue en `none`). lo
+    // que esta en la barra (el toggle del celu) se mide de verdad. `chat` es el toggle en el celu y el item del menu
+    // en la mac (`#mv-chat`). los paneles se siguen midiendo de verdad.
+    var vis = function(id){ var e = document.getElementById(id); if(!e) return false;
+      if(getComputedStyle(e).display === "none") return false;
+      return !!e.closest("#menulista") || e.getBoundingClientRect().width > 0; };
+    var visR = function(id){ var e = document.getElementById(id); return !!e && e.getBoundingClientRect().width > 0; };
     return {on: vistaSet(), elegida: vistaOn, previa: vistaPrevia, mobile: esVistaMobile(), doble: vistaDoble,
             clases: VISTAS_TODAS.filter(function(n){ return document.body.classList.contains("v-" + n); }),
-            iconos: {chat: vis("ver-chat"), widgets: vis("ver-widgets"), tinder: vis("ver-votar"),
+            iconos: {chat: vis("ver-chat") || vis("mv-chat"), widgets: vis("ver-widgets"), tinder: vis("ver-votar"),
                      votar: vis("ver-votacion"), podcast: vis("ver-podcast"), home: vis("ver-home"),
                      claves: vis("ver-claves")},
-            paneles: {chat: vis("panel-chat"), widgets: vis("panel-widgets"), tinder: vis("selmodal"),
-                      votar: vis("selmodal") || vis("votar"), podcast: vis("vista-podcast"),
-                      home: vis("vista-home"), claves: vis("vista-claves")},
+            paneles: {chat: visR("panel-chat"), widgets: visR("panel-widgets"), tinder: visR("selmodal"),
+                      votar: visR("selmodal") || visR("votar"), podcast: visR("vista-podcast"),
+                      home: visR("vista-home"), claves: visR("vista-claves")},
             guardada: (function(){ try{ return sessionStorage.getItem(VISTA_LS); }catch(x){ return null; } })()};
   },
   estado: function(){ return {tabs: tabs, activo: activo, ts: layoutTs,
@@ -14591,7 +14651,9 @@ window.__agente = {
             nivel: NIVELES_NOTI.filter(function(x){ return b.classList.contains(x); })[0] || null,
             fondo: getComputedStyle(b).backgroundColor, ancho: Math.round(rc.width), alto: Math.round(rc.height),
             svg: !!c.querySelector("svg"), borde: getComputedStyle(c).borderTopWidth, bg: getComputedStyle(c).backgroundColor,
-            izqPersona: rc.right <= $("persona").getBoundingClientRect().left + 1,
+            // 2118 {barra}: la campana esta afuera, a la derecha de la hamburguesa y a la izquierda de los nodos
+            izqNodos: (function(){ var n = $("nodos").getBoundingClientRect(); return n.width === 0 || rc.right <= n.left + 1; })(),
+            derHamb: rc.left >= $("hamb").getBoundingClientRect().right - 1,
             abierta: !l.classList.contains("oculta"), todas: !!l.querySelector("[data-ntodas]"),
             // 2022 {campana}: la solapa puesta, las dos etiquetas y cuantas entran en cada clase
             solapa: campanaSolapa, accion: notisAccion().length, sinLeer: notisNoLeidas().length,
@@ -14607,6 +14669,23 @@ window.__agente = {
                       acciones: [].map.call(f.querySelectorAll(".nacc"), function(a){ return a.title || a.textContent; })};
             })};
   },
+  // 2118 {barra}: la hamburguesa y su menu, medidos de verdad
+  menuVistas: function(){
+    var h = $("hamb"), m = $("menuvistas"), caja = m.querySelector(".mmenu"), rh = h.getBoundingClientRect();
+    var barras = [].map.call(h.querySelectorAll(".hamb i"), function(i){ var c = getComputedStyle(i);
+      return {transform: c.transform, opacity: c.opacity, transicion: c.transitionDuration}; });
+    var rc = caja.getBoundingClientRect(), rb = $("menuback").getBoundingClientRect(), rx = $("menux").getBoundingClientRect();
+    return {abierto: menuVAbierto, on: h.classList.contains("on"), expandido: h.getAttribute("aria-expanded"),
+            hamb: {izq: rh.left, der: rh.right, ancho: rh.width, alto: rh.height, arriba: rh.top}, barras: barras,
+            capaVis: !m.classList.contains("oculta") && m.getBoundingClientRect().width > 0,
+            caja: {izq: rc.left, der: rc.right, arriba: rc.top, abajo: rc.bottom, ancho: rc.width, alto: rc.height},
+            back: {izq: rb.left, ancho: rb.width, alto: rb.height}, x: {der: rx.right, ancho: rx.width, alto: rx.height},
+            items: [].map.call($("menulista").querySelectorAll("button"), function(b){ var r = b.getBoundingClientRect(), t = b.querySelector(".mvtxt");
+              return {id: b.id, vis: r.width > 0 && r.height > 0, alto: Math.round(r.height), ancho: Math.round(r.width),
+                      txt: t ? t.textContent : "", svg: !!b.querySelector("svg"),
+                      fs: parseFloat(getComputedStyle(b).fontSize), fsTxt: t ? parseFloat(getComputedStyle(t).fontSize) : 0}; })};
+  },
+  menuVAbrir: menuVAbrir, menuVCerrar: menuVCerrar,
   persona: function(){
     var p = $("persona"), r = p.getBoundingClientRect(), s = getComputedStyle(p);
     return {svg: !!p.querySelector("svg"), ancho: Math.round(r.width), alto: Math.round(r.height), borde: s.borderTopWidth,

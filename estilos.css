@@ -1598,6 +1598,47 @@
     font-size:13px;line-height:15px;font-weight:600;text-align:center;color:#000;background:var(--gris);pointer-events:none}
   .ib .badge.oculta{display:none}
   .ib .badge.gris{color:var(--blanco)}
+  /* 2118 {barra} (facundo, 2026-09-26, por audio): "los tres botoncitos de cloud, server, mac del lado de la derecha,
+     y todos los botones excepto la campanita en una hamburger del lado izquierdo desplegable [...] animada".
+     la barra queda: hamburguesa | campana | (celu) toggle chat|widgets ........ nodos a la derecha. `#nodos` es el
+     que empuja (flex 1) y alinea sus labels al final. la hamburguesa es un `.ib` mas (mismo porte que la campana):
+     tres barras de `currentColor` que con `.on` se cruzan en una `✕` (la del medio se apaga), con transicion. */
+  #nodos{justify-content:flex-end}
+  #hamb{width:36px}
+  .hamb{display:block;position:relative;width:18px;height:14px}
+  .hamb i{position:absolute;left:0;width:18px;height:2px;border-radius:1px;background:currentColor;
+    transition:transform .25s ease,top .25s ease,opacity .2s ease}
+  .hamb i:nth-child(1){top:0}
+  .hamb i:nth-child(2){top:6px}
+  .hamb i:nth-child(3){top:12px}
+  #hamb.on .hamb i:nth-child(1){top:6px;transform:rotate(45deg)}
+  #hamb.on .hamb i:nth-child(2){opacity:0}
+  #hamb.on .hamb i:nth-child(3){top:6px;transform:rotate(-45deg)}
+  /* el menu: en la mac es un dropdown que cuelga de la hamburguesa (`--menu-top` / `--menu-left` los pone el js con
+     el rect del icono), sin fondo que tape la pagina; en el celu (media query de abajo) ocupa la pantalla entera.
+     la caja es el molde (`.mcaja` + `.mhead` con el back grande y la `✕`, 2002 {back}); cada item es el mismo
+     `.ib` de siempre (icono svg de 20 px) mas su nombre al lado, a `--texto-max`, que dice A DONDE VAS. el item de la
+     vista activa no se pinta: siguen valiendo las reglas `body.v-<vista> #ver-<vista>{display:none}` de cada vista. */
+  #menuvistas{z-index:44;position:fixed;inset:auto;top:var(--menu-top,52px);left:var(--menu-left,6px);right:auto;bottom:auto;
+    display:block;padding:0;background:none}
+  #menuvistas .mmenu{width:250px;max-height:calc(100dvh - var(--menu-top,52px) - 12px);box-sizing:border-box;
+    display:flex;flex-direction:column;gap:4px;padding:4px 6px 8px 6px}
+  #menuvistas .mhead{flex:0 0 auto}
+  #menutitulo{color:var(--verde);font-size:var(--texto-max)}
+  #menulista{display:flex;flex-direction:column;gap:2px;flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  #menulista .ib{width:100%;height:auto;min-height:44px;margin:0;padding:0 10px;box-sizing:border-box;
+    justify-content:flex-start;gap:12px;border-radius:4px;text-transform:lowercase}
+  #menulista .ib svg{width:20px;height:20px;flex:0 0 auto}
+  #menulista .ib .badge{position:static;margin-left:auto}
+  #menulista .mvtxt{font-size:var(--texto-max);line-height:1.2;color:var(--blanco);white-space:nowrap}
+  #menulista .ib:hover,#menulista .ib:active{background:#111}
+  #menulista .ib:hover .mvtxt,#menulista .ib:active .mvtxt{color:var(--verde)}
+  #menulista #ver-votar{color:var(--blanco);font-weight:normal;font-size:var(--icono-max)}
+  #menulista #ver-votar.apagado{color:var(--gris)}
+  /* el toggle chat | widgets vive afuera SOLO en el celu (facundo: "el chat widget toggle es visible solo en mobile al
+     lado de la campana"); en la mac su lugar en el menu es `#mv-chat`, que se esconde con chat o widgets puesta */
+  #vistas{display:none}
+  body.v-chat #mv-chat,body.v-widgets #mv-chat{display:none}
   /* 1794 (facundo, 2026-09-16): `votar` es un fueguito en outline con el molde de la campana y el tipito (`.ib`: mismo
      trazo 1.8, mismo tamaño y blanco), y el numero de pendientes es un badge celeste como el de la campana */
   #ver-votar{min-height:0;min-width:0;padding:0;font-weight:normal;color:var(--blanco);font-size:var(--icono-max)}
@@ -1685,8 +1726,8 @@
      svg del mismo molde `.ib` que el fueguito, el podcast, la campana y el tipito, y viven a la DERECHA de la barra,
      a la izquierda del fueguito. `#vistas` deja de ser una caja (`display:contents`): no empuja mas (lo empuja
      `#nodos`) y los dos iconos son items de la cabecera, con su mismo `gap` que los otros cuatro. */
-  #vistas{display:contents}   /* los dos iconos son items de la cabecera: mismo gap que los otros cuatro, y el que no
-                                 se pinta no deja hueco (en la compu no se pinta ninguno de los dos) */
+  /* 2118 {barra}: `#vistas` (el toggle) se pinta SOLO en el celu (`display:contents` adentro del media query de
+     abajo); en la mac va `display:none` (regla arriba, junto a la hamburguesa) y `chat` es un item del menu */
   /* 1407/1567: `votar` a la izquierda de chat, solo con algo para votar en este dispositivo; 1794: paso a ser el
      fueguito `.ib` (reglas arriba, junto al badge) */
   body.sinlogin #cabecera,body.sinlogin #cuerpo{display:none}
@@ -2289,3 +2330,16 @@
 .inv .invcant{min-width:0;overflow:hidden;text-overflow:ellipsis}
 .inv .invval{text-align:right}
 .inv .invspark{display:block;width:100%;height:36px;margin-top:2px;overflow:visible}
+
+/* 2118 {barra}: en el celu (el mismo media query de siempre, `MQ_MOBILE` en el js) el menu de la hamburguesa ocupa la
+   pantalla entera, arrancando arriba de todo (tapa la barra: el back grande y la `✕` son la salida, y `esc`), y el
+   toggle chat | widgets vuelve a la barra al lado de la campana. los nodos quedan a la derecha, alineados al final. */
+@media (max-width:899px), (max-aspect-ratio: 1/1){
+  #vistas{display:contents}
+  #mv-chat{display:none!important}
+  #hamb{width:36px}
+  #menuvistas{inset:0;top:0;left:0;right:0;bottom:0;display:flex;padding:0;background:#000}
+  #menuvistas .mmenu{width:100%;height:100%;max-height:none;border-radius:0;box-shadow:none;
+    padding:calc(4px + env(safe-area-inset-top)) 10px calc(8px + env(safe-area-inset-bottom)) 10px}
+  #menulista .ib{min-height:50px;height:auto;margin:0}
+}
