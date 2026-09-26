@@ -51,12 +51,13 @@
     if(!cu || !B.modalMolde) return false;
     if(!cuModal) cuModal = B.modalMolde({id: "cuentamodal", z: 43, sinServer: true,
                                          alCerrar: function(){ cuAbierta = null; }});
-    var esActiva = activa(cu), bs = cu.barras || [];
+    var esActiva = activa(cu), bs = cu.barras || [], lp = lineasClaude[cu.nombre] || {};
     var estado = cu.agotada ? '<span class="r">agotada: sin creditos hasta que renueve</span>'
                : cu.dormida ? '<span class="r">dormida: sin 5h; la semana todavia tiene lugar</span>'
                : esActiva ? '<span class="v">es la cuenta que usa el agente ahora</span>'
                : '<span class="g">no es la cuenta activa</span>';
     var html = '<div class="cmod">' + estado +
+      (lp && lp.prioritaria_txt ? '\n<span class="v">' + esc(sinPlata(lp.prioritaria_txt)) + "</span>" : "") +
       (cu.excluida ? '\n<span class="r">excluida</span> <span class="g">' + esc(sinPlata(cu.motivo)) + "</span>"
                    : (cu.motivo && !esActiva ? '\n<span class="g">' + esc(sinPlata(cu.motivo)) + "</span>" : "")) +
       (cu.modelo ? '\n<span class="g">hoy sale con</span> <span class="c">' + esc(cu.modelo) + "</span>" +
@@ -86,7 +87,7 @@
     cuAbierta = cu.nombre;
     return cuModal.abrir({titulo: "cuenta " + cu.nombre, cuenta: cu.email || "", html: html, botones: botones});
   }
-  var cuentasVistas = {}, lineasVistas = {};
+  var cuentasVistas = {}, lineasVistas = {}, lineasClaude = {};   // lineasClaude: la fila del widget por cuenta (2100 {prioritaria})
   function alTocar(ev){
     var n = ev.target.closest && ev.target.closest(".gasto [data-cta]");
     if(!n) return;
@@ -163,13 +164,16 @@
     var tit = l.nombre + ": " + sinPlata(l.consumo_txt || "?") + " · " + sinPlata(l.sec) +
               (l.linea_txt ? "\n" + sinPlata(l.linea_txt) : "") +
               (l.extra ? "\n" + sinPlata(l.extra) : "") +
+              (l.prioritaria_txt ? "\n" + sinPlata(l.prioritaria_txt) : "") +
               (l.cinco ? "\n" + sinPlata(l.cinco.detalle) +
                          (l.cinco.linea_txt ? "\n" + sinPlata(l.cinco.linea_txt) : "") : "");
     return '<div class="ub grow n-' + esc(l.nivel || "sin") + (l.agotada ? " agotada" : "") +
       (l.dormida ? " dormida" : "") + (l.sin_costo ? " sincosto" : "") + (l.tocable ? "" : " sinlim") + '" title="' + esc(tit) + '"' +
       (l.tocable ? ' data-cta="' + esc(l.nombre) + '" role="button" tabindex="0"' : "") + ">" +
       cincoHtml(l) +
-      '<span class="ub-n nom' + (l.estado ? " e-" + esc(l.estado) : "") + '">' + esc(l.nombre) + "</span>" +
+      // 2100 {prioritaria}: la prioritaria del reparto (la que renueva antes) lleva la clase `pri` (un punto verde
+      // por css, fuera del texto) y el porque (cuanto le falta) en el tooltip; el server decide cual es, la web solo pinta
+      '<span class="ub-n nom' + (l.estado ? " e-" + esc(l.estado) : "") + (l.prioritaria ? " pri" : "") + '">' + esc(l.nombre) + "</span>" +
       '<span class="ub-pista"><span class="ub-lleno" style="width:' + pct + '%"></span>' + tickHtml(l) + "</span>" +
       '<span class="ub-p">' + esc(sinPlata(l.consumo_txt || "?")) + "</span>" +
       '<span class="ren">' + esc(sinPlata(l.sec)) + "</span>" +
@@ -208,9 +212,9 @@
       cuentas = cuentas.filter(function(c){ return c.nombre === soloCta; });
     }
     // lo tocable: la de claude abre el modal de la cuenta (barras, motivo, boton verde), la de api el suyo
-    cuentasVistas = {}; lineasVistas = {};
+    cuentasVistas = {}; lineasVistas = {}; lineasClaude = {};
     var porNombre = {};
-    lineas.forEach(function(l){ porNombre[l.nombre] = l; });
+    lineas.forEach(function(l){ porNombre[l.nombre] = l; if(l.tipo === "claude") lineasClaude[l.nombre] = l; });
     cuentas.forEach(function(c){
       var l = porNombre[c.nombre] || {};
       c.etiqueta = l.sin_costo ? (l.etiqueta || null) : null;
@@ -231,7 +235,7 @@
     destruir: function(){
       document.removeEventListener("click", alTocar, true);
       if(cuModal){ try{ cuModal.cerrar(true); }catch(e){} var el = document.getElementById("cuentamodal"); if(el) el.remove(); }
-      cuModal = null; cuUltimo = null; cuAbierta = null; cuentasVistas = {}; lineasVistas = {};
+      cuModal = null; cuUltimo = null; cuAbierta = null; cuentasVistas = {}; lineasVistas = {}; lineasClaude = {};
     },
     cuentaAbrir: cuentaAbrir, apiAbrir: apiAbrir, cuEstado: cuEstado
   });

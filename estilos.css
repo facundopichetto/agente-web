@@ -1287,6 +1287,8 @@
   .usage .bloque + .bloque{margin-top:9px;padding-top:8px;border-top:1px solid var(--linea)}
   .ub{display:flex;align-items:center;gap:6px;margin:0 0 5px 0}
   .ub-n{flex:0 0 50px;min-width:50px;white-space:nowrap;color:var(--gris);font-size:14px;letter-spacing:.04em}
+  /* 2100 {prioritaria}: el punto verde pegado al nombre de la cuenta que renueva antes (la prioritaria del reparto) */
+  .ub-n.pri::after{content:"\25CF";color:var(--verde,#7ee787);font-size:9px;margin-left:3px;vertical-align:middle;line-height:1}
   .ub-pista{
     flex:1 1 auto;min-width:0;position:relative;height:14px;background:var(--fondo-hundido);
     border:1px solid var(--linea);border-radius:2px;overflow:hidden;
@@ -2271,3 +2273,19 @@
       border:none;border-radius:0;padding-bottom:env(safe-area-inset-bottom);
     }
   }
+/* 2078: el widget `inversiones` (la cartera de ibkr). dos numeros arriba (ayer y mes), el total y una fila por
+   activo, y la sparkline al pie. nada pasa el tope del texto (`--texto-max`): lo "grande" es peso y color, no
+   tamaño (1541/2334). sin borde ni sombra extra: la caja es la de siempre. */
+.inv{display:flex;flex-direction:column;gap:6px}
+.inv .invtop{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.inv .invnum{display:flex;flex-direction:column;gap:1px;min-width:0;font-variant-numeric:tabular-nums}
+.inv .invet{font-size:12px;letter-spacing:.3px}
+.inv .invusd{font-size:var(--texto-max);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.inv .invpct{font-size:12px;opacity:.85}
+.inv .invtot{font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.inv .invact{display:grid;grid-template-columns:auto 1fr auto;column-gap:8px;row-gap:1px;font-size:12px;
+             font-variant-numeric:tabular-nums}
+.inv .invfila{display:contents}
+.inv .invcant{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.inv .invval{text-align:right}
+.inv .invspark{display:block;width:100%;height:36px;margin-top:2px;overflow:visible}
