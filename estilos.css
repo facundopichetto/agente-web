@@ -441,21 +441,6 @@
   #selextras .tjx-subir{border-color:var(--verde);color:var(--verde)}
   #selextras .tjx-no,#selextras .tjx-unfollow{border-color:var(--rojo);color:var(--rojo)}
   #selextras .tjx-follow{border-color:var(--cian);color:var(--cian)}
-  /* {cambios} paso 3 (facundo, 2026-09-22): "en la cartita de una persona y en el votador, en el celu, un cuadro con
-     hasta 6 botones para mandarla a cualquiera de las otras listas de un toque". es el molde de grilla de la 2035
-     {columnas} (dos columnas, `gap` de 10 y `minmax(0,1fr)`) con el control chico del board al 160% de la 2080
-     {diseno}: cada boton entra en el area de dedo de 40 px y el texto no pasa el tope de `--texto-max`.
-     `en el celu`: arriba de 700 px (el mismo corte que usa el pie del votador) el cuadro no se pinta. */
-  #selmover{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;width:100%;max-width:520px;
-    margin:0 auto}
-  #selmover.oculta{display:none!important}
-  #selmover .tjmvbtn{display:flex;align-items:center;justify-content:center;min-height:40px;padding:6px 10px;
-    box-sizing:border-box;border-radius:4px;border:1px solid var(--linea);background:var(--fondo-caja);
-    color:var(--blanco);font:inherit;font-size:13px;line-height:1.15;cursor:pointer;opacity:.9;
-    box-shadow:var(--caja-sombra)}
-  #selmover .tjmvbtn:hover,#selmover .tjmvbtn:focus-visible{opacity:1;border-color:var(--cian);color:var(--cian)}
-  #selmover .tjmvtxt{white-space:normal;overflow-wrap:anywhere;text-align:center}
-  @media (min-width:700px){ #selmover{display:none} }
   /* {gracia} (facundo, 2026-09-20): el voto que dispara follow o unfollow se puede deshacer mientras corre el
      contador. es UNA franja angosta arriba de los botones, con el molde de caja de la 1922, en el amarillo de
      aviso: no compite con los tres votos grandes del pie ni tapa la foto. */
@@ -464,19 +449,26 @@
   #selgracia .bcaja{min-height:34px;padding:5px 14px;border-radius:17px;font-size:14px;line-height:1.1;
     border-color:var(--amarillo);color:var(--amarillo);width:auto;text-align:center}
   #selgracia .gracmas{color:var(--gris);font-size:13px;opacity:.85}
-  /* 2051 {votador} paso 4: la franja de la persona del celu. molde de `docs/componentes-web.md`: el arroba en cian
-     como el `@cuenta` de la tarjeta (verde con link, gris sin el), los datos en cian y una sola linea con ellipsis (el dato entero sigue en la
-     tarjeta, que scrollea). en compu no se pinta */
+  /* 2051 {votador} paso 4 + 2120 {persona} (facundo, 2026-09-26: "esos botones del medio no los quiero ver. ahi
+     deberia aparecer toda la info que tengas de la persona"): la franja del celu es la ficha entera. molde de
+     `docs/componentes-web.md`: el arroba en verde con link (gris sin el), los datos en cian, la bio en blanco
+     flojo, el historial en gris. NADA lleva ellipsis: los renglones envuelven y la caja scrollea sola con un tope
+     de alto, asi los votos grandes siguen a la vista. en compu no se pinta */
   #selficha{display:none}
   #selficha.oculta{display:none!important}
-  #selficha .tjfila{display:flex;align-items:center;gap:6px;min-width:0}
-  #selficha .tjfcta{color:var(--verde);font-size:var(--texto-max);text-decoration:none;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto}
+  #selficha .tjfila{display:flex;align-items:center;gap:6px;min-width:0;flex-wrap:wrap}
+  #selficha .tjfcta{color:var(--verde);font-size:var(--texto-max);text-decoration:none;overflow-wrap:anywhere;flex:0 1 auto}
   #selficha span.tjfcta{color:var(--gris)}   /* 1515: sin link (cuenta sin url) no se pinta como link */
-  #selficha .tjfnom{color:var(--blanco);opacity:.85;font-size:var(--texto-max);
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-  #selficha .tjfdatos{color:var(--cian);font-size:var(--texto-max);line-height:1.15;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #selficha .tjfnom{color:var(--blanco);opacity:.85;font-size:var(--texto-max);overflow-wrap:anywhere;min-width:0}
+  #selficha .tjfchips{display:flex;flex-wrap:wrap;gap:5px}
+  #selficha .tjfchip{padding:1px 7px;border:1px solid var(--linea);border-radius:999px;color:var(--gris);font-size:13px}
+  #selficha .tjfdatos{color:var(--cian);font-size:var(--texto-max);line-height:1.2;overflow-wrap:anywhere}
+  #selficha .tjfdet,#selficha .tjfmot{color:var(--gris);font-size:14px;overflow-wrap:anywhere}
+  #selficha .tjfbio{color:var(--blanco);opacity:.85;font-size:14px;line-height:1.25;white-space:pre-wrap;overflow-wrap:anywhere}
+  #selficha .tjfsuper{color:var(--amarillo);font-size:14px}
+  #selficha .tjfsupmot{color:var(--gris);font-size:13px;overflow-wrap:anywhere}
+  #selficha .tjfdesde{color:var(--gris);font-size:13px}
+  #selficha .tjfhist{color:var(--gris);font-size:13px;opacity:.8;overflow-wrap:anywhere}
   #selacciones{display:flex;flex-wrap:wrap;gap:6px}
   #selacciones.oculta,#selmodal #seltxt.oculta{display:none!important}
   /* 1922 {vistatinder}: en el `home` de la vista no hay tarjeta que deshacer ni texto que enviar */
@@ -547,15 +539,14 @@
     #selmodal.pantalla .selpie{order:7}
     #selmodal.pantalla #selextras{order:8;flex:0 0 auto;max-width:none}
     /* 2051 {votador} paso 4 (facundo, 2026-09-25: "en mobile de `super` no se ve el arroba: poner info de la
-       persona donde estaban esos botones chicos"): la franja con el arroba y los datos ocupa EL LUGAR de esos
-       chicos, justo arriba de los votos grandes, y no scrollea con la tarjeta: la foto al 100% del ancho
-       ({fotoancha}) deja los datos abajo del pliegue y facundo votaba sin saber a quien */
-    #selmodal.pantalla #selficha{order:8;flex:0 0 auto;max-width:none;display:flex;flex-direction:column;gap:2px;
-      padding:2px 10px 4px 10px;box-sizing:border-box}
+       persona donde estaban esos botones chicos") + 2120 {persona} (2026-09-26: "esos botones del medio no los
+       quiero ver. ahi deberia aparecer toda la info que tengas de la persona"): la ficha entera ocupa EL LUGAR del
+       cuadro de mudanza (`order:5`, entre la tarjeta y el pie), no scrollea con la tarjeta, y como es larga tiene
+       su propio tope de alto con scroll: los votos grandes nunca se van de la pantalla */
+    #selmodal.pantalla #selficha{order:5;flex:0 0 auto;max-width:none;display:flex;flex-direction:column;gap:3px;
+      padding:4px 10px 6px 10px;box-sizing:border-box;max-height:34vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+      overscroll-behavior-y:contain}
     #selmodal.pantalla #selgracia{order:6;flex:0 0 auto;max-width:none}   /* {gracia}: arriba del pie */
-    /* {cambios} paso 3: el cuadro de mudanza queda ARRIBA de todo eso: es la accion de segunda mano, los tres
-       grandes siguen siendo lo ultimo que toca el pulgar */
-    #selmodal.pantalla #selmover{order:5;flex:0 0 auto;max-width:none}
   }
   @media (min-width:700px){
     #selmodal.pantalla #seltarjeta{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr);gap:12px}
@@ -731,15 +722,6 @@
   #lisficha .fictraza{color:var(--gris);font-size:14px;word-break:break-word}
   #lisficha .fictrazatit{color:var(--cian)}
   #lisficha .fichist{color:var(--gris);font-size:14px;opacity:.8;word-break:break-word}
-  /* {cambios} paso 3: el mismo cuadro, en la cartita de una persona. dos columnas, hasta 6, arriba de las acciones */
-  #lisficha .ficmover{margin-top:6px}
-  #lisficha .ficmovtit{font-size:12px;opacity:.6;margin-bottom:4px}
-  #lisficha .ficmovg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-  #lisficha .ficmovg .bcaja{width:100%;box-sizing:border-box;min-height:40px;display:flex;align-items:center;
-    justify-content:center;text-align:center}
-  /* facundo pidio el cuadro "en el celu": arriba de 700 px la cartita queda como estaba (las mismas mudanzas
-     siguen estando abajo, en la lista de acciones, con su caja `dale`) */
-  @media (min-width:700px){ #lisficha .ficmover{display:none} }
   #lisficha .ficacc{display:flex;flex-direction:column;gap:6px;margin-top:4px}
   #lisficha .ficacc .bcaja{width:100%;box-sizing:border-box;text-decoration:none;display:flex;align-items:center}
   #lisficha .ficacc .bcaja.toca{border-color:var(--amarillo,#d8b25a);color:var(--amarillo,#d8b25a)}
