@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.475">
-<link rel="manifest" href="manifest.json?v=4.475">
+<meta name="agente-web-version" content="4.476">
+<link rel="manifest" href="manifest.json?v=4.476">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.475">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.476">
 </head>
 <body>
 
@@ -4126,8 +4126,8 @@ function cargarChatTema(tema){
       var n = ((chatIndex || {})[t] || {}).n || 0;
       if(n && !chat404[t] && t === temaActivo()){   // la linea se pinta en la pestaña activa: solo la de ella
         chat404[t] = true;
-        sistema("no encuentro el historial de `" + t + "` (" + arch + " no está en el buzón): " +
-                "el panel queda vacío hasta que el server lo publique.", "error");
+        notiLocal("fetch-chat", "no encuentro el historial de `" + t + "` (" + arch + " no está en el buzón): " +
+                  "el panel queda vacío hasta que el server lo publique.", t);   // 2102: a la campana, no al chat
       }
       return 0;   // tema sin charla todavia
     }
@@ -4177,8 +4177,10 @@ function cargarChatTemaSuave(t){
     var m = (e && e.message) || "?";
     if(!chatFalla[t]){
       chatFalla[t] = m;
+      // 2102 {resultado}: un fetch fallido de OTRA pestaña nunca escribe en la charla de la abierta ni en su
+      // jsonl ({tira}): va a la campana, y los repetidos en una sola fila ({campana})
       if(m !== "401" && m !== "freno")
-        sistema("no pude bajar la charla de `" + t + "` (" + m + "): las otras pestañas siguen andando.", "error");
+        notiLocal("fetch-chat", "no pude bajar la charla de `" + t + "` (" + m + "): las otras pestañas siguen andando.", t);
     }
     return 0;
   });
@@ -4188,7 +4190,7 @@ function cargarChat(){
     if(!chatFalla[CHAT_INDEX]){
       chatFalla[CHAT_INDEX] = true;
       var m = (e && e.message) || "?";
-      if(m !== "401" && m !== "freno") sistema("no pude bajar el índice del chat (" + m + ").", "error");
+      if(m !== "401" && m !== "freno") notiLocal("fetch-chat", "no pude bajar el índice del chat (" + m + ").", null);
     }
     return chatIndex || {};
   }).then(function(){
@@ -11374,16 +11376,37 @@ function recibirLeidos(rem){
 }
 function marcarLeidos(ids){
   var ahora = Date.now(), cambio = false;
-  (ids || []).forEach(function(i){ if(i && !avLeidos[i]){ avLeidos[i] = ahora; cambio = true; } });
+  (ids || []).forEach(function(i){
+    if(i && String(i).indexOf("local-") === 0){   // 2102: un aviso del board se cierra sacandolo, no viaja al server
+      var k = notisLocales.findIndex(function(n){ return n.id === i; });
+      if(k >= 0){ notisLocales.splice(k, 1); cambio = true; }
+      return;
+    }
+    if(i && !avLeidos[i]){ avLeidos[i] = ahora; cambio = true; }
+  });
   if(!cambio) return false;
   guardarCache();
   publicarTabs(true);
   pintarAvisos();
   return true;
 }
+// 2102 {resultado}: avisos que nacen en el board (un fetch de la charla de otra pestaña que fallo) viven aca,
+// solo en memoria: nunca en el chat, nunca en un jsonl, nunca en `avisos.md`. entran a la campana como los del
+// server, con `familia` para que los repetidos sean UNA fila (`· N`), y cerrarlos los saca de la lista.
+var notisLocales = [], notiLocalN = 0;
+function notiLocal(familia, texto, tema, nivel){
+  var d = new Date(), f = d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()) + " " +
+          pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+  var n = {id: "local-" + familia + "-" + (++notiLocalN), ts: Math.floor(d.getTime() / 1000), fecha: f,
+           texto: String(texto || ""), nivel: nivel || "amarillo", clase: "accion", familia: familia || "",
+           tema: tema && esTema(tema) ? normTema(tema) : "tools", local: true};
+  notisLocales.push(n);
+  pintarAvisos();
+  return n.id;
+}
 function notisNoLeidas(){
   var ns = ((widDatos || {}).notificaciones);
-  if(!Array.isArray(ns)) return [];
+  ns = (Array.isArray(ns) ? ns : []).concat(notisLocales);
   return ns.filter(function(n){ return n && n.id && !avLeidos[n.id]; })
            .sort(function(a, b){ return (+b.ts || 0) - (+a.ts || 0); });
 }
@@ -13869,6 +13892,10 @@ function medirCentro(b){
 }
 
 window.__agente = {
+  // 2102 {resultado}: los avisos que nacen en el board van a la campana, no al chat (`prueba_web_falla_campana`)
+  notiLocal: notiLocal, notisNoLeidas: notisNoLeidas, chatFalla: function(){ return chatFalla; },
+  notisLocales: function(){ return notisLocales.slice(); }, avLeidos: function(){ return avLeidos; },
+  cargarChatTemaSuave: cargarChatTemaSuave, msgs: function(){ return msgs.slice(); },
   // 1676 {vista}: la vista `docs` (`prueba_docs_vista`)
   docsPintar: docsPintar, docsCargarIndice: docsCargarIndice, docsAbrir: docsAbrir, docsCerrarDoc: docsCerrarDoc,
   // 2190 {vista}: la vista `claves` vive en el modulo; el shell solo la abre y deja mirar su estado (`prueba_web_claves`)
