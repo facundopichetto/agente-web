@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.483">
-<link rel="manifest" href="manifest.json?v=4.483">
+<meta name="agente-web-version" content="4.484">
+<link rel="manifest" href="manifest.json?v=4.484">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.483">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.484">
 </head>
 <body>
 
@@ -5349,6 +5349,30 @@ function selFallo(col){ var t = selFallos[col]; return !!t && Date.now() - t < S
 // se mide por la RESPUESTA, nunca por el nombre de la via: por tailscale contesta el server de casa y anda igual.
 var selSinFilas = {};
 function selSinFila(col){ return !!selSinFilas[col]; }
+// 2174 {cuentas} paso 1: el pie de cada lista, guardado POR LISTA (y en el equipo, asi sobrevive a un reload).
+// la segunda causa del `follow` que desaparecia: al abrir una lista con la fila ya cacheada, `sel.actual` sale de
+// lo ultimo que dejo el poll del PROCESO (`sel.abiertas`), que viene con el pie de 3 botones; el pie de la lista
+// recien llegaba con la respuesta siguiente. ahora la apertura usa el pie que esa lista ya mostro.
+function pieClave(col, lista){ return (lista || "") + "|" + col; }
+function pieGuardar(col, lista, j){
+  if(!j || !j.botones || !j.botones.length) return;
+  var m = selLeer("pie", {});
+  m[pieClave(col, lista)] = {botones: j.botones, extras: j.extras || [], mover: j.mover || null};
+  selEscribir("pie", m);
+}
+function pieTraer(col, lista){ return selLeer("pie", {})[pieClave(col, lista)] || null; }
+// 2174 {cuentas} paso 1: que lista esta abierta para esta coleccion. con el votador a la vista es `sel.filtro`;
+// si ya se cerro, la ultima que sirvio esa fila (`sel.filaDe`), asi los votos que se suben despues viajan igual
+// con su lista. `""`/null = el proceso entero, que es una respuesta valida solo para el proceso entero.
+function selListaDe(col){
+  if(sel.actual && sel.actual.coleccion === col) return sel.filtro || null;
+  return sel.filaDe[col] || null;
+}
+// si esta respuesta es de la lista que hoy esta abierta. una respuesta sin `lista` es del PROCESO: solo sirve
+// cuando no hay ninguna lista abierta (un server viejo que no manda la clave se trata igual, y no pisa nada).
+function selMismaLista(j){
+  return String((j && j.lista) || "") === String(sel.filtro || "");
+}
 function selPedir(col, arranque){
   if(arranque){
     var f = selLeer("fila", {});
@@ -5385,9 +5409,14 @@ function filaAplicar(col, j){
   // del proceso (`abiertas`, que viene sin lista) y una lista mostraba el pie de otra: `activate` decia `dejar
   // donde está` en vez de `dejar en activate` y `super candidatas` pintaba tres botones en vez de cuatro.
   var act = sel.actual, cambio = false;
-  if(act && act.coleccion === col && act !== j){
+  // 2174 {cuentas} paso 1: el board NUNCA adopta un pie que no diga de que lista es. antes alcanzaba con que la
+  // respuesta fuera de la misma coleccion, y por ahi entraban las tres causas del `follow` que desaparecia en
+  // `super candidatas`: la respuesta del POST de `enviar` (que iba sin lista), el poll que salio con OTRA lista
+  // abierta y llego tarde (race), y cualquier respuesta del proceso entero. las tres traen el pie de 3 botones.
+  pieGuardar(col, j.lista || null, j);   // el pie se guarda bajo la lista que DICE la respuesta, venga cuando venga
+  if(act && act.coleccion === col && act !== j && selMismaLista(j)){
     ["botones", "extras", "mover"].forEach(function(k){
-      if(!j[k]) return;
+      if(!j[k] || !j[k].length) return;   // y un pie vacio tampoco pisa a uno que ya esta pintado
       if(JSON.stringify(act[k] || null) !== JSON.stringify(j[k])){ act[k] = j[k]; cambio = true; }
     });
   }
@@ -5811,6 +5840,14 @@ function tjFilaFiltrada(e, filtro){
 function tjAbrir(e){
   lisXVer(true);   // {home} paso 5: el votador siempre tiene su `✕` (2002 {back}: cierra sin enviar)
   e = Object.assign({}, e, {candidatas: tjFilaFiltrada(e, sel.filtro)});
+  // 2174 {cuentas} paso 1: si lo que se abre trae el pie de OTRA lista (o el del proceso entero, que es lo que
+  // deja el poll en `sel.abiertas`), se usa el que esa lista ya mostro. asi `super candidatas` abre siempre con
+  // sus cuatro grandes, tambien cuando la fila salio de la cache y todavia no volvio ningun pedido con `?lista=`.
+  if(String(e.lista || "") !== String(sel.filtro || "")){
+    var pi = pieTraer(e.coleccion, sel.filtro);
+    if(pi){ e.botones = pi.botones; e.extras = pi.extras; e.mover = pi.mover; e.lista = sel.filtro || null; }
+    else { delete e.botones; delete e.extras; delete e.mover; }
+  }
   if(!e.candidatas.length) return false;
   if(e.continua) e.mas = typeof e.pendientes === "number" && e.pendientes > e.candidatas.length;
   sel.tjUlt = 0; sel.tjAtrasUlt = 0;   // 1567: el freno del doble toque es de esta apertura (si no, se come el primer toque de la siguiente)
@@ -5854,6 +5891,33 @@ function tjPantalla(){ return $("selmodal").classList.contains("pantalla"); }
 // 1524 (2026-09-15 16:20): en el iphone no bajo ninguna y el `catch` avanzaba en cadena hasta mandar `fin`. ahora
 // se reintenta (probando la lan de nuevo) y si igual no baja la tarjeta SE SACA de la tanda, sin votar (eso solo lo
 // hace la foto PRINCIPAL: 1580 {fotoancha}, una foto de mas abajo del carrusel que no baja no saca a nadie).
+// 2174 {cuentas} paso 2: la foto de una tarjeta que se abrio sin ella. una sola vez por persona y por carga
+// (`tjFotoPedida`), y lo que contesta el server se guarda para pintarlo (`tjFotoMotivo`): o la foto entra en la
+// tarjeta y se repinta, o queda el motivo en castellano (la lectura frenada, la cuenta sin foto de perfil).
+var tjFotoPedida = {}, tjFotoMotivo = {};
+function tjPedirFoto(c){
+  if(!c || !c.id || tjFotoPedida[c.id]) return false;
+  tjFotoPedida[c.id] = true;
+  votLan().then(function(base){
+    if(!base) throw new Error("sin lan");
+    return lanFetch(base + "/ig/foto/" + encodeURIComponent(c.id), {method: "GET", cache: "no-store",
+      headers: {"authorization": "Bearer " + token}})
+      .then(function(r){ if(!r || !r.ok) throw new Error("http " + (r && r.status)); return r.json(); });
+  }).then(function(j){
+    if(!j) return;
+    if(j.ok && j.ruta){
+      c.fotos = [j.ruta]; c.foto_pendiente = false;
+      delete tjFotoMotivo[c.id];
+    } else if(j.motivo){ tjFotoMotivo[c.id] = j.motivo; }
+    var a = tjActual();
+    if(a && String(a.id) === String(c.id)) tjPintar();
+  }).catch(function(){
+    tjFotoMotivo[c.id] = "no pude pedir la foto: sin conexión con el server";
+    var a = tjActual();
+    if(a && String(a.id) === String(c.id)) tjPintar();
+  });
+  return true;
+}
 function tjBajarFoto(id, foto, pp, principal){
   var intento = 0;
   // 1729 {votador}: la bajada es de ESTA apertura. mirar solo el id no alcanza: entrar al votador por el chip de
@@ -5998,8 +6062,14 @@ function tjPintar(){
   // esta al frente de la cola (`ig_embudo.alimentar`): el cartel se va solo en cuanto la foto llega
   if(c.foto_pendiente){
     var fp = document.createElement("div"); fp.className = "tjfotopend";
-    fp.textContent = "bajando la foto…";
+    // 2174 {cuentas} paso 2 (facundo, 2026-09-27: "no entiendo como no puedas capturarla [...] en el momento que
+    // abro la tarjeta"): la tarjeta sin foto la PIDE ahora mismo (`GET /ig/foto/<pk>`, el server la baja del cdn
+    // con la url guardada y solo le lee el perfil si hace falta y la lectura no esta frenada). mientras tanto
+    // dice que la esta pidiendo, y lo que vuelve manda: con la foto se repinta, y si instagram freno las lecturas
+    // el cartel lo DICE con la hora en vez de prometer una bajada que no esta pasando.
+    fp.textContent = tjFotoMotivo[c.id] || "pidiendo la foto…";
     info.appendChild(fp);
+    tjPedirFoto(c);
   }
   tjPrecargar(e, sel.tj);   // 1772: las dos tarjetas siguientes bajan mientras vota esta
   var nom = document.createElement("div"); nom.className = "tjnom"; nom.textContent = c.titulo || c.id;
@@ -6416,13 +6486,21 @@ function selSubir(){
   if(!pend.length) return Promise.resolve(true);
   var cols = [];
   pend.forEach(function(p){ if(cols.indexOf(p.col) < 0) cols.push(p.col); });
+  // 2174 {cuentas} paso 1: la lista de cada coleccion se mira AHORA. el `enviar` cierra el votador antes de que la
+  // respuesta vuelva, asi que preguntarla despues daba `null` y la respuesta volvia con el pie del proceso.
+  var lisPost = {};
+  cols.forEach(function(c){ lisPost[c] = selListaDe(c); });
   sel.subiendo = votLan().then(function(base){
     return cols.reduce(function(pr, col){
       return pr.then(function(){
         var regs = pend.filter(function(p){ return p.col === col; }).map(function(p){ return p.r; });
-        var viaLan = !base ? Promise.reject(new Error("sin lan")) : lanFetch(selUrl(base, col), {method: "POST", cache: "no-store",
+        // 2174 {cuentas} paso 1: el POST viaja SIEMPRE con la lista de la tirada. la respuesta del server es el
+        // estado de la fila y el board lo adopta: sin la lista volvia el pie del PROCESO (3 botones) y en
+        // `super candidatas` el cuarto grande (`follow`) desaparecia hasta el poll siguiente.
+        var liPost = lisPost[col] || null;
+        var viaLan = !base ? Promise.reject(new Error("sin lan")) : lanFetch(selUrl(base, col) + (liPost ? "?lista=" + encodeURIComponent(liPost) : ""), {method: "POST", cache: "no-store",
           headers: {"authorization": "Bearer " + token, "content-type": "application/json"},
-          body: JSON.stringify({registros: regs})
+          body: JSON.stringify({registros: regs, lista: liPost})
         }).then(function(r){
           if(!r || (!r.ok && r.status !== 400 && r.status !== 404)) throw new Error("http " + (r && r.status));
           if(r.ok && typeof r.json === "function") return r.json().then(function(j){ selTrasSubir(col, j); }, function(){});
