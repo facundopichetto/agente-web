@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.482">
-<link rel="manifest" href="manifest.json?v=4.482">
+<meta name="agente-web-version" content="4.483">
+<link rel="manifest" href="manifest.json?v=4.483">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.482">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.483">
 </head>
 <body>
 
@@ -209,6 +209,11 @@
          una lista grande dice por que estan ahi y cuantos son, una chica lista a su gente con fotito, lo que ya se
          sabe y UNA frase de accion. la web no calcula ni redacta nada -->
     <div id="sellistas" class="oculta"></div>
+    <!-- 2170 {foto-2} paso 1 (facundo, 2026-09-27: "saco el corte de 24 h y `following not followers` muestra igual,
+         avisando que el dato puede estar viejo"): el renglon chico que va ARRIBA de las tarjetas cuando la lista se
+         calcula con una foto de seguidos vieja. lo redacta el server (`ig_embudo.foto_seguidos`, con la fecha y la
+         hora de la foto en 12 h): la web no escribe ninguna palabra ni toca un voto -->
+    <div id="selnota" class="oculta" aria-live="polite"></div>
     <div id="seltarjeta" class="oculta"></div>
     <!-- 1801: los botones los arma `tjBotones` segun el proceso (`TJ_PROCS`). candidatas: `↓` baja (hoy a ignoradas)
          · `-_-` maybe · `↑` sube (hoy a interesan). el back `←` sigue arriba, fuera de esta fila (1657) -->
@@ -4977,6 +4982,7 @@ function selModoLista(lista){
   $("seltarjeta").classList.toggle("oculta", lista);
   $("selacciones").classList.toggle("oculta", lista);
   $("selextras").classList.toggle("oculta", lista);   // 2247: los chicos son de la tarjeta, no de la lista de checkboxes
+  if(lista) $("selnota").classList.add("oculta");   // 2170: la nota de la foto vieja es del votador de una lista
   $("selback").classList.toggle("oculta", lista);   // 1657: el back es de las tarjetas, no de la lista de checkboxes
   $("seltxt").classList.toggle("oculta", !lista);   // 1561: en tarjetas no hay campo de texto
   var b = document.querySelector("#selmodal .selbtns");
@@ -5874,6 +5880,20 @@ function tjBajarFoto(id, foto, pp, principal){
   }
   bajar();
 }
+// 2170 {foto-2} paso 1: el renglon chico de arriba de las tarjetas. solo aparece cuando la lista que se esta
+// votando se calcula con una foto de seguidos vieja (`foto.vieja` de su fila en la home) y el texto es el que
+// redacta el server (`aviso.motivo`, con la fecha y hora de la foto en 12 h). ningun otro aviso se pinta aca: los
+// demas motivos son de una lista VACIA y esos se leen en su vista (`lisUnaPintar`).
+function tjNota(){
+  var n = $("selnota"), cl = sel.filtro, txt = "";
+  if(cl){
+    var d = lisCacheLeer();
+    var f = (((movVista(d) || {}).listas) || []).filter(function(x){ return x.clave === cl; })[0];
+    if(f && f.foto && f.foto.vieja && f.aviso && f.aviso.motivo) txt = f.aviso.motivo;
+  }
+  n.textContent = txt;
+  n.classList.toggle("oculta", !txt);
+}
 function tjPintar(){
   var e = sel.actual, c = tjActual(), t = $("seltarjeta");
   t.textContent = "";
@@ -5889,6 +5909,7 @@ function tjPintar(){
   $("selacciones").classList.toggle("oculta", !c);
   $("selextras").classList.toggle("oculta", !c || !tjExtrasSpec(e).length);
   $("selficha").classList.toggle("oculta", !c);   // 2051 paso 4 + 2120 {persona}: la ficha entera (el css la muestra solo en el celu)
+  tjNota();   // 2170 {foto-2} paso 1: el renglon chico de la foto vieja, arriba de las tarjetas
   gracPintar();   // {gracia}: el `deshacer` con su contador vive mientras la ventana corre
   [].forEach.call(document.querySelectorAll("#selacciones .tjbtn"), function(b){
     b.style.visibility = c ? "" : "hidden";
@@ -6582,6 +6603,7 @@ function lisPoner(cual, fresco){
   $("seltarjeta").classList.add("oculta");
   $("selacciones").classList.add("oculta"); $("selextras").classList.add("oculta");   // 2247
   $("selficha").classList.add("oculta");   // 2051 paso 4
+  $("selnota").classList.add("oculta");    // 2170 {foto-2}: la nota vive en el votador
   $("selback").classList.add("oculta");
   $("seltxt").classList.add("oculta");
   var b = document.querySelector("#selmodal .selbtns");
@@ -6835,6 +6857,7 @@ function lisModoUna(){
   $("seltarjeta").classList.add("oculta");
   $("selacciones").classList.add("oculta"); $("selextras").classList.add("oculta");   // 2247
   $("selficha").classList.add("oculta");   // 2051 paso 4
+  $("selnota").classList.add("oculta");    // 2170 {foto-2}: la nota vive en el votador
   $("seltxt").classList.add("oculta");
   var b = document.querySelector("#selmodal .selbtns");
   if(b) b.classList.add("oculta");
@@ -7445,8 +7468,26 @@ function tinderAbrirCol(col, desde, falla, lista, titulo){
   // 2026 {vista}: y `sinvia` = contesto un server que no tiene las listas de instagram (la nube). solo se mira con
   // una lista puesta: sin `lista` esto no es el votador del instatinder (`animaciones`) y ahi `checkbox` es lo normal
   var porque = function(){
+    // 2170 {foto-2} paso 2: si la home ya dijo que esa lista tiene CERO, el motivo es que no hay nadie, aunque el
+    // pedido fresco de su fila no haya vuelto: decir "no se pudo leer la lista" cuando el server ya contesto que
+    // esta vacia es contar otra cosa. (desde la 2325 ese pedido se hace siempre, y con eso el caso 2 de la 1605
+    // empezo a leerse como un error de lectura.)
+    var d0 = lisCacheLeer();
+    var f0 = lista ? (((movVista(d0) || {}).listas) || []).filter(function(x){ return x.clave === lista; })[0] : null;
+    var cero = !!f0 && !f0.n;
     lis.piso = {clave: lista || null,
-                motivo: selFallo(col) ? "error" : (lista && selSinFila(col) ? "sinvia" : "vacia")};
+                motivo: (selFallo(col) && !cero) ? "error" : (lista && selSinFila(col) ? "sinvia" : "vacia")};
+  };
+  // 2170 {foto-2} paso 2 (facundo, 2026-09-27: "una lista vacia abre diciendo el motivo"): el plan B corria solo
+  // con `!sel.actual`, asi que si quedaba un votador abierto de OTRA lista, la lista vacia no abria nada y en
+  // pantalla seguian el pie y las tarjetas de la lista anterior: justo lo que no se puede ver. ahora lo que queda
+  // en pantalla solo cuenta si es el votador de ESTA lista (`sel.filtro` ya es `lista`): un votador de otra lista
+  // no vale como "algo a la vista" y el toque cae a la vista de la lista, que dice el motivo. no se cierra la
+  // votacion de al lado a mano (eso mandaria los votos locales): `lisEntrar` -> `lisModoUna` la tapa entera.
+  var quedaAlgo = function(){
+    if(!sel.actual) return false;
+    if(!lista) return true;   // lo que no es una lista del instatinder (animaciones, un push) sigue como antes
+    return sel.actual.coleccion === col && tjFilaFiltrada(sel.actual, lista).length > 0;
   };
   // 2095 paso 5: de que lista es la fila que se va a ver. lo pone el toque en la lista y lo respetan `tjAbrir` (la
   // apertura) y `filaSumar` (todo lo que el server manda despues): en el votador de `following` no entra nunca
@@ -7473,7 +7514,7 @@ function tinderAbrirCol(col, desde, falla, lista, titulo){
       // 1605 paso 2: el plan B ya no pide `vistaEs("tinder")`. pedirlo era lo que lo dejaba sin correr justo
       // cuando mas hacia falta (el guard acababa de sacar de la vista); ademas `lisEntrar` / `lisCartita` /
       // `lisVolver` vuelven a poner la vista, asi que el peor caso es volver a entrar, nunca quedarse afuera.
-      if(!selAbrirCol(col) && !sel.actual){ atras(); porque(); (falla || lisVolver)(); }
+      if(!selAbrirCol(col) && !quedaAlgo()){ atras(); porque(); (falla || lisVolver)(); }
       else tjIr(desde);
     });
     return true;
@@ -7488,7 +7529,7 @@ function tinderAbrirCol(col, desde, falla, lista, titulo){
   // 2095 paso 5: si la fila de esa lista no tiene a nadie cargado todavia, se vuelve a la LISTA (de donde salio el
   // toque), nunca a otro proceso (eso era el bug) ni a la home. 2113: si el toque trajo su plan B, ese manda
   // 1605 paso 2: sin `vistaEs("tinder")` (ver arriba): el toque en una lista SIEMPRE termina en algo a la vista
-  if(!ok && !sel.actual){ atras(); porque(); (falla || lisVolver)(); }
+  if(!ok && !quedaAlgo()){ atras(); porque(); (falla || lisVolver)(); }
   else if(ok){ lis.piso = null; tjIr(desde); selFresco(col); }   // 2143: lo cacheado pinto el primer frame, el server manda
   return ok;
 }

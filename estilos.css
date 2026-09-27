@@ -363,6 +363,10 @@
   #seltarjeta{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;
     display:flex;flex-direction:column;gap:8px}   /* 2286 {celu}: el `contain` es el mismo de `#sellistas` */
   #seltarjeta.oculta,#sellista.oculta{display:none!important}
+  /* 2170 {foto-2} paso 1: el renglon chico de arriba de las tarjetas (la foto de seguidos vieja). amarillo y chico,
+     como la `lisnota` de las listas, y nunca le come alto a la tarjeta */
+  #selnota{flex:0 0 auto;color:var(--amarillo);font-size:13px;opacity:.85;line-height:1.25;word-break:break-word}
+  #selnota.oculta{display:none!important}
   /* 2113 {listavotador}: el swipe del votador. mientras el dedo la lleva la tarjeta va sin transicion (pegada al
      dedo) y al soltar vuelve sola a su lugar: la clase `tjsw` es "agarrada", sacarla es lo que anima la vuelta */
   #seltarjeta{transition:transform .18s ease;touch-action:pan-y}
