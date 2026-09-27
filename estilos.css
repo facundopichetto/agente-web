@@ -237,6 +237,11 @@
      sube a una persona (le manda el follow), y se pinta como glifo, nunca como caja verde llena */
   .bglifo.b-follow{color:#4ad07d;color:var(--verde)}
   .bglifo.b-igual{color:#e8e8e8;color:var(--blanco)}
+  /* 2182 {foto}: la tanda de etiquetado de genero. los dos que deciden (venus y marte) en blanco, como el que no
+     mueve a nadie en las demas listas: ninguna de las dos etiquetas es mejor que la otra, asi que ninguna va en
+     verde ni en rojo. el `?` de `no sé`, que no decide nada, queda en gris. */
+  .bglifo.b-mujer,.bglifo.b-varon{color:#e8e8e8;color:var(--blanco)}
+  .bglifo.b-nose{color:#999;color:var(--gris)}
   .bglifo.b-atras{color:#e8e8e8;color:var(--blanco)}
   .bglifo.b-atras.apagado{color:#666;color:var(--gris)}
   /* 2002 {back} (facundo, 2026-09-18): "1- hacelo boton grande [...] 2- hacelo mucho mas grande el boton de back, es
