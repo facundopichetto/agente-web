@@ -17,6 +17,7 @@
     if(p.error) return caja("seguidores", "", vacio(p.error), false, "seguidores");
     var extra = '<span class="b">' + (p.seguidores || 0) + '</span> <span class="g">te siguen ·</span> ' +
                 '<span class="b">' + (p.seguidos || 0) + '</span> <span class="g">seguís</span>' +
+                (p.dato_hora ? ' <span class="g">· ' + esc(p.dato_hora) + "</span>" : "") +   // 2161: de cuando es el numero (lo arma el server, 12 h)
                 (p.contador_viejo ? ' <span class="a">·</span>' : "");
     var filas = [], quien = function(u){
       return "@" + esc(u.usuario) + (u.nombre ? ' <span class="g">' + esc(u.nombre) + "</span>" : "");
@@ -27,8 +28,9 @@
     var pie = "no te siguen <b>" + (p.no_me_siguen === null || p.no_me_siguen === undefined ? "?" : p.no_me_siguen) + "</b>";
     if((p.dejaste || []).length || (p.seguiste || []).length)
       pie += ' <span class="g">· vos: -' + (p.dejaste || []).length + " +" + (p.seguiste || []).length + "</span>";
-    if(p.fecha) pie += ' <span class="g">· foto ' + esc(p.fecha.slice(5)) + "</span>";
+    if(p.foto_hora || p.fecha) pie += ' <span class="g">· foto ' + esc(p.foto_hora || p.fecha.slice(5)) + "</span>";   // 2161: la fecha de la foto de las listas
     filas.push(pie);
+    if(p.freno) filas.push('<span class="a">' + esc(p.freno) + "</span>");   // 2161: "instagram frena la lectura desde ..."
     if(p.problema) filas.push('<span class="a">' + esc(p.problema) + "</span>");
     return caja("seguidores", extra, B.limFilas("seguidores", filas).join("\n"), false, "seguidores");
   }
