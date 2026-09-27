@@ -2322,6 +2322,9 @@
 .inv .invcant{min-width:0;overflow:hidden;text-overflow:ellipsis}
 .inv .invval{text-align:right}
 .inv .invspark{display:block;width:100%;height:36px;margin-top:2px;overflow:visible}
+/* 2204: la cartera es de verdad pero la ultima lectura de ibkr fallo. la linea va abajo de la sparkline,
+   chica y sin grito: los numeros siguen siendo los buenos, solo estan sin refrescar. */
+.inv .invviejo{font-size:12px;opacity:.8;margin-top:2px;line-height:1.3}
 
 /* 2118 {barra}: en el celu (el mismo media query de siempre, `MQ_MOBILE` en el js) el menu de la hamburguesa ocupa la
    pantalla entera, arrancando arriba de todo (tapa la barra: el back grande y la `✕` son la salida, y `esc`), y el

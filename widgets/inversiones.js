@@ -5,7 +5,10 @@
 // modulo de widget (orden 1793): el shell lo carga con `import()` y, en `file://` (las pruebas), con un `<script>`;
 // por eso el archivo NO tiene `export` y del shell solo usa `window.__board`.
 // el dato es `~/.claudio/plata/inversiones.json` (el contrato esta en `recetas/inversiones.py`: lo escribe el
-// tracker de ibkr, hoy `mock: true`). llega por dos caminos: adentro de `widgets.json` (lan, y github de respaldo
+// tracker de ibkr, SOLO lectura). el `estado` del json manda (2204): con `ok` o `viejo` hay cartera y se pintan los
+// numeros (`viejo` = son de verdad pero la ultima lectura de ibkr fallo, y se avisa); con `en_revision`,
+// `sin_token` o `error` **no hay ni un numero** y la caja dice en una linea por que, sin inventar nada. ya no hay
+// modo mock. llega por dos caminos: adentro de `widgets.json` (lan, y github de respaldo
 // sin lan) y, por la lan, `inversiones.json` cada 60 s con etag, que repinta SOLO esta caja (el patron de la 1849).
 // la web hace una sola cuenta: la resta de dos cierres del historial. todo lo demas viene en usd del json.
 (function(){
@@ -32,6 +35,13 @@
   function historial(d){
     return (d.historial || []).filter(function(x){ return x && isFinite(Number(x.valor)); })
                               .map(function(x){ return Number(x.valor); });
+  }
+  // con cartera o sin cartera. un json sin `estado` es de antes de la 2204 (o el respaldo de github atrasado):
+  // ahi manda lo que traiga, para no tapar numeros buenos con un cartel.
+  var CON_DATOS = {ok: 1, viejo: 1};
+  function conDatos(d){
+    if(d.estado) return !!CON_DATOS[d.estado];
+    return !!(historial(d).length || (d.activos || []).length);
   }
 
   // ---------- la caja ----------
@@ -62,6 +72,11 @@
   function cajaInversiones(d){
     d = d || {};
     if(d.error) return caja("inversiones", "", vacio(d.error), false, "inversiones");
+    // la cuenta todavia no da plata: la linea del tracker tal cual, y ningun numero
+    if(!conDatos(d)){
+      return caja("inversiones", '<span class="g">ibkr</span>',
+                  vacio(d.detalle || "la cuenta de ibkr todavia no da datos"), false, "inversiones");
+    }
     var h = historial(d), acts = d.activos || [];
     if(h.length < 2 && !acts.length) return caja("inversiones", "", vacio("sin datos todavia"), false, "inversiones");
     var ayer = h.length >= 2 ? delta(h[h.length - 1], h[h.length - 2]) : {usd: 0, pct: 0};
@@ -73,8 +88,11 @@
       ' <span class="g">· vale</span> <span class="' + clase(vale - Number(d.total_invertido || 0)) + '">' + esc(usd(vale)) + "</span>" +
       (d.efectivo ? ' <span class="g">· efectivo ' + esc(usd(d.efectivo)) + "</span>" : "") + "</div>" +
       (acts.length ? '<div class="invact">' + acts.map(filaActivo).join("") + "</div>" : "") +
-      sparkline(h, clase(mes.usd)) + "</div>";
-    var ese = '<span class="g">usd</span> ' + (d.mock ? '<span class="g" title="datos inventados: el tracker de ibkr todavia no corrio">mock</span>' : "");
+      sparkline(h, clase(mes.usd)) +
+      (d.estado === "viejo" ? '<div class="invviejo g">' + esc(d.detalle || "la ultima lectura de ibkr fallo") +
+                              "</div>" : "") + "</div>";
+    var ese = '<span class="g">usd</span>' +
+      (d.estado === "viejo" ? ' <span class="r" title="' + esc(d.detalle || "") + '">sin refrescar</span>' : "");
     return caja("inversiones", ese, cuerpo, false, "inversiones");
   }
 
