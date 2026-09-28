@@ -1519,6 +1519,8 @@
      asi que lo unico propio es el boton de largar la cola, la ficha de una tarea y sus dos campos. las fuentes
      salen de `--texto-max` (14 px) y no hay ningun tamaño nuevo. */
   .madpie{margin:0 0 4px} .madtab .qnom{cursor:pointer;touch-action:manipulation}
+  /* 2302: el subtitulo de la segunda tabla (las que ya corrieron). mismo `--texto-max`, ningun tamaño nuevo */
+  .madsub{margin:8px 0 1px;font-size:var(--texto-max);opacity:.85}
   .madtxt{white-space:pre-wrap;color:var(--gris);margin:6px 0;max-height:30vh;overflow:auto}
   .madlbl{display:flex;flex-direction:column;gap:3px;margin-top:6px}
   .madlbl input,.madlbl textarea{background:#000;color:var(--texto);border:1px solid var(--linea);
