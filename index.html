@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.489">
-<link rel="manifest" href="manifest.json?v=4.489">
+<meta name="agente-web-version" content="4.490">
+<link rel="manifest" href="manifest.json?v=4.490">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.489">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.490">
 </head>
 <body>
 
@@ -904,7 +904,7 @@ var WSETS = {
                 {k: "falta_login", et: "avisar que fuente falta", tipo: "bool", def: true}],
   igcola:      [{k: "hechas", et: "mostrar las que ya salieron", tipo: "bool", def: true}],
   madrugada:   [{k: "filas", et: "cu\u00e1ntas filas", tipo: "opciones", def: 0, ops: [0, 3, 5, 10]}],
-  inversiones: [],
+  inversiones: [], standup: [],
   verificaciones: [], sombra: []
 };
 // 2144 {oportunidades}: widgets retirados del board. la clave puede seguir en el `tabs.json` del buzon
@@ -4164,7 +4164,35 @@ var etagChat = {};         // etag por archivo del buzon
 // 2265 {clon}: el `#` de un clon pasa a `~` en el nombre del archivo del buzon. un `#` crudo en una url
 // arranca el fragmento, asi que `chat/awtomic#2.json` se pediria como `chat/awtomic`. mismo mapeo que
 // `clasificar_tema.slug_web()` del lado del server, que es quien lo escribe.
-function archivoChat(tema){ return "chat/" + normTema(tema).replace(/\//g, "-").replace(/#/g, "~") + ".json"; }
+function archivoChat(tema){ return "chat/" + slugChat(tema) + ".json"; }
+function slugChat(tema){ return normTema(tema).replace(/\//g, "-").replace(/#/g, "~"); }
+// 2259 {redisenar} (facundo, 2026-09-28): la charla de un tema es una CARPETA append-only por dia
+// (`chat/<slug>/index.json` + `chat/<slug>/AAAA-MM-DD.json`), asi que un mensaje nuevo cambia UN pedazo y
+// el board se baja solo ese. antes cada mensaje reescribia el json entero del tema (763 KB en `tools`) y
+// el board lo volvia a bajar completo. `chat/<slug>.json` sigue leyendose de fallback mientras dure la
+// migracion. `chatPed[tema][dia] = {firma, filas}` es el cache de pedazos de esta sesion.
+var dirChat = function(tema){ return "chat/" + slugChat(tema); };
+var chatPed = {};          // tema -> {dia: {firma, filas}}
+var CHAT_PED_MSJ = 300;    // cuantos mensajes (de los mas nuevos) se bajan al abrir: los dias que hagan falta
+// los pedazos que hace falta bajar y el orden en que se juntan, mirando el cache por firma
+function pedazosFaltan(tema, index){
+  var have = chatPed[tema] || {}, ped = (index && index.pedazos) || [], falta = [], usar = [], n = 0;
+  for(var i = ped.length - 1; i >= 0; i--){
+    if(n >= CHAT_PED_MSJ) break;
+    var p = ped[i]; usar.push(p); n += p.n || 0;
+    if(!have[p.dia] || have[p.dia].firma !== p.firma) falta.push(p);
+  }
+  usar.reverse();
+  return {falta: falta, usar: usar};
+}
+// el reconstructor: los pedazos del cache, en orden de dia, en una sola charla (misma logica que
+// `buzon.juntar()` del lado del server)
+function juntarPedazos(tema, usar){
+  var have = chatPed[tema] || {}, filas = [];
+  usar.forEach(function(p){ var c = have[p.dia]; if(c) filas = filas.concat(c.filas || []); });
+  filas.sort(function(a, b){ return fecha(a.ts) - fecha(b.ts); });
+  return filas;
+}
 function crudo(ruta, etag){
   return api("GET", "/repos/" + REPO + "/contents/" + ruta, null, etag,
              "application/vnd.github.raw+json");
@@ -4228,7 +4256,39 @@ function recibirChat(tema, d){
 // "el archivo con la charla no esta". si el indice (`chat/index.json`) dice que ese tema TIENE intercambios
 // y su archivo igual da 404, el panel lo dice una vez, con el nombre del archivo que falta.
 var chat404 = {};
+// 2259 {redisenar}: primero el index de la carpeta (~200 B) y de ahi SOLO los pedazos que faltan. si la
+// carpeta todavia no esta (404 del index), cae al `chat/<slug>.json` de siempre (`cargarChatViejo`).
 function cargarChatTema(tema){
+  var t = normTema(tema), idx = dirChat(t) + "/index.json";
+  return crudo(idx, etagChat[idx]).then(function(r){
+    if(r.status === 304 && chatPed[t]) return (msgsHist[t] || []).length;
+    if(r.json) etagChat[idx] = r.etag;
+    var index = r.json || (chatIndexTema[t] || null);
+    if(!index || !index.pedazos || !index.pedazos.length) return cargarChatViejo(t);
+    chatIndexTema[t] = index;
+    var q = pedazosFaltan(t, index);
+    chatPed[t] = chatPed[t] || {};
+    return q.falta.reduce(function(prev, p){
+      return prev.then(function(){
+        return crudo(dirChat(t) + "/" + p.dia + ".json", null).then(function(rp){
+          if(rp.json) chatPed[t][p.dia] = {firma: p.firma, filas: (rp.json.filas || [])};
+        }).catch(function(e){ if(!/http 404/.test((e && e.message) || "")) throw e; });
+      });
+    }, Promise.resolve()).then(function(){
+      // los dias que ya no estan en el index (github se queda con los ultimos 20) no se tiran del cache:
+      // el board sigue mostrando lo que bajo antes, que es mas historial que el que quedo en el repo
+      delete chat404[t];
+      return recibirChat(t, {filas: juntarPedazos(t, q.usar)});
+    });
+  }).catch(function(e){
+    var m = (e && e.message) || "";
+    if(/http 404/.test(m)) return cargarChatViejo(t);
+    if(m === "401" || m === "freno") return 0;
+    throw e;
+  });
+}
+var chatIndexTema = {};    // tema -> el index de su carpeta, como lo publico el server
+function cargarChatViejo(tema){
   var arch = archivoChat(tema), t = normTema(tema);
   return crudo(arch, etagChat[arch]).then(function(r){
     if(r.status === 304) return (msgsHist[t] || []).length;
@@ -12021,7 +12081,7 @@ document.addEventListener("keydown", function(e){
 // de un widget ya migrado, se vuelve a cargar ese archivo y se repinta ESA caja (`repintarMod`), sin tocar el
 // chat, su scroll ni lo que este tipeado. si cambio el shell (o algo que no se sabe repintar), el reload de
 // siempre. un modulo no ve el adentro del shell: solo esto.
-var MODULOS = ["gasto", "agent", "sombra", "seguidores", "igcola", "claves", "madrugada", "inversiones"];   // widgets migrados, en `web/widgets/<clave>.js` (1832: `models` = clave `sombra`)
+var MODULOS = ["gasto", "agent", "sombra", "seguidores", "igcola", "claves", "madrugada", "inversiones", "standup"];   // widgets migrados, en `web/widgets/<clave>.js` (1832: `models` = clave `sombra`)
 var MOD_DATOS = {gasto: "gasto", agent: "agente"};   // de que campo de `widgets.json` come cada uno
 var mods = {}, modsVer = {}, modsTimers = {}, modsError = {}, modCargando = null, modsCargas = 0;
 var visibleForzada = false;   // 1849: las pruebas headless corren con `document.hidden` y fuerzan `B.visible()`
@@ -12067,7 +12127,7 @@ var BOARD = {
   // el chat es del shell: un widget que manda un comando lo manda por aca (sin burbuja, como el switch)
   mandarAparte: function(cmd, tema){
     mandarAparte = true;
-    try{ mandar(cmd, tema || "tools", false); }
+    try{ return mandar(cmd, tema || "tools", false); }   // 2267: devuelve la promesa `{ok, via, motivo}` de `mandar()`
     finally{ mandarAparte = false; }
   },
   // cambiar UNA caja sin tocar el resto del panel
@@ -12211,6 +12271,7 @@ function pintarWidgets(d, err){
     ["igcola", d.igcola ? modHtml("igcola") : ""],
     ["madrugada", d.madrugada ? modHtml("madrugada") : ""],
     ["inversiones", d.inversiones ? modHtml("inversiones") : ""],   // 2078: la cartera de ibkr, modulo
+    ["standup", d.standup ? modHtml("standup") : ""],   // 2267 {standup}: el draft de la proxima standup, modulo
     ["reglas", d.reglas ? cajaReglas(d.reglas) : ""]
   ];
   var mapa = {}, hay = [];
@@ -15092,6 +15153,9 @@ window.__agente = {
   // 1622 {seleccion}: la pausa del repintado del historial (`prueba_web_seleccion`)
   selTxViva: selTxViva, selTxEstado: selTxEstado, selTxSoltar: selTxSoltar, renderYa: renderYa,
   temasACargar: temasACargar, archivoChat: archivoChat, mezclar: mezclar, claveMsg: claveMsg,
+  // 2259 {redisenar}: los pedazos por dia (`prueba_buzon`, `prueba_web_chat_pedazos`)
+  dirChat: dirChat, pedazosFaltan: pedazosFaltan, juntarPedazos: juntarPedazos,
+  chatPed: function(t){ return chatPed[normTema(t)] || null; },
   // 1997 {pestana}: el sello de lo bajado sin mezclar y la flecha `ir al final` (`prueba_web_tabs`)
   chatPendiente: chatPendiente, mezclarSiFalta: mezclarSiFalta, chatFallas: function(){ return Object.keys(chatFalla); },
   alFinalBoton: function(){ var b = $("alfinal"), r = b.getBoundingClientRect(), h = hist.getBoundingClientRect();
