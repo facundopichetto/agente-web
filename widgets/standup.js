@@ -49,6 +49,8 @@
     var nota = w.texto ? "corregida por vos" + (w.editado ? " · " + esc(horaCorta(w.editado)) : "")
                        : "draft armado solo" + (w.reglas_aplicadas ? " · " + w.reglas_aplicadas + " reglas aplicadas" : "");
     if(w.reglas) nota += ' · <span class="c">' + w.reglas + " aprendidas</span>";
+    // 2270: el rearmado de las 11:45 no pisa lo que facundo escribio; el draft nuevo queda aparte
+    if(w.sugerido) nota += ' · <span class="c">hay un draft nuevo sugerido</span>';
     if(w.mandada && w.mandada.fecha) nota += ' · <span class="g">última mandada ' + esc(w.mandada.fecha.slice(5).split("-").reverse().join("/")) +
                                              " " + esc(w.mandada.hora || "") + "</span>";
     var pie = '<div class="stupie"><span class="g stunota">' + nota + "</span>" +
