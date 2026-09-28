@@ -629,6 +629,17 @@
   /* 2143 {cache}: el pedido fresco no salio y se ve lo ultimo que bajo. una linea, en el amarillo de aviso,
      arriba de la grilla (nunca una lista en blanco ni un cartel que tape lo que facundo quiere mirar). */
   #sellistas .lisaviso{color:var(--amarillo);font-size:14px;grid-column:1 / -1;opacity:.85}
+  /* 2224 {follow}: el campo `@` + `follow` de la home de instatinder, a todo el ancho de la grilla */
+  #sellistas .lisarroba{grid-column:1 / -1;display:flex;flex-direction:column;gap:4px;margin:2px 0 6px}
+  #sellistas .lisarrfila{display:flex;align-items:center;gap:8px}
+  #sellistas .lisarrat{color:var(--gris);font-size:18px}
+  #sellistas .lisarrinp{flex:1;min-width:0;background:transparent;color:var(--texto,#eee);border:1px solid var(--borde,#444);border-radius:8px;padding:8px 10px;font-size:16px}
+  #sellistas .lisarrinp:focus{outline:none;border-color:var(--verde,#3c6)}
+  #sellistas .lisarrbtn{background:var(--verde,#3c6);color:#000;border:0;border-radius:8px;padding:9px 16px;font-size:16px;cursor:pointer}
+  #sellistas .lisarrbtn:disabled{opacity:.5;cursor:default}
+  #sellistas .lisarrmsg{font-size:14px;min-height:1.2em;color:var(--gris)}
+  #sellistas .lisarrmsg.lisarrok{color:var(--verde,#3c6)}
+  #sellistas .lisarrmsg.lisarrmal{color:var(--amarillo)}
   /* 2095 {instatinder} pasos 5 y 6: la sub-vista `una` (UNA lista abierta) usa el MISMO contenedor y los mismos
      chips de la 2035; lo unico distinto es que la grilla es de una sola columna (la cabecera de la lista arriba,
      la tira de gente abajo) y que arriba va el boton `votar esta lista`, con el molde de caja de siempre. */

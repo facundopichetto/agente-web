@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.487">
-<link rel="manifest" href="manifest.json?v=4.487">
+<meta name="agente-web-version" content="4.488">
+<link rel="manifest" href="manifest.json?v=4.488">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.487">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.488">
 </head>
 <body>
 
@@ -6832,12 +6832,64 @@ function lisPintar(){
     return;
   }
   if(lis.aviso) c.appendChild(lisLinea("lisaviso", lis.aviso));   // 2143: nunca una lista en blanco, pero se avisa
+  c.appendChild(lisArroba());   // 2224 {follow}: el campo `@` con el boton `follow`, arriba de las listas
   d.listas.forEach(function(f){ c.appendChild(lisCaja(f)); });
   // 2078 {home} paso 4: volver del votador cae en la MISMA posicion de scroll de la que salio (`lis.scroll`, de un
   // solo uso); un repintado de rutina (el poll de `selBoton`) no mueve el scroll de donde esta
   var y = lis.scroll || prev;
   lis.scroll = 0;
   if(y) try{ c.scrollTop = y; }catch(x){}
+}
+// ---------- 2224 {follow}: el follow a un arroba suelto desde la home de `instatinder` ----------
+// facundo (2026-09-27 11:29 pm): "quiero yo tambien poder hacerlo sin tener que venir a avisarte". un campo `@` y un
+// boton `follow`: el server (`POST /ig/follow`, `ig_cola.follow_arroba`) da el alta minima sin leer el perfil y
+// encola el follow con el ritmo normal de la cola de instagram; la respuesta dice el arroba y la hora estimada, o
+// por que no (ya la seguis, ya estaba en la cola, arroba invalido). el arroba va con o sin `@`. el estado vive en
+// `lisArr` para que un repintado (el poll de las listas) no borre lo que se acaba de contestar.
+var lisArr = {texto: "", cl: "", valor: "", mandando: false};
+function lisArroba(){
+  var w = document.createElement("div"); w.className = "lisarroba";
+  var fila = document.createElement("div"); fila.className = "lisarrfila";
+  var at = document.createElement("span"); at.className = "lisarrat"; at.textContent = "@";
+  var inp = document.createElement("input"); inp.type = "text"; inp.className = "lisarrinp"; inp.id = "lisarrinp";
+  inp.placeholder = "usuario de instagram"; inp.autocomplete = "off"; inp.autocapitalize = "none"; inp.spellcheck = false;
+  inp.value = lisArr.valor; inp.setAttribute("aria-label", "usuario de instagram al que mandarle follow");
+  inp.addEventListener("input", function(){ lisArr.valor = inp.value; });
+  inp.addEventListener("keydown", function(e){ if(e.key === "Enter" && !esTactil()){ e.preventDefault(); lisArrMandar(); } });   // {enter}: solo teclado fisico
+  var b = document.createElement("button"); b.type = "button"; b.className = "lisarrbtn"; b.textContent = "follow";
+  b.title = "mandarle follow a ese arroba (entra a la cola de instagram con el ritmo normal)";
+  b.disabled = !!lisArr.mandando;
+  b.addEventListener("click", lisArrMandar);
+  fila.appendChild(at); fila.appendChild(inp); fila.appendChild(b);
+  w.appendChild(fila);
+  var m = document.createElement("div"); m.className = "lisarrmsg" + (lisArr.cl ? " " + lisArr.cl : ""); m.id = "lisarrmsg";
+  m.textContent = lisArr.texto;
+  w.appendChild(m);
+  return w;
+}
+function lisArrPintar(texto, cl){
+  lisArr.texto = texto || ""; lisArr.cl = cl || "";
+  var m = $("lisarrmsg"); if(m){ m.textContent = lisArr.texto; m.className = "lisarrmsg" + (cl ? " " + cl : ""); }
+  var b = document.querySelector("#sellistas .lisarrbtn"); if(b) b.disabled = !!lisArr.mandando;
+}
+function lisArrMandar(){
+  var u = String(lisArr.valor || "").trim().replace(/^@+/, "").toLowerCase();
+  if(!u){ lisArrPintar("escribí el arroba primero", "lisarrmal"); return; }
+  if(lisArr.mandando) return;
+  lisArr.mandando = true;
+  lisArrPintar("encolando el follow a @" + u + "…", "");
+  return docsPedir("/ig/follow", {method: "POST", headers: {"content-type": "application/json"},
+                                  body: JSON.stringify({usuario: u})}).then(function(j){
+    lisArr.mandando = false;
+    if(!j || !j.estado){ lisArrPintar("no entendí la respuesta del server", "lisarrmal"); return; }
+    var ok = j.estado === "encolada" || j.estado === "ya_en_cola";
+    if(j.estado === "encolada"){ lisArr.valor = ""; var i = $("lisarrinp"); if(i) i.value = ""; }
+    lisArrPintar(j.texto || (ok ? "encolado" : "no se pudo"), ok ? "lisarrok" : "lisarrmal");
+    if(ok) lisBajar(true).then(function(){ if(lis.sub === "listas") lisPintar(); });   // la persona nueva ya cuenta en `interesan`
+  }).catch(function(e){
+    lisArr.mandando = false;
+    lisArrPintar("no llegó al server (" + ((e && e.message) || "sin lan") + "): probá de nuevo", "lisarrmal");
+  });
 }
 // 1605 {vista} paso 3: cuantas tarjetas tiene AHORA el votador de esa lista, con el mismo codigo que la apertura
 // (`tjFilaFiltrada`). devuelve `null` = "no se sabe": ahi manda el numero del server, que es el de la lista entera.
