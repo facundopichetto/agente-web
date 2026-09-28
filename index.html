@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.486">
-<link rel="manifest" href="manifest.json?v=4.486">
+<meta name="agente-web-version" content="4.487">
+<link rel="manifest" href="manifest.json?v=4.487">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.486">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.487">
 </head>
 <body>
 
@@ -1644,7 +1644,8 @@ function pintarTabs(){
     if(t === temaActivo() && clonable(t)){
       var mas = document.createElement("span");
       mas.className = "mas"; mas.textContent = "+"; mas.dataset.clonar = t;
-      mas.title = "otra pestaña de " + t;
+      mas.title = normTema(t) === TEMA_TICKET ? "pestaña de un ticket (cx5129, mvp6484)"
+                                              : "otra pestaña de " + t;
       b.appendChild(mas);
     }
     if(t === temaActivo() && tabs.length > 1 && !esModo(t)){   // 1959: un modo es fijo, no se cierra
@@ -1729,6 +1730,8 @@ function clonSinServer(e, cuerpo, que, dePend){
 function clonAplicar(it){
   var c = (it && it.cuerpo) || {};
   if(c.borrar) return clonBorrar(c.borrar, c.forzar, true);
+  if(c.ticket) return clonTicket(c.ticket, true);              // 2220 {ticket}
+  if(c.archivar) return clonArchivar(c.archivar, true);
   if(c.renombrar) return clonRenombrar(c.renombrar, c.nombre, c.sacar, true);
   if(c.tema) return clonCrear(c.tema, true);
   return Promise.resolve(null);                // fila ilegible: se descarta
@@ -1824,6 +1827,55 @@ function clonRenombrar(tema, nombre, sacar, dePend){
                            "renombrar la pestaña " + tema, dePend);
     });
 }
+// ---------- 2220 {ticket}: las subs de `awtomic` son tickets, y se archivan ----------
+// facundo, 2026-09-27: "las subpestañas de la pestaña `awtomic` pasan a nombrarse por ticket y se archivan".
+// una sub de awtomic se llama como el ticket del que habla, en minuscula y sin guion (`cx5129`, `mvp6484`):
+// el formato se valida aca y en el server (`pestanas_clon.ticket_norm`), que es el unico que escribe el
+// registro. cerrarla la **archiva**: sale de la barra y de todas las listas, su charla queda entera y vuelve
+// cuando facundo escribe su nombre exacto en el chat o toca ese ticket en un widget.
+var TEMA_TICKET = "awtomic";
+var RE_TICKET_TAB = /^(cx|mvp)[ _-]?(\d{2,6})$/i;
+function ticketNorm(x){
+  var m = RE_TICKET_TAB.exec(String(x === null || x === undefined ? "" : x).trim());
+  return m ? m[1].toLowerCase() + m[2] : null;
+}
+function esSubTicket(t){ t = normTema(t); return esClon(t) && baseTema(t) === TEMA_TICKET; }
+// la sub de ESE ticket, abierta: el server la crea si falta y la saca del archivo si estaba cerrada.
+function clonTicket(ticket, dePend){
+  var tk = ticketNorm(ticket);
+  if(!tk){ sistema("eso no es un ticket: una pestaña de awtomic se llama `cx5129` o `mvp6484`", "error"); return Promise.resolve(null); }
+  if(!dePend){
+    var ya = null;                        // ya abierta y con nombre puesto: es un toque, no un pedido al server
+    tabs.forEach(function(t){ if(esSubTicket(t) && CLON_VIS[t] === TEMA_TICKET[0] + "/" + tk) ya = t; });
+    if(ya){ abrirTab(ya); return Promise.resolve(ya); }
+  }
+  return clonPedir("/clones", {method: "POST", headers: {"content-type": "application/json"},
+                               body: JSON.stringify({ticket: tk})})
+    .then(function(j){
+      if(!j || !j.ok || !j.nombre){ sistema("no pude abrir la pestaña de " + tk + ": " + ((j && j.motivo) || "?"), "error"); return null; }
+      CLONES = j.clones || CLONES;
+      clonVisPoner(j.visibles);
+      abrirTab(j.nombre);
+      return j.nombre;
+    }).catch(function(e){
+      return clonSinServer(e, {ticket: tk}, "abrir la pestaña de " + tk, dePend);
+    });
+}
+// cerrar una sub = archivarla. la charla no se borra nunca (el `logs/chat-<id>.jsonl` queda igual).
+function clonArchivar(tema, dePend){
+  return clonPedir("/clones", {method: "POST", headers: {"content-type": "application/json"},
+                               body: JSON.stringify({archivar: tema})})
+    .then(function(j){
+      if(!j || !j.ok){ sistema("no pude archivar la pestaña: " + ((j && j.motivo) || "?"), "error"); return null; }
+      CLONES = j.clones || CLONES;
+      clonVisPoner(j.visibles);
+      if(tabs.indexOf(tema) >= 0) cerrarTab(tema);
+      sistema("pestaña " + (j.visible || tema) + " archivada: la charla queda y vuelve escribiendo su nombre.");
+      return tema;
+    }).catch(function(e){
+      return clonSinServer(e, {archivar: tema}, "archivar la pestaña " + tema, dePend);
+    });
+}
 // el input inline: reemplaza el texto de ESA pestaña y nada mas. enter confirma, esc cancela, perder el foco
 // cancela. la pestaña activa no cambia (el editor no abre pestaña) y el borrador de la caja no se toca.
 var tabEdit = null;
@@ -1865,9 +1917,55 @@ function tabEditar(tema){
   inp.addEventListener("click", function(e){ e.stopPropagation(); });
   return true;
 }
-// el `×` de un clon: cerrar la pestaña (el clon queda vivo) o borrar el clon del server
+// 2220 {ticket}: el `+` de la pestaña `awtomic` no crea una sub muda: pide el ticket en un input inline,
+// el mismo molde que el renombrar (enter confirma, esc y perder el foco cancelan). el formato se valida acá
+// antes de molestar al server, y si ese ticket ya tenía su sub -abierta o archivada- vuelve esa misma.
+function tabTicketNuevo(tema){
+  tema = normTema(tema);
+  var nodo = document.querySelector('#tabs .tab[data-tema="' + tema + '"]');
+  if(!nodo || tabEdit) return false;
+  var inp = document.createElement("input");
+  inp.type = "text"; inp.className = "tabnom";
+  inp.value = ""; inp.placeholder = "cx5129";
+  inp.setAttribute("aria-label", "ticket de la pestaña nueva de " + tema);
+  inp.maxLength = 12; inp.size = 8;
+  nodo.textContent = "";
+  nodo.appendChild(inp);
+  tabEdit = {tema: tema, input: inp, ticket: true};
+  inp.focus();
+  function cerrar(){ tabEdit = null; pintarTabs(); }
+  inp.addEventListener("keydown", function(e){
+    if(e.key === "Enter"){
+      e.preventDefault(); e.stopPropagation();
+      var val = inp.value.trim();
+      tabEdit = null;
+      pintarTabs();
+      if(!val) return;
+      if(!ticketNorm(val)){
+        sistema("una pestaña de awtomic se llama como su ticket, en minúscula y sin guion (`cx5129`, `mvp6484`)", "error");
+        return;
+      }
+      clonTicket(val);
+    } else if(e.key === "Escape"){
+      e.preventDefault(); e.stopPropagation();
+      cerrar();
+    }
+  });
+  inp.addEventListener("blur", function(){ if(tabEdit && tabEdit.input === inp) cerrar(); });
+  inp.addEventListener("click", function(e){ e.stopPropagation(); });
+  return true;
+}
+// el `+` de una pestaña: en `awtomic` pide el ticket, en el resto crea el clon siguiente como siempre
+function clonMas(tema){
+  if(normTema(tema) === TEMA_TICKET) return tabTicketNuevo(tema);
+  return clonCrear(tema);
+}
+// el `×` de un clon: cerrar la pestaña (el clon queda vivo) o borrar el clon del server.
+// 2220 {ticket}: una sub de `awtomic` se ARCHIVA y listo, sin preguntar: cerrarla es archivarla (la charla
+// queda y vuelve con su nombre), asi que no hay dos caminos que elegir.
 function cerrarOClon(tema){
   if(!esClon(tema)) return cerrarTab(tema);
+  if(esSubTicket(tema)) return clonArchivar(tema);
   dd(tema + ": qué hago?", [["cerrar la pestaña (el clon queda)", "cerrar"],
                             ["borrar el clon " + tema, "borrar"]],
      function(r){ if(r === "cerrar") cerrarTab(tema); else if(r === "borrar") clonBorrar(tema, false); });
@@ -8387,6 +8485,13 @@ function enviarMensaje(texto){
   if(cierreGrab) return cierreGrab.then(function(){ if(adjunto) return mandarAdjunto(texto); if(texto) return enviarMensaje(texto); });
   if(!texto) return;
   if(cmdLocal(texto)){ if(txt.value.trim() === texto){ txt.value = ""; txt.style.height = ""; } return; }   // 1631: sin red
+  // 2220 {ticket}: el mensaje que es SOLO el nombre de una sub de awtomic (`cx5129`, `CX-5129`) no es un
+  // mensaje: es el gesto de abrirla. la crea si no existe y la saca del archivo si estaba cerrada.
+  if(ticketNorm(texto)){
+    if(txt.value.trim() === texto){ txt.value = ""; txt.style.height = ""; }
+    clonTicket(texto);
+    return;
+  }
   if(RE_CRUDO.test(texto)){ mandar(texto, temaActivo(), true); return; }
   var activo = temaActivo(), c = clasificar(texto);
   if(c.fuente === "prefijo"){
@@ -10597,9 +10702,13 @@ function ticGente(x){
   return p.length ? " " + p.join(" ") : "";
 }
 // una fila de ticket: la misma en las tres cajas (el modal `ticket` no cambia). `gente` solo en CX.
+// 2220 {ticket} (facundo, 2026-09-27: "tocar un ticket en cualquier lista o widget del board abre la
+// subpestaña de ese ticket"): la CLAVE (`CX-5129`) es el botón que salta a su sub (la crea o la desarchiva);
+// el resto de la fila sigue abriendo la ficha de siempre, que además tiene la acción de saltar.
 function ticFila(x, gente){
   return it({tipo: "ticket", tema: "awtomic", d: x},
-    '<span class="c b">' + esc(x.key) + '</span> <span class="' + (x.cerrado ? "v" : "a") + '">' +
+    '<span class="c b" data-ticket="' + esc(x.key) + '" title="abrir la pestaña ' +
+    esc(ticketNorm(x.key) || x.key) + '">' + esc(x.key) + '</span> <span class="' + (x.cerrado ? "v" : "a") + '">' +
     esc(x.estado) + '</span> <span class="g">' + haceSeg(x.hace_s) + "</span>" +
     (gente ? ticGente(x) : "") + " " + esc(x.titulo));
 }
@@ -12326,6 +12435,9 @@ widgetsEl.addEventListener("click", function(e){
     setTimeout(function(){ b.disabled = false; }, 1500);
     return;
   }
+  // 2220 {ticket}: la clave de un ticket salta a su subpestaña, antes de que la fila abra la ficha
+  var tk = e.target.closest("[data-ticket]");
+  if(tk){ e.stopPropagation(); clonTicket(tk.dataset.ticket); return; }
   var n = e.target.closest("[data-it]");         // tocar la fila = modal con el item expandido
   if(n && itemsW[n.dataset.it]) abrirModal(itemsW[n.dataset.it]);
 });
@@ -12574,6 +12686,9 @@ function modalDe(o){
     m.titulo = d.key;
     m.cuerpo = esc(d.titulo) + '\n\n<span class="a">' + esc(d.estado) + '</span> <span class="g">hace ' +
       haceSeg(d.hace_s) + "</span>\n" + link(JIRA + d.key, "abrir " + d.key + " en jira");
+    // 2220 {ticket}: desde la ficha tambien se salta a la subpestaña de ese ticket (la crea si no existe)
+    var tkf = ticketNorm(d.key);
+    if(tkf) m.acciones.push(["abrir la pestaña " + tkf, function(){ cerrarModal(); clonTicket(d.key); }, true]);
     m.acciones.push(accHablar(o, "el ticket " + d.key + " (" + corto(d.titulo, 70) + ")"));
   } else if(o.tipo === "caidas"){
     // los ratos sin claude de hoy (facundo, 2026-09-12): hora, causa y duracion de cada uno
@@ -13777,7 +13892,7 @@ $("tabs").addEventListener("click", function(e){
   // 2299 {ordentabs}: el click que viene atras de un arrastre no cambia de pestaña
   if(Date.now() - arrTUlt < 300){ e.stopPropagation(); e.preventDefault(); return; }
   var c = e.target.closest("[data-clonar]");
-  if(c){ clonCrear(c.dataset.clonar); return; }        // 2265 {clon}: el `+` de la pestaña
+  if(c){ clonMas(c.dataset.clonar); return; }          // 2265 {clon}: el `+` de la pestaña (2220: awtomic pide el ticket)
   var x = e.target.closest("[data-cerrar]");
   if(x){ cerrarOClon(x.dataset.cerrar); return; }
   var b = e.target.closest("[data-accion]");
@@ -14421,6 +14536,9 @@ window.__agente = {
   tabEditando: function(){ return tabEdit ? tabEdit.tema : null; },
   esClon: esClon, baseTema: baseTema, clonable: clonable, esTema: esTema, padreTema: padreTema,
   clonar: function(t){ return clonCrear(t); }, clonBorrar: clonBorrar, cerrarOClon: cerrarOClon,
+  // 2220 {ticket}: las subs de awtomic por ticket (crear/abrir, archivar, el `+` que pide el ticket)
+  clonTicket: clonTicket, clonArchivar: clonArchivar, clonMas: clonMas, tabTicketNuevo: tabTicketNuevo,
+  ticketNorm: ticketNorm, esSubTicket: esSubTicket,
   clonPendientes: function(){ return clonPendLeer(); }, clonPendFlush: clonPendFlush,
   clonPendLimpiar: function(){ return clonPendGuardar([]); },
   clonStub: function(fn){ clonStub = fn; },
