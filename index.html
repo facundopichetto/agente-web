@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.492">
-<link rel="manifest" href="manifest.json?v=4.492">
+<meta name="agente-web-version" content="4.493">
+<link rel="manifest" href="manifest.json?v=4.493">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.492">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.493">
 </head>
 <body>
 
@@ -528,10 +528,27 @@ var CLONES = [];                       // los que el server dio de alta (se pide
 // 2300 {visible} (facundo, 2026-09-24): un clon puede tener un **nombre visible** (`t/impresora` para
 // `tools#2`). es SOLO lo que se pinta: `data-tema`, el `tema x:` que se manda, el carril de la cola y
 // `logs/chat-tools#2.jsonl` siguen con el id. el mapa lo manda el server en `/clones` (`visibles`).
-var CLON_VIS = {};                     // {id: visible}, solo los clones con nombre puesto
+// 2277 {cambios} (facundo, 2026-09-28: "a veces se ven como `tema#N` hasta que cambio de pestaña y
+// vuelvo"): el mapa llega del server (`/clones`), o sea DESPUES del primer pintado, asi que la barra
+// arrancaba con el id crudo. queda cacheado en localStorage: el primer pintado ya sale con el nombre de
+// la ultima vez y el del server lo pisa apenas llega (`clonVisPoner` repinta la barra sola).
+var CLON_VIS_LS = "agente_clon_vis";
+var CLON_VIS = (function(){
+  try{ var m = JSON.parse(localStorage.getItem(CLON_VIS_LS) || "{}"); return (m && typeof m === "object") ? m : {}; }
+  catch(x){ return {}; }
+})();                                  // {id: visible}, solo las pestañas con nombre puesto
 // lo que se PINTA de una pestaña. nadie imprime el id crudo: la general tiene su etiqueta, un clon con
 // nombre su visible, y el resto es su propio nombre.
-function visibleTab(t){ return ETIQUETA[t] || CLON_VIS[normTema(t)] || t; }
+// 2277 {cambios}: un clon SIN nombre tampoco muestra su id (`plata#2`): se pinta `<tema> N` (`$ 2`), con
+// el tema como se ve (un tema renombrado manda: `tools` -> `flos`). el id interno no cambia nunca.
+function visibleTab(t){
+  var n = normTema(t);
+  if(ETIQUETA[t]) return ETIQUETA[t];
+  if(CLON_VIS[n]) return CLON_VIS[n];
+  var m = RE_CLON.exec(n);
+  if(m) return (ETIQUETA[m[1]] || CLON_VIS[m[1]] || m[1]) + " " + parseInt(m[2], 10);
+  return t;
+}
 function esClon(t){ return RE_CLON.test(normTema(t)); }
 function baseTema(t){ var m = RE_CLON.exec(normTema(t)); return m ? m[1] : normTema(t); }
 function clonN(t){ var m = RE_CLON.exec(normTema(t)); return m ? parseInt(m[2], 10) : 0; }
@@ -1774,7 +1791,7 @@ function clonCrear(tema, dePend){
       CLONES = j.clones || CLONES;
       clonVisPoner(j.visibles);
       abrirTab(j.nombre);
-      sistema("pestaña " + j.nombre + " lista");
+      sistema("pestaña " + visibleTab(j.nombre) + " lista");   // 2277: el id interno no se nombra
       return j.nombre;
     }).catch(function(e){
       return clonSinServer(e, {tema: tema}, "crear la pestaña de " + tema, dePend);
@@ -1798,7 +1815,7 @@ function clonBorrar(tema, forzar, dePend){
       CLONES = j.clones || [];
       clonVisPoner(j.visibles);
       if(tabs.indexOf(tema) >= 0) cerrarTab(tema);
-      sistema("pestaña " + tema + " borrada (el tema " + baseTema(tema) + " no se toca)");
+      sistema("pestaña " + visibleTab(tema) + " borrada (el tema " + visibleTab(baseTema(tema)) + " no se toca)");
       return tema;
     }).catch(function(e){
       return clonSinServer(e, {borrar: tema, forzar: !!forzar}, "borrar la pestaña " + tema, dePend);
@@ -1809,8 +1826,15 @@ function clonBorrar(tema, forzar, dePend){
 // exista solo en este navegador (el chat, la cola y la tui tienen que ver el mismo).
 function clonVisPoner(m){
   if(!m || typeof m !== "object") return CLON_VIS;
+  var antes = JSON.stringify(CLON_VIS);
   CLON_VIS = {};
   Object.keys(m).forEach(function(k){ if(m[k]) CLON_VIS[normTema(k)] = m[k]; });
+  var ahora = JSON.stringify(CLON_VIS);
+  if(ahora === antes) return CLON_VIS;
+  try{ localStorage.setItem(CLON_VIS_LS, ahora); }catch(x){}   // 2277: el proximo arranque ya lo sabe
+  // 2277 {cambios} + {pedazos}: el nombre cambio, asi que se repinta LA BARRA en el acto (no el chat):
+  // ni el scroll ni lo tipeado se tocan, y facundo no tiene que cambiar de pestaña y volver.
+  pintarTabs();
   return CLON_VIS;
 }
 function clonRenombrar(tema, nombre, sacar, dePend){
@@ -1846,7 +1870,8 @@ function clonTicket(ticket, dePend){
   if(!tk){ sistema("eso no es un ticket: una pestaña de awtomic se llama `cx5129` o `mvp6484`", "error"); return Promise.resolve(null); }
   if(!dePend){
     var ya = null;                        // ya abierta y con nombre puesto: es un toque, no un pedido al server
-    tabs.forEach(function(t){ if(esSubTicket(t) && CLON_VIS[t] === TEMA_TICKET[0] + "/" + tk) ya = t; });
+    // 2277 {cambios}: el prefijo del visible sale del tema como se ve, asi que se compara el nombre, no `a/`
+    tabs.forEach(function(t){ if(esSubTicket(t) && String(CLON_VIS[t] || "").split("/").pop() === tk) ya = t; });
     if(ya){ abrirTab(ya); return Promise.resolve(ya); }
   }
   return clonPedir("/clones", {method: "POST", headers: {"content-type": "application/json"},
@@ -14669,7 +14694,9 @@ window.__agente = {
   clonesPoner: function(l, vis){ CLONES = l || []; if(vis) clonVisPoner(vis); pintarTabs(); },
   // 2300 {visible}: el nombre visible de un clon (`recetas/prueba_web_tabs`)
   clonVisibles: function(){ return JSON.parse(JSON.stringify(CLON_VIS)); },
-  clonVisPoner: function(m){ clonVisPoner(m); pintarTabs(); return CLON_VIS; },
+  // 2277 {cambios}: SIN `pintarTabs()` aca a proposito: el repintado lo tiene que hacer `clonVisPoner`
+  // sola (es lo que prueba `recetas/prueba_web_tabnombre`), como cuando el mapa llega del server.
+  clonVisPoner: function(m){ return clonVisPoner(m); },
   visibleTab: visibleTab, tabEditar: tabEditar, clonRenombrar: clonRenombrar,
   tabEditando: function(){ return tabEdit ? tabEdit.tema : null; },
   esClon: esClon, baseTema: baseTema, clonable: clonable, esTema: esTema, padreTema: padreTema,
