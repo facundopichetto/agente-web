@@ -592,6 +592,12 @@
      `scale`, igual que los votos de la 1841 */
   #seltarjeta .tjppal .tjinil{font-size:var(--texto-max);font-weight:bold;line-height:1;color:var(--gris);
     transform:scale(3.5);transform-origin:center}
+  /* 2249 {foto} (facundo, 2026-09-28): la que no tiene foto (y no espera ninguna) lleva el @arroba en el cuadro,
+     en vez de la inicial. es una palabra, no un glifo, asi que no se agranda con el `scale` de la inicial (eso
+     desborda el cuadro): va con su propio tamaño, centrada, partida si no entra, y en blanco (la inicial es gris
+     de placeholder; el arroba aca es el dato, lo unico que se puede mirar de esa persona) */
+  #seltarjeta .tjppal .tjinil.tjinia{transform:none;font-size:clamp(20px, 8vw, 44px);color:var(--blanco);
+    padding:0 10px;text-align:center;overflow-wrap:anywhere;line-height:1.15}
   #seltarjeta .tjppal.confoto .tjini{display:none}
   /* {fotoancha}: varias fotos se caminan de a UNA a ancho completo (swipe horizontal con snap), nunca la tira chica */
   /* 2080 {diseno}: la fila del carrusel centra vertical como todas las filas del board; las fotos son todas del
@@ -632,10 +638,10 @@
   /* 2224 {follow}: el campo `@` + `follow` de la home de instatinder, a todo el ancho de la grilla */
   #sellistas .lisarroba{grid-column:1 / -1;display:flex;flex-direction:column;gap:4px;margin:2px 0 6px}
   #sellistas .lisarrfila{display:flex;align-items:center;gap:8px}
-  #sellistas .lisarrat{color:var(--gris);font-size:18px}
-  #sellistas .lisarrinp{flex:1;min-width:0;background:transparent;color:var(--texto,#eee);border:1px solid var(--borde,#444);border-radius:8px;padding:8px 10px;font-size:16px}
+  #sellistas .lisarrat{color:var(--gris);font-size:var(--texto-max)}
+  #sellistas .lisarrinp{flex:1;min-width:0;background:transparent;color:var(--texto,#eee);border:1px solid var(--borde,#444);border-radius:8px;padding:8px 10px;font-size:14px}
   #sellistas .lisarrinp:focus{outline:none;border-color:var(--verde,#3c6)}
-  #sellistas .lisarrbtn{background:var(--verde,#3c6);color:#000;border:0;border-radius:8px;padding:9px 16px;font-size:16px;cursor:pointer}
+  #sellistas .lisarrbtn{background:var(--verde,#3c6);color:#000;border:0;border-radius:8px;padding:9px 16px;font-size:14px;cursor:pointer}
   #sellistas .lisarrbtn:disabled{opacity:.5;cursor:default}
   #sellistas .lisarrmsg{font-size:14px;min-height:1.2em;color:var(--gris)}
   #sellistas .lisarrmsg.lisarrok{color:var(--verde,#3c6)}

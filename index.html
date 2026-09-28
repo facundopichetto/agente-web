@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.488">
-<link rel="manifest" href="manifest.json?v=4.488">
+<meta name="agente-web-version" content="4.489">
+<link rel="manifest" href="manifest.json?v=4.489">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.488">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.489">
 </head>
 <body>
 
@@ -6025,9 +6025,14 @@ function tjPedirFoto(c){
   }).then(function(j){
     if(!j) return;
     if(j.ok && j.ruta){
-      c.fotos = [j.ruta]; c.foto_pendiente = false;
+      c.fotos = [j.ruta]; c.foto_pendiente = false; c.sin_foto = false;
       delete tjFotoMotivo[c.id];
-    } else if(j.motivo){ tjFotoMotivo[c.id] = j.motivo; }
+    } else {
+      // 2249 {foto}: el server ya contesto que no la tiene: deja de decir "bajando" para siempre y pasa al cuadro
+      // con el arroba, que es lo que deja votar la tarjeta igual
+      if(j.motivo) tjFotoMotivo[c.id] = j.motivo;
+      c.foto_pendiente = false; c.sin_foto = true;
+    }
     var a = tjActual();
     if(a && String(a.id) === String(c.id)) tjPintar();
   }).catch(function(){
@@ -6054,7 +6059,10 @@ function tjBajarFoto(id, foto, pp, principal){
       pp.__url = url;   // 1665: la privada se agranda con esta misma foto (no hay otra bajada)
     }).catch(function(){
       if(!viva()) return;
-      if(intento >= TJ_REINTENTOS.length) return principal ? tjSacar(id) : null;
+      // 2249 {foto} (facundo, 2026-09-28): la foto que no baja ya NO saca la tarjeta de la fila (1524). se queda,
+      // con el arroba grande y el renglon `sin foto de perfil`, y se vota como cualquier otra: una tanda no se
+      // puede trabar para siempre por una foto que instagram no da (las 8 de `etiquetar género`).
+      if(intento >= TJ_REINTENTOS.length) return principal ? tjSinFoto(id) : null;
       setTimeout(function(){
         (lan.base ? Promise.resolve() : probarLan()).then(bajar, bajar);
       }, TJ_REINTENTOS[intento++]);
@@ -6135,8 +6143,12 @@ function tjPintar(){
   // con la inicial de la 1580 se queda para la foto que existe y todavia no bajo (o que no baja), que es otra cosa.
   // 2277 {foto}: la que esta ESPERANDO la foto (`foto_pendiente`) si pinta el cuadro, con la inicial adentro: es
   // exactamente el caso de la 1580 (la foto existe y todavia no bajo), no el de `@_solabdala` (no tiene ninguna)
+  // 2249 {foto} (facundo, 2026-09-28: "le bajo la foto a esas 8 y si instagram no la da, la tarjeta sale igual
+  // con el arroba grande y un aviso de que no hay foto, asi podes votarlas"): la que NO tiene foto y no espera
+  // ninguna (`sin_foto`) tambien pinta el cuadro, pero con el @arroba adentro en vez de la inicial. es lo unico
+  // que se puede mirar de esa persona, y sin el cuadro la tarjeta quedaba sin nada donde va la foto.
   var fotos = (c.fotos || []).filter(Boolean);
-  var cuadros = fotos.length ? fotos : (c.foto_pendiente ? [""] : []);
+  var cuadros = fotos.length ? fotos : ((c.foto_pendiente || c.sin_foto) ? [""] : []);
   if(cuadros.length > 1) fs.classList.add("tjcarr");
   var pp = null;
   cuadros.forEach(function(foto, i){
@@ -6149,6 +6161,8 @@ function tjPintar(){
     var ini = document.createElement("span"); ini.className = "tjini";
     var letra = document.createElement("span"); letra.className = "tjinil";
     letra.textContent = (String(c.titulo || c.cuenta || "?").trim().charAt(0) || "?").toUpperCase();
+    // 2249 {foto}: sin foto (y sin ninguna en camino) el cuadro lleva el @arroba grande y centrado, no la inicial
+    if(c.sin_foto && !foto && c.cuenta){ letra.className = "tjinil tjinia"; letra.textContent = "@" + c.cuenta; }
     ini.appendChild(letra); x.appendChild(ini);
     // 1665 (facundo): tocar la foto. cuenta publica -> el perfil de instagram en otra pestaña; privada (donde el perfil
     // no muestra nada) -> la foto a pantalla completa en el visor, que ya cierra con esc, la ✕ y el fondo
@@ -6178,7 +6192,13 @@ function tjPintar(){
   // 2277 {foto}: la que entro a la fila sin foto bajada lo DICE en la tarjeta, arriba de todo: sin esto la tarjeta
   // se ve igual a una cuenta que no tiene foto de perfil y no se entiende por que falta. la lectura que la trae ya
   // esta al frente de la cola (`ig_embudo.alimentar`): el cartel se va solo en cuanto la foto llega
-  if(c.foto_pendiente){
+  if(c.sin_foto){
+    // 2249 {foto}: el renglon chico que dice por que el cuadro tiene el arroba y no una cara. con lo que haya
+    // contestado el server (`/ig/foto/<pk>`: la lectura frenada, la cuenta sin foto de perfil) atras.
+    var sf = document.createElement("div"); sf.className = "tjfotopend tjsinfoto";
+    sf.textContent = "sin foto de perfil" + (tjFotoMotivo[c.id] ? " · " + tjFotoMotivo[c.id] : "");
+    info.appendChild(sf);
+  } else if(c.foto_pendiente){
     var fp = document.createElement("div"); fp.className = "tjfotopend";
     // 2174 {cuentas} paso 2 (facundo, 2026-09-27: "no entiendo como no puedas capturarla [...] en el momento que
     // abro la tarjeta"): la tarjeta sin foto la PIDE ahora mismo (`GET /ig/foto/<pk>`, el server la baja del cdn
@@ -6413,12 +6433,17 @@ function tjPrecargar(e, i){
   }
   return pedidas;
 }
-function tjSacar(id){
-  // 1524: la foto no bajo ni reintentando: la tarjeta sale de ESTA apertura sin votar y sin correr el indice
+function tjSinFoto(id){
+  // 2249 {foto}: la foto no bajo ni reintentando. hasta la 1524 la tarjeta SALIA de la apertura sin votar (y una
+  // tanda entera sin fotos se cerraba con `tjSinFotos`); ahora se queda y se pinta con el @arroba grande y el
+  // renglon `sin foto de perfil`, asi facundo la vota igual y la fila nunca queda trabada.
   var e = sel.actual;
   if(!e || !e.candidatas) return;
   sel.tjFallidas = (sel.tjFallidas || []).concat([id]);
-  e.candidatas = e.candidatas.filter(function(x){ return x.id !== id; });
+  var c = null;
+  e.candidatas.forEach(function(x){ if(String(x.id) === String(id)) c = x; });
+  if(!c) return;
+  c.fotos = []; c.foto_pendiente = false; c.sin_foto = true;
   tjPintar();
 }
 function tjSinFotos(e){
