@@ -522,6 +522,13 @@
      "detector": true
     },
     {
+     "cmd": "es_cmd_opencode",
+     "que": "detector nuevo en daemon.py, sin descripción todavía",
+     "escribe": null,
+     "offline": "cola",
+     "detector": true
+    },
+    {
      "cmd": "es_cmd_pares",
      "que": "detector nuevo en daemon.py, sin descripción todavía",
      "escribe": null,

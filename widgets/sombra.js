@@ -285,7 +285,11 @@ function cajaSombra(sb){
   function parHtml(x){
     var lado = x.solo_lectura ? "respuesta" : "diff";
     return '<div class="parord"><span class="g">orden ' + esc(String(x.n || "?")) + " \u00b7 " + esc(x.tipo || "") +
-             (x.clase === "sombra" ? " \u00b7 sombra" : "") + (x.tema ? " \u00b7 " + esc(x.tema) : "") + "</span>\n" +
+             (x.clase === "sombra" ? " \u00b7 sombra" : "") +
+             // 2361 {atiende-sombra} paso 9: un par de este carril no es opus contra fable, es la respuesta
+             // que ya se publico (opencode) contra la de agy en sombra. se dice, para que el voto se entienda.
+             (x.clase === "opencode" ? " \u00b7 opencode vs sombra" : "") +
+             (x.tema ? " \u00b7 " + esc(x.tema) : "") + "</span>\n" +
              esc(x.texto || "") + "</div>" +
            '<div class="parcols">' +
              '<div class="parlado"><div class="parcab"><span class="c b">A</span> <span class="g">' + lado + '</span></div><pre class="partxt">' + esc(x.A || "") + "</pre></div>" +
