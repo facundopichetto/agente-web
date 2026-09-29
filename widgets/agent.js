@@ -64,6 +64,26 @@
            '<span class="qth qcel qtiempo">delta</span>' +
            '<span class="qth qcel">terminó</span>';
   }
+  // 2368 {hora} (facundo, 2026-09-29: "los de la madrugada se pueden no ver en el widget de la cola normal?"):
+  // una orden con hora de arranque a futuro (la de `[madrugada]` y cualquier otra con marca) ya no esta en la
+  // tabla de arriba: el server la manda aparte en `programadas`, y se pinta en su propia seccion, ordenada por
+  // hora y con el tema de cada una. si no hay ninguna la seccion no existe (ni titulo ni tabla vacia). la hora
+  // en 12 h la arma el server (regla de las horas): aca no se calcula nada.
+  function pFila(f){
+    return it({tipo: "tarea", cola: true, estado: "cola", tema: f.tema, d: f},
+      '<span class="qcola qnom" title="' + esc(f.completo || f.texto || "") + '">' + esc(f.nombre || ("" + f.n)) +
+      (f.tema ? ' <span class="g">' + esc(f.tema) + "</span>" : "") + "</span>" +
+      qCelda("qcola", f.hora));
+  }
+  function secProgramadas(ps){
+    if(!ps || !ps.length) return "";
+    var cols = [ps.map(function(f){ return (f.nombre || ("" + f.n)) + (f.tema ? " " + f.tema : ""); }),
+                ps.map(function(f){ return f.hora; })];
+    return '<div class="madsub g">programadas</div>' +
+           '<div class="madtab igtab" style="grid-template-columns:' + esc(B.gridFr(cols)) + '">' +
+           '<span class="qth qnom">tarea</span><span class="qth qcel">sale</span>' +
+           B.limFilas("agent", ps.map(pFila)).join("") + "</div>";
+  }
   function cajaAgente(a){
     var corr = a.corriendo || [], tabla = a.tabla || [];
     var verCola = wset("agent", "cola");
@@ -75,9 +95,12 @@
                 vis.map(function(f){ return f.delay; }),
                 vis.map(qTxtEspera), vis.map(function(f){ return f.dur; }),
                 vis.map(qTxtFin)];
+    var prog = a.programadas || [];
     var cuerpo = filas.length ? '<div class="qtab" style="grid-template-columns:' + esc(B.gridFr(cols)) + '">' +
                                 qCabecera() + filas.join("") + "</div>"
-               : (a.pausa ? '<span class="r b">PAUSA</span>' : vacio("nada en la cola"));
+               : (a.pausa ? '<span class="r b">PAUSA</span>'
+                          : vacio(prog.length ? "nada en la cola de ahora" : "nada en la cola"));
+    cuerpo += secProgramadas(prog);
     // dato esencial, corto para que entre en el celu: la cuenta, cuantas corren (verde) y +las que esperan.
     // 1915 {widgets}: la cuenta la manda el server ya resuelta (`cuenta_cola`): la que de verdad puede tomar
     // trabajo, o `sin cuenta hasta <hora>` si ninguna puede. la web no decide nada ni arma esa hora.
@@ -85,7 +108,10 @@
     var ese = '<span class="' + (sinCta ? "r" : "c") + ' b">' + esc(a.cuenta || "?") + "</span> " +
               (a.pausa ? '<span class="r b">PAUSA</span>'
                        : corr.length ? '<span class="v b">' + corr.length + "</span>" : '<span class="g">idle</span>') +
-              (a.pendientes ? ' <span class="qcola">+' + a.pendientes + "</span>" : "");
+              (a.pendientes ? ' <span class="qcola">+' + a.pendientes + "</span>" : "") +
+              // 2368 {hora}: las programadas no son cola de ahora, asi que se cuentan aparte del `+N`
+              (prog.length ? ' <span class="g">· ' + prog.length + " programada" + (prog.length === 1 ? "" : "s") +
+                             "</span>" : "");
     return caja("queue", ese, cuerpo, false, "agent");
   }
 
