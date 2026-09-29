@@ -16,6 +16,10 @@
   var vivo = {d: null, etag: null, hash: null, pidiendo: false, espera: 0, hasta: 0, recibidos: 0, repintados: 0,
               saltados: 0};
   var ultimo = null, mandados = 0, guardados = 0;   // lo lee `prueba_web_standup`
+  // 2349: el rearmado de cada 30 min no pisa lo que facundo corrigio: el draft nuevo llega como `sugerido` y aca
+  // se muestra un boton `hay uno nuevo` al lado de la hora; tocarlo ABRE el sugerido al lado del texto (nunca lo
+  // pisa en silencio) y facundo elige `usar el nuevo` o `dejar el mio`. `sugAbierto` sobrevive al repintado.
+  var sugAbierto = false;
   // el shell repinta TODO el panel con `innerHTML` cada 30 s: si facundo esta escribiendo adentro del textarea, la
   // caja nueva sale con lo que tiene tipeado y el foco (y el cursor) vuelven al textarea nuevo en el mismo tick
   var pendiente = null;
@@ -24,6 +28,12 @@
 
   // ---------- la caja ----------
   function textoDe(w){ return (w && (w.texto || w.draft)) || ""; }
+  // hay un sugerido mas nuevo que lo que se ve (la edicion de facundo, o el draft si no edito)
+  function hayNuevo(w){
+    if(!w || !w.sugerido || !String(w.sugerido).trim()) return false;
+    var base = w.editado || w.generado || "";
+    return !w.sugerido_generado || !base || w.sugerido_generado > base;
+  }
   function filas(t){
     var n = (t.match(/\n/g) || []).length + 2;
     return Math.max(6, Math.min(24, n));
@@ -40,9 +50,20 @@
       vivo.saltados++;
       setTimeout(volverFoco, 0);
     }
+    var nuevo = hayNuevo(w);
+    if(!nuevo) sugAbierto = false;
     var cab = '<div class="stucab"><span class="g">la das el</span> ' +
               '<span class="v b stucuando">' + esc(px.texto || "?") + "</span>" +
-              (px.hoy ? ' <span class="c">hoy</span>' : "") + "</div>";
+              (px.hoy ? ' <span class="c">hoy</span>' : "") +
+              (nuevo ? ' <button class="qforz stunuevo" type="button" title="el draft se rearmó solo y hay uno más nuevo que tu texto: tocá para verlo">' +
+                       (sugAbierto ? "cerrar el nuevo" : "hay uno nuevo") + "</button>" : "") + "</div>";
+    var sug = (nuevo && sugAbierto)
+      ? '<div class="stusug"><div class="g">el draft nuevo' + (w.sugerido_generado ? " · " + esc(horaCorta(w.sugerido_generado)) : "") +
+        ' <span class="c">(tu texto sigue arriba, nada se pisa hasta que elijas)</span></div>' +
+        '<pre class="stusugtxt">' + esc(w.sugerido) + "</pre>" +
+        '<div class="stusugpie"><button class="qforz stuusar" type="button" title="el nuevo pasa a ser el draft; tus correcciones ya quedaron como reglas">usar el nuevo</button>' +
+        '<button class="qforz studejar" type="button" title="descarta el sugerido y deja tu texto">dejar el mío</button></div></div>'
+      : "";
     var area = '<textarea class="stutxt" rows="' + filas(t) + '" spellcheck="false" autocapitalize="off" ' +
                'autocorrect="off" aria-label="draft de la standup" placeholder="' +
                (t ? "" : "sin novedades desde la última standup") + '">' + esc(t) + "</textarea>";
@@ -57,7 +78,7 @@
               '<button class="qforz stumand" type="button" title="ya la di: guarda el texto y arma la siguiente">mandada</button></div>';
     var ese = '<span class="v b">' + esc(px.dia || "") + " " + esc(px.ddmm || "") + '</span> <span class="g">·</span> ' +
               '<span class="b">' + esc(px.hora || "") + "</span>";
-    return caja("standup", ese, '<div class="stu">' + cab + area + pie + "</div>", false, "standup");
+    return caja("standup", ese, '<div class="stu">' + cab + area + sug + pie + "</div>", false, "standup");
   }
   function horaCorta(iso){
     // `2026-09-28T11:40:12-03:00` -> `11:40 am`. la unica cuenta de la web, y es de formato, no de hora
@@ -115,6 +136,34 @@
   // `mandada`: el texto del textarea viaja en el mismo mensaje (asi no hay dos envios pegados), el server lo guarda,
   // escribe `standup-<fecha>.md`, actualiza `última standup:` y arma la siguiente
   function alTocar(ev){
+    var n = ev.target.closest && ev.target.closest('#widgets [data-w="standup"] .stunuevo');
+    if(n){   // abrir o cerrar el sugerido: solo se muestra, nada se pisa
+      ev.preventDefault(); ev.stopPropagation();
+      sugAbierto = !sugAbierto;
+      var nodo = nodoCaja();
+      if(nodo) B.anclado(function(){ B.reemplazar(nodo, cajaStandup(vivo.d || {})); });
+      return;
+    }
+    var u = ev.target.closest && ev.target.closest('#widgets [data-w="standup"] .stuusar, #widgets [data-w="standup"] .studejar');
+    if(u){
+      ev.preventDefault(); ev.stopPropagation();
+      var usar = u.classList.contains("stuusar");
+      u.disabled = true; u.textContent = "guardando…";
+      if(!vivo.d) vivo.d = {};
+      if(usar){ vivo.d.draft = vivo.d.sugerido; vivo.d.texto = null; vivo.d.editado = null; }
+      vivo.d.sugerido = null; vivo.d.sugerido_generado = null;
+      sugAbierto = false;
+      B.datos("standup", vivo.d);
+      var q = mandar(usar ? "standup sugerido usar" : "standup sugerido descartar");
+      Promise.resolve(q).then(function(r){
+        if(r && r.ok === false){ notaPoner("no salió: " + (r.motivo || "")); return; }
+        var nodo = nodoCaja();
+        if(nodo) B.anclado(function(){ B.reemplazar(nodo, cajaStandup(vivo.d || {})); });
+        notaPoner(usar ? "el nuevo es ahora el draft" : "quedó tu texto");
+        setTimeout(function(){ pedir(true); }, 1500);
+      });
+      return;
+    }
     var b = ev.target.closest && ev.target.closest('#widgets [data-w="standup"] .stumand');
     if(!b) return;
     ev.preventDefault(); ev.stopPropagation();
@@ -181,9 +230,9 @@
       document.removeEventListener("focusout", alSalir, true);
       document.removeEventListener("input", alEscribir, true);
       document.removeEventListener("click", alTocar, true);
-      vivo.d = null; vivo.hash = null; vivo.etag = null;
+      vivo.d = null; vivo.hash = null; vivo.etag = null; sugAbierto = false;
     },
-    recibir: recibir, pedir: pedir, estado: estado,
+    recibir: recibir, pedir: pedir, estado: estado, hayNuevo: hayNuevo,
     vivo: function(){ return {recibidos: vivo.recibidos, repintados: vivo.repintados, saltados: vivo.saltados, espera: vivo.espera}; }
   });
 })();
