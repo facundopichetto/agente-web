@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.500">
-<link rel="manifest" href="manifest.json?v=4.500">
+<meta name="agente-web-version" content="4.501">
+<link rel="manifest" href="manifest.json?v=4.501">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.500">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.501">
 </head>
 <body>
 
@@ -5514,6 +5514,9 @@ function tjResumen(e){
   if(e && e.resumen) return String(e.resumen).replace(/^\[[^\]]*\]\s*/, "");
   var c = {ignorar: 0, maybe: 0, queda: 0}, hs = tjHist(e);
   hs.forEach(function(h){ if(c.hasOwnProperty(h.q)) c[h.q]++; });
+  // 2405 {tarjeta} paso 3: en el instatinder tambien esta frase va en ingles (la de verdad la redacta el server,
+  // `e.resumen`; esta es la red de abajo de cuando no la manda)
+  if(tjIng(e)) return "you voted " + hs.length + ": " + c.queda + " interested, " + c.maybe + " maybe, " + c.ignorar + " ignored";
   return "votaste " + hs.length + ": " + c.queda + " quedan (interesan), " + c.maybe + " maybe, " + c.ignorar + " no van";
 }
 // 1794: el estado de UNA fila por lan (`GET /seleccion/<col>`): trae `agotada` y el lote que `ejecutar` repuso
@@ -5840,6 +5843,22 @@ function tjExtras(e){
 // el puntaje y el puesto de `super candidatas` si los trae (en cualquier lista, no solo en `super`), el motivo,
 // desde cuando y en que lista, y el historial de listas y votos. no calcula ni redacta nada nuevo, y sin tarjeta
 // a la vista no se pinta. en compu el css la esconde (ahi la misma info esta al lado de la foto).
+// 2405 {tarjeta} pasos 2 y 3 (facundo, 2026-09-28: "super candidatas no tiene que decir `no se siguen` porque es
+// obvio que ahi estan las que no nos seguimos. solo si es pública que lo diga en verde, privada nada y listo" +
+// "usá el ingles [...] PARA TODO"): los chips de la tarjeta y de la ficha salen de UN solo lugar, asi los dos
+// dicen lo mismo. `public` en verde siempre; `private` no se pinta en las listas virtuales de ranking (ahi el
+// dato importa menos que la foto) y el vinculo `not connected` tampoco (en `super candidatas` es la definicion de
+// la lista). las etiquetas y el vinculo los redacta el server (`ig_embudo`): aca no se traduce ni se inventa nada.
+function tjChipsSpec(c, e){
+  var sup = tjEsSuper(), out = [], ing = tjIng(e);
+  if(!c) return out;
+  if(c.privada){ if(!sup) out.push({texto: ing ? "private" : "privada", cls: "priv"}); }
+  else out.push({texto: ing ? "public" : "pública", cls: "pub", href: c.link});
+  (c.etiquetas || []).forEach(function(x){ out.push({texto: x, cls: "tag"}); });
+  // el vinculo: el server manda `vinculo` (`ninguno` / `mutual` / `te_sigue` / `la_seguis`) al lado del texto
+  if(c.estado && !(sup && c.vinculo === "ninguno")) out.push({texto: c.estado, cls: "est"});
+  return out;
+}
 function tjFicha(e, c){
   var caja = $("selficha");
   caja.textContent = "";
@@ -5863,25 +5882,36 @@ function tjFicha(e, c){
     fila.appendChild(n);
   }
   caja.appendChild(fila);
-  // los chips: los mismos de la tarjeta (`privada` / `pública`, las etiquetas y el estado, que es donde el server
-  // dice `te sigue`)
-  var chips = [c.privada ? "privada" : "pública"].concat(c.etiquetas || []);
-  if(c.estado) chips.push(c.estado);
+  // los chips: los mismos de la tarjeta (`private` / `public`, las etiquetas y el estado, que es donde el server
+  // dice `follows you`). 2405 {tarjeta} pasos 2 y 3: en ingles, y en `super candidatas` la privada no lleva chip
+  // ninguno y el vinculo `not connected` tampoco (ahi es obvio: por eso estan en esa lista)
   var ch = document.createElement("div"); ch.className = "tjfchips";
-  chips.forEach(function(t){ var x = document.createElement("span"); x.className = "tjfchip"; x.textContent = t; ch.appendChild(x); });
+  tjChipsSpec(c, e).forEach(function(b){
+    var x = document.createElement("span"); x.className = "tjfchip " + (b.cls || ""); x.textContent = b.texto; ch.appendChild(x);
+  });
   caja.appendChild(ch);
   if((c.datos || []).length) linea(c.datos.join(" · "), "tjfdatos");
   var mismo = function(t){ return String(t || "").trim().toLowerCase(); };
   if(c.detalle && mismo(c.detalle) !== mismo(c.titulo) && mismo(c.detalle) !== mismo(c.cuenta)) linea(c.detalle, "tjfdet");
   linea(c.bio, "tjfbio");   // completa: la caja envuelve y scrollea, nunca un `…`
-  if(c.sup){   // puntaje y puesto si los tiene, en cualquier lista (2244 {superranking}: `a medias` si le falta el perfil)
-    linea("puntaje " + c.sup.puntaje + " de " + (c.sup.de || 100) + " · #" + c.sup.puesto + (c.sup.parcial ? " · a medias" : ""), "tjfsuper");
-    linea(c.sup.motivo, "tjfsupmot");
-  }
+  // 2405 {tarjeta} paso 4 (facundo, 2026-09-28: "no pongas puntaje ni numero, no me importa a mi. eso es para vos,
+  // vos mostrame info de la persona"): el puntaje y el puesto de `super candidatas` NO se pintan mas, ni aca ni en
+  // la tarjeta, y no se reemplazan con nada: la ficha queda mas corta y la foto se lleva ese espacio. el ranking
+  // sigue existiendo del lado del server (es el que ordena la fila), solo que facundo no lo ve.
   linea(c.motivo, "tjfmot");
-  linea(c.desde ? "desde " + c.desde + (c.lista ? " · " + c.lista : "") : "", "tjfdesde");
+  linea(c.desde ? (tjIng(e) ? "since " : "desde ") + c.desde + (c.lista ? " · " + c.lista : "") : "", "tjfdesde");
   (c.historial || []).forEach(function(h){ linea(h, "tjfhist"); });
   return caja;
+}
+// 2405 {tarjeta} paso 3 (facundo, 2026-09-28: "usá el ingles [...] PARA TODO. insta tinder en ingles"): el
+// instatinder se lee entero en ingles. las OTRAS votaciones del board (la vista `votar`, la tanda de tarjetas de
+// un tema) siguen en castellano, asi que cada palabra que la web escribe en el votador pasa por aca. la marca es
+// la COLECCION (`ig-embudo`, `ig-seguir`, `ig-dejar`, ...), no la vista: una votacion que no es de instagram
+// abierta desde la vista `tinder` sigue leyendose en castellano, y una de instagram se lee en ingles venga de
+// donde venga (el push, el chip de una persona).
+function tjIng(e){
+  e = e || sel.actual;
+  return /^ig-/.test(String((e && e.coleccion) || ""));
 }
 function tjProcQs(e){ return tjBotonesSpec(e).map(function(b){ return b.q; }); }
 // todas las decisiones que se pueden votar en esta tarjeta: los 3 del pie y los chicos de la lista (2247). 2120
@@ -5982,7 +6012,8 @@ function tjContar(){
   // 1836 (facundo, 2026-09-17: "tampoco me pongas cuantas quedan"): la fila continua no cuenta nada en el modal
   if(e.continua){
     $("selcuenta").textContent = "";
-  } else $("selcuenta").textContent = c ? (sel.tj + 1) + " de " + e.candidatas.length : "listo";
+  } else $("selcuenta").textContent = c ? (sel.tj + 1) + (tjIng(e) ? " of " : " de ") + e.candidatas.length
+                                       : (tjIng(e) ? "done" : "listo");
 }
 // 2095 paso 5: esta tarjeta es de la lista que facundo abrio? sin filtro puesto, todas lo son. una tarjeta vieja
 // que el server manda sin `lista` no se tira (un server que todavia no la manda no puede dejar el votador vacio).
@@ -6092,6 +6123,26 @@ function tjActual(){
 }
 // 1874: la vista entera la pone `selModoLista` (modo tarjetas); lo que cambia es la clase del modal
 function tjPantalla(){ return $("selmodal").classList.contains("pantalla"); }
+// 2405 {tarjeta} paso 1 (facundo, 2026-09-28: "la tarjeta para votar tiene que ser full screen, es decir arriba a
+// la derecha la X y a la izq la flecha. no tengo que poder ir al menu desde la tarjeta, primero la X para ir al
+// home del instatinder y ahi si"): con una tarjeta A LA VISTA la barra de iconos del board (hamburguesa, campana,
+// chat, grilla) se esconde por css (`body.tjfull`), asi que arriba quedan SOLO los dos controles de la cabecera
+// del votador: el `←` a la izquierda y la `✕` a la derecha. es la tarjeta y nada mas: en la home del instatinder,
+// en la grilla de una lista y cuando la fila se quedo sin tarjetas la barra vuelve sola. no es una vista nueva ni
+// una capa nueva: solo una clase en el `body`, asi que `esc`, la pila de capas y el back siguen igual.
+function tjFull(){
+  // "hay una tarjeta a la vista" es lo MISMO que mira el teclado (`tjTecla`): la vista, el modal abierto a
+  // pantalla completa, la fila de votos pintada y una candidata bajo el cursor. la home del instatinder y la
+  // grilla de una lista comparten el modal y la clase `pantalla`, asi que mirar solo `sel.actual` las daba por
+  // tarjeta y les escondia la barra.
+  var t = $("seltarjeta");
+  var on = !!(vistaEs("tinder") && sel.actual && tjActual() && tjPantalla()
+              && !$("selmodal").classList.contains("oculta")
+              && !$("selacciones").classList.contains("oculta")
+              && t && !t.classList.contains("oculta"));
+  document.body.classList.toggle("tjfull", on);
+  return on;
+}
 // 1524 (2026-09-15 16:20): en el iphone no bajo ninguna y el `catch` avanzaba en cadena hasta mandar `fin`. ahora
 // se reintenta (probando la lan de nuevo) y si igual no baja la tarjeta SE SACA de la tanda, sin votar (eso solo lo
 // hace la foto PRINCIPAL: 1580 {fotoancha}, una foto de mas abajo del carrusel que no baja no saca a nadie).
@@ -6179,6 +6230,7 @@ function tjPintar(){
   // 2078 {home} paso 4: el back grande vuelve a la tarjeta anterior (2002) y, cuando no queda ninguna por deshacer,
   // a la LISTA de la que salio el votador. solo queda gris si el votador no salio de una lista (el push, un icono)
   var atras = tjHist(e).length > 0 || !!lis.origen, bk = $("selback");
+  tjFull();       // 2405 {tarjeta} paso 1: con tarjeta a la vista, la barra de iconos del board se va
   tjBotones(e);   // 1801: los botones son los del proceso de esta coleccion
   tjExtras(e);    // 2247: y los chicos de arriba, los de ESTA lista
   $("selacciones").classList.toggle("oculta", !c);
@@ -6191,7 +6243,9 @@ function tjPintar(){
   });
   // 2137 {votolocal}: el pie dice cuantos votos hay esperando el `enviar` (nada sale hasta tocarlo)
   var nv = tjHist(e).length;
-  $("selcerrar").textContent = nv ? "enviar (" + nv + ")" : "enviar";
+  // 2405 {tarjeta} pasos 3 y 6: en ingles, y el `send` ya no comparte renglon con el `ignore @...`: el pie es
+  // un boton solo, ancho, abajo de todo (el css), con el aviso del voto arriba
+  $("selcerrar").textContent = (tjIng(e) ? "send" : "enviar") + (nv ? " (" + nv + ")" : "");
   bk.classList.remove("oculta");   // en tarjetas el back se ve siempre; `selModoLista` lo esconde en la lista
   bk.classList.toggle("apagado", !atras);
   bk.disabled = !atras;
@@ -6207,7 +6261,9 @@ function tjPintar(){
     // pide por lan cada `SEL_PEDIR_MS` (sin lan lo trae `widgets.json`). el back `←` sigue vivo: vuelve a la anterior.
     t.removeAttribute("data-candidata");
     var w = document.createElement("div"); w.className = "tjdet " + (e.agotada ? "tjcierre" : "tjespera");
-    w.textContent = e.agotada ? "no quedan candidatas · " + tjResumen(e) : "no hay más por ahora: las nuevas entran solas al final";
+    w.textContent = e.agotada ? (tjIng(e) ? "no one left · " : "no quedan candidatas · ") + tjResumen(e)
+      : (tjIng(e) ? "nothing more for now: new ones come in at the end by themselves"
+                 : "no hay más por ahora: las nuevas entran solas al final");
     t.appendChild(w);
     if(!e.agotada) selEsperar(e.coleccion);
     return;
@@ -6269,7 +6325,7 @@ function tjPintar(){
     var fn = document.createElement("div"); fn.className = "tjfnum";
     var fnPintar = function(){
       var an = fs.clientWidth || 1, k = Math.min(fotos.length, Math.round(fs.scrollLeft / an) + 1);
-      fn.textContent = "foto " + k + " de " + fotos.length;
+      fn.textContent = (tjIng(e) ? "photo " + k + " of " : "foto " + k + " de ") + fotos.length;
     };
     fnPintar(); fs.addEventListener("scroll", fnPintar, {passive: true});
     info.appendChild(fn);
@@ -6281,7 +6337,7 @@ function tjPintar(){
     // 2249 {foto}: el renglon chico que dice por que el cuadro tiene el arroba y no una cara. con lo que haya
     // contestado el server (`/ig/foto/<pk>`: la lectura frenada, la cuenta sin foto de perfil) atras.
     var sf = document.createElement("div"); sf.className = "tjfotopend tjsinfoto";
-    sf.textContent = "sin foto de perfil" + (tjFotoMotivo[c.id] ? " · " + tjFotoMotivo[c.id] : "");
+    sf.textContent = (tjIng(e) ? "no profile photo" : "sin foto de perfil") + (tjFotoMotivo[c.id] ? " · " + tjFotoMotivo[c.id] : "");
     info.appendChild(sf);
   } else if(c.foto_pendiente){
     var fp = document.createElement("div"); fp.className = "tjfotopend";
@@ -6290,7 +6346,7 @@ function tjPintar(){
     // con la url guardada y solo le lee el perfil si hace falta y la lectura no esta frenada). mientras tanto
     // dice que la esta pidiendo, y lo que vuelve manda: con la foto se repinta, y si instagram freno las lecturas
     // el cartel lo DICE con la hora en vez de prometer una bajada que no esta pasando.
-    fp.textContent = tjFotoMotivo[c.id] || "bajando la foto…";
+    fp.textContent = tjFotoMotivo[c.id] || (tjIng(e) ? "loading photo…" : "bajando la foto…");
     info.appendChild(fp);
     tjPedirFoto(c);
   }
@@ -6312,9 +6368,9 @@ function tjPintar(){
     if(lk){ x.href = href; x.target = "_blank"; x.rel = "noopener"; x.addEventListener("click", function(ev){ ev.stopPropagation(); }); }
     est.appendChild(x); return x;
   }
-  chip(c.privada ? "privada" : "pública", c.privada ? "priv" : "pub", c.privada ? "" : c.link);
-  (c.etiquetas || []).forEach(function(x){ chip(x, "tag"); });
-  if(c.estado) est.appendChild(document.createTextNode(c.estado));
+  // 2405 {tarjeta} pasos 2 y 3: los mismos chips que la ficha (`tjChipsSpec`), en ingles y sin el `not connected`
+  // de `super candidatas`. el vinculo pasa a ser un chip mas: antes era texto suelto al lado
+  tjChipsSpec(c, e).forEach(function(b){ chip(b.texto, b.cls, b.href || ""); });
   info.appendChild(est);
   // 1642: lo que el embudo ya sabe (seguidores, en comun, reacciones), la bio y el motivo; la linea igual al nombre no va
   if((c.datos || []).length){
@@ -6328,17 +6384,13 @@ function tjPintar(){
   // 1665: la bio tiene su renglon siempre, vacio mientras no haya dato (lo llena la lectura de perfiles); `following`
   // entra solo en `datos` cuando existe
   var bio = document.createElement("div"); bio.className = "tjbio"; bio.textContent = c.bio || ""; info.appendChild(bio);
-  // 2134 {supervirtual} paso 4: en `super candidatas` la tarjeta dice cuanto puntuo y POR QUE (lo redacta el
-  // server, `ig_super.puntuar`); el resto de los procesos no lo pinta aunque la tarjeta lo traiga
-  if(c.sup && tjEsSuper()){
-    // 2244 {superranking}: una puntuada SIN el perfil leido lo dice en el mismo renglon del puntaje, asi un 100
-    // sacado con 3 señales no se lee igual que uno sacado con 9 (el detalle va en el `motivo`, que ya lo trae)
-    renglon("puntaje " + c.sup.puntaje + " de " + (c.sup.de || 100) + " · #" + c.sup.puesto
-            + (c.sup.parcial ? " · a medias" : ""), "tjsuper" + (c.sup.parcial ? " tjsupmed" : ""));
-    if(c.sup.motivo) renglon(c.sup.motivo, "tjsupmot");
-  }
+  // 2405 {tarjeta} paso 4 (facundo, 2026-09-28: "no pongas puntaje ni número, no me importa a mi. eso es para vos,
+  // vos mostrame info de la persona"): el renglon `puntaje 58.1 de 100 · #89` y el de sub-puntajes se fueron de la
+  // tarjeta, y NO se reemplazan por nada (facundo, opcion B: "el puntaje simplemente se va y no lo reemplazo con
+  // nada: la tarjeta queda más corta y la foto más grande"). el `sup` sigue viajando en la tarjeta y el ranking
+  // sigue ordenando la fila del lado del server: lo unico que cambia es que facundo no lo ve.
   if(c.motivo) renglon(c.motivo, "tjmot");
-  if(c.desde) renglon("desde " + c.desde + (c.lista ? " · " + c.lista : ""), "tjdesde");
+  if(c.desde) renglon((tjIng(e) ? "since " : "desde ") + c.desde + (c.lista ? " · " + c.lista : ""), "tjdesde");
   if((c.historial || []).length){   // 1665: de donde salio, cada voto y cada mudanza, lo mas nuevo abajo
     var hs = document.createElement("div"); hs.className = "tjhist";
     c.historial.forEach(function(x){ var y = document.createElement("div"); y.textContent = x; hs.appendChild(y); });
@@ -6589,7 +6641,11 @@ function selCancelar(){
   sel.ignorada[e.coleccion] = e.abrir_ts;
   sel.actual = null; sel.sesion = null; sel.sesionVotos = [];
   selModoLista(true);
-  selSalir();   // 1922/2078: vuelve a la home de la vista (las listas), no cierra la vista
+  // 2405 {tarjeta} paso 1: la `✕` de la tarjeta lleva SIEMPRE al home del instatinder (facundo: "primero la X
+  // para ir al home del instatinder y ahi si [aparece el menu]"), nunca a la grilla de la que salio el votador:
+  // volver ahi sigue siendo el `←`. fuera de la vista `tinder` no cambia nada.
+  if(vistaEs("tinder")){ lis.origen = null; tinderHome(); } else selSalir();
+  tjFull();
   selBoton();
   selSubir();
   return true;
@@ -6630,12 +6686,13 @@ function selCerrar(){
   // 1922 {vistatinder} + 2078 {home}: `esc` o el `enviar` de una votacion vuelven a la home de la vista, que son
   // las listas; la vista se cierra recien con el segundo `esc` (desde las listas) o tocando otro icono de la barra
   // 2095 paso 5: volver es volver a la LISTA de la que salio el votador (la sub-vista `una`); sin origen, la home
-  if(tj && sub !== "listas" && sub !== "una"){ lisVolver(); selBoton(); return; }
+  if(tj && sub !== "listas" && sub !== "una"){ lisVolver(); tjFull(); selBoton(); return; }
   // {home} paso 5: parado en UNA lista, `esc` cierra esa lista (vuelve a la home del tinder), no la vista entera:
   // es el mismo gesto que la `✕` y que el back grande. la vista se cierra desde su home
-  if(tj && sub === "una"){ lisAHome(); selBoton(); return; }
+  if(tj && sub === "una"){ lisAHome(); tjFull(); selBoton(); return; }
   capaOcultar("selmodal");
   if(tj || (vistaEs("votar") && !votacionHay())) vistaVolver();   // 1875: sale de la vista; 1933: tambien `votar`
+  tjFull();   // 2405 {tarjeta} paso 1
   selBoton();
 }
 function selEncolar(tipo){
@@ -6891,6 +6948,7 @@ function lisAbrir(fresco){
 }
 function lisPoner(cual, fresco){
   lis.sub = cual === "listas" ? "listas" : "votar";
+  setTimeout(tjFull, 0);   // 2405 {tarjeta} paso 1: fuera de la tarjeta la barra de iconos vuelve sola
   if(lis.sub === "listas") lis.una = null;   // 2095: la home no es ninguna lista abierta
   if(lis.sub === "votar"){
     $("sellistas").classList.add("oculta");
@@ -7201,6 +7259,7 @@ function lisEntrar(f, fresco){
   // que conteste el server, sin que facundo tenga que hacer un refresco duro
   lisBajar(true).then(function(){ if(lis.sub === "una") lisUnaPintar(); });
   lisRefrescar();
+  tjFull();   // 2405 {tarjeta} paso 1: la grilla de una lista NO es la tarjeta: la barra de iconos se ve
   selBoton();
   return true;
 }
@@ -7913,6 +7972,7 @@ function tinderSalir(){
   lis.una = null; sel.filtro = null; sel.filtroTitulo = null;   // 2095
   lisRefrescoParar();
   capaOcultar("selmodal");
+  tjFull();   // 2405 {tarjeta} paso 1: saliendo de la vista, la barra de iconos vuelve
 }
 // 1788: SIEMPRE lo toca facundo (el boton `votar` o el push). abre la primera que no cerraste; si cerraste todas,
 // vuelve a la primera; si no queda ninguna seleccion, abre el votador de animaciones que el server confirmo.
@@ -13823,6 +13883,7 @@ function vistaPoner(n){
   if(vistaPrevia === "votar" && n !== "votar") votacionSalir();   // 1933 {instatinder}
   if(vistaPrevia === "podcast" && n !== "podcast") pod.ep = null;
   if(vistaPrevia === "docs" && n !== "docs") docs.doc = null;   // 1676: salir por la barra cierra el informe abierto
+  tjFull();   // 2405 {tarjeta} paso 1: la barra de iconos solo se esconde con la tarjeta del votador a la vista
   vistaPintar();
   if(vistaEs("widgets") && Date.now() - widUlt > 15000) cargarWidgets().catch(function(){});
   if(vistaEs("podcast")) podVistaPintar();
@@ -14670,6 +14731,11 @@ window.__agente = {
             iconos: {chat: vis("ver-chat") || vis("mv-chat"), widgets: vis("ver-widgets"), tinder: vis("ver-votar"),
                      votar: vis("ver-votacion"), podcast: vis("ver-podcast"), home: vis("ver-home"),
                      claves: vis("ver-claves")},
+            // 2405 {tarjeta} paso 1: la barra de iconos del board, que con una tarjeta del votador a la vista
+            // no se pinta (`body.tjfull`)
+            barra: (function(){ var e = document.getElementById("cabecera");
+                     return !!e && getComputedStyle(e).display !== "none"; })(),
+            tjfull: document.body.classList.contains("tjfull"),
             paneles: {chat: visR("panel-chat"), widgets: visR("panel-widgets"), tinder: visR("selmodal"),
                       votar: visR("selmodal") || visR("votar"), podcast: visR("vista-podcast"),
                       home: visR("vista-home"), claves: visR("vista-claves")},

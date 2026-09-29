@@ -261,7 +261,7 @@ function cajaSombra(sb){
   // por socket como `pares votar <id> <A|B|iguales>` (sin modelo) y recien la respuesta fresca destapa cual era
   // cual. molde de `docs/componentes-web.md`: back grande a la izquierda (par anterior de la fila, sin deshacer
   // nada), `✕` a la derecha, esc cierra, y `confirmar` pide `pares.json?fresco=1` al abrir: sin datos viejos.
-  var parM = null, par = {lista: [], i: 0, votados: [], n: 0, mandados: 0, ultimo: null, local: false};
+  var parM = null, par = {lista: [], i: 0, votados: [], n: 0, mandados: 0, ultimo: null, local: false, crudo: {}};
   function paresFila(sb){
     var p = sb.pares || {}, n = p.a_votar || 0;
     return '<span class="parfila"><span class="g">' + pad("pares", 11) + "</span>" +
@@ -282,8 +282,26 @@ function cajaSombra(sb){
     par.lista = j.pares || []; par.votados = j.votados || []; par.n = j.n || par.lista.length;
     if(par.i >= par.lista.length) par.i = 0;
   }
+  // 2414 {pares}: lo que se MUESTRA de cada lado son los tres renglones del resumen ciego que escribio un modelo
+  // gratis (`banco_pareado.resumir`), no el diff crudo: facundo, 2026-09-29, "no puedo votar MDs". el diff sigue
+  // estando, atras de la caja chica `ver el diff`, del mismo par y sin cambiar de letra. un par sin resumen (el
+  // gratis no llego todavia) muestra el diff como antes, asi el modal nunca queda vacio.
+  function parTieneResumen(x){
+    return !!(x && String(x.resumen_A || "").trim() && String(x.resumen_B || "").trim());
+  }
+  function parCrudo(x){
+    return !parTieneResumen(x) || !!par.crudo[x.id];
+  }
+  function parLadoHtml(x, letra, crudo, lado){
+    var cab = '<div class="parcab"><span class="c b">' + letra + '</span> <span class="g">' +
+      (crudo ? lado : "resumen") + "</span></div>";
+    if(crudo) return '<div class="parlado">' + cab + '<pre class="partxt">' + esc(x[letra] || "") + "</pre></div>";
+    var ls = String(x["resumen_" + letra] || "").split("\n").filter(function(l){ return l.trim(); });
+    return '<div class="parlado">' + cab + '<div class="partxt">' +
+      ls.map(function(l){ return "<div>" + esc(l.trim()) + "</div>"; }).join("") + "</div></div>";
+  }
   function parHtml(x){
-    var lado = x.solo_lectura ? "respuesta" : "diff";
+    var lado = x.solo_lectura ? "respuesta" : "diff", crudo = parCrudo(x);
     return '<div class="parord"><span class="g">orden ' + esc(String(x.n || "?")) + " \u00b7 " + esc(x.tipo || "") +
              (x.clase === "sombra" ? " \u00b7 sombra" : "") +
              // 2361 {atiende-sombra} paso 9: un par de este carril no es opus contra fable, es la respuesta
@@ -291,18 +309,18 @@ function cajaSombra(sb){
              (x.clase === "opencode" ? " \u00b7 opencode vs sombra" : "") +
              (x.tema ? " \u00b7 " + esc(x.tema) : "") + "</span>\n" +
              esc(x.texto || "") + "</div>" +
-           '<div class="parcols">' +
-             '<div class="parlado"><div class="parcab"><span class="c b">A</span> <span class="g">' + lado + '</span></div><pre class="partxt">' + esc(x.A || "") + "</pre></div>" +
-             '<div class="parlado"><div class="parcab"><span class="c b">B</span> <span class="g">' + lado + '</span></div><pre class="partxt">' + esc(x.B || "") + "</pre></div>" +
-           "</div>" +
-           (x.recortado ? '<span class="g">los lados estan recortados al tope del juez</span>' : "");
+           '<div class="parcols">' + parLadoHtml(x, "A", crudo, lado) + parLadoHtml(x, "B", crudo, lado) + "</div>" +
+           (parTieneResumen(x) ? '<button class="qforz pardiff" type="button" title="' +
+              (crudo ? "volver a los dos resumenes" : "los dos lados crudos, sin cambiar de letra") + '">' +
+              (crudo ? "ver el resumen" : "ver el " + lado) + "</button>" : "") +
+           (crudo && x.recortado ? '<span class="g">los lados estan recortados al tope del juez</span>' : "");
   }
   function parModal(){
     if(parM) return parM;
     parM = B.modalMolde({
       id: "paresmodal", z: 44,
       confirmar: function(d){ return (d && d.local) ? Promise.resolve(true) : parCargar(); },
-      alCerrar: function(){ par.lista = []; par.i = 0; par.local = false; }
+      alCerrar: function(){ par.lista = []; par.i = 0; par.local = false; par.crudo = {}; }
     });
     // 2002 {back}: el back grande a la izquierda de la cabecera. aca es "el par anterior de la fila" (para
     // volver a mirarlo), nunca deshace un voto ya mandado. apagado en el primero.
@@ -313,6 +331,16 @@ function cajaSombra(sb){
     back.innerHTML = '<span class="mglf">\u2190</span>';
     back.addEventListener("click", function(){ if(par.i > 0){ par.i--; parPintar(); } });
     h.insertBefore(back, h.firstChild);
+    // la caja chica `ver el diff` / `ver el resumen`: mismo par, misma letra, no manda nada a ningun lado
+    parM.el.addEventListener("click", function(ev){
+      var b = ev.target.closest && ev.target.closest(".pardiff");
+      if(!b) return;
+      ev.preventDefault(); ev.stopPropagation();
+      var x = par.lista[par.i];
+      if(!x) return;
+      if(par.crudo[x.id]) delete par.crudo[x.id]; else par.crudo[x.id] = 1;
+      parPintar();
+    }, true);
     return parM;
   }
   function parPintar(nota){
@@ -387,6 +415,6 @@ function cajaSombra(sb){
     escaleraHtml: escaleraHtml,   // lo mira `prueba_escalera`
     pares: {abrir: paresAbrir, mostrar: paresMostrar, votar: function(l){ var x = par.lista[par.i]; if(x) parVotar(x, l); return !!x; },
             estado: function(){ return {n: par.lista.length, i: par.i, mandados: par.mandados, ultimo: par.ultimo,
-                                        abierto: !!(parM && parM.abierto)}; }}
+                                        crudo: Object.keys(par.crudo).length, abierto: !!(parM && parM.abierto)}; }}
   });
 })();
