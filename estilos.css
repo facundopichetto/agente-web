@@ -978,6 +978,19 @@
   /* el modal de comandos (`cmdAbrir`, molde `modalMolde`): grupos por tema, una fila tocable por comando */
   /* 2095 {instatinder} paso 9 (facundo: "la vista de comandos tambien esta angosta en desktop"): el modal del
      glifo `/` deja de tener el ancho de un celu y ocupa el ancho de la pantalla, como el resto de las vistas */
+  /* 2360 {voto}: el modal `pares` del widget `models`: la orden arriba, los dos lados `A`/`B` lado a lado
+     (uno debajo del otro en el celu angosto) y tres botones grandes al pie. reusa el molde entero. */
+  #paresmodal .mmolde{max-width:none;width:100%;height:100%;max-height:100%}
+  #paresmodal .mcuerpo2{flex:1 1 auto;min-height:0;white-space:normal;display:flex;flex-direction:column;gap:6px;overflow:hidden}
+  #paresmodal .parord{white-space:pre-wrap;word-break:break-word;flex:0 0 auto;max-height:22%;overflow-y:auto;
+    border-bottom:1px solid var(--linea);padding-bottom:4px}
+  #paresmodal .parcols{display:grid;grid-template-columns:1fr 1fr;gap:8px;flex:1 1 auto;min-height:0}
+  #paresmodal .parlado{display:flex;flex-direction:column;min-height:0;min-width:0}
+  #paresmodal .parcab{flex:0 0 auto;padding:2px 0}
+  #paresmodal .partxt{flex:1 1 auto;min-height:0;overflow:auto;margin:0;padding:4px;background:#000;
+    border:1px solid var(--linea);border-radius:4px;white-space:pre-wrap;word-break:break-word;font-size:var(--texto-max)}
+  #paresmodal .mbotones .parbtn{min-height:46px}
+  @media (max-width:520px){ #paresmodal .parcols{grid-template-columns:1fr;overflow-y:auto} #paresmodal .partxt{max-height:38vh} }
   #cmdmodal .mmolde{max-width:none;width:100%}
   #cmdmodal .mcuerpo2{display:flex;flex-direction:column;gap:2px}
   .cmdgrupo{color:var(--amarillo);font-weight:bold;margin:8px 0 2px}

@@ -233,6 +233,7 @@ function cajaSombra(sb){
     filas.push('<span class="g">' + pad("hoy", 11) + "</span>" + chips.join('<span class="g"> \u00b7 </span>'));
   }
   filas.push(ahoraHtml(sb.ahora));   // 2176 paso 5: quien esta escribiendo AHORA, no el historico
+  filas.push(paresFila(sb));         // 2360 {voto}: los pares del banco pareado que esperan el voto de facundo
   // pie: el modelo real del ollama del server (o `sin local` si no contesta) y lo que el juez no pudo puntuar
   var loc = (sb.local || {}).modelo || ((sb.modelos || {}).local || {}).modelo;
   filas.push('<span class="g">' + (sb.n || 0) + " corridas · 100 = mejor de la categoria · apto = 85+ crudo 80+ &lt;5s 20+" +
@@ -253,10 +254,135 @@ function cajaSombra(sb){
   return caja("models", ese, limFilas("sombra", filas).join("\n"), true, "sombra");
 }
 
+  // ---------- 2360 {voto}: el modal `pares` (facundo es el juez del banco pareado) ----------
+  // cada par cerrado del banco pareado (opus vs fable sobre la MISMA orden, o un barato en sombra) queda `a votar`.
+  // aca se ve la orden y los dos lados como `A` y `B`, sorteados con el id del par y con los nombres de modelo
+  // tapados por el server: NADA de lo que llega dice cual es de quien. tres botones grandes al pie; el voto sale
+  // por socket como `pares votar <id> <A|B|iguales>` (sin modelo) y recien la respuesta fresca destapa cual era
+  // cual. molde de `docs/componentes-web.md`: back grande a la izquierda (par anterior de la fila, sin deshacer
+  // nada), `✕` a la derecha, esc cierra, y `confirmar` pide `pares.json?fresco=1` al abrir: sin datos viejos.
+  var parM = null, par = {lista: [], i: 0, votados: [], n: 0, mandados: 0, ultimo: null, local: false};
+  function paresFila(sb){
+    var p = sb.pares || {}, n = p.a_votar || 0;
+    return '<span class="parfila"><span class="g">' + pad("pares", 11) + "</span>" +
+      (n ? '<span class="a b">' + esc(String(n)) + " a votar</span>" : '<span class="g">nada a votar</span>') +
+      (p.votados ? '<span class="g"> \u00b7 ' + esc(String(p.votados)) + " votados</span>" : "") +
+      (n ? ' <button class="qforz parvot" type="button" title="opus vs fable a ciegas: elegís el mejor sin saber cuál es de quién">votar</button>' : "") +
+      "</span>";
+  }
+  function parCargar(){
+    if(!B.lan()) return Promise.resolve(false);
+    return B.bajar("pares.json?fresco=1", null).then(function(r){
+      if(!r || !r.json) return false;
+      parAdoptar(r.json);
+      return true;
+    }, function(){ return false; });
+  }
+  function parAdoptar(j){
+    par.lista = j.pares || []; par.votados = j.votados || []; par.n = j.n || par.lista.length;
+    if(par.i >= par.lista.length) par.i = 0;
+  }
+  function parHtml(x){
+    var lado = x.solo_lectura ? "respuesta" : "diff";
+    return '<div class="parord"><span class="g">orden ' + esc(String(x.n || "?")) + " \u00b7 " + esc(x.tipo || "") +
+             (x.clase === "sombra" ? " \u00b7 sombra" : "") + (x.tema ? " \u00b7 " + esc(x.tema) : "") + "</span>\n" +
+             esc(x.texto || "") + "</div>" +
+           '<div class="parcols">' +
+             '<div class="parlado"><div class="parcab"><span class="c b">A</span> <span class="g">' + lado + '</span></div><pre class="partxt">' + esc(x.A || "") + "</pre></div>" +
+             '<div class="parlado"><div class="parcab"><span class="c b">B</span> <span class="g">' + lado + '</span></div><pre class="partxt">' + esc(x.B || "") + "</pre></div>" +
+           "</div>" +
+           (x.recortado ? '<span class="g">los lados estan recortados al tope del juez</span>' : "");
+  }
+  function parModal(){
+    if(parM) return parM;
+    parM = B.modalMolde({
+      id: "paresmodal", z: 44,
+      confirmar: function(d){ return (d && d.local) ? Promise.resolve(true) : parCargar(); },
+      alCerrar: function(){ par.lista = []; par.i = 0; par.local = false; }
+    });
+    // 2002 {back}: el back grande a la izquierda de la cabecera. aca es "el par anterior de la fila" (para
+    // volver a mirarlo), nunca deshace un voto ya mandado. apagado en el primero.
+    var h = parM.el.querySelector(".mhead");
+    var back = document.createElement("button");
+    back.type = "button"; back.className = "bglifo mesquina b-atras parback apagado";
+    back.setAttribute("aria-label", "par anterior"); back.title = "par anterior";
+    back.innerHTML = '<span class="mglf">\u2190</span>';
+    back.addEventListener("click", function(){ if(par.i > 0){ par.i--; parPintar(); } });
+    h.insertBefore(back, h.firstChild);
+    return parM;
+  }
+  function parPintar(nota){
+    var m = parModal(), x = par.lista[par.i];
+    if(!x){
+      m.pintar({titulo: "pares", cuenta: "", texto: "no queda ningún par a votar", botones: []});
+    } else {
+      m.pintar({titulo: "par " + x.id, cuenta: (par.i + 1) + " de " + par.lista.length, html: parHtml(x),
+                botones: [
+                  {tipo: "verde", txt: "mejor A", clase: "parbtn", aria: "mejor A", accion: function(){ parVotar(x, "A"); }},
+                  {tipo: "verde", txt: "mejor B", clase: "parbtn", aria: "mejor B", accion: function(){ parVotar(x, "B"); }},
+                  {tipo: "verde", txt: "iguales", clase: "parbtn", aria: "iguales", accion: function(){ parVotar(x, "iguales"); }}]});
+    }
+    var back = m.el.querySelector(".parback");
+    if(back) back.classList.toggle("apagado", par.i === 0);
+    if(nota) m.estado(nota);
+  }
+  function parDestape(id){
+    var v = null;
+    (par.votados || []).forEach(function(z){ if(z && z.id === id) v = z; });
+    if(!v) return "voto guardado";
+    return "par " + id + ": A era " + v.A + " \u00b7 B era " + v.B + " \u00b7 " +
+           (v.gana === "iguales" ? "iguales" : "gana " + v.gana) + (v.juez ? " (el juez gratis decía " + v.juez + ")" : "");
+  }
+  function parVotar(x, letra){
+    var m = parModal();
+    var bs = m.el.querySelectorAll(".mbotones button");
+    [].forEach.call(bs, function(b){ b.disabled = true; });
+    m.estado("mandando el voto\u2026");
+    par.mandados++;
+    par.ultimo = {id: x.id, letra: letra};
+    var q = par.local ? Promise.resolve({ok: true}) : B.mandarAparte("pares votar " + x.id + " " + letra, "board");
+    Promise.resolve(q).then(function(r){
+      if(r && r.ok === false){
+        [].forEach.call(bs, function(b){ b.disabled = false; });
+        m.estado("no salió: " + (r.motivo || "sin conexión")); return;
+      }
+      // el que se voto sale de la fila en el momento; el destape llega con el json fresco
+      par.lista = par.lista.filter(function(z){ return z.id !== x.id; });
+      if(par.i >= par.lista.length) par.i = Math.max(0, par.lista.length - 1);
+      parPintar("voto mandado, destapando\u2026");
+      if(par.local) return;
+      setTimeout(function(){
+        parCargar().then(function(ok){ parPintar(ok ? parDestape(x.id) : "voto mandado"); B.repintarWidgets && B.repintarWidgets(); });
+      }, 1500);
+    });
+  }
+  function paresAbrir(){
+    par.i = 0; par.local = false;
+    return parModal().abrir({titulo: "pares", texto: "cargando\u2026"}).then(function(ok){
+      if(ok) parPintar();
+      return ok;
+    });
+  }
+  // para las pruebas (sin lan): la misma fila, con un json ya armado; el voto no sale a ningun lado
+  function paresMostrar(j){
+    par.i = 0; par.local = true; parAdoptar(j || {});
+    return parModal().abrir({titulo: "pares", texto: "", local: true}).then(function(ok){ if(ok) parPintar(); return ok; });
+  }
+  function alTocarPares(ev){
+    var b = ev.target.closest && ev.target.closest('#widgets [data-w="sombra"] .parvot');
+    if(!b) return;
+    ev.preventDefault(); ev.stopPropagation();
+    paresAbrir();
+  }
+  document.addEventListener("click", alTocarPares, true);
+
   B.registrar("sombra", {
     html: function(d){ return cajaSombra(d || {}); },
     pintar: function(d, nodo){ return B.reemplazar(nodo, cajaSombra(d || {})); },
-    destruir: function(){},
-    escaleraHtml: escaleraHtml   // lo mira `prueba_escalera`
+    destruir: function(){ document.removeEventListener("click", alTocarPares, true); },
+    escaleraHtml: escaleraHtml,   // lo mira `prueba_escalera`
+    pares: {abrir: paresAbrir, mostrar: paresMostrar, votar: function(l){ var x = par.lista[par.i]; if(x) parVotar(x, l); return !!x; },
+            estado: function(){ return {n: par.lista.length, i: par.i, mandados: par.mandados, ultimo: par.ultimo,
+                                        abierto: !!(parM && parM.abierto)}; }}
   });
 })();
