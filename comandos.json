@@ -543,6 +543,13 @@
      "detector": true
     },
     {
+     "cmd": "es_cmd_sonnet",
+     "que": "detector nuevo en daemon.py, sin descripción todavía",
+     "escribe": null,
+     "offline": "cola",
+     "detector": true
+    },
+    {
      "cmd": "es_cmd_standup",
      "que": "detector nuevo en daemon.py, sin descripción todavía",
      "escribe": null,
