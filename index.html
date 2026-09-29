@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.501">
-<link rel="manifest" href="manifest.json?v=4.501">
+<meta name="agente-web-version" content="4.502">
+<link rel="manifest" href="manifest.json?v=4.502">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.501">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.502">
 </head>
 <body>
 
@@ -2686,6 +2686,43 @@ function modeloCorto(s){
   if(b.indexOf("sin modelo") === 0) return "sin modelo";
   return s.split(/[\/:\s]/)[0].slice(0, 20);
 }
+// ---------- 2417 {boton}: `lo entendiste mal` (facundo, 2026-09-29) ----------
+// cada respuesta del chat lleva un boton chico al pie. no escribe nada en la caja y no le pide a facundo que
+// repita el pedido: manda `#mal <ts>` (el `ts` de ESA fila del jsonl) y el daemon, sin modelo, anota el
+// entendimiento errado en la memoria de la pestaña y re-larga ESE turno con la instruccion de preguntar antes
+// de tocar nada. sin `ts` no se pinta: el turno no se adivina (una respuesta recien llegada por el buzon lo
+// toma en cuanto se publica su fila, que es el mismo segundo).
+var MARCA_MAL = "[entendiste mal]";
+function sinMarcaMal(t){
+  var s = String(t || "");
+  if(s.indexOf(MARCA_MAL) !== 0) return s;
+  var i = s.indexOf("\n\n");
+  return "`lo entendiste mal` · " + (i < 0 ? "" : s.slice(i + 2).trim());
+}
+// las pruebas (`prueba_web_mal`) se quedan con lo que mandaria el boton en vez de dejarlo salir al buzon
+var malMandarFn = null;
+function malMandar(fn){ malMandarFn = fn; }
+function tocarMal(b){
+  var ts = b.dataset.mal, tema = b.dataset.tema || temaActivo();
+  if(!ts) return;
+  b.disabled = true; b.classList.add("hecho");
+  var msg = "#mal " + ts;
+  if(malMandarFn) malMandarFn(msg, tema);
+  else mandar(msg, tema);
+  setTimeout(function(){ b.disabled = false; }, 2000);
+}
+function nodoAccMsg(m){
+  var w = document.createElement("div");
+  w.className = "msgacc";
+  var b = document.createElement("button");
+  b.type = "button"; b.className = "malent";
+  b.textContent = "lo entendiste mal";
+  b.dataset.mal = m.ts_envio; b.dataset.tema = m.tema || "";
+  b.setAttribute("aria-label", "lo entendiste mal: volvé a leer lo que te pedí");
+  b.addEventListener("click", function(){ tocarMal(b); });
+  w.appendChild(b);
+  return w;
+}
 function nodoMsg(m){
   var div = document.createElement("div");
   div.className = "msg " + m.clase + (m.enviando ? " enviando" : "");
@@ -2739,13 +2776,17 @@ function nodoMsg(m){
   var textoSinAcc = acc && acc.cuerpo !== null ? acc.cuerpo : m.texto;
   var ops = m.clase === "agente" ? cajasDe({texto: textoSinAcc, opciones: m.opciones}) : null;
   var dr = draftsDe(ops && ops.cuerpo !== null ? ops.cuerpo : textoSinAcc);
-  var cuerpoTxt = m.clase === "agente" && dr.bloques.length ? dr.cuerpo : (ops && ops.cuerpo !== null ? ops.cuerpo : (m.clase === "yo" ? sinDictado(m.texto) : textoSinAcc));
+  var cuerpoTxt = m.clase === "agente" && dr.bloques.length ? dr.cuerpo : (ops && ops.cuerpo !== null ? ops.cuerpo : (m.clase === "yo" ? sinMarcaMal(sinDictado(m.texto)) : textoSinAcc));
   b.innerHTML = resaltar(auds.length ? sinMarcaAudio(cuerpoTxt) : cuerpoTxt);
   // 2336 {cambios} (facundo, 2026-09-23: "el mensaje deberia estar antes de las cajas de decision. las cajas de
   // decision siempre lo ultimo. incluso despues del audio. que el audio se inyecte antes, cuando este listo"):
   // el orden de un mensaje es SIEMPRE texto -> drafts -> audio -> cajas. el audio llega en un poll posterior al
   // texto, asi que al repintarse el mensaje se mete en el medio y las cajas bajan solas: nunca quedan arriba.
   div.appendChild(cab); if(hilo) div.appendChild(hilo); div.appendChild(b);
+  // 2417 {boton}: el pie de acciones de la respuesta (hoy solo `lo entendiste mal`), pegado al texto y
+  // ARRIBA del audio: el reproductor sigue siendo lo ultimo del mensaje (2044) y las cajas de decision
+  // siguen saliendo despues de el (2336 {cambios}). es una accion chica sobre lo que ya se dijo, no una decision.
+  if(m.clase === "agente" && m.ts_envio) div.appendChild(nodoAccMsg(m));
   // el reproductor completo, uno por audio (2044: en todas las pestañas), abajo del texto y ARRIBA de toda
   // caja de decision. los drafts copiables siguen abajo de las cajas, como los dejo la 1240.
   auds.forEach(function(sa){ div.appendChild(playerAudio(sa, "escuchar")); });
@@ -4266,6 +4307,7 @@ function recibirChat(tema, d){
                 srv: fecha(f.ts_llegada || f.ts),
                 clave: "r:" + t + "|" + (f.ts_llegada || f.ts || "") + "|" + hashTexto(r),   // 1211: no por posicion
                 tema: t, explicito: true, tag: t, audio: f.audio || null, nodo: nodo, tarea: f.tarea || null,
+                ts_envio: f.ts || null,   // 2417 {boton}: el `ts` de ESTA fila, lo unico que identifica el turno
                 audios_seg: f.audios_seg || null,
                 modelo: f.nodo && f.modelo ? modeloCorto(f.modelo) : null,
                 duracion_s: f.duracion_s !== undefined ? f.duracion_s : null, cuello: f.cuello || null,
@@ -13424,6 +13466,11 @@ function menuMsg(nodo, x, y){
   if(!m) return false;
   var ops = [["responder", function(){ responderA(m); }],
              ["copiar", function(){ copiar(m.texto); }]];
+  // 2417 {boton}: la misma accion que el boton del pie, tambien en el menu del hold
+  if(m.clase === "agente" && m.ts_envio) ops.push(["lo entendiste mal", function(){
+    var b = nodo.querySelector(".malent");
+    if(b) b.click(); else tocarMal({dataset: {mal: m.ts_envio, tema: m.tema || ""}, classList: {add: function(){}}});
+  }]);
   if(m.clase === "yo"){
     ops.push(["editar", function(){ editarMsg(m); }]);
     ops.push(["mandar a otra pestaña", function(){ aOtraPestana(m); }]);
@@ -14419,6 +14466,8 @@ function medirCentro(b){
 }
 
 window.__agente = {
+  // 2417 {boton}: el boton `lo entendiste mal` de cada respuesta
+  malMandar: malMandar, sinMarcaMal: sinMarcaMal, nodoAccMsg: nodoAccMsg,
   // 2102 {resultado}: los avisos que nacen en el board van a la campana, no al chat (`prueba_web_falla_campana`)
   notiLocal: notiLocal, notisNoLeidas: notisNoLeidas, chatFalla: function(){ return chatFalla; },
   notisLocales: function(){ return notisLocales.slice(); }, avLeidos: function(){ return avLeidos; },
