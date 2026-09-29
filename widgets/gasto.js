@@ -78,8 +78,8 @@
     var botones = [];
     if(!esActiva && !cu.sin_login){
       botones.push({tipo: "verde", txt: "pasar a " + cu.nombre, accion: function(m){
-        cuUltimo = {cmd: "cuenta " + cu.nombre, tema: "tools", aparte: true};   // lo lee `prueba_web_modelos`
-        B.mandarAparte(cuUltimo.cmd, "tools");
+        cuUltimo = {cmd: "cuenta " + cu.nombre, tema: "flos", aparte: true};   // lo lee `prueba_web_modelos`
+        B.mandarAparte(cuUltimo.cmd, "flos");
         m.estado("mandé cuenta " + cu.nombre);
         setTimeout(function(){ m.cerrar(false); }, 700);
       }});

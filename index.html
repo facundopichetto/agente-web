@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.502">
-<link rel="manifest" href="manifest.json?v=4.502">
+<meta name="agente-web-version" content="4.503">
+<link rel="manifest" href="manifest.json?v=4.503">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.502">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.503">
 </head>
 <body>
 
@@ -489,12 +489,12 @@ var alfinal = $("alfinal"), envoltorio = $("envoltorio");
 // una copia GENERADA de esa receta: se actualiza con `python3 -m recetas.clasificar_tema --sync-web`
 // y `recetas/prueba_web` falla si quedo vieja. no editarla a mano.
 /* TEMAS-JS: generado por `python3 -m recetas.clasificar_tema --sync-web`, no editar a mano */
-var TEMAS = ["tools", "awtomic", "awtomic/qa", "flabs", "fuzzer", "juegos", "plata", "server", "personal", "podcast", "mesa", "flaudio", "tinder", "board", "modelos", "gemini", "groq", "groq-tandas", "mistral"];
-var PRIORIDAD = ["awtomic/qa", "flabs", "podcast", "mesa", "tinder", "board", "modelos", "server", "juegos", "plata", "fuzzer", "awtomic", "flaudio", "tools"];
+var TEMAS = ["flos", "awtomic", "awtomic/qa", "flabs", "fuzzer", "juegos", "plata", "server", "personal", "podcast", "mesa", "flaudio", "tinder", "board", "modelos", "gemini", "groq", "groq-tandas", "mistral"];
+var PRIORIDAD = ["awtomic/qa", "flabs", "podcast", "mesa", "tinder", "board", "modelos", "server", "juegos", "plata", "fuzzer", "awtomic", "flaudio", "flos"];
 var MODOS_TAB = [];
 var PROVEEDORES_TAB = ["gemini", "groq", "groq-tandas", "mistral"];
-var PESTANAS_TAB = [["awtomic", "awtomic"], ["awtomic/qa", "awtomic/qa"], ["board", "board"], ["flabs", "flabs"], ["flaudio", "flaudio"], ["fuzzer", "fuzzer"], ["gemini", "gemini"], ["juegos", "juegos"], ["mesa", "mesa"], ["mistral", "mistral"], ["modelos", "modelos"], ["personal", "personal"], ["plata", "plata"], ["podcast", "podcast"], ["server", "server"], ["tinder", "tinder"], ["tools", "tools"]];
-var ALIAS = {"awtomic-qa": "awtomic/qa", "claudio": "flaudio", "consejo": "mesa"};
+var PESTANAS_TAB = [["awtomic", "awtomic"], ["awtomic/qa", "awtomic/qa"], ["board", "board"], ["flabs", "flabs"], ["flaudio", "flaudio"], ["flos", "flos"], ["fuzzer", "fuzzer"], ["gemini", "gemini"], ["juegos", "juegos"], ["mesa", "mesa"], ["mistral", "mistral"], ["modelos", "modelos"], ["personal", "personal"], ["plata", "plata"], ["podcast", "podcast"], ["server", "server"], ["tinder", "tinder"]];
+var ALIAS = {"awtomic-qa": "awtomic/qa", "claudio": "flaudio", "consejo": "mesa", "tools": "flos"};
 var RE_CORTE_SRC = "(\\n+)|([.;!?]\\s+)|(^|[\\s,;:])(?:y\\s+otra\\s+cosa|otra\\s+cosa|aparte|adem[a\u00e1]s|tambi[e\u00e9]n)(?!\\w)";
 var PALABRAS = {
   "awtomic/qa": ["verificador", "awtomic[- ]?qa", "qa", "tanda de tickets", "revisor de tanda", "loop verificador", "capturas del ticket"],
@@ -510,7 +510,7 @@ var PALABRAS = {
   "tinder": ["instatinder", "votador", "embudo", "candidatas?", "super candidatas", "unfollow", "unfollows", "dejar de seguir", "cartita", "igcola", "ig cola", "follow", "follows", "seguidores", "ignorada", "ignoradas", "maybe", "activar", "activa", "follow[ _]request[ _]sent", "following"],
   "board": ["board", "tablero", "vista del board", "barra de iconos"],
   "modelos": ["modelos?", "tokens", "usage", "fable", "opus", "haiku", "sonnet", "reparto", "escalera", "banco", "faacuu", "orugote", "cuentas? de claude", "week", "tope 99", "switch de cuenta", "claude code"],
-  "tools": ["claude", "iterm", "fish", "chrome", "tui", "consola", "daemon", "agente", "receta", "recetas", "skill", "terminal", "tmux", "widget", "widgets", "web terminal", "mision", "cola", "launchd", "pesta[\u00f1n]a", "pesta[\u00f1n]as", "interfaz", "chat"],
+  "flos": ["claude", "iterm", "fish", "chrome", "tui", "consola", "daemon", "agente", "receta", "recetas", "skill", "terminal", "tmux", "widget", "widgets", "web terminal", "mision", "cola", "launchd", "pesta[\u00f1n]a", "pesta[\u00f1n]as", "interfaz", "chat"],
 };
 /* /TEMAS-JS */
 var AUTO = "auto";
@@ -618,7 +618,7 @@ function clasificar(txt){
 // resolucion de conflictos: **el ultimo que escribe gana**, por el `ts` de cada layout.
 // el chat es un panel UNICO (facundo, 2026-09-12: "las pestañas del chat no tienen que poder ser
 // dragandropeables"): no hay segundo panel ni arrastre, solo la pestaña activa.
-var tabs = ["tools", AUTO], activo = "tools";   // 2044: la pestaña `audio` se fue; la general sigue fija
+var tabs = ["flos", AUTO], activo = "flos";   // 2044: la pestaña `audio` se fue; la general sigue fija
 var layoutTs = 0;                 // cuando se escribio el layout que estoy mostrando
 var shaTabs = null;               // sha del tabs.json remoto (para el PUT)
 var etagTabs = null, tabsUlt = 0; // poll con etag, como los widgets
@@ -2551,9 +2551,9 @@ var msgs = [], msgsHist = {}, msgsCom = [];
 function temaDe(m, prev, prevF){
   if(m.explicito) return m.tema;
   if(m.tag) return m.tag;
-  if(m.clase === "agente") return prevF || prev || "tools";
+  if(m.clase === "agente") return prevF || prev || "flos";
   var c = clasificar(m.texto);
-  return c.tema || prevF || prev || "tools";
+  return c.tema || prevF || prev || "flos";
 }
 function recalcularTemas(){
   var prev = null, prevF = null;
@@ -4922,7 +4922,7 @@ function votMandarTexto(){
   if(t){
     if(enviando){ $("vtestado").textContent = "hay un mensaje saliendo: probá en un segundo"; return false; }
     mandarAparte = true;
-    try{ mandar(t, "tools"); }
+    try{ mandar(t, "flos"); }
     finally{ mandarAparte = false; }
     $("vttxt").value = "";
   }
@@ -5175,7 +5175,7 @@ function selAbrir(e){
     }
   });
   $("seltxt").value = ""; $("selestado").textContent = "";
-  $("seltxt").placeholder = "algo para sumar (va al chat de " + (e.tema || "tools") + ")";
+  $("seltxt").placeholder = "algo para sumar (va al chat de " + (e.tema || "flos") + ")";
   selCuenta();
   vistaPoner("votar");   // 1933 {instatinder}: la lista de checkboxes es la vista `votar`, no un modal sobre el chat
   capaMostrar("selmodal");
@@ -9165,10 +9165,10 @@ function buscarNotiPush(p){
       if(!id && tema && (!p.ts || Math.abs((fecha(x.iso) || 0) - p.ts) < 15 * 60000)) m = x;
     });
   });
-  if(m) return {m: m, texto: m.texto || "", tema: m.tema || tema || "tools", fecha: hhmmDe(m)};
+  if(m) return {m: m, texto: m.texto || "", tema: m.tema || tema || "flos", fecha: hhmmDe(m)};
   var d = p.ts ? new Date(+p.ts) : null;
   return {texto: [p.cuerpo].filter(Boolean).join("\n") || p.titulo || "(la notificación no trajo texto)",
-          tema: tema || "tools", fecha: d ? pad2(d.getHours()) + ":" + pad2(d.getMinutes()) : ""};
+          tema: tema || "flos", fecha: d ? pad2(d.getHours()) + ":" + pad2(d.getMinutes()) : ""};
 }
 function claveNotiCtx(c){ return (c.noti ? "n:" + c.noti.id : c.m ? "m:" + c.m.id : "p") + "|" + (c.texto || "").length; }
 function citaNotiPush(c){
@@ -10913,7 +10913,7 @@ function cajaSalud(s){
     if(solo && (f.estado === "verde" || f.estado === "gris")) return;
     var vence = (f.falta_s !== null && f.falta_s !== undefined && f.grupo !== "oauth" && f.estado !== "rojo")
       ? '<span class="g">vence en</span> <span class="b">' + faltaTxt(f.falta_s) + "</span> " : "";
-    filas.push(it({tipo: "salud", tema: "tools", d: f},
+    filas.push(it({tipo: "salud", tema: "flos", d: f},
       '<span class="' + (SALUD_COLOR[f.estado] || "g") + ' b">' + esc(f.estado || "?") + "</span> " +
       '<span class="b">' + esc(f.nombre || "") + "</span> " + vence +
       '<span class="g">' + esc(String(f.detalle || "").slice(0, 70)) + "</span>"));
@@ -11101,7 +11101,7 @@ function cajaPodcast(p){
   var filas = [btn + link(p.web || "#", "la web del podcast")];
   if(!eps.length) filas.push(vacio("sin episodios"));
   eps.forEach(function(e){
-    filas.push(it({tipo: "episodio", tema: "tools", d: e},
+    filas.push(it({tipo: "episodio", tema: "flos", d: e},
                '<span class="g">' + esc((e.fecha || "").slice(5)) +
                // la hora de la ultima actualizacion (el podcast vivo se republica con el mismo id)
                (/T\d\d:\d\d/.test(e.actualizado || "") ? " · act " + esc(hora12(e.actualizado.slice(11, 16))) : "") +
@@ -11171,7 +11171,7 @@ function homeDrafts(el){
   el.appendChild(cab);
   ds.forEach(function(d){
     var c = document.createElement("div"); c.className = "homedraft"; c.setAttribute("data-draft", d.id);
-    var t = document.createElement("div"); t.className = "homelin"; t.textContent = "tema " + (d.tema || "tools");
+    var t = document.createElement("div"); t.className = "homelin"; t.textContent = "tema " + (d.tema || "flos");
     var ta = document.createElement("textarea"); ta.className = "homedtxt"; ta.value = d.cuerpo || "";
     ta.setAttribute("aria-label", "el texto de la orden");
     var fila = document.createElement("div"); fila.className = "homedbtns";
@@ -11809,7 +11809,7 @@ function cajaQueVer(p){
   var filas = its.map(function(i, n){
     return '<span class="qv" data-qv="' + esc(i.id) + '" data-qvt="' + esc(corto(i.titulo, 60)) + '">' +
       '<span class="qvf qvv">visto</span><span class="qvf qvn">no me interesa</span>' +
-      '<span class="qvin">' + it({tipo: "queVer", tema: "tools", d: i},
+      '<span class="qvin">' + it({tipo: "queVer", tema: "flos", d: i},
       '<span class="c b">' + (n + 1) + '</span> <span class="g">' + esc(i.nombre) + "</span> " +
       esc(corto(i.titulo, 64)) + ' <span class="g">' + esc(i.porque) + "</span>") +
       "\n  " + link(i.url, "abrir") + "</span>" +
@@ -11855,7 +11855,7 @@ function abrirNodo(e){
   var n = ((widDatos || {}).nodos || {}).nodos || [];
   var x = n[+b.dataset.nodo];
   if(!x) return;
-  abrirModal({tipo: "nodo", tema: x.id === "mbp" ? "tools" : "server", d: x});
+  abrirModal({tipo: "nodo", tema: x.id === "mbp" ? "flos" : "server", d: x});
   // el del server dice "habla por: lan|tailscale|buzón" (1166): si cambia el camino con el menu abierto, se repinta
   if(modalAbierto){ modalAbierto.nodoId = x.id; modalAbierto.reabrir = function(){ abrirNodo(e); }; }
 }
@@ -11917,7 +11917,7 @@ function notiLocal(familia, texto, tema, nivel){
           pad2(d.getHours()) + ":" + pad2(d.getMinutes());
   var n = {id: "local-" + familia + "-" + (++notiLocalN), ts: Math.floor(d.getTime() / 1000), fecha: f,
            texto: String(texto || ""), nivel: nivel || "amarillo", clase: "accion", familia: familia || "",
-           tema: tema && esTema(tema) ? normTema(tema) : "tools", local: true};
+           tema: tema && esTema(tema) ? normTema(tema) : "flos", local: true};
   notisLocales.push(n);
   pintarAvisos();
   return n.id;
@@ -11958,7 +11958,7 @@ function horaNoti(n){
   var h = hora12(f.slice(11, 16));
   return f.slice(0, 10) === d ? h : f.slice(8, 10) + "/" + f.slice(5, 7) + " " + h;
 }
-function temaNoti(n){ return n && n.tema && esTema(n.tema) ? normTema(n.tema) : "tools"; }
+function temaNoti(n){ return n && n.tema && esTema(n.tema) ? normTema(n.tema) : "flos"; }
 // 1328 (19:47): el mismo titulo de una linea ("tipo: asunto") y cuerpo corto que el push (`push_filtro.formato`);
 // el detalle (modal) sigue con el texto entero
 // 2202 {forzar}: el aviso trae marcas para el board (`[forzar:<n>]`, que el modal convierte en un boton).
@@ -12157,7 +12157,7 @@ function notiModo(){
 function notiPoner(on){
   notiPuesto = {v: !!on, ts: Date.now()};
   mandarAparte = true;
-  try{ mandar("notificaciones " + (on ? "on" : "off"), "tools", true); }
+  try{ mandar("notificaciones " + (on ? "on" : "off"), "flos", true); }
   finally{ mandarAparte = false; }
 }
 function notiFila(){
@@ -12254,7 +12254,7 @@ var BOARD = {
   // el chat es del shell: un widget que manda un comando lo manda por aca (sin burbuja, como el switch)
   mandarAparte: function(cmd, tema){
     mandarAparte = true;
-    try{ return mandar(cmd, tema || "tools", false); }   // 2267: devuelve la promesa `{ok, via, motivo}` de `mandar()`
+    try{ return mandar(cmd, tema || "flos", false); }   // 2267: devuelve la promesa `{ok, via, motivo}` de `mandar()`
     finally{ mandarAparte = false; }
   },
   // cambiar UNA caja sin tocar el resto del panel
@@ -12571,7 +12571,7 @@ widgetsEl.addEventListener("pointerdown", function(e){
 var qvSw = null, qvUlt = 0;
 function qvMandar(msg, intentos){
   if(enviando && intentos > 0){ setTimeout(function(){ qvMandar(msg, intentos - 1); }, 700); return; }
-  mandar(msg, "tools", true);
+  mandar(msg, "flos", true);
 }
 function qvAplicar(fila, accion, dir){
   if(!fila || fila.classList.contains("chau")) return false;
@@ -12718,9 +12718,9 @@ function corto(t, n){
   return t.length > n ? t.slice(0, n) + "…" : t;
 }
 function temaItem(o){
-  var t = o.tema || clasificar(String((o.d || {}).texto || (o.d || {}).titulo || "")).tema || "tools";
+  var t = o.tema || clasificar(String((o.d || {}).texto || (o.d || {}).titulo || "")).tema || "flos";
   t = normTema(t);
-  return esTema(t) ? t : "tools";
+  return esTema(t) ? t : "flos";
 }
 // un mensaje que sale del modal: a la pestaña del tema del item (los crudos no llevan prefijo ni saltan)
 function actuar(tema, msg, crudo){
@@ -12747,14 +12747,14 @@ function accHablar(o, contexto){
 // contexto": el `[✎]` del header (y `escribir` en el modal de cada fila) lleva a la pestaña del tema
 // del widget y deja una cita `> widget <nombre>: ...` + linea vacia en el input, sin mandar nada. el
 // daemon la separa del pedido con `marcas_chat` (igual que `responder`) y se la pasa al modelo.
-var TEMA_WIDGET = {server: "server", salud: "tools", gasto: "tools", agent: "tools", cola: "tools", verificaciones: "awtomic/qa",
-                   tickets_cx: "awtomic", tickets_mvp: "awtomic", tickets_qa: "awtomic/qa", sombra: "tools",
-                   propuestas: "tools", podcast: "podcast", dj: "fuzzer", mail: "fuzzer",
+var TEMA_WIDGET = {server: "server", salud: "flos", gasto: "flos", agent: "flos", cola: "flos", verificaciones: "awtomic/qa",
+                   tickets_cx: "awtomic", tickets_mvp: "awtomic", tickets_qa: "awtomic/qa", sombra: "flos",
+                   propuestas: "flos", podcast: "podcast", dj: "fuzzer", mail: "fuzzer",
                    que_ver: "personal", salud_personal: "personal"};
 var ESC_CHARS = 300;
 function temaWidget(clave){
-  var t = TEMA_WIDGET[clave] || "tools";
-  return esTema(t) ? normTema(t) : "tools";
+  var t = TEMA_WIDGET[clave] || "flos";
+  return esTema(t) ? normTema(t) : "flos";
 }
 function unaLinea(t, n){
   t = String(t || "").replace(/\s+/g, " ").trim();
@@ -12916,7 +12916,7 @@ function modalDe(o){
     }]);
     m.acciones.push(accHablar(o, "el modelo de backup " + d.prov));
     m.acciones.push(["sacarlo del widget", function(){
-      actuar("tools", "sacá " + d.prov + " del widget `models`: quitalo de COLS_SOMBRA en " +
+      actuar("flos", "sacá " + d.prov + " del widget `models`: quitalo de COLS_SOMBRA en " +
                       "recetas/widgets_json.py y de donde se mida en recetas/sombra.py, y decime por qué quedó afuera");
     }]);
   } else if(o.tipo === "ahora"){
@@ -13052,8 +13052,8 @@ function modalDe(o){
     m.acciones.push(["abrir " + d.nombre, function(){
       window.open(d.url, "_blank", "noopener"); cerrarModal();
     }, true]);
-    m.acciones.push(["otra de " + d.nombre, function(){ actuar("tools", "que ver otra " + d.fuente, true); }]);
-    m.acciones.push(["no me interesa", function(){ actuar("tools", "que ver no " + d.id, true); }]);
+    m.acciones.push(["otra de " + d.nombre, function(){ actuar("flos", "que ver otra " + d.fuente, true); }]);
+    m.acciones.push(["no me interesa", function(){ actuar("flos", "que ver no " + d.id, true); }]);
     m.acciones.push(accHablar(o, "«" + corto(d.titulo, 60) + "» de " + d.nombre));
   } else if(o.tipo === "verif"){
     m.titulo = "verification agent";
@@ -13118,8 +13118,8 @@ function modalDe(o){
       (d.vence ? '\n<span class="g">vence</span> ' + esc(d.vence) +
         (d.falta_s > 0 ? " (en " + faltaTxt(d.falta_s) + ")" : "") : "") +
       (d.arreglo ? '\n<span class="g">arreglo</span> ' + esc(d.arreglo) : "");
-    if(d.comando) m.acciones.push([d.comando, function(){ actuar("tools", d.comando, true); }, true]);
-    m.acciones.push(["volver a medir ahora", function(){ actuar("tools", "salud fresco", true); }]);
+    if(d.comando) m.acciones.push([d.comando, function(){ actuar("flos", d.comando, true); }, true]);
+    m.acciones.push(["volver a medir ahora", function(){ actuar("flos", "salud fresco", true); }]);
     m.acciones.push(accHablar(o, "la credencial " + (d.nombre || "")));
   } else {
     m.cuerpo = esc(JSON.stringify(d, null, 1));
@@ -13153,7 +13153,7 @@ function valorTxt(v){
 function modalSets(clave){
   var ls = setsDe(clave);
   var pos = ordenarClaves(clavesW.slice()).indexOf(clave);
-  var m = {titulo: "settings \u00b7 " + clave, tema: "tools", acciones: [],
+  var m = {titulo: "settings \u00b7 " + clave, tema: "flos", acciones: [],
            cuerpo: '<span class="g">se guardan en el buz\u00f3n: las ves igual en el celu y en la compu.' +
                    (pos >= 0 ? " caja " + (pos + 1) + " de " + clavesW.length +
                                " (se arrastra del header).</span>" : "</span>")};
@@ -14398,7 +14398,7 @@ $("clave").addEventListener("keydown", function(e){ if(e.key === "Enter") entrar
 // `salir` y `reinicia` viven en el menu de persona, cada uno con su confirmacion en rojo.
 function modalBoard(){
   var ocultas = clavesW.filter(ocultoW);
-  var m = {titulo: "settings · board", tema: "tools", board: true, acciones: [],
+  var m = {titulo: "settings · board", tema: "flos", board: true, acciones: [],
            cuerpo: '<span class="g">de este dispositivo.</span>\n\n<span class="g">widgets ocultos:</span> ' +
                    (ocultas.length ? '<span class="c">' + ocultas.map(esc).join(" · ") + "</span>"
                                    : '<span class="g">ninguno (la × del header de cada widget lo oculta)</span>')};
@@ -14415,13 +14415,13 @@ function modalBoard(){
   return m;
 }
 function modalReinicia(){
-  return {titulo: "reinicia · daemon", tema: "tools", board: true, acciones: [
-            ["sí, reiniciar", function(){ actuar("tools", "reinicia", true); }, false, "confirmar"],
+  return {titulo: "reinicia · daemon", tema: "flos", board: true, acciones: [
+            ["sí, reiniciar", function(){ actuar("flos", "reinicia", true); }, false, "confirmar"],
             ["cancelar", cerrarModal, true]],
           cuerpo: '<span class="g">reinicio diferido: espera a que no quede ninguna tarea corriendo. no gasta tokens.</span>'};
 }
 function modalSalir(){
-  return {titulo: "salir", tema: "tools", board: true, acciones: [
+  return {titulo: "salir", tema: "flos", board: true, acciones: [
             ["borrar token?", function(){ cerrarModal(); pedirToken("token borrado de este teléfono."); }, false, "confirmar"],
             ["cancelar", cerrarModal, true]],
           cuerpo: '<span class="g">borra el token de este dispositivo. para volver a entrar hace falta la clave.</span>'};

@@ -122,7 +122,7 @@
       var m = f.medidas || {}, x = f.precio || {}, n = f.nivel || {};
       // el `.it` (tocable) es el que entra en la grilla, asi que lleva el `enom`: sin eso la celda no se
       // achica ni corta con `\u2026` y la tabla se pasa del ancho de la caja en el celu (1946)
-      h += it({tipo: "modelo", tema: "tools", d: {prov: f.proveedor, modelo: f.modelo,
+      h += it({tipo: "modelo", tema: "flos", d: {prov: f.proveedor, modelo: f.modelo,
                                                   hoy: ((sb.hoy || {}).estados || {})[f.proveedor] || {},
                                                   info: Object.assign({}, (sb.modelos || {})[f.proveedor] || {},
                                                                       {modelo: f.modelo, medidas: m}),
@@ -156,13 +156,13 @@
     var ch = [];
     (a.tareas || []).forEach(function(t){
       var cl = CLESC[t.escalon] || "c";
-      ch.push(it({tipo: "ahora", tema: t.tema || "tools", d: t},
+      ch.push(it({tipo: "ahora", tema: t.tema || "flos", d: t},
                  '<span class="' + cl + '">' + esc(t.modelo || "?") + "</span>" +
                  '<span class="c"> ' + esc(t.nombre || t.carril || "") + "</span>" +
                  (t.min || t.min === 0 ? '<span class="g"> ' + esc(String(t.min)) + "m</span>" : "")));
     });
     if(a.chat && a.chat.modelo)
-      ch.push(it({tipo: "ahora", tema: "tools", d: a.chat},
+      ch.push(it({tipo: "ahora", tema: "flos", d: a.chat},
                  '<span class="g">chat </span>' +
                  '<span class="' + (CLESC[a.chat.escalon] || "c") + '">' + esc(a.chat.modelo) + "</span>" +
                  (a.chat.cuenta ? '<span class="g"> ' + esc(a.chat.cuenta) + "</span>" : "")));
@@ -210,7 +210,7 @@ function cajaSombra(sb){
     // `ts` y esta tabla no: un 100 de hace cinco dias se veia igual que uno de hace diez minutos.
     var fr = ((sb.fresco || {})[cat] || {}).edad;
     var frcl = !fr ? "g" : /m$/.test(fr) ? "c" : /d$/.test(fr) ? "a" : "g";
-    filas.push(it({tipo: "catbackup", tema: "tools", d: {cat: cat, fila: f, cols: cols, veredicto: v,
+    filas.push(it({tipo: "catbackup", tema: "flos", d: {cat: cat, fila: f, cols: cols, veredicto: v,
                                                          fresco: (sb.fresco || {})[cat] || {}}},
                pad(cat, 11) + celdas.join(" ") + " " + ver +
                ' <span class="' + frcl + '">' + pad(fr || "-", 5, true) + "</span>"));
@@ -224,7 +224,7 @@ function cajaSombra(sb){
     var chips = Object.keys(est).map(function(p){
       var e = est[p], c = clEst[e.estado] || "g";
       var lat = e.estado === "ok" && e.latencia !== null ? " " + e.latencia + "s" : "";
-      return it({tipo: "modelo", tema: "tools",
+      return it({tipo: "modelo", tema: "flos",
                  d: {prov: p, hoy: e, info: (sb.modelos || {})[p] || {}, tabla: sb.tabla || {},
                      cats: sb.cats || [], veredictos: sb.veredictos || {}}},
                 '<span class="' + c + ' b">' + esc(cortos[p] || p) + "</span>" +
