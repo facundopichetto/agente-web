@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.504">
-<link rel="manifest" href="manifest.json?v=4.504">
+<meta name="agente-web-version" content="4.505">
+<link rel="manifest" href="manifest.json?v=4.505">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.504">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.505">
 </head>
 <body>
 
@@ -2762,7 +2762,7 @@ function nodoMsg(m){
   // bien ver el razonamiento antes y que quede"): las lineas `hecho` SI quedan, cada una en su linea, apagadas
   var hilo = null;
   if(m.clase === "agente" && m.tramos && m.tramos.length){
-    var tt = m.tramos.filter(function(t){ return t && tipoTramo(t) && String(t.texto || "").trim(); });
+    var tt = m.tramos.filter(function(t){ return t && tipoTramo(t) && tipoTramo(t) !== "caja" && String(t.texto || "").trim(); });
     if(tt.length){
       hilo = document.createElement("div"); hilo.className = "hilo";
       tt.forEach(function(t, i){ hilo.appendChild(nodoTramo({i: t.i !== undefined ? t.i : i, tipo: tipoTramo(t), texto: t.texto,
@@ -2804,7 +2804,7 @@ function nodoMsg(m){
 // algo de facundo, y guarda `opciones: [{letra, texto}]` en el jsonl y en `chat/<tema>.json`. las lineas
 // OPCION no se pintan como texto: se ven como cajas. si la respuesta nombra una oportunidad (`op N`) con
 // opciones reales en widgets.json, las cajas mandan `op N X` crudo (lo resuelve el daemon sin modelo).
-var RE_OPCION = /^\s*(?:[-*]\s+)?\**OPCI[OÓ]N\s+([ABC])\**\s*[:)\.]\**\s*(\S.*)$/i;
+var RE_OPCION = /^\s*(?:[-*]\s+)?\**OPCI[OÓ]N\s+([A-P])\**\s*[:)\.]\**\s*(\S.*)$/i;
 var OPC_UMBRAL = 10;     // px: un dedo que se mueve mas que esto esta scrolleando, no eligiendo
 // 1276: ms. un 2do toque sobre la misma caja antes de esto era el mismo doble click y no mandaba ni preguntaba.
 // 2080 {diseno} punto 5: ahora el 2do clic es JUSTO lo que manda ("solo un clic selecciona, dos clicks un
@@ -2827,10 +2827,10 @@ var OPC_VIDA_MS = 24 * 3600 * 1000;
 function opcGuardado(v){ return v && typeof v === "object" ? (+v.g || 0) : 0; }
 function opcValida(k, v){
   if(!k || typeof k !== "string" || !RE_CLAVE_OK.test(k)) return false;   // 1211: claves por posicion afuera
-  if(typeof v === "string") return /^(-|[ABC]{1,3})$/.test(v);        // formato viejo (una letra o `-`)
+  if(typeof v === "string") return /^(-|[A-P]{1,16})$/.test(v);        // formato viejo (una letra o `-`)
   if(!v || typeof v !== "object" || Array.isArray(v)) return false;
   if(v.h !== undefined && (!v.h || typeof v.h !== "object" || Array.isArray(v.h))) return false;   // 1203
-  return typeof v.l === "string" && /^[ABC]{0,3}$/.test(v.l);
+  return typeof v.l === "string" && /^[A-P]{0,16}$/.test(v.l);
 }
 var MS_2000 = 946684800000;   // piso: menos que esto no es una hora, es un indice
 // 1203: las horas guardadas, limpias: solo letras marcadas y valores que son una fecha en ms
@@ -2993,7 +2993,7 @@ function nodoAcciones(m, lista_){
 function cajasDe(m){
   var o = opcionesDe(m.texto);
   if(m.opciones && m.opciones.length){
-    o.lista = m.opciones.filter(function(x){ return x && /^[ABC]$/i.test(x.letra || ""); })
+    o.lista = m.opciones.filter(function(x){ return x && /^[A-P]$/i.test(x.letra || ""); })
       .map(function(x){ return {letra: String(x.letra).toUpperCase(), texto: String(x.texto || "")}; });
   }
   // 1658 {cajas}: una oportunidad se ofrece como cajas grandes con el texto de cada opcion adentro (nunca
@@ -3035,13 +3035,13 @@ function respuestaA(m){
   }
   return null;
 }
-var RE_ELEGIDAS = /^([ABC](?:\s*(?:y|,)\s*[ABC]){0,2})\s*(?::|$)/;
-var RE_ARREPENTI = /^me\s+arrepent[ií]\s*:\s*([ABC](?:\s*(?:y|,)\s*[ABC]){0,2})\s*:/i;
+var RE_ELEGIDAS = /^([A-P](?:\s*(?:y|,)\s*[A-P]){0,15})\s*(?::|$)/;
+var RE_ARREPENTI = /^me\s+arrepent[ií]\s*:\s*([A-P](?:\s*(?:y|,)\s*[A-P]){0,15})\s*:/i;
 // 2096 {codigocaja}: el toque de una caja manda el codigo corto de su respuesta (`opc_id`, 4 caracteres que
 // pone el daemon al guardar la fila) y la letra: `#k7f2A`, varias `#k7f2A+C`, arrepentimiento `#k7f2-A`.
 // no viaja el texto de la opcion ni la cita: el daemon lo resuelve contra las `opciones` de ESA fila, sin
 // modelo. una respuesta vieja (sin `opc_id`) sigue mandando `A: <texto>` como siempre.
-var RE_CAJA_COD = /^#([a-z0-9]{4})(-?)([ABC](?:\s*\+\s*[ABC])*)$/i;
+var RE_CAJA_COD = /^#([a-z0-9]{4})(-?)([A-P](?:\s*\+\s*[A-P])*)$/i;
 function codigoCaja(texto){
   var pc = partirCita(texto), mm = RE_CAJA_COD.exec(String(pc.cuerpo || "").trim());
   if(!mm) return null;
@@ -3206,7 +3206,7 @@ function citaEsDe(cita, m){
   var q = normCita(mm[2].replace(/^\[[\w\/#-]+\]\s*/, "")).replace(/…$/, "").slice(0, 24), ls = lineasCita(m);
   return !q || normCita(ls[0] || "").indexOf(q) === 0;
 }
-function letrasDe(txt){ return (String(txt).match(/[ABC]/g) || []).filter(function(l, i, a){ return a.indexOf(l) === i; }).sort().join(""); }
+function letrasDe(txt){ return (String(txt).match(/[A-P]/g) || []).filter(function(l, i, a){ return a.indexOf(l) === i; }).sort().join(""); }
 function tieneCajas(m){
   if(!m || m.clase !== "agente") return false;
   if(m._tc === undefined || m._tcT !== m.texto){ m._tc = cajasDe(m).lista.length > 0; m._tcT = m.texto; }
@@ -3371,7 +3371,8 @@ function refrescarCajas(){
 }
 function nodoCajas(m, lista_){
   var k = claveCajas(m), caja = document.createElement("div");
-  caja.className = "opciones";
+  // 2557: con la votacion multi-modelo el menu puede traer de la A a la P: de 4 en adelante van en dos columnas
+  caja.className = "opciones" + (lista_.length > 3 ? " muchas" : "");
   caja.dataset.clave = k;
   cajaMsg[k] = m;
   lista_.forEach(function(o){
@@ -8324,6 +8325,7 @@ function tipoTramo(t){
   if(!t) return "texto";
   if(t.tipo === "hecho") return "hecho";
   if(t.tipo === "paso") return "paso";   // 1931: el rastro de la bolita
+  if(t.tipo === "caja") return "caja";   // 2557: la caja de un modelo que ya contesto, mientras llegan las demas
   return (!t.tipo || t.tipo === "texto") ? "texto" : null;   // null = no se pinta
 }
 // 1931 (facundo, 2026-09-17: "cuando cambie, la anterior queda arriba en la linea de arriba como ya paso, en gris
@@ -8334,6 +8336,19 @@ function tipoTramo(t){
 function nodoTramo(t){
   var d = document.createElement("div");
   var tipo = tipoTramo(t) || "texto", apagado = tipo === "hecho" || tipo === "paso";
+  // 2557 {votacion}: cada modelo que contesta pinta SU caja en el vuelo, con el molde de las `OPCION` (misma
+  // letra, mismo color), todavia sin tocar: se tocan cuando llega la respuesta entera con el codigo del menu.
+  if(tipo === "caja"){
+    d.className = "tramo caja opciones llegando";
+    var b = document.createElement("button");
+    b.type = "button"; b.disabled = true; b.className = "opc " + String(t.letra || "");
+    b.innerHTML = '<span class="l"></span><span class="t"></span>';
+    b.querySelector(".l").textContent = String(t.letra || "");
+    b.querySelector(".t").textContent = String(t.texto || "");
+    b.title = "llegando las demas: se toca cuando termine la ronda";
+    d.appendChild(b);
+    return d;
+  }
   d.className = "tramo " + tipo + (t.i === 0 && !apagado ? " entendi" : "");
   if(apagado) d.textContent = String(t.texto || "");
   else d.innerHTML = resaltar(String(t.texto || ""));
@@ -8354,6 +8369,7 @@ function vueloTramos(lista){
     var t = lista[i], tipo = tipoTramo(t);
     if(!tipo || !String(t.texto || "").trim()) { vuelo.tramos.push({i: i, tipo: "vacio", texto: ""}); continue; }
     var copia = {i: i, tipo: tipo, texto: String(t.texto)};
+    if(t.letra) copia.letra = String(t.letra);   // 2557: la letra de una caja que llego
     if(t.voto) copia.voto = String(t.voto);      // 1931: la plantilla del pool, para el `mas`/`menos`
     if(t.etapa) copia.etapa = String(t.etapa);
     vuelo.tramos.push(copia);
@@ -8367,13 +8383,17 @@ function vueloTramos(lista){
 // la respuesta final repite el ultimo bloque de texto (el `result` de claude): ese no se pinta dos veces.
 // 1868: los `hecho` (las lineas de los comandos) SI pasan a la respuesta, en su lugar, y quedan en el historial
 function tramosSinFinal(tramos, final){
-  var l = (tramos || []).filter(function(t){ return t && tipoTramo(t) && String(t.texto || "").trim(); });
+  // 2557: las cajas que llegaron en vuelo no quedan en el hilo: la respuesta las trae como cajas tocables
+  var l = (tramos || []).filter(function(t){ return t && tipoTramo(t) && tipoTramo(t) !== "caja" && String(t.texto || "").trim(); });
   if(!l.length) return null;
   var ult = -1;
   for(var i = 0; i < l.length; i++) if(tipoTramo(l[i]) === "texto") ult = i;
   if(ult >= 0){
     var a = normTramo(l[ult].texto), b = normTramo(final);
-    if(a && b && (a === b || b.indexOf(a.slice(0, 120)) === 0)) l = l.slice(0, ult).concat(l.slice(ult + 1));
+    // 2557: con la votacion las opciones del final son otras: se compara tambien el cuerpo sin las `OPCION`
+    var sa = opcionesDe(l[ult].texto).cuerpo, sb = opcionesDe(final).cuerpo;
+    var a2 = sa !== null ? normTramo(sa) : a, b2 = sb !== null ? normTramo(sb) : b;
+    if(a && b && (a === b || b.indexOf(a.slice(0, 120)) === 0 || (a2 && a2 === b2))) l = l.slice(0, ult).concat(l.slice(ult + 1));
   }
   return l.length ? l : null;
 }

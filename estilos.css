@@ -901,7 +901,22 @@
   .opciones .opc.A.sel{background:var(--verde);color:#000}
   .opciones .opc.B.sel{background:var(--cian);color:#000}
   .opciones .opc.C.sel{background:var(--magenta);color:#000}
-  .opciones.hecho .opc:not(.sel){opacity:.45}          /* las no elegidas se apagan, pero se siguen pudiendo tocar */
+  .opciones.hecho .opc:not(.sel){opacity:.45}
+  /* 2557 {votacion}: de la D a la P (una caja por modelo) los colores rotan verde / cian / magenta como A/B/C;
+     con mas de 3 van de a dos por fila (una en el celu angosto), y las que llegan en vuelo se ven apagadas. */
+  .opciones .opc.D,.opciones .opc.G,.opciones .opc.J,.opciones .opc.M,.opciones .opc.P{color:var(--verde);border-color:var(--verde)}
+  .opciones .opc.D.sel,.opciones .opc.G.sel,.opciones .opc.J.sel,.opciones .opc.M.sel,.opciones .opc.P.sel{background:var(--verde);color:#000}
+  .opciones .opc.D.selec,.opciones .opc.G.selec,.opciones .opc.J.selec,.opciones .opc.M.selec,.opciones .opc.P.selec{box-shadow:inset 0 0 0 1px var(--verde)}
+  .opciones .opc.E,.opciones .opc.H,.opciones .opc.K,.opciones .opc.N{color:var(--cian);border-color:var(--cian)}
+  .opciones .opc.E.sel,.opciones .opc.H.sel,.opciones .opc.K.sel,.opciones .opc.N.sel{background:var(--cian);color:#000}
+  .opciones .opc.E.selec,.opciones .opc.H.selec,.opciones .opc.K.selec,.opciones .opc.N.selec{box-shadow:inset 0 0 0 1px var(--cian)}
+  .opciones .opc.F,.opciones .opc.I,.opciones .opc.L,.opciones .opc.O{color:var(--magenta);border-color:var(--magenta)}
+  .opciones .opc.F.sel,.opciones .opc.I.sel,.opciones .opc.L.sel,.opciones .opc.O.sel{background:var(--magenta);color:#000}
+  .opciones .opc.F.selec,.opciones .opc.I.selec,.opciones .opc.L.selec,.opciones .opc.O.selec{box-shadow:inset 0 0 0 1px var(--magenta)}
+  .opciones.muchas .opc{flex:1 1 calc(50% - 6px)}
+  @media (max-width:520px){ .opciones.muchas .opc{flex:1 1 100%} }
+  .tramo.caja.opciones{margin:4px 0 0 0}
+  .tramo.caja .opc{flex:0 1 auto;max-width:100%;opacity:.7;cursor:default}          /* las no elegidas se apagan, pero se siguen pudiendo tocar */
   /* la confirmacion vive DENTRO de la caja tocada: le tapa el texto y deja `si` / `no` (facundo, 1202) */
   .opciones .opc .cf{display:none}
   .opciones .opc.conf{opacity:1}
