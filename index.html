@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.507">
-<link rel="manifest" href="manifest.json?v=4.507">
+<meta name="agente-web-version" content="4.508">
+<link rel="manifest" href="manifest.json?v=4.508">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.507">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.508">
 </head>
 <body>
 
@@ -3383,8 +3383,88 @@ function refrescarCajas(){
     marcarHecho(c, e.l, e.h);
   });
 }
+// ---------- 2565 {bajar}: el puntaje 0 a 5 de cada caja `entendí` (facundo, 2026-09-30) ----------
+// "cada caja tiene que tener puntaje del 0 al 5 para que yo pueda votar mejor" y "ni bien sale una respuesta tengo
+// que poder ponerle puntaje. sin re render". la fila va ADENTRO de la caja desde que aparece en el vuelo
+// (`nodoTramo`) y sigue en la respuesta final (`nodoCajas`). tocar un numero pinta SOLO esa fila y sale por la lan a
+// `POST /puntaje` (`votaciones_modelos.puntuar_caja`), nunca como mensaje: un mensaje nuevo cortaria la ronda que
+// esta llegando. lo votado queda en localStorage por tema y texto, asi la caja final (que reemplaza a la del vuelo)
+// nace con el mismo numero marcado. sin lan queda pendiente y se reintenta.
+var PUNTAJE_MAX = 5, PUNTAJE_LS = "agente_puntaje", PUNTAJE_REINTENTO_MS = 30000, RE_ENTENDI_CAJA = /^\s*entend[ií]/i;
+var puntajeMandarFn = null, puntajeTimer = null;   // las pruebas se quedan con lo que saldria
+function puntajeMandar(fn){ puntajeMandarFn = fn; }
+function esEntendi(texto){ return RE_ENTENDI_CAJA.test(String(texto || "")); }
+function puntajeClave(tema, texto){ return String(tema || "").toLowerCase() + "|" + hashTexto(normTramo(texto)); }
+function puntajeLeer(){ try{ return JSON.parse(localStorage.getItem(PUNTAJE_LS) || "{}") || {}; }catch(x){ return {}; } }
+function puntajeEscribir(d){
+  var ks = Object.keys(d);   // no crece sin fin: quedan los 300 ultimos
+  if(ks.length > 300) ks.sort(function(a, b){ return (d[a].t || 0) - (d[b].t || 0); }).slice(0, ks.length - 300)
+    .forEach(function(k){ delete d[k]; });
+  try{ localStorage.setItem(PUNTAJE_LS, JSON.stringify(d)); }catch(x){}
+}
+function puntajeFila(tema, letra, texto){
+  var w = document.createElement("span");
+  w.className = "puntaje";
+  w.setAttribute("role", "group"); w.setAttribute("aria-label", "puntaje de 0 a " + PUNTAJE_MAX);
+  var d = puntajeLeer()[puntajeClave(tema, texto)], ya = d ? d.n : null;
+  for(var i = 0; i <= PUNTAJE_MAX; i++) (function(n){
+    var p = document.createElement("span");
+    p.className = "pt" + (ya === n ? " on" : "");
+    p.textContent = String(n); p.dataset.n = n;
+    p.setAttribute("role", "button"); p.setAttribute("tabindex", "0");
+    p.title = "puntaje " + n + " de " + PUNTAJE_MAX;
+    function tocar(e){ e.stopPropagation(); e.preventDefault(); puntajeTocar(w, tema, letra, texto, n); }
+    // la caja de abajo no se entera: ni la seleccion, ni el envio, ni el antirrebote de `tocarCaja`
+    p.addEventListener("pointerdown", function(e){ e.stopPropagation(); });
+    p.addEventListener("pointerup", function(e){ e.stopPropagation(); });
+    p.addEventListener("click", tocar);
+    p.addEventListener("keydown", function(e){ if(e.key === "Enter" || e.key === " ") tocar(e); });
+    w.appendChild(p);
+  })(i);
+  return w;
+}
+function puntajeTocar(w, tema, letra, texto, n){
+  [].forEach.call(w.querySelectorAll(".pt"), function(p){ p.classList.toggle("on", +p.dataset.n === n); });
+  var d = puntajeLeer(), k = puntajeClave(tema, texto);
+  d[k] = {tema: tema, letra: letra, texto: String(texto || ""), n: n, t: Date.now(), pend: true};
+  puntajeEscribir(d);
+  puntajeSubir();
+}
+function puntajeSubir(){
+  if(puntajeTimer){ clearTimeout(puntajeTimer); puntajeTimer = null; }
+  var d = puntajeLeer(), ks = Object.keys(d).filter(function(k){ return d[k].pend; });
+  if(!ks.length) return Promise.resolve(true);
+  function listo(k, x){
+    var e = puntajeLeer();
+    if(e[k] && e[k].n === x.n && e[k].t === x.t){ delete e[k].pend; puntajeEscribir(e); }
+  }
+  var sale = function(x){
+    var cuerpo = {tema: x.tema, letra: x.letra, texto: x.texto, n: x.n};
+    if(puntajeMandarFn) return Promise.resolve(puntajeMandarFn(cuerpo)).then(function(){ return true; });
+    return votLan().then(function(base){
+      if(!base) throw new Error("sin lan");
+      return lanFetch(base + "/puntaje", {method: "POST", cache: "no-store",
+        headers: {"authorization": "Bearer " + token, "content-type": "application/json"}, body: JSON.stringify(cuerpo)});
+    }).then(function(r){
+      if(!r || (!r.ok && r.status !== 404)) throw new Error("http " + (r && r.status));
+      return true;   // 404 = esa caja ya no esta en el server: no se reintenta para siempre
+    });
+  };
+  return ks.reduce(function(pr, k){
+    var x = d[k];
+    return pr.then(function(todo){
+      return sale(x).then(function(){ listo(k, x); return todo; }, function(){ return false; });
+    });
+  }, Promise.resolve(true)).then(function(todo){
+    if(!todo) puntajeTimer = setTimeout(puntajeSubir, PUNTAJE_REINTENTO_MS);
+    return todo;
+  });
+}
 function nodoCajas(m, lista_){
   var k = claveCajas(m), caja = document.createElement("div");
+  // 2565: un menu `entendí` (todas sus cajas son lecturas, mas la `ninguna` del final) lleva el puntaje en cada una
+  var ent = lista_.some(function(o){ return esEntendi(o.texto); }) &&
+            lista_.every(function(o){ return esEntendi(o.texto) || /^ninguna, entendieron mal/i.test(String(o.texto || "")); });
   // 2557: con la votacion multi-modelo el menu puede traer de la A a la P: de 4 en adelante van en dos columnas
   caja.className = "opciones" + (lista_.length > 3 ? " muchas" : "");
   caja.dataset.clave = k;
@@ -3398,6 +3478,7 @@ function nodoCajas(m, lista_){
     b.querySelector(".l").textContent = o.letra;
     b.querySelector(".t").textContent = o.texto;
     b.title = o.cmd || (o.letra + ": " + o.texto);
+    if(ent && esEntendi(o.texto)) b.appendChild(puntajeFila(m.tema || temaActivo(), o.letra, o.texto));
     var ini = null;
     b.addEventListener("pointerdown", function(e){ ini = {x: e.clientX, y: e.clientY, mov: false}; });
     b.addEventListener("pointermove", function(e){
@@ -8356,11 +8437,13 @@ function nodoTramo(t){
   if(tipo === "caja"){
     d.className = "tramo caja opciones llegando";
     var b = document.createElement("button");
-    b.type = "button"; b.disabled = true; b.className = "opc " + String(t.letra || "");
+    // 2565: `aria-disabled` y no `disabled`: un boton disabled se come los toques de adentro, y el puntaje se vota ya
+    b.type = "button"; b.setAttribute("aria-disabled", "true"); b.className = "opc " + String(t.letra || "");
     b.innerHTML = '<span class="l"></span><span class="t"></span>';
     b.querySelector(".l").textContent = String(t.letra || "");
     b.querySelector(".t").textContent = String(t.texto || "");
     b.title = "llegando las demas: se toca cuando termine la ronda";
+    if(esEntendi(t.texto)) b.appendChild(puntajeFila(t.tema || (vuelo && vuelo.tema) || temaActivo(), String(t.letra || ""), String(t.texto || "")));
     d.appendChild(b);
     return d;
   }
@@ -14500,9 +14583,13 @@ function medirCentro(b){
           dy: Math.round(((m("top", "min") + m("bottom", "max")) / 2 - (r.top + r.bottom) / 2) * 10) / 10};
 }
 
+setTimeout(function(){ try{ puntajeSubir(); }catch(x){} }, 5000);   // 2565: lo que quedo pendiente sin lan
 window.__agente = {
   // 2417 {boton}: el boton `lo entendiste mal` de cada respuesta
   malMandar: malMandar, sinMarcaMal: sinMarcaMal, nodoAccMsg: nodoAccMsg,
+  // 2565 {bajar}: el puntaje 0 a 5 de las cajas `entendí` (`prueba_web_puntaje`)
+  puntajeMandar: puntajeMandar, puntajeFila: puntajeFila, puntajeSubir: puntajeSubir, puntajeLeer: puntajeLeer,
+  nodoCajas: nodoCajas, nodoTramo: nodoTramo,
   // 2102 {resultado}: los avisos que nacen en el board van a la campana, no al chat (`prueba_web_falla_campana`)
   notiLocal: notiLocal, notisNoLeidas: notisNoLeidas, chatFalla: function(){ return chatFalla; },
   notisLocales: function(){ return notisLocales.slice(); }, avLeidos: function(){ return avLeidos; },
