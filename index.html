@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.503">
-<link rel="manifest" href="manifest.json?v=4.503">
+<meta name="agente-web-version" content="4.504">
+<link rel="manifest" href="manifest.json?v=4.504">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.503">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.504">
 </head>
 <body>
 
@@ -526,8 +526,8 @@ var RE_TEMA = /^\s*tema\s+([\w\/#-]+)\s*:\s*/i;
 var RE_CLON = /^(.+?)#(\d+)$/;
 var CLONES = [];                       // los que el server dio de alta (se pide al abrir y despues de crear/borrar)
 // 2300 {visible} (facundo, 2026-09-24): un clon puede tener un **nombre visible** (`t/impresora` para
-// `tools#2`). es SOLO lo que se pinta: `data-tema`, el `tema x:` que se manda, el carril de la cola y
-// `logs/chat-tools#2.jsonl` siguen con el id. el mapa lo manda el server en `/clones` (`visibles`).
+// `flos#2`). es SOLO lo que se pinta: `data-tema`, el `tema x:` que se manda, el carril de la cola y
+// `logs/chat-flos#2.jsonl` siguen con el id. el mapa lo manda el server en `/clones` (`visibles`).
 // 2277 {cambios} (facundo, 2026-09-28: "a veces se ven como `tema#N` hasta que cambio de pestaña y
 // vuelvo"): el mapa llega del server (`/clones`), o sea DESPUES del primer pintado, asi que la barra
 // arrancaba con el id crudo. queda cacheado en localStorage: el primer pintado ya sale con el nombre de
@@ -1931,7 +1931,7 @@ function tabEditar(tema){
       e.preventDefault(); e.stopPropagation();
       var val = inp.value.trim();
       tabEdit = null;
-      clonRenombrar(tema, val, !val);          // vacio = volver al id de siempre (`tools#2`)
+      clonRenombrar(tema, val, !val);          // vacio = volver al id de siempre (`flos#2`)
       pintarTabs();
     } else if(e.key === "Escape"){
       e.preventDefault(); e.stopPropagation();
