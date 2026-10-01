@@ -220,6 +220,21 @@
     } else {
       sel = '<span class="gparte-fijo">' + esc(p.modelo || "?") + "</span>";
     }
+    // 2570 {puntos} (facundo, 2026-09-30): los puntos de cada modelo al lado de su parte, en el orden en que
+    // atienden (el primero es el que atiende hoy), y el que facundo saco del pool tachado con `afuera`. llega
+    // armado del server (`modelo_partes.widget`: `puntos`, `atiende`, `afuera`); sin eso queda el detalle de antes.
+    if(p.editable && (p.puntos || []).length){
+      var pts = p.puntos.map(function(x, i){
+        return '<span class="gparte-p' + (i === 0 && !p.override ? " primero" : "") + '">' + esc(x.modelo) +
+          ' <b>' + esc(String(x.puntos)) + "</b></span>";
+      }).concat((p.afuera || []).map(function(x){
+        return '<span class="gparte-p afuera" title="' + esc("afuera del pool desde " + (x.desde || "?")) + '">' +
+          esc(x.modelo) + " afuera</span>";
+      }));
+      return '<div class="gparte conpuntos" title="' + esc(p.nombre + ": " + (p.detalle || "")) + '">' +
+        '<span class="gparte-n">' + esc(p.nombre) + "</span>" + sel +
+        '<span class="gparte-pts">' + pts.join("") + "</span></div>";
+    }
     return '<div class="gparte" title="' + esc(p.nombre + ": " + (p.detalle || "")) + '">' +
       '<span class="gparte-n">' + esc(p.nombre) + "</span>" + sel +
       '<span class="gparte-d">' + esc(p.detalle || "") + "</span></div>";

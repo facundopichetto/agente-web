@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.510">
-<link rel="manifest" href="manifest.json?v=4.510">
+<meta name="agente-web-version" content="4.511">
+<link rel="manifest" href="manifest.json?v=4.511">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.510">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.511">
 </head>
 <body>
 
@@ -3398,7 +3398,12 @@ function esEntendi(texto){ return RE_ENTENDI_CAJA.test(String(texto || "")); }
 // `opciones` llega firmada por su modelo (`(groq) encolo ...`) y tambien se puntua. `puntuable` = una de las dos.
 var RE_FIRMADA_CAJA = /^\s*\((?:[a-z0-9][\w.:\-]*)(?:,\s*[a-z0-9][\w.:\-]*)*\)\s+\S/i;
 function esFirmada(texto){ return RE_FIRMADA_CAJA.test(String(texto || "")); }
-function puntuable(texto){ return esEntendi(texto) || esFirmada(texto); }
+// 2570 {puntos} (facundo: "cada bloque arranca con el nombre del modelo solo, sin la palabra `entendí`"): la caja
+// dice `groq: ...` (el `entendí`) o `gemini: ...` (la accion), y se puntua igual que antes.
+var RE_HABLA_NOMBRE = "(?:groq|gemini|opencode|sonnet|opus|fable|local(?::[\\w.:\\-]*[\\w\\-])?)";
+var RE_HABLA_CAJA = new RegExp("^\\s*" + RE_HABLA_NOMBRE + "(?:\\s*,\\s*" + RE_HABLA_NOMBRE + ")*\\s*:\\s+\\S", "i");
+function esHabla(texto){ return RE_HABLA_CAJA.test(String(texto || "")); }
+function puntuable(texto){ return esEntendi(texto) || esFirmada(texto) || esHabla(texto); }
 function puntajeClave(tema, texto){ return String(tema || "").toLowerCase() + "|" + hashTexto(normTramo(texto)); }
 function puntajeLeer(){ try{ return JSON.parse(localStorage.getItem(PUNTAJE_LS) || "{}") || {}; }catch(x){ return {}; } }
 function puntajeEscribir(d){

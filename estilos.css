@@ -1506,6 +1506,14 @@
   .usage.gasto .gparte-fijo{display:inline-flex;align-items:center;color:var(--gris)}
   .usage.gasto .gparte-d{flex:1 1 auto;min-width:0;font-size:13px;color:var(--gris);text-align:right;
                          white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* 2570 {puntos}: los puntos de cada modelo van en su renglon, debajo del desplegable y alineados con el: el
+     primero (el que atiende) en verde, el que esta afuera del pool tachado. */
+  .usage.gasto .gparte.conpuntos{flex-wrap:wrap;row-gap:3px}
+  .usage.gasto .gparte-pts{flex:1 1 100%;display:flex;flex-wrap:wrap;column-gap:10px;row-gap:2px;
+                           padding-left:81px;font-size:13px;color:var(--gris)}
+  .usage.gasto .gparte-p b{font-weight:normal;color:var(--texto,#ddd)}
+  .usage.gasto .gparte-p.primero{color:var(--verde)}
+  .usage.gasto .gparte-p.afuera{text-decoration:line-through;opacity:.7}
   .usage.gasto .ub.grow .g5{flex:1 1 100%;display:flex;align-items:center;column-gap:5px;margin-bottom:3px}
   .usage.gasto .ub.grow .g5-h{flex:0 0 74px;min-width:74px}
   .usage.gasto .ub.grow .g5-pista{flex:1 1 30px;min-width:28px;position:relative;height:14px;
