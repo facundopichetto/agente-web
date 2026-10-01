@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.508">
-<link rel="manifest" href="manifest.json?v=4.508">
+<meta name="agente-web-version" content="4.509">
+<link rel="manifest" href="manifest.json?v=4.509">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.508">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.509">
 </head>
 <body>
 
@@ -2783,8 +2783,8 @@ function nodoMsg(m){
   // el orden de un mensaje es SIEMPRE texto -> drafts -> audio -> cajas. el audio llega en un poll posterior al
   // texto, asi que al repintarse el mensaje se mete en el medio y las cajas bajan solas: nunca quedan arriba.
   div.appendChild(cab); if(hilo) div.appendChild(hilo); div.appendChild(b);
-  // 2561 {hacerlo}: el pie `lo entendiste mal` (2417) ya no se pinta. lo reemplaza la ultima caja de cada ronda
-  // `entendí` (`ninguna, entendieron mal`), que sale sola en todo pedido nuevo. `nodoAccMsg` queda para el revert.
+  // 2561 {hacerlo}: el pie `lo entendiste mal` (2417) ya no se pinta, y desde la 2566 tampoco la caja `ninguna,
+  // entendieron mal`: el voto es el puntaje 0-5, y escribir cierra la ronda sin voto. `nodoAccMsg` queda para el revert.
   // el reproductor completo, uno por audio (2044: en todas las pestañas), abajo del texto y ARRIBA de toda
   // caja de decision. los drafts copiables siguen abajo de las cajas, como los dejo la 1240.
   auds.forEach(function(sa){ div.appendChild(playerAudio(sa, "escuchar")); });
@@ -3394,6 +3394,11 @@ var PUNTAJE_MAX = 5, PUNTAJE_LS = "agente_puntaje", PUNTAJE_REINTENTO_MS = 30000
 var puntajeMandarFn = null, puntajeTimer = null;   // las pruebas se quedan con lo que saldria
 function puntajeMandar(fn){ puntajeMandarFn = fn; }
 function esEntendi(texto){ return RE_ENTENDI_CAJA.test(String(texto || "")); }
+// 2566 {voto} (facundo: "los votos son literalmente mi puntaje de 0 a 5 en cada una"): la caja de la ronda
+// `opciones` llega firmada por su modelo (`(groq) encolo ...`) y tambien se puntua. `puntuable` = una de las dos.
+var RE_FIRMADA_CAJA = /^\s*\((?:[a-z0-9][\w.:\-]*)(?:,\s*[a-z0-9][\w.:\-]*)*\)\s+\S/i;
+function esFirmada(texto){ return RE_FIRMADA_CAJA.test(String(texto || "")); }
+function puntuable(texto){ return esEntendi(texto) || esFirmada(texto); }
 function puntajeClave(tema, texto){ return String(tema || "").toLowerCase() + "|" + hashTexto(normTramo(texto)); }
 function puntajeLeer(){ try{ return JSON.parse(localStorage.getItem(PUNTAJE_LS) || "{}") || {}; }catch(x){ return {}; } }
 function puntajeEscribir(d){
@@ -3462,9 +3467,10 @@ function puntajeSubir(){
 }
 function nodoCajas(m, lista_){
   var k = claveCajas(m), caja = document.createElement("div");
-  // 2565: un menu `entendí` (todas sus cajas son lecturas, mas la `ninguna` del final) lleva el puntaje en cada una
-  var ent = lista_.some(function(o){ return esEntendi(o.texto); }) &&
-            lista_.every(function(o){ return esEntendi(o.texto) || /^ninguna, entendieron mal/i.test(String(o.texto || "")); });
+  // 2565: un menu `entendí` lleva el puntaje en cada caja. 2566: tambien el de `opciones` (cajas firmadas). la
+  // `ninguna` y `lo seguimos discutiendo` ya no salen; la tolerancia es para los menus viejos del historial
+  var ent = lista_.some(function(o){ return puntuable(o.texto); }) &&
+            lista_.every(function(o){ return puntuable(o.texto) || /^ninguna, entendieron mal/i.test(String(o.texto || "")); });
   // 2557: con la votacion multi-modelo el menu puede traer de la A a la P: de 4 en adelante van en dos columnas
   caja.className = "opciones" + (lista_.length > 3 ? " muchas" : "");
   caja.dataset.clave = k;
@@ -3478,7 +3484,7 @@ function nodoCajas(m, lista_){
     b.querySelector(".l").textContent = o.letra;
     b.querySelector(".t").textContent = o.texto;
     b.title = o.cmd || (o.letra + ": " + o.texto);
-    if(ent && esEntendi(o.texto)) b.appendChild(puntajeFila(m.tema || temaActivo(), o.letra, o.texto));
+    if(ent && puntuable(o.texto)) b.appendChild(puntajeFila(m.tema || temaActivo(), o.letra, o.texto));
     var ini = null;
     b.addEventListener("pointerdown", function(e){ ini = {x: e.clientX, y: e.clientY, mov: false}; });
     b.addEventListener("pointermove", function(e){
@@ -8443,7 +8449,7 @@ function nodoTramo(t){
     b.querySelector(".l").textContent = String(t.letra || "");
     b.querySelector(".t").textContent = String(t.texto || "");
     b.title = "llegando las demas: se toca cuando termine la ronda";
-    if(esEntendi(t.texto)) b.appendChild(puntajeFila(t.tema || (vuelo && vuelo.tema) || temaActivo(), String(t.letra || ""), String(t.texto || "")));
+    if(puntuable(t.texto)) b.appendChild(puntajeFila(t.tema || (vuelo && vuelo.tema) || temaActivo(), String(t.letra || ""), String(t.texto || "")));
     d.appendChild(b);
     return d;
   }
