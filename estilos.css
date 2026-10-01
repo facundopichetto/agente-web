@@ -1495,6 +1495,17 @@
      pista, numero de 60 px, etiqueta en el ancho del dato secundario -- para que las dos barras arranquen y
      terminen en la MISMA x. clases propias (`g5-*`) y no `.ub-*`: anidar un `.ub` adentro de otro haria que el
      color por nivel del padre pintara tambien esta barra. la de abajo (week) no se toco. */
+  /* 2569 {cadena}: una fila por parte del chat (chat, entendí, acciones, cola) abajo de las cuentas, con el
+     nombre en la misma columna de 74 px que las cuentas, el desplegable del modelo y la cadena en gris. */
+  .usage.gasto .gpartes{display:block;margin-top:9px;padding-top:7px;border-top:1px solid var(--linea)}
+  .usage.gasto .gparte{display:flex;align-items:center;column-gap:7px;margin:0 0 6px 0;min-height:28px}
+  .usage.gasto .gparte-n{flex:0 0 74px;min-width:74px;color:var(--cian);letter-spacing:.04em}
+  .usage.gasto .gparte-sel,.usage.gasto .gparte-fijo{flex:0 0 96px;min-width:96px;font:inherit;font-size:14px;
+                              color:var(--texto,#ddd);background:var(--fondo-hundido);border:1px solid var(--linea);
+                              border-radius:3px;padding:3px 4px;min-height:28px;box-sizing:border-box}
+  .usage.gasto .gparte-fijo{display:inline-flex;align-items:center;color:var(--gris)}
+  .usage.gasto .gparte-d{flex:1 1 auto;min-width:0;font-size:13px;color:var(--gris);text-align:right;
+                         white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .usage.gasto .ub.grow .g5{flex:1 1 100%;display:flex;align-items:center;column-gap:5px;margin-bottom:3px}
   .usage.gasto .ub.grow .g5-h{flex:0 0 74px;min-width:74px}
   .usage.gasto .ub.grow .g5-pista{flex:1 1 30px;min-width:28px;position:relative;height:14px;

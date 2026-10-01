@@ -203,6 +203,35 @@
     cuAbierta = l.nombre;
     return cuModal.abrir({titulo: "cuenta " + l.nombre, cuenta: plan, html: html, botones: []});
   }
+  // 2569 {cadena} (facundo, 2026-09-30, opcion C: "una fila por parte en el widget `USAGE` del board con un
+  // desplegable para cambiar el modelo con un toque, además del comando"): abajo de las cuentas, chat, entendí,
+  // acciones y cola, cada una con su modelo. el desplegable manda el MISMO texto que el comando (`chat groq`,
+  // `acciones vuelve`) por `mandarAparte`, y el daemon lo atiende sin modelo (`atajo_partes`). la cola no tiene
+  // desplegable: no se cambia desde aca. todo llega armado del server (`modelo_partes.widget`): la web no decide
+  // ningun modelo. sin plata y sin pie ({sinpie}).
+  var parteUltimo = null;
+  function filaParte(p){
+    var sel;
+    if(p.editable){
+      sel = '<select class="gparte-sel" data-parte="' + esc(p.parte) + '" aria-label="modelo de ' + esc(p.nombre) + '">' +
+        (p.opciones || []).map(function(o){
+          return '<option value="' + esc(o) + '"' + (o === p.modelo ? " selected" : "") + ">" + esc(o) + "</option>";
+        }).join("") + "</select>";
+    } else {
+      sel = '<span class="gparte-fijo">' + esc(p.modelo || "?") + "</span>";
+    }
+    return '<div class="gparte" title="' + esc(p.nombre + ": " + (p.detalle || "")) + '">' +
+      '<span class="gparte-n">' + esc(p.nombre) + "</span>" + sel +
+      '<span class="gparte-d">' + esc(p.detalle || "") + "</span></div>";
+  }
+  function alCambiarParte(ev){
+    var n = ev.target;
+    if(!n || !n.classList || !n.classList.contains("gparte-sel")) return;
+    var parte = n.getAttribute("data-parte"), v = n.value;
+    parteUltimo = {cmd: parte + " " + (v === "cadena" ? "vuelve" : v), tema: "modelos", aparte: true};
+    if(B.mandarAparte) B.mandarAparte(parteUltimo.cmd, "modelos");
+  }
+  document.addEventListener("change", alCambiarParte, true);
   function cajaGasto(u){
     var lineas = (u.lineas || []).slice(), html = "";
     var cuentas = (u.cuentas || []).slice();
@@ -223,6 +252,7 @@
     lineas.forEach(function(l){ if(l.tipo !== "claude") lineasVistas[l.nombre] = l; });
     // {sinpie}: las filas y nada mas; se fueron el grafico de 7 dias y el total del mes de abajo
     if(lineas.length) html += '<div class="glin">' + lineas.map(filaGasto).join("") + "</div>";
+    if((u.partes || []).length) html += '<div class="gpartes">' + u.partes.map(filaParte).join("") + "</div>";
     // {widget} (facundo, 2026-09-22): el titulo es `USAGE` y al lado no va nada (se fue la bateria)
     return caja("USAGE", "", '<div class="usage gasto">' + (html || vacio("sin datos")) + "</div>",
                 false, "gasto");
@@ -234,9 +264,12 @@
     // lo que este modulo deja puesto afuera: el listener del titulo de cada cuenta y su modal. al soltarlo se sacan
     destruir: function(){
       document.removeEventListener("click", alTocar, true);
+      document.removeEventListener("change", alCambiarParte, true);
+      parteUltimo = null;
       if(cuModal){ try{ cuModal.cerrar(true); }catch(e){} var el = document.getElementById("cuentamodal"); if(el) el.remove(); }
       cuModal = null; cuUltimo = null; cuAbierta = null; cuentasVistas = {}; lineasVistas = {}; lineasClaude = {};
     },
-    cuentaAbrir: cuentaAbrir, apiAbrir: apiAbrir, cuEstado: cuEstado
+    cuentaAbrir: cuentaAbrir, apiAbrir: apiAbrir, cuEstado: cuEstado,
+    parteEstado: function(){ return parteUltimo; }
   });
 })();
