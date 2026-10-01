@@ -1497,23 +1497,23 @@
      color por nivel del padre pintara tambien esta barra. la de abajo (week) no se toco. */
   /* 2569 {cadena}: una fila por parte del chat (chat, entendí, acciones, cola) abajo de las cuentas, con el
      nombre en la misma columna de 74 px que las cuentas, el desplegable del modelo y la cadena en gris. */
-  .usage.gasto .gpartes{display:block;margin-top:9px;padding-top:7px;border-top:1px solid var(--linea)}
-  .usage.gasto .gparte{display:flex;align-items:center;column-gap:7px;margin:0 0 6px 0;min-height:28px}
-  .usage.gasto .gparte-n{flex:0 0 74px;min-width:74px;color:var(--cian);letter-spacing:.04em}
-  .usage.gasto .gparte-sel,.usage.gasto .gparte-fijo{flex:0 0 96px;min-width:96px;font:inherit;font-size:14px;
+  .usage.cadenas .gpartes{display:block;margin-top:9px;padding-top:7px;border-top:1px solid var(--linea)}
+  .usage.cadenas .gparte{display:flex;align-items:center;column-gap:7px;margin:0 0 6px 0;min-height:28px}
+  .usage.cadenas .gparte-n{flex:0 0 74px;min-width:74px;color:var(--cian);letter-spacing:.04em}
+  .usage.cadenas .gparte-sel,.usage.cadenas .gparte-fijo{flex:0 0 96px;min-width:96px;font:inherit;font-size:14px;
                               color:var(--texto,#ddd);background:var(--fondo-hundido);border:1px solid var(--linea);
                               border-radius:3px;padding:3px 4px;min-height:28px;box-sizing:border-box}
-  .usage.gasto .gparte-fijo{display:inline-flex;align-items:center;color:var(--gris)}
-  .usage.gasto .gparte-d{flex:1 1 auto;min-width:0;font-size:13px;color:var(--gris);text-align:right;
+  .usage.cadenas .gparte-fijo{display:inline-flex;align-items:center;color:var(--gris)}
+  .usage.cadenas .gparte-d{flex:1 1 auto;min-width:0;font-size:13px;color:var(--gris);text-align:right;
                          white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   /* 2570 {puntos}: los puntos de cada modelo van en su renglon, debajo del desplegable y alineados con el: el
      primero (el que atiende) en verde, el que esta afuera del pool tachado. */
-  .usage.gasto .gparte.conpuntos{flex-wrap:wrap;row-gap:3px}
-  .usage.gasto .gparte-pts{flex:1 1 100%;display:flex;flex-wrap:wrap;column-gap:10px;row-gap:2px;
+  .usage.cadenas .gparte.conpuntos{flex-wrap:wrap;row-gap:3px}
+  .usage.cadenas .gparte-pts{flex:1 1 100%;display:flex;flex-wrap:wrap;column-gap:10px;row-gap:2px;
                            padding-left:81px;font-size:13px;color:var(--gris)}
-  .usage.gasto .gparte-p b{font-weight:normal;color:var(--texto,#ddd)}
-  .usage.gasto .gparte-p.primero{color:var(--verde)}
-  .usage.gasto .gparte-p.afuera{text-decoration:line-through;opacity:.7}
+  .usage.cadenas .gparte-p b{font-weight:normal;color:var(--texto,#ddd)}
+  .usage.cadenas .gparte-p.primero{color:var(--verde)}
+  .usage.cadenas .gparte-p.afuera{text-decoration:line-through;opacity:.7}
   .usage.gasto .ub.grow .g5{flex:1 1 100%;display:flex;align-items:center;column-gap:5px;margin-bottom:3px}
   .usage.gasto .ub.grow .g5-h{flex:0 0 74px;min-width:74px}
   .usage.gasto .ub.grow .g5-pista{flex:1 1 30px;min-width:28px;position:relative;height:14px;
