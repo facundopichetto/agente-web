@@ -48,7 +48,9 @@
     // forzar inicio, frenar y reordenar en su modal (el widget `server` tambien pinta items `tarea`, ajenos)
     return it({tipo: "tarea", cola: true, estado: f.estado, tema: f.tema, d: f},
       '<span class="' + cl + ' qnom">' + esc(f.nombre || ("" + f.n)) +
-      (f.estado === "fallo" ? ' <span class="r b">!!</span>' : "") + "</span>" +
+      (f.estado === "fallo" ? ' <span class="r b">!!</span>' : "") +
+      (f.veces > 1 ? ' <span class="g" title="' + esc(f.veces + ' ordenes con este nombre, juntas en una fila') + '">×' +
+                     esc(String(f.veces)) + "</span>" : "") + "</span>" +
       qCelda(cl, f.pedida) + qCelda(cl, f.delay) +
       (pend ? qEsperaCelda(f) : qCelda(cl, f.iniciada)) +
       qCelda(cl, corre ? durVivo(f) : f.dur, corre ? " b qdelta" : "", corre ? ' data-n="' + esc(String(f.n)) + '"' : "") +
@@ -101,6 +103,8 @@
                : (a.pausa ? '<span class="r b">PAUSA</span>'
                           : vacio(prog.length ? "nada en la cola de ahora" : "nada en la cola"));
     cuerpo += secProgramadas(prog);
+    // 2671 {encolo-2}: el pie lo arma el server (`cola_filas.pie`) y nunca viene vacio
+    cuerpo += '<div class="g igpie">' + esc(a.pie || "sin novedades de la cola") + "</div>";
     // dato esencial, corto para que entre en el celu: la cuenta, cuantas corren (verde) y +las que esperan.
     // 1915 {widgets}: la cuenta la manda el server ya resuelta (`cuenta_cola`): la que de verdad puede tomar
     // trabajo, o `sin cuenta hasta <hora>` si ninguna puede. la web no decide nada ni arma esa hora.

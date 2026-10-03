@@ -27,9 +27,12 @@
   function celda(cl, v, mas){ return '<span class="' + cl + " qcel qh" + (mas || "") + '">' + esc(v || "") + "</span>"; }
   function num(v, suf){ return (v === null || v === undefined || v === "") ? "·" : (v + (suf || "")); }
   function fila(f){
-    var cl = f.estado === "corriendo" ? "qcorre" : "qcola";
-    return '<span class="' + cl + ' qnom" data-mad="' + esc(String(f.n)) + '" title="' + esc(f.texto || "") + '">' +
+    var sis = f.origen === "sistema";   // 2671: lo que el sistema corre solo; no tiene ficha ni se reprograma desde aca
+    var cl = f.estado === "corriendo" ? "qcorre" : (sis ? "qpaso" : "qcola");
+    return '<span class="' + cl + ' qnom"' + (sis ? "" : ' data-mad="' + esc(String(f.n)) + '"') +
+             ' title="' + esc(f.texto || "") + '">' +
              esc(f.nombre || "") + (f.tema ? ' <span class="g">' + esc(f.tema) + "</span>" : "") +
+             (sis && f.modelo ? ' <span class="g">' + esc(f.modelo) + "</span>" : "") +
              (f.nota ? ' <span class="c">✎</span>' : "") + "</span>" +
            celda(cl, f.hora) + celda(cl, num(f.min, " min")) + celda(cl, num(f.pct, "%"));
   }
@@ -59,11 +62,11 @@
     if(w.error) return caja("madrugada", "", vacio(w.error), false, "madrugada");
     var fs = w.filas || [], hs = w.corridas || [];
     // arriba de todo, el boton de largar la cola ya (el "me voy a dormir"): saltea la espera de 15 min
-    var boton = fs.length ? '<div class="madpie">' +
+    var boton = fs.some(function(f){ return f.origen !== "sistema"; }) ? '<div class="madpie">' +
         '<button class="qforz" type="button" data-msg="madrugada ' + (w.largada ? "esperar" : "ya") + '">' +
         (w.largada ? "volver a esperarme" : "me voy a dormir: largá la cola") + "</button></div>" : "";
     var cuerpo = boton + (fs.length ? tabla("madrugada", fs, "arranca", fila)
-                                    : vacio("nada esperando la madrugada"));
+                                    : vacio("nada programado para la próxima madrugada"));
     if(hs.length){
       cuerpo += '<div class="madsub g">' + esc(w.corridas_titulo || "ya corrieron") + "</div>" +
                 tabla("madrugada", hs, "corrió", filaHecha);
