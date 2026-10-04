@@ -501,6 +501,12 @@
    "grupo": "nuevos",
    "comandos": [
     {
+     "cmd": "conseguime",
+     "que": "sin descripción todavía",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
      "cmd": "atajo_cmd",
      "que": "detector nuevo en daemon.py, sin descripción todavía",
      "escribe": null,
