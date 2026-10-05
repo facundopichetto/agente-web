@@ -189,6 +189,16 @@
                                          alCerrar: function(){ cuAbierta = null; }});
     var f = function(et, v){ return '<span><span class="g">' + esc(et) + "</span> " + v + "</span>"; };
     var plan = sinPlata(l.plan) || "?";
+    // {groq-cuentas} (2949): una cuenta de groq de la rotacion dice su papel y sus dos topes, armados en el server
+    if(l.rotada){
+      var rot = '<div class="cmod">' + f("cuenta", '<span class="c">' + esc(l.cuenta || "?") + "</span>") +
+        "\n" + f("ahora", esc(sinPlata(l.sec))) +
+        (l.cinco ? "\n" + f("minuto", esc(l.cinco.pct_txt || "?") + ' <span class="g">' + esc(sinPlata(l.cinco.detalle)) + "</span>") : "") +
+        "\n" + f("dia", esc(l.consumo_txt || "?") + ' <span class="g">' + esc(sinPlata(l.dia_txt)) + "</span>") +
+        (l.motivo ? '\n<span class="r">' + esc(l.motivo) + "</span>" : "") + "</div>";
+      cuAbierta = l.nombre;
+      return cuModal.abrir({titulo: l.nombre + " · " + (l.cuenta || ""), cuenta: plan, html: rot, botones: []});
+    }
     var html = '<div class="cmod">' + f("plan", '<span class="c">' + esc(plan) + "</span>") +
       "\n" + f("tokens del mes", esc((l.tok || 0).toLocaleString("es-AR")) +
                 ' <span class="g">en ' + (l.llamadas || 0) + " llamadas</span>") +
@@ -225,7 +235,8 @@
     // {sinpie}: las filas y nada mas; se fueron el grafico de 7 dias y el total del mes de abajo
     if(lineas.length) html += '<div class="glin">' + lineas.map(filaGasto).join("") + "</div>";
     // {widget} (facundo, 2026-09-22): el titulo es `USAGE` y al lado no va nada (se fue la bateria)
-    return caja("USAGE", "", '<div class="usage gasto">' + (html || vacio("sin datos")) + "</div>",
+    // {groq-cuentas} (2949): facundo lo llama `MODELS` (la caja A de la mesa, pendiente desde el 2026-10-04)
+    return caja("MODELS", "", '<div class="usage gasto">' + (html || vacio("sin datos")) + "</div>",
                 false, "gasto");
   }
 

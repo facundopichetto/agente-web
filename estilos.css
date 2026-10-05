@@ -1553,6 +1553,22 @@
   .usage.gasto .ub.grow.sinlim .ub-n{color:var(--gris);opacity:.7}
   .usage.gasto .ub.grow.sinlim{cursor:default}
   .usage.gasto .ub.grow.sinlim:hover{background:none}
+  /* {groq-cuentas} (orden 2949, facundo 2026-10-04: "de paso achica todo un poco para que no sea un bardo"): el widget
+     `MODELS` compacto. las mismas columnas de siempre, todas mas angostas (nombre 70, numero 46, dato 140; letra 12 y 11 px) para que
+     las barras sigan arrancando en la misma x; la pista de abajo baja a 10 px y la barrita de arriba (la 5 h de
+     `awtomic`, el minuto de cada cuenta de groq) a 6 px, sin numero grande: se lee como la marca de la de abajo. */
+  .usage.gasto .ub.grow{margin:0 0 4px 0;column-gap:4px;font-size:12px}
+  .usage.gasto .ub.grow .ub-n{flex:0 0 70px;min-width:70px;font-size:12px}
+  .usage.gasto .ub.grow .ub-pista{height:10px}
+  .usage.gasto .ub.grow .ub-p{flex:0 0 46px;min-width:46px;font-size:12px}
+  .usage.gasto .ub.grow .ren{flex:0 0 140px;font-size:11px}
+  .usage.gasto .ub.grow .gsec{font-size:11px}
+  .usage.gasto .ub.grow .gsec:empty{display:none}
+  .usage.gasto .ub.grow .g5{column-gap:4px;margin-bottom:2px}
+  .usage.gasto .ub.grow .g5-h{flex:0 0 70px;min-width:70px}
+  .usage.gasto .ub.grow .g5-pista{height:6px}
+  .usage.gasto .ub.grow .g5-p{flex:0 0 46px;min-width:46px;font-size:11px;font-weight:400}
+  .usage.gasto .ub.grow .g5-et{flex:0 0 140px;font-size:11px}
   .ubat{display:inline-block;vertical-align:middle;position:relative;width:20px;height:9px;margin:0 5px 0 2px;
         border:1px solid #555;border-radius:2px;padding:1px;box-sizing:border-box}
   .ubat::after{content:"";position:absolute;right:-3px;top:2px;width:2px;height:3px;background:#555;border-radius:0 1px 1px 0}
