@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.521">
-<link rel="manifest" href="manifest.json?v=4.521">
+<meta name="agente-web-version" content="4.522">
+<link rel="manifest" href="manifest.json?v=4.522">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.521">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.522">
 </head>
 <body>
 
@@ -3953,6 +3953,18 @@ function cvRepasar(){
     x[0].style.contentVisibility = "auto";
   }); } finally { cvAdentro = false; }
 }
+// 3054: una burbuja salteada (fuera de pantalla) se queda con el alto medido antes de que le cargue una imagen:
+// `content-visibility:auto` no la maqueta y el `contain-intrinsic-size` viejo manda. `load` no burbujea, asi que
+// se escucha en captura sobre `#lista` (corre ANTES que el `load` de la propia imagen, que es el que repone el
+// ancla): se suelta el salteo de ESA burbuja, se maqueta con su alto real y `cvRepasar` la vuelve a medir.
+if(lista) lista.addEventListener("load", function(e){
+  var t = e.target;
+  if(!t || t.tagName !== "IMG" || !t.closest) return;
+  var n = t.closest(".msg[data-clave]") || t.closest(".msg");
+  if(!n || !n.style.contentVisibility) return;
+  cvSoltarNodo(n);
+  requestAnimationFrame(cvRepasar);
+}, true);
 // `forzar` = cambio de pestaña: lo que se ve es otra charla, asi que la marca de "subio a mano" (que era de la
 // pestaña anterior) se apaga y la vista de la nueva se aplica. sin `forzar` (sync, volver al foco, historial que
 // llega) la marca manda y no se mueve nada.
