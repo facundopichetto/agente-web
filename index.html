@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.522">
-<link rel="manifest" href="manifest.json?v=4.522">
+<meta name="agente-web-version" content="4.523">
+<link rel="manifest" href="manifest.json?v=4.523">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.522">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.523">
 </head>
 <body>
 
@@ -308,7 +308,10 @@ function capaZ(c){
 function capaTope(){
   return CAPAS.filter(capaAbierta).sort(function(a, b){ return capaZ(b) - capaZ(a) || a.orden - b.orden; })[0] || null;
 }
-function capaMostrar(id, fondo){ $(id).classList.remove("oculta"); if(fondo) $(fondo).classList.remove("oculta"); capaOptico($(id)); }
+// 3056: mostrar u ocultar el votador es el ULTIMO paso de abrir una tarjeta (despues de pintarla y de poner la vista
+// `tinder`), asi que la clase de la 2405 {tarjeta} paso 1 se reevalua aca: si no, la primera tarjeta dejaba la barra
+function capaMostrar(id, fondo){ $(id).classList.remove("oculta"); if(fondo) $(fondo).classList.remove("oculta"); capaOptico($(id));
+  if(id === "selmodal") tjFull(); }
 // 1642 (facundo, 2026-09-15 18:55): centro optico solo si sobra lugar. la caja sube al 45% (`.optico`) si deja al
 // menos 5% libre arriba y abajo, o sea si mide hasta el 80% del alto; si no, centro real y nunca se corta arriba.
 // se recalcula cuando cambia el alto de la caja (otra tarjeta) o de la pantalla
@@ -324,7 +327,8 @@ function capaOptico(capa){
   var H = capa.clientHeight, h = caja.getBoundingClientRect().height;
   capa.classList.toggle("optico", H > 0 && h > 0 && h <= H * CAPA_OPTICO_MAX);
 }
-function capaOcultar(id, fondo){ $(id).classList.add("oculta"); if(fondo) $(fondo).classList.add("oculta"); }
+function capaOcultar(id, fondo){ $(id).classList.add("oculta"); if(fondo) $(fondo).classList.add("oculta");
+  if(id === "selmodal") tjFull(); }
 // 1657 (facundo, 2026-09-15): `-_-` es maybe y va en la fila de votos; `←` es el back y va en otro contexto
 // 1801 (facundo, 2026-09-16): los tres procesos del votador votan con la misma gramatica: flecha roja hacia abajo a
 // la izquierda (baja de lista), el medio sin movimiento (`-_-` maybe en candidatas, `=` en los otros dos) y flecha
@@ -6402,12 +6406,14 @@ function tjPintar(){
   // 2078 {home} paso 4: el back grande vuelve a la tarjeta anterior (2002) y, cuando no queda ninguna por deshacer,
   // a la LISTA de la que salio el votador. solo queda gris si el votador no salio de una lista (el push, un icono)
   var atras = tjHist(e).length > 0 || !!lis.origen, bk = $("selback");
-  tjFull();       // 2405 {tarjeta} paso 1: con tarjeta a la vista, la barra de iconos del board se va
   tjBotones(e);   // 1801: los botones son los del proceso de esta coleccion
   tjExtras(e);    // 2247: y los chicos de arriba, los de ESTA lista
   $("selacciones").classList.toggle("oculta", !c);
   $("selextras").classList.toggle("oculta", !c || !tjExtrasSpec(e).length);
   $("selficha").classList.toggle("oculta", !c);   // 2051 paso 4 + 2120 {persona}: la ficha entera (el css la muestra solo en el celu)
+  // 2405 {tarjeta} paso 1: con tarjeta a la vista, la barra de iconos del board se va. 3056: DESPUES de destapar
+  // `#selacciones`, que `tjFull()` pide visible: llamado antes, la primera tarjeta dejaba la barra a la vista
+  tjFull();
   tjNota();   // 2170 {foto-2} paso 1: el renglon chico de la foto vieja, arriba de las tarjetas
   gracPintar();   // {gracia}: el `deshacer` con su contador vive mientras la ventana corre
   [].forEach.call(document.querySelectorAll("#selacciones .tjbtn"), function(b){
