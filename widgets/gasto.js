@@ -215,8 +215,10 @@
   }
   // {limpiar}: las filas de las cadenas de modelos pasaron a su propio widget, `cadenas` (web/widgets/cadenas.js)
   function cajaGasto(u){
-    var lineas = (u.lineas || []).slice(), html = "";
-    var cuentas = (u.cuentas || []).slice();
+    // {widget-usage} (2958): la cuenta excluida llega con `oculta` (la decide el server) y no se pinta; su fila y
+    // su conexion siguen en el json, asi vuelve sola cuando deja de estar excluida
+    var lineas = (u.lineas || []).filter(function(l){ return !l.oculta; }), html = "";
+    var cuentas = (u.cuentas || []).filter(function(c){ return !c.excluida; });
     var soloCta = wset("gasto", "cuentas");
     if(soloCta && soloCta !== "todas"){
       lineas = lineas.filter(function(l){ return l.tipo !== "claude" || l.nombre === soloCta; });
