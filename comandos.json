@@ -125,6 +125,36 @@
      "offline": "cola"
     },
     {
+     "cmd": "forzar N",
+     "que": "larga ya la pendiente N, sin esperar al clasificador",
+     "escribe": "forzar ",
+     "offline": "cola"
+    },
+    {
+     "cmd": "madrugada",
+     "que": "la cola de madrugada: qué sale a la noche y a qué hora",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "opencode estado",
+     "que": "cómo viene opencode en la cola (opencode ok N / mal N juzga un cierre)",
+     "escribe": "opencode ",
+     "offline": "cola"
+    },
+    {
+     "cmd": "sonnet estado",
+     "que": "cómo viene sonnet en la cola (sonnet ok N / mal N juzga un cierre)",
+     "escribe": "sonnet ",
+     "offline": "cola"
+    },
+    {
+     "cmd": "standup",
+     "que": "el draft del standup (standup regenerar lo vuelve a armar)",
+     "escribe": "standup ",
+     "offline": "cola"
+    },
+    {
      "cmd": "borrar N",
      "que": "la orden pendiente N se va del todo, no vuelve nunca",
      "escribe": "borrar ",
@@ -190,6 +220,12 @@
    "grupo": "cuentas y modelo",
    "comandos": [
     {
+     "cmd": "pares",
+     "que": "los pares de modelos para votar cuál contestó mejor",
+     "escribe": "pares ",
+     "offline": "cola"
+    },
+    {
      "cmd": "cuenta",
      "que": "qué cuenta de claude está activa",
      "escribe": null,
@@ -253,6 +289,94 @@
      "cmd": "gmail auth casilla",
      "que": "reautoriza una casilla de gmail",
      "escribe": "gmail auth ",
+     "offline": "cola"
+    }
+   ]
+  },
+  {
+   "grupo": "en esta pantalla",
+   "comandos": [
+    {
+     "cmd": "renombra pestaña nombre",
+     "que": "le cambia el nombre a una pestaña",
+     "escribe": "renombra ",
+     "offline": "cola"
+    },
+    {
+     "cmd": "en espera",
+     "que": "lo que escribiste sin conexión y todavía no salió",
+     "escribe": null,
+     "offline": "local"
+    },
+    {
+     "cmd": "recargar",
+     "que": "vuelve a bajar el board",
+     "escribe": null,
+     "offline": "local"
+    }
+   ]
+  },
+  {
+   "grupo": "casa, slack y mail",
+   "comandos": [
+    {
+     "cmd": "ig follow @cuenta",
+     "que": "programa un follow (o ig unfollow @cuenta) en la cola de instagram",
+     "escribe": "ig follow ",
+     "offline": "cola"
+    },
+    {
+     "cmd": "conseguime cosa",
+     "que": "busca y baja lo que le pidas",
+     "escribe": "conseguime ",
+     "offline": "cola"
+    },
+    {
+     "cmd": "estoy",
+     "que": "estás en casa: callo las cámaras",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "me fui",
+     "que": "saliste: vuelven los avisos de cámara",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "silencio 2h",
+     "que": "silencia las cámaras un rato",
+     "escribe": "silencio ",
+     "offline": "cola"
+    },
+    {
+     "cmd": "slack",
+     "que": "tu presencia en slack hoy",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "slack libre hoy",
+     "que": "hoy no sostengo tu online",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "slack laburo fecha",
+     "que": "ese día sí laburás",
+     "escribe": "slack laburo ",
+     "offline": "cola"
+    },
+    {
+     "cmd": "mail",
+     "que": "los pedidos de santi y leo esperando respuesta",
+     "escribe": null,
+     "offline": "cola"
+    },
+    {
+     "cmd": "mail contestar id texto",
+     "que": "le contesto eso a santi o leo",
+     "escribe": "mail contestar ",
      "offline": "cola"
     }
    ]
@@ -394,59 +518,6 @@
    ]
   },
   {
-   "grupo": "casa, slack y mail",
-   "comandos": [
-    {
-     "cmd": "estoy",
-     "que": "estás en casa: callo las cámaras",
-     "escribe": null,
-     "offline": "cola"
-    },
-    {
-     "cmd": "me fui",
-     "que": "saliste: vuelven los avisos de cámara",
-     "escribe": null,
-     "offline": "cola"
-    },
-    {
-     "cmd": "silencio 2h",
-     "que": "silencia las cámaras un rato",
-     "escribe": "silencio ",
-     "offline": "cola"
-    },
-    {
-     "cmd": "slack",
-     "que": "tu presencia en slack hoy",
-     "escribe": null,
-     "offline": "cola"
-    },
-    {
-     "cmd": "slack libre hoy",
-     "que": "hoy no sostengo tu online",
-     "escribe": null,
-     "offline": "cola"
-    },
-    {
-     "cmd": "slack laburo fecha",
-     "que": "ese día sí laburás",
-     "escribe": "slack laburo ",
-     "offline": "cola"
-    },
-    {
-     "cmd": "mail",
-     "que": "los pedidos de santi y leo esperando respuesta",
-     "escribe": null,
-     "offline": "cola"
-    },
-    {
-     "cmd": "mail contestar id texto",
-     "que": "le contesto eso a santi o leo",
-     "escribe": "mail contestar ",
-     "offline": "cola"
-    }
-   ]
-  },
-  {
    "grupo": "cambiar cómo trabajo",
    "comandos": [
     {
@@ -477,104 +548,6 @@
      "que": "contesta un modelo de respaldo, solo propone",
      "escribe": "eco: ",
      "offline": "cola"
-    }
-   ]
-  },
-  {
-   "grupo": "en esta pantalla",
-   "comandos": [
-    {
-     "cmd": "en espera",
-     "que": "lo que escribiste sin conexión y todavía no salió",
-     "escribe": null,
-     "offline": "local"
-    },
-    {
-     "cmd": "recargar",
-     "que": "vuelve a bajar el board",
-     "escribe": null,
-     "offline": "local"
-    }
-   ]
-  },
-  {
-   "grupo": "nuevos",
-   "comandos": [
-    {
-     "cmd": "conseguime",
-     "que": "sin descripción todavía",
-     "escribe": null,
-     "offline": "cola"
-    },
-    {
-     "cmd": "atajo_cmd",
-     "que": "detector nuevo en daemon.py, sin descripción todavía",
-     "escribe": null,
-     "offline": "cola",
-     "detector": true
-    },
-    {
-     "cmd": "es_cmd_forzar",
-     "que": "detector nuevo en daemon.py, sin descripción todavía",
-     "escribe": null,
-     "offline": "cola",
-     "detector": true
-    },
-    {
-     "cmd": "es_cmd_madrugada",
-     "que": "detector nuevo en daemon.py, sin descripción todavía",
-     "escribe": null,
-     "offline": "cola",
-     "detector": true
-    },
-    {
-     "cmd": "es_cmd_opencode",
-     "que": "detector nuevo en daemon.py, sin descripción todavía",
-     "escribe": null,
-     "offline": "cola",
-     "detector": true
-    },
-    {
-     "cmd": "es_cmd_pares",
-     "que": "detector nuevo en daemon.py, sin descripción todavía",
-     "escribe": null,
-     "offline": "cola",
-     "detector": true
-    },
-    {
-     "cmd": "es_cmd_renombra",
-     "que": "detector nuevo en daemon.py, sin descripción todavía",
-     "escribe": null,
-     "offline": "cola",
-     "detector": true
-    },
-    {
-     "cmd": "es_cmd_sonnet",
-     "que": "detector nuevo en daemon.py, sin descripción todavía",
-     "escribe": null,
-     "offline": "cola",
-     "detector": true
-    },
-    {
-     "cmd": "es_cmd_standup",
-     "que": "detector nuevo en daemon.py, sin descripción todavía",
-     "escribe": null,
-     "offline": "cola",
-     "detector": true
-    },
-    {
-     "cmd": "ig_listas_cmd",
-     "que": "detector nuevo en daemon.py, sin descripción todavía",
-     "escribe": null,
-     "offline": "cola",
-     "detector": true
-    },
-    {
-     "cmd": "router_local_cmd",
-     "que": "detector nuevo en daemon.py, sin descripción todavía",
-     "escribe": null,
-     "offline": "cola",
-     "detector": true
     }
    ]
   }
