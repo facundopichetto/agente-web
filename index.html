@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.518">
-<link rel="manifest" href="manifest.json?v=4.518">
+<meta name="agente-web-version" content="4.519">
+<link rel="manifest" href="manifest.json?v=4.519">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.518">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.519">
 </head>
 <body>
 
@@ -2321,10 +2321,20 @@ function bajarImagen(src){
   var repo = srcBuzon(src);
   if(imgUrls[src]) return Promise.resolve(imgUrls[src]);
   if(imgUrls[repo]) return Promise.resolve(imgUrls[src] = imgUrls[repo]);
-  return bajarBlob(repo).then(function(b){
+  var local = !/^(img|audio)\//.test(src);
+  return (/^(img|audio)\//.test(repo) ? bajarBlob(repo) : Promise.reject(new Error("local")))
+    .catch(function(e){ if(!local) throw e; return bajarLocal(src); })
+    .then(function(b){
       imgUrls[repo] = imgUrls[src] = URL.createObjectURL(b);
       return imgUrls[src];
     });
+}
+// 3022 {recibe}: una ruta del server (`/home/...`, `~/...`, `qa/...` del tema) se la pido al server, no 404
+function bajarLocal(src){
+  if(!lan.base || !token) return Promise.reject(new Error("sin server"));
+  return lanFetch(lan.base + "/local?ruta=" + encodeURIComponent(src) + "&tema=" + encodeURIComponent(temaActivo() || ""),
+                  {headers: {"authorization": "Bearer " + token}, cache: "no-store"})
+    .then(function(r){ if(!r.ok) throw new Error("http " + r.status); return r.blob(); });
 }
 function cargarImagenes(nodo){
   var spans = nodo.querySelectorAll ? nodo.querySelectorAll(".img[data-src]") : [];
