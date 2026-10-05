@@ -50,6 +50,18 @@
            '<span class="invusd b">' + esc(conSigno(dl.usd)) + "</span>" +
            '<span class="invpct">' + esc(conSigno(dl.pct, "%")) + "</span></div>";
   }
+  // 2966: el `año`, el retorno anual de la cartera (independiente de la plata). `ESTIMADO` hasta los 365 dias, `REAL`
+  // (ultimos 12 meses) despues; el calculo lo hace el server (`recetas/inversiones_anual.py`), la web solo lo pinta.
+  function filaAnual(a){
+    if(!a) return "";
+    if(a.pct === null || a.pct === undefined)
+      return '<div class="invanio"><span class="invet g">año</span> <span class="g">' + esc(a.motivo || "sin dato todavia") + "</span></div>";
+    var rot = a.rotulo || (a.estimado ? "ESTIMADO" : "REAL");
+    return '<div class="invanio ' + clase(a.pct) + '"><span class="invet g">año</span> ' +
+           '<span class="invusd b">' + esc(conSigno(a.pct, "%")) + "</span> " +
+           '<span class="' + "g" + '">' + esc(rot) + "</span> " +
+           '<span class="g">' + esc((a.desde || "") + " → " + (a.hasta || "")) + "</span></div>";
+  }
   function filaActivo(a){
     return '<div class="invfila"><span class="invtk b">' + esc(a.ticker || "?") + "</span>" +
            '<span class="invcant g">' + esc(a.cantidad !== undefined ? String(a.cantidad) + " u" : "") + "</span>" +
@@ -87,6 +99,7 @@
       '<div class="invtot"><span class="g">invertido</span> <span class="b">' + esc(usd(d.total_invertido)) + "</span>" +
       ' <span class="g">· vale</span> <span class="' + clase(vale - Number(d.total_invertido || 0)) + '">' + esc(usd(vale)) + "</span>" +
       (d.efectivo ? ' <span class="g">· efectivo ' + esc(usd(d.efectivo)) + "</span>" : "") + "</div>" +
+      filaAnual(d.anual) +
       (acts.length ? '<div class="invact">' + acts.map(filaActivo).join("") + "</div>" : "") +
       sparkline(h, clase(mes.usd)) +
       (d.estado === "viejo" ? '<div class="invviejo g">' + esc(d.detalle || "la ultima lectura de ibkr fallo") +

@@ -2473,6 +2473,7 @@
 .inv .invusd{font-size:var(--texto-max);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .inv .invpct{font-size:12px;opacity:.85}
 .inv .invtot{font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.inv .invanio{font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .inv .invact{display:grid;grid-template-columns:auto 1fr auto;column-gap:8px;row-gap:1px;font-size:12px;
              font-variant-numeric:tabular-nums}
 .inv .invfila{display:contents}
