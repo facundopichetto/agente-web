@@ -2479,3 +2479,11 @@
     padding:calc(4px + env(safe-area-inset-top)) 10px calc(8px + env(safe-area-inset-bottom)) 10px}
   #menulista .ib{min-height:50px;height:auto;margin:0}
 }
+
+/* 2901 {pestana-viva}: lo que va haciendo una orden, adentro del modal de la cola (se refresca cada 3 s) */
+#modal .viva{margin-top:8px;max-height:45vh;overflow:auto;background:#000;border:1px solid var(--linea);border-radius:4px;
+  padding:6px 8px;font-family:ui-monospace,Menlo,monospace;font-size:13px;line-height:1.45;white-space:pre-wrap;word-break:break-word}
+#modal .viva .vivacab{position:sticky;top:-6px;background:#000;padding-bottom:4px}
+#modal .viva .vivatx{color:var(--blanco);margin-top:6px}
+#modal .viva .vivacmd{margin-top:1px}
+#modal .viva .vivafin{color:var(--verde)}

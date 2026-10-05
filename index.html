@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.514">
-<link rel="manifest" href="manifest.json?v=4.514">
+<meta name="agente-web-version" content="4.515">
+<link rel="manifest" href="manifest.json?v=4.515">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.514">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.515">
 </head>
 <body>
 
@@ -12978,6 +12978,12 @@ function modalDe(o){
         modalDale(m, tema, "frenar " + d.n, "le mando TERM y KILL al proceso y a sus hijos; la línea queda [x]");
       }]);
     }
+    // 2901 {pestana-viva}: lo que va haciendo la orden (o lo que hizo), digerido en el server sin modelo y
+    // refrescado cada 3 s mientras el modal este abierto. arranca en `cargando`: nunca con datos viejos.
+    if(o.cola && d.n){
+      m.viva = d.n;
+      m.cuerpo += '\n\n<div class="viva" id="vivacaja"><span class="g">pestaña viva: cargando lo que va haciendo…</span></div>';
+    }
     if(cerrada)
       m.acciones.push(["ver el log de esta tarea", function(){
         actuar(tema, "mostrame el log de la tarea «" + corto(d.texto, 90) + "»" +
@@ -13328,7 +13334,56 @@ function modalDale(m, tema, cmd, que){
     dale: {txt: "dale", aria: cmd, accion: function(){ actuar(tema, cmd, true); }},
     acciones: [["volver sin tocar nada", function(){ pintarModal(m); }]]});
 }
+// 2901 {pestana-viva}: el digest de `GET /viva/<N>` (`recetas/pestana_viva.py`): `>` lo que dice el modelo, `$` lo
+// que toca, arriba el estado. el poll vive mientras el modal que lo pidio siga abierto.
+var viva = {n: null, t: null, seq: 0};
+function vivaParar(){
+  if(viva.t) clearTimeout(viva.t);
+  viva.t = null; viva.n = null; viva.seq++;
+}
+function vivaPintar(j){
+  var el = $("vivacaja");
+  if(!el) return false;
+  var abajo = el.scrollHeight - el.scrollTop - el.clientHeight < 30;
+  var cl = {"corriendo": "c", "terminó": "v", "falló": "r", "murió": "r"}[j.estado] || "g";
+  var h = '<div class="vivacab"><span class="g">pestaña viva</span> <span class="' + cl + '">' + esc(j.estado || "?") + "</span>" +
+    (j.motor ? ' <span class="g">' + esc(j.motor) + "</span>" : "") +
+    (j.corridas > 1 ? ' <span class="g">' + j.corridas + " corridas</span>" : "") +
+    (j.aviso ? ' <span class="a">' + esc(j.aviso) + "</span>" : "") + "</div>";
+  (j.lineas || []).forEach(function(x){
+    var t = x[0], tx = x[1];
+    h += t === ">" ? '<div class="vivatx">&gt; ' + esc(tx) + "</div>"
+       : t === "$" ? '<div class="vivacmd"><span class="c">$ ' + esc(tx) + "</span></div>"
+       : '<div class="g">' + esc(t + " " + tx) + "</div>";
+  });
+  if(j.final) h += '<div class="vivatx vivafin">= ' + esc(j.final) + "</div>";
+  el.innerHTML = h;
+  if(abajo) el.scrollTop = el.scrollHeight;
+  return true;
+}
+function vivaPedir(n){
+  var seq = viva.seq;
+  return votLan().then(function(base){
+    if(!base) throw new Error("sin lan");
+    return lanFetch(base + "/viva/" + n, {cache: "no-store", headers: {"authorization": "Bearer " + token}});
+  }).then(function(r){
+    if(!r || !r.ok) throw new Error("http " + (r && r.status));
+    return r.json();
+  }).then(function(j){
+    if(seq !== viva.seq || viva.n !== n) return;
+    if(!vivaPintar(j)) return vivaParar();
+    viva.t = setTimeout(function(){ vivaPedir(n); }, 3000);
+  }).catch(function(e){
+    if(seq !== viva.seq || viva.n !== n) return;
+    var el = $("vivacaja");
+    if(!el) return vivaParar();
+    el.innerHTML = '<span class="g">pestaña viva: no llego al server (' + esc(String(e && e.message || e)) +
+                   "), reintento en 10 s</span>";
+    viva.t = setTimeout(function(){ vivaPedir(n); }, 10000);
+  });
+}
 function pintarModal(m){
+  vivaParar();
   modalAbierto = m;
   $("mtitulo").textContent = m.titulo || "item";
   $("mcuerpo").innerHTML = m.cuerpo || "";
@@ -13343,8 +13398,10 @@ function pintarModal(m){
     acc.appendChild(moldeBoton({tipo: "term", letra: LETRAS[i], txt: a[0], principal: a[2], clase: a[3], accion: a[1]}));
   });
   capaMostrar("modal", "mfondo");
+  if(m.viva){ viva.n = m.viva; vivaPedir(m.viva); }
 }
 function cerrarModal(){
+  vivaParar();
   modalAbierto = null;
   capaOcultar("modal", "mfondo");
   $("macc").innerHTML = "";
