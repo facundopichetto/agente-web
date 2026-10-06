@@ -941,6 +941,25 @@
     display:inline-block;border:1px solid;border-radius:3px;padding:1px 8px;margin-right:8px;font-weight:600;
   }
   @media (max-width:380px){ .opciones{flex-direction:column} }
+  /* 2026-10-06 (harness2 {cajas}) (facundo: "si dispara una orden, ponele un borde grueso de algun color que cruce con
+     el color de la caja (y el fondo negro obvio) [...] arriba chiquito centrado (dentro del borde) --------orden--------";
+     eligio A, el complementario): la caja que DISPARA una orden (`orden: true` del server) lleva borde de 3 px del
+     color opuesto al suyo, fondo negro y el rotulo `──── orden ────` arriba y centrado, adentro del borde. la que es
+     solo una pregunta para seguir charlando queda como siempre. verde -> violeta, cian -> naranja, magenta -> verde. */
+  .orden{--comp:#da14ff}
+  .orden[data-letra="B"],.orden[data-letra="E"],.orden[data-letra="H"],.orden[data-letra="K"],.orden[data-letra="N"]{--comp:#ee3d22}
+  .orden[data-letra="C"],.orden[data-letra="F"],.orden[data-letra="I"],.orden[data-letra="L"],.orden[data-letra="O"]{--comp:#4fff76}
+  .opciones .opc.orden,#notimodal .nmop.orden{
+    position:relative;border:3px solid var(--comp);background:#000;padding:17px 8px 6px 8px;
+  }
+  .opciones .opc.orden.selec{border-width:4px;padding:16px 7px 5px 7px;box-shadow:none}
+  .ord{display:none}
+  .orden > .ord{
+    display:block;position:absolute;top:2px;left:4px;right:4px;text-align:center;font-size:10px;line-height:12px;
+    font-weight:600;letter-spacing:.04em;color:var(--comp);white-space:nowrap;overflow:hidden;pointer-events:none;
+  }
+  .opciones .opc.orden.sel > .ord{color:#000}
+  @media (pointer:coarse){ .orden > .ord{font-size:11px;line-height:13px} .opciones .opc.orden{padding-top:18px} }
   .sistema .cuerpo{color:var(--gris)}
   /* los mensajes se muestran siempre enteros: no hay plegado (facundo, 2026-09-10) */
   .cuerpo .ok{color:var(--verde)}
@@ -1941,15 +1960,7 @@
   #homevista .est-mal .homelin{color:var(--rojo)}
   #homevista .est-espera .homelin{color:var(--amarillo,#d8b25a)}
   #homevista .homevacio{color:var(--gris);font-size:14px}
-  #homevista .homedcab{margin-top:6px}
-  #homevista .homedraft{display:flex;flex-direction:column;gap:6px;
-    border:1px solid var(--linea);border-radius:4px;padding:8px}
-  #homevista .homedraft.yendo{opacity:.5}
-  #homevista .homedtxt{width:100%;box-sizing:border-box;min-height:88px;resize:vertical;
-    background:var(--fondo-chat);color:var(--blanco);border:1px solid var(--linea);border-radius:4px;
-    padding:6px;font:inherit;font-size:14px}
-  #homevista .homedbtns{display:flex;align-items:center;gap:8px}
-  #homevista .homedale{flex:1 1 auto}
+  /* 2026-10-06 (harness2 {cajas}): los borradores del home (`homedraft`) se fueron: la orden es una caja `orden` */
   #vista-podcast{display:none}
   body.v-podcast #vista-podcast{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;
     background:var(--fondo-chat);padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom) 0}

@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.524">
-<link rel="manifest" href="manifest.json?v=4.524">
+<meta name="agente-web-version" content="4.525">
+<link rel="manifest" href="manifest.json?v=4.525">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.524">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.525">
 </head>
 <body>
 
@@ -3021,8 +3021,9 @@ function nodoAcciones(m, lista_){
 function cajasDe(m){
   var o = opcionesDe(m.texto);
   if(m.opciones && m.opciones.length){
+    // 2026-10-06 (harness2 {cajas}): `orden` lo pone el server (la caja que DISPARA una orden), la web no lo adivina
     o.lista = m.opciones.filter(function(x){ return x && /^[A-P]$/i.test(x.letra || ""); })
-      .map(function(x){ return {letra: String(x.letra).toUpperCase(), texto: String(x.texto || "")}; });
+      .map(function(x){ return {letra: String(x.letra).toUpperCase(), texto: String(x.texto || ""), orden: x.orden === true}; });
   }
   // 1658 {cajas}: una oportunidad se ofrece como cajas grandes con el texto de cada opcion adentro (nunca
   // mas los chips `op N X`). el toque sigue mandando el `op N X` crudo, que el daemon resuelve sin modelo.
@@ -3484,6 +3485,18 @@ function puntajeSubir(){
     return todo;
   });
 }
+// 2026-10-06 (harness2 {cajas}) (facundo, 2026-10-06: "si dispara una orden, ponele un borde grueso de algun color que
+// cruce con el color de la caja (y el fondo negro obvio) [...] arriba chiquito centrado (dentro del borde) [...]
+// --------orden--------"; eligio A: el borde es el complementario del color de la caja). la caja que es solo una
+// pregunta para seguir charlando queda como siempre. el rotulo va adentro del boton, arriba y centrado.
+var ROTULO_ORDEN = "\u2500\u2500\u2500\u2500 orden \u2500\u2500\u2500\u2500";
+function marcaOrden(b){
+  b.classList.add("orden");
+  var r = document.createElement("span");
+  r.className = "ord"; r.setAttribute("aria-hidden", "true"); r.textContent = ROTULO_ORDEN;
+  b.insertBefore(r, b.firstChild);
+  b.setAttribute("aria-label", "orden: " + (b.title || ""));
+}
 function nodoCajas(m, lista_){
   var k = claveCajas(m), caja = document.createElement("div");
   // 2565: un menu `entendí` lleva el puntaje en cada caja. 2566: tambien el de `opciones` (cajas firmadas). la
@@ -3503,6 +3516,7 @@ function nodoCajas(m, lista_){
     b.querySelector(".l").textContent = o.letra;
     b.querySelector(".t").textContent = o.texto;
     b.title = o.cmd || (o.letra + ": " + o.texto);
+    if(o.orden) marcaOrden(b);   // 2026-10-06 (harness2 {cajas}): esta caja dispara una orden: borde y rotulo
     if(ent && puntuable(o.texto)) b.appendChild(puntajeFila(m.tema || temaActivo(), o.letra, o.texto));
     var ini = null;
     b.addEventListener("pointerdown", function(e){ ini = {x: e.clientX, y: e.clientY, mov: false}; });
@@ -9406,9 +9420,13 @@ function pintarNotiPush(){
     o.lista.forEach(function(op){
       var b = moldeBoton({tipo: "term", letra: op.letra, txt: op.texto, clase: "nmop"});
       b.dataset.letra = op.letra;
+      // 2026-10-06 (harness2 {cajas}): la caja `orden` se ve igual que en el chat y manda el codigo de la caja
+      // (`#k7f2D`), asi el daemon la encola sin modelo, como el toque desde el hilo
+      var cod = op.orden && c.m ? cajaCod(c.m, op.letra) : null;
+      if(op.orden) marcaOrden(b);
       b.addEventListener("click", function(){
         if(b.classList.contains("sel")) return;
-        if(responderNotiPush(op.cmd || (op.letra + ": " + op.texto), !!op.cmd)) b.classList.add("sel");
+        if(responderNotiPush(cod || op.cmd || (op.letra + ": " + op.texto), !!(cod || op.cmd))) b.classList.add("sel");
       });
       w.appendChild(b);
     });
@@ -11315,54 +11333,10 @@ function homePintar(){
     b.addEventListener("click", function(){ vistaPoner(f.vista || "widgets"); });
     el.appendChild(b);
   });
-  homeDrafts(el);
   return el.innerHTML;
 }
-// 2008 {ahorro} paso 4: el texto EXACTO de la orden que el chat dejo en draft, editable, con UNA caja verde
-// `dale` (nunca caja `no`: no tocarla es no confirmar, 1762) y la `✕` para descartarla.
-function homeDrafts(el){
-  var ds = (((widDatos || {}).ordenes || {}).drafts) || [];
-  if(!ds.length) return;
-  var cab = document.createElement("div"); cab.className = "hometit homedcab";
-  cab.textContent = "estas órdenes esperan tu dale";
-  el.appendChild(cab);
-  ds.forEach(function(d){
-    var c = document.createElement("div"); c.className = "homedraft"; c.setAttribute("data-draft", d.id);
-    var t = document.createElement("div"); t.className = "homelin"; t.textContent = "tema " + (d.tema || "flos");
-    var ta = document.createElement("textarea"); ta.className = "homedtxt"; ta.value = d.cuerpo || "";
-    ta.setAttribute("aria-label", "el texto de la orden");
-    var fila = document.createElement("div"); fila.className = "homedbtns";
-    var ok = moldeBoton({txt: "dale"});
-    ok.className += " homedale";
-    ok.addEventListener("click", function(){ homeDraftMandar(d.id, "dale", ta.value); });
-    var no = moldeBoton({tipo: "x", aria: "descartar la orden"});
-    no.addEventListener("click", function(){ homeDraftMandar(d.id, "no"); });
-    fila.appendChild(ok); fila.appendChild(no);
-    c.appendChild(t); c.appendChild(ta); c.appendChild(fila);
-    el.appendChild(c);
-  });
-}
-function homeDraftMandar(id, accion, texto){
-  var reg = {id: id, accion: accion};
-  if(texto != null) reg.texto = texto;
-  var c = document.querySelector('[data-draft="' + id + '"]');
-  if(c) c.classList.add("yendo");
-  // lan primero (`POST /ordenes/draft`); sin lan, al buzon (`seleccion-web/orden-draft--<id>.json`), el mismo
-  // carril y el mismo dedup por id que los votos
-  votLan().then(function(base){
-    if(!base) throw new Error("sin lan");
-    return lanFetch(base + "/ordenes/draft", {method: "POST", cache: "no-store",
-      headers: {"authorization": "Bearer " + token, "content-type": "application/json"},
-      body: JSON.stringify({registros: [reg]})});
-  }).then(function(r){
-    if(!r || !r.ok) throw new Error("http " + (r && r.status));
-    return true;
-  }, function(){ return selBuzon("orden-draft", [reg]); }).then(function(){
-    if(c) c.remove();
-    var d = (widDatos || {}).ordenes;
-    if(d) d.drafts = (d.drafts || []).filter(function(x){ return x.id !== id; });
-  }, function(){ if(c) c.classList.remove("yendo"); });
-}
+// 2026-10-06 (harness2 {cajas}): los borradores de la 2008 paso 4 (el widget del home) se fueron: la orden que propone el
+// chat sale como una caja `orden` en su respuesta (`marcaOrden`) y tocarla es el ok.
 function podVistaPintar(){
   var el = $("podvista");
   if(!el) return "";
