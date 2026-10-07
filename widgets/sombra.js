@@ -14,7 +14,7 @@
   // 1832 (facundo, 2026-09-16 10:40 pm): la escalera por tarea. todo viene armado del server (`escalera.widget_cache`):
   // `% script` que ya sale sin modelo, el mejor gratis con su acierto y si es apto (piso 95), opus, fable, quien la hace
   // hoy y el plan B si claude cae. abajo el reparto de la semana por escalon y la meta. sin negrita en texto: color.
-  var CORTO = {"gemini": "gem", "groq": "groq", "openrouter": "orou", "mistral": "mist", "local": "locl"};
+  var CORTO = {"gemini": "gem", "groq": "groq", "openrouter": "orou", "local": "locl"};
   function cortoCol(k){
     if(!k) return "-";
     var p = String(k).split(":")[0], m = String(k).split(":").slice(1).join(":");
@@ -86,7 +86,7 @@
   // plata (paso 1), la tasa de error y la de cuota (paso 2), la red contra la velocidad de generacion (paso 3)
   // y la frescura (paso 4).
   // 2240 {widgets} paso 2 (panel `widgets`, 5 de 5): una fila por MODELO, no por proveedor. la columna `local`
-  // tapaba a los ollama y la de `mistral` a tres ministral de distinto precio, asi que dos modelos con 0% y 32%
+  // tapaba a los ollama y la de un proveedor a tres niveles de distinto precio, asi que dos modelos con 0% y 32%
   // de error se leian como una sola fila. el proveedor pasa a ser un dato de la fila (el prefijo del nombre).
   // no rompe la 1045 ("una tabla de widget compara UNA cosa"): sigue comparando modelos, cambio la unidad.
   // 2240 paso 3: `lat` (la latencia) entra a la grilla y el color de `err`, `429` y `lat` lo decide el server
@@ -102,7 +102,7 @@
               .replace(new RegExp("^" + prov + "[-.]?", "i"), "");
     if(!m || m === prov) return p;
     // el nombre entero no entra en 390 px al lado de seis numeros. se corta por el MEDIO, no por el final:
-    // dos modelos de la misma familia se distinguen por el sufijo (`ministral-14b` vs `ministral-3b`) y
+    // dos modelos de la misma familia se distinguen por el sufijo (`flash` vs `flash-lite`) y
     // cortando por atras las dos filas quedaban con el mismo texto. el nombre completo esta en el modal.
     return p + " " + (m.length > 17 ? m.slice(0, 8) + "\u2026" + m.slice(-8) : m);
   }
@@ -183,7 +183,7 @@ function cajaSombra(sb){
     return caja("models", "", '<span class="r">' + esc(sb.error) + "</span>", false, "sombra");
   // escala (facundo, 2026-09-14): el numero es la calidad normalizada, 100 = el mejor de esa categoria (uno solo)
   var cols = sb.cols || [], cortos = {opus:"opus", fable:"fabl", gemini:"gem", groq:"groq", openrouter:"orou",
-                                      mistral:"mist", local:"locl", principal:"prin"};
+                                      local:"locl", principal:"prin"};
   // 2176 paso 6: `sb.cols` ya viene sin los `HISTORICOS` (el server los saca): un proveedor que no se llama
   // mas ocupaba una columna entera de `off`. el detalle (`sb.modelos`) los sigue teniendo.
   var filas = ['<span class="g">' + pad("categoria", 11) + cols.map(function(c){ return pad(cortos[c] || c, 4, true); }).join(" ") +

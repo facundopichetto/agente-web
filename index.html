@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.525">
-<link rel="manifest" href="manifest.json?v=4.525">
+<meta name="agente-web-version" content="4.526">
+<link rel="manifest" href="manifest.json?v=4.526">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.525">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.526">
 </head>
 <body>
 
@@ -493,11 +493,11 @@ var alfinal = $("alfinal"), envoltorio = $("envoltorio");
 // una copia GENERADA de esa receta: se actualiza con `python3 -m recetas.clasificar_tema --sync-web`
 // y `recetas/prueba_web` falla si quedo vieja. no editarla a mano.
 /* TEMAS-JS: generado por `python3 -m recetas.clasificar_tema --sync-web`, no editar a mano */
-var TEMAS = ["flos", "awtomic", "awtomic/qa", "flabs", "fuzzer", "juegos", "plata", "server", "personal", "podcast", "mesa", "flaudio", "tinder", "board", "modelos", "claude", "gemini", "groq", "groq-tandas", "mistral"];
+var TEMAS = ["flos", "awtomic", "awtomic/qa", "flabs", "fuzzer", "juegos", "plata", "server", "personal", "podcast", "mesa", "flaudio", "tinder", "board", "modelos", "claude", "gemini", "groq", "groq-tandas"];
 var PRIORIDAD = ["awtomic/qa", "flabs", "podcast", "mesa", "tinder", "board", "modelos", "server", "juegos", "plata", "fuzzer", "awtomic", "flaudio", "flos"];
 var MODOS_TAB = [];
-var PROVEEDORES_TAB = ["gemini", "groq", "groq-tandas", "mistral"];
-var PESTANAS_TAB = [["awtomic", "awtomic"], ["awtomic/qa", "awtomic/qa"], ["board", "board"], ["claude", "claude"], ["flabs", "flabs"], ["flaudio", "flaudio"], ["flos", "flos"], ["fuzzer", "fuzzer"], ["gemini", "gemini"], ["juegos", "juegos"], ["mesa", "mesa"], ["mistral", "mistral"], ["modelos", "modelos"], ["personal", "personal"], ["plata", "plata"], ["podcast", "podcast"], ["server", "server"], ["tinder", "tinder"]];
+var PROVEEDORES_TAB = ["gemini", "groq", "groq-tandas"];
+var PESTANAS_TAB = [["awtomic", "awtomic"], ["awtomic/qa", "awtomic/qa"], ["board", "board"], ["claude", "claude"], ["flabs", "flabs"], ["flaudio", "flaudio"], ["flos", "flos"], ["fuzzer", "fuzzer"], ["gemini", "gemini"], ["juegos", "juegos"], ["mesa", "mesa"], ["modelos", "modelos"], ["personal", "personal"], ["plata", "plata"], ["podcast", "podcast"], ["server", "server"], ["tinder", "tinder"]];
 var ALIAS = {"awtomic-qa": "awtomic/qa", "claudio": "flaudio", "consejo": "mesa", "tools": "flos"};
 var RE_CORTE_SRC = "(\\n+)|([.;!?]\\s+)|(^|[\\s,;:])(?:y\\s+otra\\s+cosa|otra\\s+cosa|aparte|adem[a\u00e1]s|tambi[e\u00e9]n)(?!\\w)";
 var PALABRAS = {
@@ -510,7 +510,7 @@ var PALABRAS = {
   "flabs": ["flabs", "flabsdev"],
   "podcast": ["podcast", "podcasts", "episodio", "episodios", "cap\\wtulo", "cap\\wtulos", "daniela", "player", "guion", "PROXIMO\\.md"],
   "flaudio": ["filosof\\wa", "principio", "principios", "a futuro", "ideas? a futuro", "visi\\wn", "claudio en general", "flaudio en general"],
-  "mesa": ["mesa", "consejo", "panel de modelos", "panel", "proveedores?", "groq", "mistral", "gemini", "modelos gratis", "free tier", "troceado", "juicio a ciegas", "contexto empaquetado"],
+  "mesa": ["mesa", "consejo", "panel de modelos", "panel", "proveedores?", "groq", "gemini", "modelos gratis", "free tier", "troceado", "juicio a ciegas", "contexto empaquetado"],
   "tinder": ["instatinder", "votador", "embudo", "candidatas?", "super candidatas", "unfollow", "unfollows", "dejar de seguir", "cartita", "igcola", "ig cola", "follow", "follows", "seguidores", "ignorada", "ignoradas", "maybe", "activar", "activa", "follow[ _]request[ _]sent", "following"],
   "board": ["board", "tablero", "vista del board", "barra de iconos"],
   "modelos": ["modelos?", "tokens", "usage", "fable", "opus", "haiku", "sonnet", "reparto", "escalera", "banco", "faacuu", "orugote", "cuentas? de claude", "week", "tope 99", "switch de cuenta", "claude code"],
@@ -2022,7 +2022,7 @@ function cerrarTab(tema){
 // grupo `claude` y se fue el grupo de proveedores. la lista la genera `clasificar_tema` en `PESTANAS_TAB`
 // desde el mismo `pestanas-proveedor.json`, asi que una pestaña con `"menu": false` (hoy `groq` y
 // `groq-tandas`) no aparece aca aunque su config siga viva. la mayoria las contesta el chat de siempre;
-// `gemini` y `mistral` las contesta su proveedor, y eso lo decide el daemon por el nombre de la pestaña
+// `gemini` la contesta su proveedor, y eso lo decide el daemon por el nombre de la pestaña
 // (`pestanas_proveedor.es_pestana`), no el menu: la web las manda igual que cualquier otra.
 function nuevaTab(){
   var lista = (typeof PESTANAS_TAB !== "undefined" ? PESTANAS_TAB : []);
@@ -3415,7 +3415,7 @@ var RE_FIRMADA_CAJA = /^\s*\((?:[a-z0-9][\w.:\-]*)(?:,\s*[a-z0-9][\w.:\-]*)*\)\s
 function esFirmada(texto){ return RE_FIRMADA_CAJA.test(String(texto || "")); }
 // 2570 {puntos} (facundo: "cada bloque arranca con el nombre del modelo solo, sin la palabra `entendí`"): la caja
 // dice `groq: ...` (el `entendí`) o `gemini: ...` (la accion), y se puntua igual que antes.
-var RE_HABLA_NOMBRE = "(?:groq|gemini|opencode|agy|codestral|ministral-8b|mistral|sonnet|opus|fable|local(?::[\\w.:\\-]*[\\w\\-])?)";
+var RE_HABLA_NOMBRE = "(?:groq|gemini|opencode|agy|sonnet|opus|fable|local(?::[\\w.:\\-]*[\\w\\-])?)";
 var RE_HABLA_CAJA = new RegExp("^\\s*" + RE_HABLA_NOMBRE + "(?:\\s*,\\s*" + RE_HABLA_NOMBRE + ")*\\s*:\\s+\\S", "i");
 function esHabla(texto){ return RE_HABLA_CAJA.test(String(texto || "")); }
 function puntuable(texto){ return esEntendi(texto) || esFirmada(texto) || esHabla(texto); }

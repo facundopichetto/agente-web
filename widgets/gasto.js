@@ -4,7 +4,7 @@
 // la misma en todas: `<cuenta> <consumo> · <usado>/<cuota> <ventana>`; claude va por su `week` en % y las apis por
 // su gasto de los ultimos 7 dias. 2255 {escala} (facundo, 2026-09-20, opcion A: "`100%` de `week` = usd 46"):
 // todas las filas se miden contra la MISMA ventana y el MISMO denominador -- una semana, `usd 46`, que es lo que
-// sale una cuenta de claude por semana --, asi que un `40%` quiere decir lo mismo en claude, gemini y mistral.
+// sale una cuenta de claude por semana --, asi que un `40%` quiere decir lo mismo en claude y gemini.
 // groq es la unica afuera: free tier, sin `%`. el consumo, la cuota y el nivel de color llegan ARMADOS del
 // server (`recetas/gasto_api.py` -> `gasto.lineas`): la web no convierte nada, no arma ninguna frase y no
 // inventa un denominador cuando el proveedor no publica cuota.
@@ -121,7 +121,7 @@
   // fueron el gradiente por distancia (2182) y la plata del renglon. una fila sin
   // cuota llega con `pct: null` y `sec` diciendo por que: la web NO inventa un denominador ni una barra.
   // 2255 {escala}: el denominador de TODAS las filas es el mismo (el `100%` de una semana = `usd 46`), asi que
-  // la barra de gemini, la de mistral y la de una cuenta de claude son comparables a ojo: el mismo ancho es la
+  // la barra de gemini y la de una cuenta de claude son comparables a ojo: el mismo ancho es la
   // misma plata. la web sigue sin convertir nada: el `%` y la escala llegan armados del server, y desde
   // {sinpie} la plata de la semana (`usd_semana_txt`) ya no se pinta ni en la ficha ni en el tooltip.
   // {awtomicgasto} (facundo, 2026-09-22): la cuenta `awtomic` (plan team, la paga awtomic) va con el molde de
