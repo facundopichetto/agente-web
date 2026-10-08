@@ -1173,6 +1173,9 @@
   .msg.yo .player{background:#030d01;background:color-mix(in srgb,var(--verde) 5%,transparent)}
   .msg.yo .player .plbtn{background:#051402;background:color-mix(in srgb,var(--verde) 8%,transparent)}
   .msg.agente .player{background:#0d040b;background:color-mix(in srgb,var(--magenta) 5%,transparent)}
+  /* 3341: el reproductor en espera mientras se arma el audio de la respuesta */
+  .player.plcamino{opacity:.55}
+  .player.plcamino .plbtn{cursor:default}
   .msg.agente .player .plbtn{background:#140611;background:color-mix(in srgb,var(--magenta) 8%,transparent)}
   /* `.bterm:active` (fondo #111) pierde contra las de arriba: el toque se sigue viendo, aclarando el mismo color */
   .msg .player .plbtn:active{filter:brightness(1.8)}

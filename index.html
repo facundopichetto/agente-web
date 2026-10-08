@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.537">
-<link rel="manifest" href="manifest.json?v=4.537">
+<meta name="agente-web-version" content="4.538">
+<link rel="manifest" href="manifest.json?v=4.538">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.537">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.538">
 </head>
 <body>
 
@@ -107,7 +107,7 @@
     <span id="grabinfo" aria-live="polite"></span>
     <button id="grabar" class="ico" type="button" title="mantené apretado para grabar un audio" aria-label="grabar audio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg></button>
     <button id="camara" class="ico" type="button" title="foto (camara o galeria)" aria-label="foto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
-    <input id="foto" type="file" accept="image/*">
+    <input id="foto" type="file" accept="image/*" multiple>
     <button id="mandar" class="ico" type="button" title="mandar" aria-label="mandar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 3 10 14"/><path d="M21 3 14 21l-4-7-7-4z"/></svg></button>
   </div>
   <!-- 1970 {grabar}: tres botones grandes en lugar de la barra, SOLO en la pestaña `audio` -->
@@ -3114,6 +3114,10 @@ function nodoMsg(m){
   // el reproductor completo, uno por audio (2044: en todas las pestañas), abajo del texto y ARRIBA de toda
   // caja de decision. los drafts copiables siguen abajo de las cajas, como los dejo la 1240.
   auds.forEach(function(sa){ div.appendChild(playerAudio(sa, "escuchar")); });
+  // 3341 (facundo, 12:33 pm: "el reproductor aparece pegado a los selectores"): el audio de daniela llega un poll
+  // despues del texto, y mientras tanto el unico reproductor a la vista era el del mensaje ANTERIOR, arriba. la
+  // respuesta fresca cierra ya con su reproductor en espera, en el mismo lugar donde va a quedar el de verdad
+  if(!auds.length && audioEnCamino(m)) div.appendChild(playerEnCamino());
   if(acc && acc.lista.length) div.appendChild(nodoAcciones(m, acc.lista));
   if(ops && ops.lista.length) div.appendChild(nodoCajas(m, ops.lista));
   if(m.clase === "agente" && m.tardes && m.tardes.length) div.appendChild(nodoTardes(m.tardes));
@@ -9891,7 +9895,9 @@ if(window.visualViewport) visualViewport.addEventListener("resize", posNotiModal
 })();
 // el camino entero: comprimir -> hash -> subir -> mandar el mensaje de la pestaña donde se mando.
 function mandarFoto(file, pieTexto, tsEnvio, temaDestino){
-  if(!file) return Promise.resolve();
+  // 3341: `file` puede ser una lista: se suben todas y viajan juntas en UN mensaje, en el orden en que se eligieron
+  var files = (Array.isArray(file) ? file : [file]).filter(Boolean);
+  if(!files.length) return Promise.resolve();
   if(subiendoFoto) return Promise.resolve();
   tsEnvio = tsEnvio || Date.now();      // se mando ahora, aunque el mensaje salga cuando termine de subir
   var tema = temaDestino || temaActivo();
@@ -9899,22 +9905,28 @@ function mandarFoto(file, pieTexto, tsEnvio, temaDestino){
   subiendoFoto = true;
   $("camara").disabled = true;   // 1658: mientras sube alcanza con el boton apagado,
                                // sin ningun mensaje en el chat (el de la foto sale con `tsEnvio`)
-  var blob, ruta;
-  return comprimirFoto(file).then(function(b){
-    blob = b;
-    if(blob.size > FOTO_TOPE) throw new Error("la foto pesa " + Math.round(blob.size / 1024) + " kb");
-    return blob.arrayBuffer();
-  }).then(function(buf){
-    return sha12(buf).then(function(h){
-      ruta = nombreFoto(h, file);
-      return subirFoto(ruta, bytesAb64(new Uint8Array(buf)), new Uint8Array(buf));
+  var ruta, lineas = [];
+  function subirUna(f){
+    var blob, r_;
+    return comprimirFoto(f).then(function(b){
+      blob = b;
+      if(blob.size > FOTO_TOPE) throw new Error("la foto pesa " + Math.round(blob.size / 1024) + " kb");
+      return blob.arrayBuffer();
+    }).then(function(buf){
+      return sha12(buf).then(function(h){
+        r_ = nombreFoto(h, f);
+        return subirFoto(r_, bytesAb64(new Uint8Array(buf)), new Uint8Array(buf));
+      });
+    }).then(function(){
+      imgUrls[r_] = URL.createObjectURL(blob);    // ya la tengo: no la bajo de nuevo para pintarla
+      if(!ruta) ruta = r_;
+      lineas.push("![" + (f.name || "foto") + "](" + r_ + ")");
     });
-  }).then(function(){
-    imgUrls[ruta] = URL.createObjectURL(blob);    // ya la tengo: no la bajo de nuevo para pintarla
+  }
+  return files.reduce(function(p, f){ return p.then(function(){ return subirUna(f); }); }, Promise.resolve()).then(function(){
     var pie = (pieTexto !== undefined ? pieTexto : txt.value || "").trim();
     txt.value = ""; txt.style.height = "";
-    return mandar((pie ? pie + "\n" : "") + "![" + (file.name || "foto") + "](" + ruta + ")",
-                  tema, false, tsEnvio);
+    return mandar((pie ? pie + "\n" : "") + lineas.join("\n"), tema, false, tsEnvio);
   }).catch(function(e){
     sistema("no pude subir la foto: " + e.message, "error");
     ruta = null;                                  // fallo: el que la mando la puede volver a adjuntar
@@ -9929,8 +9941,7 @@ $("camara").addEventListener("click", function(){
   $("foto").click();
 });
 $("foto").addEventListener("change", function(e){
-  var f = (e.target.files || [])[0];
-  if(f) adjuntarFoto(f, temaActivo());
+  [].slice.call(e.target.files || []).forEach(function(f){ adjuntarFoto(f, temaActivo()); });   // 3341: varias
   $("foto").value = "";                          // asi elegir dos veces la misma foto vuelve a disparar
 });
 
@@ -9942,7 +9953,8 @@ $("foto").addEventListener("change", function(e){
 // buzon y sale **un solo mensaje** con el `![](...)` / `[audio](...)` mas el texto que escribio.
 // vive solo en memoria: no viaja en el borrador de `tabs.json` (un adjunto no se continua en otro
 // dispositivo, el archivo no esta ahi).
-var adjunto = null;      // {tipo:"img"|"aud", file|blob, mime, nombre, url, ms}
+var adjunto = null;      // {tipo:"img"|"aud", file|blob, mime, nombre, url, ms, fotos:[{file, nombre, url}]}
+var FOTOS_TOPE = 10;     // 3341: fotos en un mismo mensaje
 
 function pintarAdjunto(){
   var caja = $("adjunto");
@@ -9954,12 +9966,17 @@ function pintarAdjunto(){
   var n = document.createElement("span");
   n.className = "n";
   if(adjunto.tipo === "img"){
-    var im = document.createElement("img");
-    im.src = adjunto.url; im.alt = adjunto.nombre;
-    caja.appendChild(im);
-    n.textContent = adjunto.nombre;
+    // 3341: varias fotos en un mismo mensaje, una miniatura por foto
+    var fotos = adjunto.fotos || [{url: adjunto.url, nombre: adjunto.nombre}];
+    fotos.forEach(function(fo){
+      var im = document.createElement("img");
+      im.src = fo.url; im.alt = fo.nombre;
+      caja.appendChild(im);
+    });
+    n.textContent = fotos.length > 1 ? fotos.length + " fotos" : adjunto.nombre;
     info.appendChild(n);
-    info.appendChild(document.createTextNode("foto lista, escribí algo y mandá"));
+    info.appendChild(document.createTextNode(fotos.length > 1 ? "fotos listas, escribí algo y mandá"
+                                                              : "foto lista, escribí algo y mandá"));
   }else{
     caja.appendChild(reproductor(adjunto.url, "escuchar antes de mandar"));
     n.textContent = "audio " + mmss(Math.round((adjunto.ms || 0) / 1000));
@@ -9976,18 +9993,26 @@ function pintarAdjunto(){
   ajustarCaja();
 }
 function descartarAdjunto(){
-  if(adjunto && adjunto.url && /^blob:/.test(adjunto.url)){
-    try{ URL.revokeObjectURL(adjunto.url); }catch(e){}
-  }
+  ((adjunto && adjunto.fotos) || [adjunto || {}]).forEach(function(fo){
+    if(fo && fo.url && /^blob:/.test(fo.url)){ try{ URL.revokeObjectURL(fo.url); }catch(e){} }
+  });
   adjunto = null;
   pintarAdjunto();
 }
 function adjuntarFoto(file, temaFijo){
   if(!file) return null;
   if(subiendoFoto || subiendoAudio) return null;
-  descartarAdjunto();                            // uno a la vez: el nuevo reemplaza al anterior
-  adjunto = {tipo: "img", file: file, mime: file.type || "image/jpeg",
-             nombre: file.name || "foto.jpg", url: URL.createObjectURL(file), tema: temaFijo || temaActivo()};
+  var temaF = temaFijo || temaActivo();
+  var fo = {file: file, nombre: file.name || "foto.jpg", url: URL.createObjectURL(file)};
+  // 3341 (facundo, 12:33 pm): una foto mas se SUMA a las que ya estan en el pie (hasta `FOTOS_TOPE`) y viajan
+  // juntas en un mensaje. un audio pendiente o fotos de otra pestaña se descartan como antes
+  if(adjunto && adjunto.tipo === "img" && adjunto.tema === temaF && (adjunto.fotos || []).length < FOTOS_TOPE){
+    adjunto.fotos.push(fo);
+  }else{
+    descartarAdjunto();
+    adjunto = {tipo: "img", file: file, mime: file.type || "image/jpeg", nombre: fo.nombre, url: fo.url,
+               tema: temaF, fotos: [fo]};
+  }
   pintarAdjunto();
   txt.focus();
   return adjunto;
@@ -10015,11 +10040,11 @@ function mandarAdjunto(texto, temaDestino){
   pintarAdjunto();
   txt.value = ""; txt.style.height = "";
   borrarBorrador(tema);
-  var p = a.tipo === "img" ? mandarFoto(a.file, pie, ts, tema)
+  var p = a.tipo === "img" ? mandarFoto((a.fotos || []).length > 1 ? a.fotos.map(function(fo){ return fo.file; }) : a.file, pie, ts, tema)
                           : mandarAudio(a.blob, a.mime, pie, ts, a.dicho ? {texto: a.dicho, local: a.dictLocal} : null, null, tema);
   return Promise.resolve(p).then(function(r){
     if(r){                                       // salio: recien ahi se suelta el object url
-      if(a.url && /^blob:/.test(a.url)){ try{ URL.revokeObjectURL(a.url); }catch(e){} }
+      (a.fotos || [a]).forEach(function(fo){ if(fo.url && /^blob:/.test(fo.url)){ try{ URL.revokeObjectURL(fo.url); }catch(e){} } });
       return r;
     }
     if(!adjunto){ adjunto = a; pintarAdjunto(); } // fallo la subida: vuelve al pie, no se pierde
@@ -10644,6 +10669,29 @@ function audRegPodar(){
 }
 var PLAYER_SALTO = 10;            // segundos de `-10s` / `+10s`
 var PLAYER_ANCHO = 500;           // px: el `max-width` en desktop (en mobile es el 100% de la caja)
+// 3341: cuanto se espera el m4a de una respuesta (daniela + subida); pasado esto, sin audio no se pinta nada
+var AUDIO_CAMINO_MS = 3 * 60 * 1000;
+function audioEnCamino(m){
+  if(!m || m.clase !== "agente" || m.enviando || !String(m.texto || "").trim()) return false;
+  var t = fecha(m.iso);
+  return !!t && Date.now() - t < AUDIO_CAMINO_MS;
+}
+function playerEnCamino(){
+  var c = document.createElement("div");
+  c.className = "player plcamino";
+  c.title = "el audio de esta respuesta se esta armando";
+  var fila1 = document.createElement("div"); fila1.className = "plfila pltiempos";
+  var t = document.createElement("span"); t.className = "pltiempo"; t.textContent = "0:00";
+  var barra = document.createElement("div"); barra.className = "plbarra";
+  var tot = document.createElement("span"); tot.className = "pltiempo pltotal"; tot.textContent = "audio en camino";
+  [t, barra, tot].forEach(function(x){ fila1.appendChild(x); });
+  var fila2 = document.createElement("div"); fila2.className = "plfila plbotones";
+  ["-10s", "▶", "+10s"].forEach(function(x){
+    var b = moldeBoton({tipo: "term", txt: x, clase: "plbtn"}); b.disabled = true; fila2.appendChild(b);
+  });
+  c.appendChild(fila1); c.appendChild(fila2);
+  return c;
+}
 function playerAudio(src, titulo){
   var c = document.createElement("div");
   c.className = "player";
@@ -11054,23 +11102,26 @@ function cargarAudios(nodo){
 
 // pegar o arrastrar una imagen (desktop, facundo 2026-09-11): el mismo camino que la camara.
 // `capture` salio del input (en el celu forzaba la camara y no dejaba elegir de la galeria).
-function imagenDe(dt){
-  if(!dt) return null;
-  var fs = dt.files || [];
-  for(var i = 0; i < fs.length; i++) if((fs[i].type || "").indexOf("image/") === 0) return fs[i];
+// 3341: TODAS las imagenes del portapapeles o del arrastre, no solo la primera
+function imagenesDe(dt){
+  if(!dt) return [];
+  var out = [], fs = dt.files || [];
+  for(var i = 0; i < fs.length; i++) if((fs[i].type || "").indexOf("image/") === 0) out.push(fs[i]);
+  if(out.length) return out;
   var it = dt.items || [];
   for(var j = 0; j < it.length; j++)
     if(it[j].kind === "file" && (it[j].type || "").indexOf("image/") === 0){
       var f = it[j].getAsFile();
-      if(f) return f;
+      if(f) out.push(f);
     }
-  return null;
+  return out;
 }
+function imagenDe(dt){ return imagenesDe(dt)[0] || null; }
 document.addEventListener("paste", function(e){
-  var f = imagenDe(e.clipboardData);
-  if(!f) return;                                  // texto pegado: comportamiento normal
+  var fs = imagenesDe(e.clipboardData);
+  if(!fs.length) return;                          // texto pegado: comportamiento normal
   e.preventDefault();
-  adjuntarFoto(f);                                // queda pendiente arriba del input, no se manda sola
+  fs.forEach(function(f){ adjuntarFoto(f); });    // quedan pendientes arriba del input, no se mandan solas
 });
 (function(){
   var chat = $("panel-chat"), dentro = 0;
@@ -11087,11 +11138,11 @@ document.addEventListener("paste", function(e){
     if(--dentro <= 0){ dentro = 0; resaltar(false); }
   });
   chat.addEventListener("drop", function(e){
-    var f = imagenDe(e.dataTransfer);
+    var fs = imagenesDe(e.dataTransfer);
     dentro = 0; resaltar(false);
-    if(!f) return;                                 // una pestaña arrastrada no es una imagen
+    if(!fs.length) return;                         // una pestaña arrastrada no es una imagen
     e.preventDefault();
-    adjuntarFoto(f);                               // pendiente arriba del input, se manda con enviar
+    fs.forEach(function(f){ adjuntarFoto(f); });   // pendientes arriba del input, se mandan con enviar
   });
   // solo los arrastres que traen un archivo: el de pestañas usa su propio dataTransfer
   function imagenArrastrada(e){
@@ -15030,6 +15081,7 @@ window.__agente = {
   cfgMotor: function(){ return cfgMotor; },
   setCfgMotor: function(c){ cfgMotor = c; },
   setMsgsHist: function(t, l){ msgsHist[t] = l; },
+  imagenesDe: imagenesDe, adjuntoActual: function(){ return adjunto; }, audioEnCamino: audioEnCamino,
   ultimoCorridoDeTab: ultimoCorridoDeTab,
   refrescarUltimoCorrido: refrescarUltimoCorrido,
   // 1631: glifo `/` de comandos (`prueba_web_comandos`)
