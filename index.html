@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.532">
-<link rel="manifest" href="manifest.json?v=4.532">
+<meta name="agente-web-version" content="4.533">
+<link rel="manifest" href="manifest.json?v=4.533">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.532">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.533">
 </head>
 <body>
 
@@ -8571,7 +8571,8 @@ function nodoTramo(t){
     d.appendChild(b);
     return d;
   }
-  d.className = "tramo " + tipo + (t.i === 0 && !apagado ? " entendi" : "");
+  d.className = "tramo " + tipo + (t.i === 0 && !apagado ? " entendi" : "") + (t.delta ? " vivo" : "");
+  d.dataset.i = String(t.i !== undefined ? t.i : "");
   if(apagado) d.textContent = String(t.texto || "");
   else d.innerHTML = resaltar(String(t.texto || ""));
   if(apagado){
@@ -8587,6 +8588,23 @@ function vueloTramos(lista){
   if(!vuelo || !Array.isArray(lista)) return 0;
   var n = document.getElementById("vuelo"), hilo = n && n.querySelector(".hilo"), nuevos = 0;
   var pego = pegadoAbajo(), ancla = pego ? null : anclaMedir();   // 1805
+  if(vuelo.tramos.length > 0 && lista.length >= vuelo.tramos.length){
+    var uIdx = vuelo.tramos.length - 1, tu = lista[uIdx], vu = vuelo.tramos[uIdx];
+    if(tu && vu && (tu.delta || vu.delta) && tu.tipo === "texto" && vu.tipo === "texto"){
+      if(String(tu.texto || "") !== String(vu.texto || "") || !!tu.delta !== !!vu.delta){
+        vu.texto = String(tu.texto || "");
+        vu.delta = !!tu.delta;
+        if(hilo){
+          var nu = hilo.querySelector('.tramo[data-i="' + uIdx + '"]') || hilo.children[uIdx];
+          if(nu){
+            nu.className = "tramo " + vu.tipo + (vu.i === 0 ? " entendi" : "") + (vu.delta ? " vivo" : "");
+            nu.innerHTML = resaltar(vu.texto);
+          }
+        }
+        nuevos++;
+      }
+    }
+  }
   for(var i = vuelo.tramos.length; i < lista.length; i++){
     var t = lista[i], tipo = tipoTramo(t);
     if(!tipo || !String(t.texto || "").trim()) { vuelo.tramos.push({i: i, tipo: "vacio", texto: ""}); continue; }
@@ -8594,6 +8612,7 @@ function vueloTramos(lista){
     if(t.letra) copia.letra = String(t.letra);   // 2557: la letra de una caja que llego
     if(t.voto) copia.voto = String(t.voto);      // 1931: la plantilla del pool, para el `mas`/`menos`
     if(t.etapa) copia.etapa = String(t.etapa);
+    if(t.delta) copia.delta = true;
     vuelo.tramos.push(copia);
     if(hilo) hilo.appendChild(nodoTramo(copia));
     nuevos++;

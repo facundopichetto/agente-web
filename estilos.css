@@ -129,6 +129,7 @@
   .msg .hilo{color:var(--blanco)}
   .msg .hilo:empty{display:none}
   .msg .hilo .tramo{margin:0 0 8px 0}
+  .msg .hilo .tramo.vivo::after{content:" ▊";color:var(--cian);opacity:.8;display:inline-block;animation:lat .8s infinite}
   .msg .hilo .tramo.hecho{color:var(--gris);font-size:12px;opacity:.7;margin:0 0 2px 0}
   .msg .hilo .tramo.hecho + .tramo.texto{margin-top:8px}
   .msg .hilo .tramo.hecho:last-child{margin-bottom:8px}
