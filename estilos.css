@@ -133,6 +133,7 @@
   .msg .hilo .tramo.hecho{color:var(--gris);font-size:12px;opacity:.7;margin:0 0 2px 0}
   .msg .hilo .tramo.hecho + .tramo.texto{margin-top:8px}
   .msg .hilo .tramo.hecho:last-child{margin-bottom:8px}
+  .msg .hilo .tramo.oculto-vuelo{display:none!important}
   /* 1931 (facundo, 2026-09-17: "cuando cambie, la anterior queda arriba en la linea de arriba como ya paso, en
      gris [...] quiero poder votar, quiero tocar y decirte mas de esto, menos de esto, o escribir"): el rastro de la
      bolita. cada linea de estado que se fue queda con el mismo estilo apagado que un `hecho`, y las dos son

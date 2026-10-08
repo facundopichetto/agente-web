@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.538">
-<link rel="manifest" href="manifest.json?v=4.538">
+<meta name="agente-web-version" content="4.539">
+<link rel="manifest" href="manifest.json?v=4.539">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.538">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.539">
 </head>
 <body>
 
@@ -1744,7 +1744,7 @@ function filaDeTab(tAct){
   return {
     modelos: ["sonnet", "opus", "claude", "agy", "geminiflash"],
     modelo_default: "sonnet",
-    efforts: ["max", "xhigh", "high", "medium", "low"],
+    efforts: ["ultracode", "max", "xhigh", "high", "medium", "low"],
     effort_default: "medium"
   };
 }
@@ -1772,7 +1772,13 @@ function ultimoCorridoDeTab(tAct){
   var list = msgsHist[act] || (temaActivo() === act ? msgs : []);
   for(var i = (list || []).length - 1; i >= 0; i--){
     var m = list[i];
-    if(m && m.clase === "agente" && m.corrio && m.corrio.modelo) return m.corrio;
+    if(m && m.clase === "agente"){
+      if(m.corrio && m.corrio.modelo) return m.corrio;
+      if(m.modelo){
+        var mot = m.motor || (/^(gemini|agy)/.test(m.modelo) ? "agy" : "claude");
+        return {motor: mot, modelo: m.modelo, effort: m.effort || null};
+      }
+    }
   }
   if(cfgMotor && cfgMotor.ultimos && cfgMotor.ultimos[act]) return cfgMotor.ultimos[act];
   return null;
@@ -3060,7 +3066,13 @@ function nodoMsg(m){
   }
   var hilo = null;
   if(m.clase === "agente" && m.tramos && m.tramos.length){
-    var tt = m.tramos.filter(function(t){ return t && tipoTramo(t) && tipoTramo(t) !== "caja" && String(t.texto || "").trim(); });
+    var tt = m.tramos.filter(function(t){
+      if(!t || !tipoTramo(t) || tipoTramo(t) === "caja") return false;
+      var s = String(t.texto || "").trim();
+      if(!s) return false;
+      if(t.tipo === "texto" && (RE_OPCION.test(s) || s.indexOf("OPCION ") >= 0 || s.indexOf("OPCIÓN ") >= 0)) return false;
+      return true;
+    });
     if(tt.length){
       hilo = document.createElement("div"); hilo.className = "hilo";
       var grupo = [], tiposGrupo = [];
@@ -3112,11 +3124,8 @@ function nodoMsg(m){
   // 2561 {hacerlo}: el pie `lo entendiste mal` (2417) ya no se pinta, y desde la 2566 tampoco la caja `ninguna,
   // entendieron mal`: el voto es el puntaje 0-5, y escribir cierra la ronda sin voto. `nodoAccMsg` queda para el revert.
   // el reproductor completo, uno por audio (2044: en todas las pestañas), abajo del texto y ARRIBA de toda
-  // caja de decision. los drafts copiables siguen abajo de las cajas, como los dejo la 1240.
+  // caja de decision (2336). los drafts copiables siguen abajo de las cajas, como los dejo la 1240.
   auds.forEach(function(sa){ div.appendChild(playerAudio(sa, "escuchar")); });
-  // 3341 (facundo, 12:33 pm: "el reproductor aparece pegado a los selectores"): el audio de daniela llega un poll
-  // despues del texto, y mientras tanto el unico reproductor a la vista era el del mensaje ANTERIOR, arriba. la
-  // respuesta fresca cierra ya con su reproductor en espera, en el mismo lugar donde va a quedar el de verdad
   if(!auds.length && audioEnCamino(m)) div.appendChild(playerEnCamino());
   if(acc && acc.lista.length) div.appendChild(nodoAcciones(m, acc.lista));
   if(ops && ops.lista.length) div.appendChild(nodoCajas(m, ops.lista));
@@ -8770,6 +8779,7 @@ function pintarVuelo(){
   var fs = n.querySelector(".fase"), ft = faseTexto();
   if(fs.textContent !== ft) faseCambiar(fs, ft);
   n.querySelector(".eta").textContent = etaTexto();
+  vueloOcultarActivo();
 }
 // 1776 (facundo, 2026-09-16: "comunicacion mas progresiva, que no se borren cosas y de repente aparezca un choclo"):
 // el estado trae `tramos` = lo que el modelo ya termino (`recetas/chat_stream.py` -> `chat_estado.Intercambio.tramo`):
@@ -8867,7 +8877,42 @@ function vueloTramos(lista){
   }
   if(nuevos && pego) alFinal();
   else if(nuevos && ancla) anclaPoner(ancla);
+  vueloOcultarActivo();
   return nuevos;
+}
+// 3380 {aplicar-ambos} (facundo, 2026-10-08): la ultima accion en vuelo se ve en la bolita blanca de abajo
+// y no se duplica en la lista gris de arriba; al terminar o pasar a otro paso vuelve a verse como hecho.
+function coincideAccionVuelo(textoTramo, ft){
+  if(!textoTramo || !ft) return false;
+  var a = normTramo(textoTramo).toLowerCase().replace(/\.+$/, "").trim();
+  var b = normTramo(ft).toLowerCase().replace(/\.+$/, "").trim();
+  if(!a || !b) return false;
+  if(a === b) return true;
+  var col = b.indexOf(":");
+  var bAcc = (col >= 0 ? b.slice(col + 1) : b).trim();
+  if(bAcc && (bAcc === a || (a.length >= 4 && bAcc.indexOf(a) >= 0) || (bAcc.length >= 4 && a.indexOf(bAcc) >= 0))) return true;
+  if(a.length >= 4 && b.indexOf(a) >= 0) return true;
+  return false;
+}
+function vueloOcultarActivo(){
+  var n = document.getElementById("vuelo");
+  if(!n) return;
+  var hilo = n.querySelector(".hilo");
+  if(!hilo) return;
+  var ft = faseTexto();
+  var grises = hilo.querySelectorAll(".tramo.hecho, .tramo.paso");
+  for(var j = 0; j < grises.length; j++){
+    if(grises[j].classList.contains("oculto-vuelo")){
+      grises[j].classList.remove("oculto-vuelo");
+      grises[j].style.display = "";
+    }
+  }
+  if(!ft || !grises.length) return;
+  var ult = grises[grises.length - 1];
+  if(coincideAccionVuelo(ult.textContent, ft)){
+    ult.classList.add("oculto-vuelo");
+    ult.style.display = "none";
+  }
 }
 // la respuesta final repite el ultimo bloque de texto (el `result` de claude): ese no se pinta dos veces.
 // 1868: los `hecho` (las lineas de los comandos) SI pasan a la respuesta, en su lugar, y quedan en el historial
@@ -9025,6 +9070,7 @@ function vueloGirar(){
 function faseCambiar(f, ft){
   var pego = pegadoAbajo(), ancla = pego ? null : anclaMedir(), h0 = f.offsetHeight;
   f.textContent = ft;
+  vueloOcultarActivo();
   if(f.offsetHeight === h0) return;
   if(pego) alFinal();
   else if(ancla) anclaPoner(ancla);
@@ -15932,6 +15978,7 @@ window.__agente = {
   // estado en vivo y una sola respuesta por mensaje (2026-09-13, prueba_web_tabs lo chequea)
   leerMeta: leerMeta, modeloCorto: modeloCorto, sinDobles: sinDobles, claveEstado: claveEstado,
   vueloIniciar: vueloIniciar, vueloTerminar: vueloTerminar, recibirEstado: recibirEstado,
+  vueloOcultarActivo: vueloOcultarActivo, coincideAccionVuelo: coincideAccionVuelo,
   vuelo: function(){ return vuelo ? {clave: vuelo.clave, palabra: vuelo.palabra, paso: vuelo.paso || null, eta: vuelo.eta, giro: vuelo.giro} : null; },
   // 1776: el hilo progresivo. `tramos()` = los textos pintados en el chat, en orden (vuelo y respuestas)
   tramos: function(){ return lista ? [].map.call(lista.querySelectorAll(".msg .hilo .tramo"), function(d){

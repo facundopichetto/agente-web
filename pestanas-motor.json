@@ -31,6 +31,7 @@
       ],
       "modelo_default": "sonnet",
       "efforts": [
+        "ultracode",
         "max",
         "xhigh",
         "high",
@@ -69,6 +70,7 @@
       ],
       "modelo_default": "sonnet",
       "efforts": [
+        "ultracode",
         "max",
         "xhigh",
         "high",
@@ -88,6 +90,7 @@
       ],
       "modelo_default": "sonnet",
       "efforts": [
+        "ultracode",
         "max",
         "xhigh",
         "high",
@@ -103,18 +106,18 @@
   },
   "elegidos": {
     "flos": {
-      "modelo": "opus",
-      "effort": "high",
-      "motor": "claude"
+      "modelo": "geminiflash",
+      "effort": "medium",
+      "motor": "agy"
     },
     "modelos": {
       "motor": "agy",
       "modelo": "geminiflash",
-      "effort": "high"
+      "effort": "medium"
     },
     "tinder": {
       "motor": "agy",
-      "modelo": "geminiflash",
+      "modelo": "agy",
       "effort": "high"
     },
     "juegos": {
@@ -131,7 +134,7 @@
       "motor": "claude",
       "modelo": "sonnet",
       "effort": "medium",
-      "origen_motor": "default",
+      "origen_motor": "del_modelo",
       "origen_modelo": "default_fila",
       "origen_effort": "default_fila",
       "flags": [
@@ -149,21 +152,21 @@
       "pestana": "flos",
       "tema": null,
       "fila": "flos",
-      "motor": "claude",
-      "modelo": "opus",
-      "effort": "high",
-      "origen_motor": "selector_exacto",
+      "motor": "agy",
+      "modelo": "geminiflash",
+      "effort": "medium",
+      "origen_motor": "del_modelo",
       "origen_modelo": "selector_exacto",
       "origen_effort": "selector_exacto",
       "flags": [
         "--model",
-        "opus",
+        "geminiflash",
         "--effort",
-        "high"
+        "medium"
       ],
       "flags_effort": [
         "--effort",
-        "high"
+        "medium"
       ]
     },
     "juegos": {
@@ -173,7 +176,7 @@
       "motor": "agy",
       "modelo": "geminiflash",
       "effort": "medium",
-      "origen_motor": "selector_exacto",
+      "origen_motor": "del_modelo",
       "origen_modelo": "selector_exacto",
       "origen_effort": "selector_exacto",
       "flags": [
@@ -193,19 +196,19 @@
       "fila": null,
       "motor": "agy",
       "modelo": "geminiflash",
-      "effort": "high",
-      "origen_motor": "selector_exacto",
+      "effort": "medium",
+      "origen_motor": "del_modelo",
       "origen_modelo": "selector_exacto",
       "origen_effort": "selector_exacto",
       "flags": [
         "--model",
         "geminiflash",
         "--effort",
-        "high"
+        "medium"
       ],
       "flags_effort": [
         "--effort",
-        "high"
+        "medium"
       ]
     },
     "plata": {
@@ -215,7 +218,7 @@
       "motor": "claude",
       "modelo": "sonnet",
       "effort": "medium",
-      "origen_motor": "default",
+      "origen_motor": "del_modelo",
       "origen_modelo": "default_fila",
       "origen_effort": "default_fila",
       "flags": [
@@ -236,7 +239,7 @@
       "motor": "claude",
       "modelo": "sonnet",
       "effort": "high",
-      "origen_motor": "default",
+      "origen_motor": "del_modelo",
       "origen_modelo": "default_fila",
       "origen_effort": "default_fila",
       "flags": [
@@ -255,14 +258,12 @@
       "tema": null,
       "fila": null,
       "motor": "agy",
-      "modelo": "geminiflash",
+      "modelo": "agy",
       "effort": "high",
-      "origen_motor": "selector_exacto",
+      "origen_motor": "del_modelo",
       "origen_modelo": "selector_exacto",
       "origen_effort": "selector_exacto",
       "flags": [
-        "--model",
-        "geminiflash",
         "--effort",
         "high"
       ],
@@ -272,5 +273,26 @@
       ]
     }
   },
-  "ultimos": {}
+  "ultimos": {
+    "flos": {
+      "motor": "agy",
+      "modelo": "geminiflash",
+      "effort": "medium"
+    },
+    "juegos": {
+      "motor": "agy",
+      "modelo": "geminiflash",
+      "effort": "medium"
+    },
+    "modelos": {
+      "motor": "agy",
+      "modelo": "geminiflash",
+      "effort": "medium"
+    },
+    "tinder": {
+      "motor": "agy",
+      "modelo": "agy",
+      "effort": "high"
+    }
+  }
 }
