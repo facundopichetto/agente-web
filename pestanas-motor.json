@@ -103,8 +103,9 @@
   },
   "elegidos": {
     "flos": {
-      "modelo": "claude",
-      "effort": "ultracode"
+      "modelo": "opus",
+      "effort": "high",
+      "motor": "claude"
     },
     "modelos": {
       "motor": "agy",
@@ -149,22 +150,20 @@
       "tema": null,
       "fila": "flos",
       "motor": "claude",
-      "modelo": "claude",
-      "effort": "ultracode",
-      "origen_motor": "default",
+      "modelo": "opus",
+      "effort": "high",
+      "origen_motor": "selector_exacto",
       "origen_modelo": "selector_exacto",
       "origen_effort": "selector_exacto",
       "flags": [
-        "--settings",
-        "{\"ultracode\":true}",
+        "--model",
+        "opus",
         "--effort",
-        "max"
+        "high"
       ],
       "flags_effort": [
-        "--settings",
-        "{\"ultracode\":true}",
         "--effort",
-        "max"
+        "high"
       ]
     },
     "juegos": {
@@ -273,41 +272,5 @@
       ]
     }
   },
-  "ultimos": {
-    "awtomic": {
-      "motor": "qa",
-      "modelo": "sonnet",
-      "effort": "medium"
-    },
-    "flos": {
-      "motor": "claude",
-      "modelo": "opus",
-      "effort": "ultracode"
-    },
-    "juegos": {
-      "motor": "agy",
-      "modelo": "geminiflash",
-      "effort": "medium"
-    },
-    "modelos": {
-      "motor": "agy",
-      "modelo": "geminiflash",
-      "effort": "high"
-    },
-    "plata": {
-      "motor": "claude",
-      "modelo": "sonnet",
-      "effort": "medium"
-    },
-    "server": {
-      "motor": "claude",
-      "modelo": "sonnet",
-      "effort": "high"
-    },
-    "tinder": {
-      "motor": "agy",
-      "modelo": "geminiflash",
-      "effort": "high"
-    }
-  }
+  "ultimos": {}
 }

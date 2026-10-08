@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.536">
-<link rel="manifest" href="manifest.json?v=4.536">
+<meta name="agente-web-version" content="4.537">
+<link rel="manifest" href="manifest.json?v=4.537">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.536">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.537">
 </head>
 <body>
 
@@ -1764,34 +1764,25 @@ function elegidoDeTab(tAct){
   return null;
 }
 
+// 3341 {chiquita}: lo que corrio DE VERDAD en la ultima respuesta (`corrio` de la fila, lo anota el daemon al
+// guardarla). sin dato no se completa con lo elegido ni con un default: eso es lo pedido, no lo corrido
 function ultimoCorridoDeTab(tAct){
   if(!tAct) return null;
   var act = tAct.toLowerCase();
-  var base = act.split(/[#/]/)[0];
   var list = msgsHist[act] || (temaActivo() === act ? msgs : []);
-  if(list && list.length){
-    for(var i = list.length - 1; i >= 0; i--){
-      var m = list[i];
-      if(m && m.clase === "agente" && (m.motor || m.modelo || m.effort)){
-        var mot = m.motor || (m.modelo && (m.modelo.indexOf("gemini") >= 0 || m.modelo === "agy") ? "agy" : "claude");
-        var mod = m.modelo || (mot === "agy" ? "geminiflash" : "sonnet");
-        var eff = m.effort || "medium";
-        if(eff === "standard") eff = "medium";
-        return {motor: mot, modelo: mod, effort: eff};
-      }
-    }
+  for(var i = (list || []).length - 1; i >= 0; i--){
+    var m = list[i];
+    if(m && m.clase === "agente" && m.corrio && m.corrio.modelo) return m.corrio;
   }
-  if(cfgMotor && cfgMotor.ultimos){
-    if(cfgMotor.ultimos[act]) return cfgMotor.ultimos[act];
-    if(cfgMotor.ultimos[base]) return cfgMotor.ultimos[base];
-  }
-  var el = elegidoDeTab(act);
-  var fil = filaDeTab(act);
-  var motRes = (el && el.motor) || (el && el.modelo && (el.modelo.indexOf("gemini") >= 0 || el.modelo === "agy") ? "agy" : "claude");
-  var modRes = (el && el.modelo) || (fil && fil.modelo_default) || "sonnet";
-  var effRes = (el && el.effort) || (fil && fil.effort_default) || "medium";
-  if(effRes === "standard") effRes = "medium";
-  return {motor: motRes, modelo: modRes, effort: effRes};
+  if(cfgMotor && cfgMotor.ultimos && cfgMotor.ultimos[act]) return cfgMotor.ultimos[act];
+  return null;
+}
+
+function textoCorrido(u){
+  if(!u) return "";
+  var vistas = [];
+  [u.motor, u.modelo, u.effort].forEach(function(x){ if(x && vistas.indexOf(x) < 0) vistas.push(x); });
+  return vistas.join(" \u00b7 ");
 }
 
 function refrescarUltimoCorrido(t){
@@ -1799,14 +1790,7 @@ function refrescarUltimoCorrido(t){
   if(!u) return;
   var act = t || temaActivo();
   if(!act) return;
-  var ult = ultimoCorridoDeTab(act);
-  if(ult){
-    var motU = ult.motor || "claude";
-    var modU = ult.modelo || "sonnet";
-    var effU = ult.effort || "medium";
-    if(effU === "standard") effU = "medium";
-    u.textContent = motU + " · " + modU + " · " + effU;
-  }
+  u.textContent = textoCorrido(ultimoCorridoDeTab(act));
 }
 
 function pintarFilaMotor(){
@@ -1834,9 +1818,9 @@ function pintarFilaMotor(){
   selMot.title = "motor de " + tAct;
   var motores = ["claude", "agy"];
 
-  var motGuardado = null;
-  if(typeof localStorage !== "undefined") motGuardado = localStorage.getItem("flos_motor_motor_" + tAct);
-  if(!motGuardado && el && el.motor) motGuardado = el.motor;
+  // 3341: lo guardado en el server manda; lo que recuerda el navegador es solo para cuando el server no llego
+  var motGuardado = (el && el.motor) || null;
+  if(!motGuardado && !cfgMotor && typeof localStorage !== "undefined") motGuardado = localStorage.getItem("flos_motor_motor_" + tAct);
   if(!motGuardado && el && el.modelo){
     if(el.modelo === "agy" || el.modelo.indexOf("gemini") >= 0) motGuardado = "agy";
     else motGuardado = "claude";
@@ -1906,10 +1890,7 @@ function pintarFilaMotor(){
     var listaMods = modelosDisponibles(mot);
     var defMod = defaultModeloDe(mot);
     var modGuardado = (el && el.modelo) || null;
-    if(typeof localStorage !== "undefined"){
-      var loc = localStorage.getItem("flos_motor_modelo_" + tAct);
-      if(loc) modGuardado = loc;
-    }
+    if(!modGuardado && !cfgMotor && typeof localStorage !== "undefined") modGuardado = localStorage.getItem("flos_motor_modelo_" + tAct);
     if(!modGuardado || listaMods.indexOf(modGuardado) < 0) modGuardado = defMod;
     selMod.innerHTML = "";
     listaMods.forEach(function(mod){
@@ -1925,10 +1906,7 @@ function pintarFilaMotor(){
     var listaEffs = effortsDisponibles(mot);
     var defEff = defaultEffortDe(mot);
     var effGuardado = (el && el.effort) || null;
-    if(typeof localStorage !== "undefined"){
-      var loc = localStorage.getItem("flos_motor_effort_" + tAct);
-      if(loc) effGuardado = loc;
-    }
+    if(!effGuardado && !cfgMotor && typeof localStorage !== "undefined") effGuardado = localStorage.getItem("flos_motor_effort_" + tAct);
     if(!effGuardado || effGuardado === "standard" || listaEffs.indexOf(effGuardado) < 0) effGuardado = defEff;
     selEff.innerHTML = "";
     listaEffs.forEach(function(ef){
@@ -1944,14 +1922,8 @@ function pintarFilaMotor(){
 
   var ultimoDiv = document.createElement("div");
   ultimoDiv.className = "tab-motor-ultimo";
-  var ult = ultimoCorridoDeTab(tAct);
-  if(ult){
-    var motU = ult.motor || "claude";
-    var modU = ult.modelo || "sonnet";
-    var effU = ult.effort || "medium";
-    if(effU === "standard") effU = "medium";
-    ultimoDiv.textContent = motU + " · " + modU + " · " + effU;
-  }
+  ultimoDiv.title = "lo que corrio en la ultima respuesta";
+  ultimoDiv.textContent = textoCorrido(ultimoCorridoDeTab(tAct));
   filaMotor.appendChild(ultimoDiv);
 
   selMot.onchange = function(){
@@ -1965,6 +1937,7 @@ function pintarFilaMotor(){
     mandarAparte = true;
     try{
       mandar("motor " + tAct + " " + selMot.value + " " + selMod.value, tAct, false);
+      mandar("effort " + tAct + " " + selEff.value, tAct, false);   // la lista de efforts cambia con el motor
     }finally{ mandarAparte = false; }
   };
 
@@ -4795,7 +4768,7 @@ function recibirChat(tema, d){
                 tema: t, explicito: true, tag: t, audio: f.audio || null, nodo: nodo, tarea: f.tarea || null,
                 ts_envio: f.ts || null,   // 2417 {boton}: el `ts` de ESTA fila, lo unico que identifica el turno
                 audios_seg: f.audios_seg || null,
-                motor: f.motor || null, effort: f.effort || null,
+                motor: f.motor || null, effort: f.effort || null, corrio: f.corrio || null,
                 modelo: f.nodo && f.modelo ? modeloCorto(f.modelo) : (f.modelo ? modeloCorto(f.modelo) : null),
                 duracion_s: f.duracion_s !== undefined ? f.duracion_s : null, cuello: f.cuello || null,
                 opciones: f.opciones || null, opc_id: f.opc_id || null, tramos: Array.isArray(f.tramos) && f.tramos.length ? f.tramos : null,
@@ -15056,6 +15029,7 @@ window.__agente = {
   pintarFilaMotor: pintarFilaMotor, cargarCfgMotor: cargarCfgMotor,
   cfgMotor: function(){ return cfgMotor; },
   setCfgMotor: function(c){ cfgMotor = c; },
+  setMsgsHist: function(t, l){ msgsHist[t] = l; },
   ultimoCorridoDeTab: ultimoCorridoDeTab,
   refrescarUltimoCorrido: refrescarUltimoCorrido,
   // 1631: glifo `/` de comandos (`prueba_web_comandos`)
