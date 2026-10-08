@@ -2306,14 +2306,15 @@
   /* + de pestaña nueva sin borde (facundo, 2026-09-15, orden 1557): el 1px vuelve al padding, mismo alto */
   #tabs .relleno{flex:1 1 auto;min-width:8px}
   #tabs .tab-motor-ctrl{
-    display:inline-flex;align-items:center;gap:4px;margin-left:6px;
+    flex:0 0 auto;display:inline-flex;align-items:center;gap:4px;margin-left:8px;
+    align-self:center;
   }
   #tabs .tab-motor-ctrl select{
-    background:#000;color:var(--cian);border:1px solid var(--linea-clara);
-    border-radius:4px;padding:1px 5px;font:inherit;font-size:12px;
-    height:22px;cursor:pointer;outline:none;
+    background:#111;color:var(--cian);border:1px solid var(--cian);
+    border-radius:4px;padding:2px 6px;font:inherit;font-size:12px;font-weight:600;
+    height:26px;cursor:pointer;outline:none;
   }
-  #tabs .tab-motor-ctrl select:hover{border-color:var(--cian)}
+  #tabs .tab-motor-ctrl select:hover{border-color:var(--verde);color:var(--verde)}
   /* ---------- notificaciones: NO se pintan en el chat (facundo, 2026-09-19, orden 2151 {tira}) ----------
      la tira `#notis` de la 1162 (el ultimo aviso sin leer, primero entre las pestañas y el chat, despues abajo
      del historial por la 2080 punto 4) se fue del todo: ningun aviso se pinta adentro de `#panel-chat`. los

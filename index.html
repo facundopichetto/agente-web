@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.529">
-<link rel="manifest" href="manifest.json?v=4.529">
+<meta name="agente-web-version" content="4.530">
+<link rel="manifest" href="manifest.json?v=4.530">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.529">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.530">
 </head>
 <body>
 
@@ -1677,8 +1677,6 @@ function pintarTabs(){
     barra.appendChild(b);
   });
   barra.appendChild(btnBarra("+", "nueva_tab"));
-  var r = document.createElement("span"); r.className = "relleno";
-  barra.appendChild(r);
   // Selector de modelo y effort por pestaña en la cabecera (PLAN-pestanas.md P12)
   var selCont = document.createElement("span");
   selCont.id = "tab-motor-ctrl";
@@ -1743,6 +1741,8 @@ function pintarTabs(){
     selCont.appendChild(selEff);
     barra.appendChild(selCont);
   }
+  var r = document.createElement("span"); r.className = "relleno";
+  barra.appendChild(r);
   $("prompt").textContent = "/";   // 1631: glifo de comandos (antes `f>`)
   fueraDelGesto(guardarLayout);   // 2149 {pestana}: guardar y publicar el layout no va adentro del toque
   cajaDeTema(temaActivo());     // cada pestaña se lleva su borrador y trae el suyo
