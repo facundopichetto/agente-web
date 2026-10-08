@@ -142,6 +142,12 @@
   .msg .hilo .tramo.paso:last-child{margin-bottom:8px}
   .msg .hilo .tramo.paso, .msg .hilo .tramo.hecho{cursor:pointer}
   .msg .hilo .tramo.paso:hover, .msg .hilo .tramo.hecho:hover{opacity:1}
+  /* 3307 (facundo, 2026-10-08): consola colapsable de herramientas */
+  .msg .hilo .consola-pasos{background:#090d13;border:1px solid #21262d;border-radius:6px;padding:4px 8px;margin:4px 0 6px 0;font-family:var(--mono, monospace)}
+  .msg .hilo .consola-pasos summary.consola-resumen{color:var(--cian);font-size:11px;cursor:pointer;outline:none;user-select:none;opacity:.85}
+  .msg .hilo .consola-pasos summary.consola-resumen:hover{color:var(--verde);opacity:1}
+  .msg .hilo .consola-pasos[open] summary.consola-resumen{margin-bottom:6px;border-bottom:1px solid #21262d;padding-bottom:4px}
+  .msg .hilo .consola-pasos .tramo.hecho, .msg .hilo .consola-pasos .tramo.paso{padding-left:8px}
   #rastromenu .rmfrase{color:var(--gris);font-size:14px;margin:0 0 8px 0}
   #rastromenu textarea{width:100%;box-sizing:border-box;min-height:56px;background:transparent;color:var(--blanco);
     border:1px solid var(--linea-clara);border-radius:6px;padding:6px;font:inherit;font-size:14px}

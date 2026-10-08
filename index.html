@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.533">
-<link rel="manifest" href="manifest.json?v=4.533">
+<meta name="agente-web-version" content="4.534">
+<link rel="manifest" href="manifest.json?v=4.534">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.533">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.534">
 </head>
 <body>
 
@@ -1678,75 +1678,135 @@ function pintarTabs(){
     barra.appendChild(b);
   });
   barra.appendChild(btnBarra("+", "nueva_tab"));
-  // Selector de modelo y effort por pestaña en la cabecera (PLAN-pestanas.md P12)
+  // Selector de modelo y effort por pestaña en la cabecera (PLAN-pestanas.md P12, orden 3307)
   var filaMotor = $("tab-motor-fila");
   var tAct = temaActivo();
-  var esAwt = (tAct && (tAct.indexOf("awtomic") === 0 || tAct === "qa" || tAct === "board"));
-  var esFlos = (tAct === "flos" || (tAct && tAct.indexOf("flos#") === 0));
-  if(filaMotor){
+  if(filaMotor && tAct){
     filaMotor.innerHTML = "";
-    if(esFlos){
-      filaMotor.className = "tab-motor-fila";
-      var selMod = document.createElement("select");
-      selMod.className = "sel-modelo";
-      selMod.title = "modelo de " + tAct;
-      var mods = ["claude", "agy", "opus", "sonnet", "fable"];
-      var modGuardado = (typeof localStorage !== "undefined" && localStorage.getItem("flos_motor_modelo_" + tAct)) || "claude";
-      mods.forEach(function(m){
+    filaMotor.className = "tab-motor-fila";
+
+    var esAwt = (tAct.indexOf("awtomic") === 0 || tAct === "qa" || tAct === "board");
+    var esFlos = (tAct === "flos" || tAct.indexOf("flos#") === 0);
+
+    // Nivel 1: Motor
+    var selMot = document.createElement("select");
+    selMot.className = "sel-motor";
+    selMot.title = "motor de " + tAct;
+    var motores = ["claude", "agy"];
+    var motGuardado = (typeof localStorage !== "undefined" && localStorage.getItem("flos_motor_motor_" + tAct));
+    if(!motGuardado){
+      var modPrev = (typeof localStorage !== "undefined" && localStorage.getItem("flos_motor_modelo_" + tAct));
+      if(modPrev && (modPrev === "agy" || modPrev === "geminiflash" || modPrev === "geminipro")) motGuardado = "agy";
+      else motGuardado = "claude";
+    }
+    motores.forEach(function(m){
+      var opt = document.createElement("option");
+      opt.value = m; opt.textContent = m;
+      if(m === motGuardado) opt.selected = true;
+      selMot.appendChild(opt);
+    });
+    filaMotor.appendChild(selMot);
+
+    // Nivel 2: Modelo
+    var selMod = document.createElement("select");
+    selMod.className = "sel-modelo";
+    selMod.title = "modelo de " + tAct;
+    filaMotor.appendChild(selMod);
+
+    // Nivel 3: Effort
+    var selEff = document.createElement("select");
+    selEff.className = "sel-effort";
+    selEff.title = "effort de " + tAct;
+    filaMotor.appendChild(selEff);
+
+    function modelosDeMotor(m){
+      if(m === "agy") return ["geminiflash", "geminipro", "sonnet"];
+      if(esFlos) return ["claude", "opus", "sonnet", "fable"];
+      if(esAwt) return ["sonnet", "opus"];
+      return ["sonnet", "opus", "fable", "claude"];
+    }
+
+    function defaultModelo(m){
+      if(m === "agy") return "geminiflash";
+      if(esFlos) return "claude";
+      return "sonnet";
+    }
+
+    function effortsDeMotor(m){
+      if(m === "agy") return ["standard", "high", "medium", "low"];
+      if(esAwt) return ["max", "xhigh", "high", "medium", "low"];
+      return ["ultracode", "max", "xhigh", "high", "medium", "low"];
+    }
+
+    function defaultEffort(m){
+      if(m === "agy") return "standard";
+      if(esFlos) return "ultracode";
+      if(tAct === "server" || tAct.indexOf("server#") === 0) return "high";
+      return "medium";
+    }
+
+    function refrescarModelos(){
+      var mot = selMot.value;
+      var listaMods = modelosDeMotor(mot);
+      var defMod = defaultModelo(mot);
+      var modGuardado = (typeof localStorage !== "undefined" && localStorage.getItem("flos_motor_modelo_" + tAct)) || defMod;
+      if(listaMods.indexOf(modGuardado) < 0) modGuardado = defMod;
+      selMod.innerHTML = "";
+      listaMods.forEach(function(mod){
         var opt = document.createElement("option");
-        opt.value = m; opt.textContent = m;
-        if(m === modGuardado) opt.selected = true;
+        opt.value = mod; opt.textContent = mod;
+        if(mod === modGuardado) opt.selected = true;
         selMod.appendChild(opt);
       });
-      selMod.onchange = function(){
-        if(typeof localStorage !== "undefined") localStorage.setItem("flos_motor_modelo_" + tAct, selMod.value);
-        mandarAparte = true;
-        try{ mandar("motor " + tAct + " " + selMod.value, tAct, false); }
-        finally{ mandarAparte = false; }
-      };
-      filaMotor.appendChild(selMod);
-
-      var selEff = document.createElement("select");
-      selEff.className = "sel-effort";
-      selEff.title = "effort de " + tAct;
-      var effs = ["ultracode", "max", "xhigh", "high", "medium", "low"];
-      var effGuardado = (typeof localStorage !== "undefined" && localStorage.getItem("flos_motor_effort_" + tAct)) || "ultracode";
-      effs.forEach(function(ef){
-        var opt = document.createElement("option");
-        opt.value = ef; opt.textContent = ef;
-        if(ef === effGuardado) opt.selected = true;
-        selEff.appendChild(opt);
-      });
-      selEff.onchange = function(){
-        if(typeof localStorage !== "undefined") localStorage.setItem("flos_motor_effort_" + tAct, selEff.value);
-        mandarAparte = true;
-        try{ mandar("effort " + tAct + " " + selEff.value, tAct, false); }
-        finally{ mandarAparte = false; }
-      };
-      filaMotor.appendChild(selEff);
-    } else if(esAwt){
-      filaMotor.className = "tab-motor-fila";
-      var selEff = document.createElement("select");
-      selEff.className = "sel-effort";
-      selEff.title = "effort de " + tAct;
-      var effs = ["max", "xhigh", "high", "medium", "low"];
-      var effGuardado = (typeof localStorage !== "undefined" && localStorage.getItem("flos_motor_effort_" + tAct)) || "medium";
-      effs.forEach(function(ef){
-        var opt = document.createElement("option");
-        opt.value = ef; opt.textContent = ef;
-        if(ef === effGuardado) opt.selected = true;
-        selEff.appendChild(opt);
-      });
-      selEff.onchange = function(){
-        if(typeof localStorage !== "undefined") localStorage.setItem("flos_motor_effort_" + tAct, selEff.value);
-        mandarAparte = true;
-        try{ mandar("effort " + tAct + " " + selEff.value, tAct, false); }
-        finally{ mandarAparte = false; }
-      };
-      filaMotor.appendChild(selEff);
-    } else {
-      filaMotor.className = "tab-motor-fila oculta";
     }
+
+    function refrescarEfforts(){
+      var mot = selMot.value;
+      var listaEffs = effortsDeMotor(mot);
+      var defEff = defaultEffort(mot);
+      var effGuardado = (typeof localStorage !== "undefined" && localStorage.getItem("flos_motor_effort_" + tAct)) || defEff;
+      if(listaEffs.indexOf(effGuardado) < 0) effGuardado = defEff;
+      selEff.innerHTML = "";
+      listaEffs.forEach(function(ef){
+        var opt = document.createElement("option");
+        opt.value = ef; opt.textContent = ef;
+        if(ef === effGuardado) opt.selected = true;
+        selEff.appendChild(opt);
+      });
+    }
+
+    refrescarModelos();
+    refrescarEfforts();
+
+    selMot.onchange = function(){
+      if(typeof localStorage !== "undefined") localStorage.setItem("flos_motor_motor_" + tAct, selMot.value);
+      refrescarModelos();
+      refrescarEfforts();
+      if(typeof localStorage !== "undefined"){
+        localStorage.setItem("flos_motor_modelo_" + tAct, selMod.value);
+        localStorage.setItem("flos_motor_effort_" + tAct, selEff.value);
+      }
+      mandarAparte = true;
+      try{
+        mandar("motor " + tAct + " " + selMot.value + " " + selMod.value, tAct, false);
+      }finally{ mandarAparte = false; }
+    };
+
+    selMod.onchange = function(){
+      if(typeof localStorage !== "undefined") localStorage.setItem("flos_motor_modelo_" + tAct, selMod.value);
+      mandarAparte = true;
+      try{
+        mandar("motor " + tAct + " " + selMod.value, tAct, false);
+      }finally{ mandarAparte = false; }
+    };
+
+    selEff.onchange = function(){
+      if(typeof localStorage !== "undefined") localStorage.setItem("flos_motor_effort_" + tAct, selEff.value);
+      mandarAparte = true;
+      try{
+        mandar("effort " + tAct + " " + selEff.value, tAct, false);
+      }finally{ mandarAparte = false; }
+    };
   }
   var r = document.createElement("span"); r.className = "relleno";
   barra.appendChild(r);
@@ -2844,14 +2904,56 @@ function nodoMsg(m){
   // 1776: el hilo que facundo ya vio mientras contestaba (entendi, textos intermedios), del jsonl (`tramos`) o
   // adoptado del bloque en vuelo; arriba del cuerpo, mismo orden, nunca editado. 1850: el comando crudo y su salida
   // (`salida` de un daemon viejo) no se pintan nunca. 1868 (facundo, 2026-09-17: "cuando ya me respondiste, esta
-  // bien ver el razonamiento antes y que quede"): las lineas `hecho` SI quedan, cada una en su linea, apagadas
+  // bien ver el razonamiento antes y que quede"): las lineas `hecho` SI quedan, cada una en su linea, apagadas.
+  // 3307 (facundo, 2026-10-08): las herramientas se agrupan en una consola colapsable para no tener mas de 5 o 6 lineas
+  function resumirPasos(textos){
+    var cats = [];
+    (textos || []).forEach(function(t){
+      var txt = String(t || "").toLowerCase();
+      var c = "herramientas";
+      if(txt.indexOf("leyendo") === 0 || txt.indexOf("mirando") === 0) c = "inspección";
+      else if(txt.indexOf("buscando") === 0) c = "búsqueda";
+      else if(txt.indexOf("corriendo") === 0) c = "ejecución";
+      else if(txt.indexOf("editando") === 0 || txt.indexOf("escribiendo") === 0) c = "edición";
+      if(cats.indexOf(c) < 0) cats.push(c);
+    });
+    return cats.join(", ") || "herramientas";
+  }
   var hilo = null;
   if(m.clase === "agente" && m.tramos && m.tramos.length){
     var tt = m.tramos.filter(function(t){ return t && tipoTramo(t) && tipoTramo(t) !== "caja" && String(t.texto || "").trim(); });
     if(tt.length){
       hilo = document.createElement("div"); hilo.className = "hilo";
-      tt.forEach(function(t, i){ hilo.appendChild(nodoTramo({i: t.i !== undefined ? t.i : i, tipo: tipoTramo(t), texto: t.texto,
-                                                             voto: t.voto || null, etapa: t.etapa || null})); });
+      var grupo = [], tiposGrupo = [];
+      function volcarGrupo(){
+        if(!grupo.length) return;
+        if(grupo.length > 2){
+          var det = document.createElement("details");
+          det.className = "consola-pasos";
+          var sum = document.createElement("summary");
+          sum.className = "consola-resumen";
+          sum.textContent = "› consola: " + grupo.length + " pasos (" + resumirPasos(tiposGrupo) + ")";
+          det.appendChild(sum);
+          grupo.forEach(function(el){ det.appendChild(el); });
+          hilo.appendChild(det);
+        } else {
+          grupo.forEach(function(el){ hilo.appendChild(el); });
+        }
+        grupo = []; tiposGrupo = [];
+      }
+      tt.forEach(function(t, i){
+        var tipo = tipoTramo(t);
+        var nodo = nodoTramo({i: t.i !== undefined ? t.i : i, tipo: tipo, texto: t.texto,
+                              voto: t.voto || null, etapa: t.etapa || null});
+        if(tipo === "hecho" || tipo === "paso"){
+          grupo.push(nodo);
+          tiposGrupo.push(String(t.texto || ""));
+        } else {
+          volcarGrupo();
+          hilo.appendChild(nodo);
+        }
+      });
+      volcarGrupo();
     }
   }
   var b = document.createElement("div");
