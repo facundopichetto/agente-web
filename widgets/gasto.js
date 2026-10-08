@@ -200,10 +200,12 @@
       return cuModal.abrir({titulo: l.nombre + " · " + (l.cuenta || ""), cuenta: plan, html: rot, botones: []});
     }
     var html = '<div class="cmod">' + f("plan", '<span class="c">' + esc(plan) + "</span>") +
+      (l.pozos && l.pozos.gemini ? "\n" + f("pozo gemini", esc(l.pozos.gemini.pct_txt || "?") + (l.pozos.gemini.resetea ? ' <span class="g">resetea ' + esc(l.pozos.gemini.resetea) + "</span>" : "")) : "") +
+      (l.pozos && l.pozos.terceros ? "\n" + f("pozo terceros", esc(l.pozos.terceros.pct_txt || "?") + (l.pozos.terceros.resetea ? ' <span class="g">resetea ' + esc(l.pozos.terceros.resetea) + "</span>" : "")) : "") +
       "\n" + f("tokens del mes", esc((l.tok || 0).toLocaleString("es-AR")) +
                 ' <span class="g">en ' + (l.llamadas || 0) + " llamadas</span>") +
       (l.tpd ? "\n" + f("hoy", esc(sinPlata(l.sec))) : "") +
-      (l.prepago && l.prepago_pct !== null && l.prepago_pct !== undefined ?
+      (!l.pozos && l.prepago && l.prepago_pct !== null && l.prepago_pct !== undefined ?
         "\n" + f("credito prepago", l.prepago_pct + '% usado <span class="g">de donde cobra la api</span>') : "") +
       (l.fuente_txt ? "\n" + f("de donde sale", (l.falta_fuente ? '<span class="r">' : '<span class="c">') +
                                esc(sinPlata(l.fuente_txt)) + "</span>" +
