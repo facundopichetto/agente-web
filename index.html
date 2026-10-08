@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.535">
-<link rel="manifest" href="manifest.json?v=4.535">
+<meta name="agente-web-version" content="4.536">
+<link rel="manifest" href="manifest.json?v=4.536">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.535">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.536">
 </head>
 <body>
 
@@ -1679,135 +1679,7 @@ function pintarTabs(){
   });
   barra.appendChild(btnBarra("+", "nueva_tab"));
   // Selector de modelo y effort por pestaña en la cabecera (PLAN-pestanas.md P12, orden 3307)
-  var filaMotor = $("tab-motor-fila");
-  var tAct = temaActivo();
-  if(filaMotor && tAct){
-    filaMotor.innerHTML = "";
-    filaMotor.className = "tab-motor-fila";
-
-    var esAwt = (tAct.indexOf("awtomic") === 0 || tAct === "qa" || tAct === "board");
-    var esFlos = (tAct === "flos" || tAct.indexOf("flos#") === 0);
-
-    // Nivel 1: Motor
-    var selMot = document.createElement("select");
-    selMot.className = "sel-motor";
-    selMot.title = "motor de " + tAct;
-    var motores = ["claude", "agy"];
-    var motGuardado = (typeof localStorage !== "undefined" && localStorage.getItem("flos_motor_motor_" + tAct));
-    if(!motGuardado){
-      var modPrev = (typeof localStorage !== "undefined" && localStorage.getItem("flos_motor_modelo_" + tAct));
-      if(modPrev && (modPrev === "agy" || modPrev === "geminiflash" || modPrev === "geminipro")) motGuardado = "agy";
-      else motGuardado = "claude";
-    }
-    motores.forEach(function(m){
-      var opt = document.createElement("option");
-      opt.value = m; opt.textContent = m;
-      if(m === motGuardado) opt.selected = true;
-      selMot.appendChild(opt);
-    });
-    filaMotor.appendChild(selMot);
-
-    // Nivel 2: Modelo
-    var selMod = document.createElement("select");
-    selMod.className = "sel-modelo";
-    selMod.title = "modelo de " + tAct;
-    filaMotor.appendChild(selMod);
-
-    // Nivel 3: Effort
-    var selEff = document.createElement("select");
-    selEff.className = "sel-effort";
-    selEff.title = "effort de " + tAct;
-    filaMotor.appendChild(selEff);
-
-    function modelosDeMotor(m){
-      if(m === "agy") return ["geminiflash", "geminipro", "sonnet"];
-      if(esFlos) return ["claude", "opus", "sonnet", "fable"];
-      if(esAwt) return ["sonnet", "opus"];
-      return ["sonnet", "opus", "fable", "claude"];
-    }
-
-    function defaultModelo(m){
-      if(m === "agy") return "geminiflash";
-      if(esFlos) return "claude";
-      return "sonnet";
-    }
-
-    function effortsDeMotor(m){
-      if(m === "agy") return ["standard", "high", "medium", "low"];
-      if(esAwt) return ["max", "xhigh", "high", "medium", "low"];
-      return ["ultracode", "max", "xhigh", "high", "medium", "low"];
-    }
-
-    function defaultEffort(m){
-      if(m === "agy") return "standard";
-      if(esFlos) return "ultracode";
-      if(tAct === "server" || tAct.indexOf("server#") === 0) return "high";
-      return "medium";
-    }
-
-    function refrescarModelos(){
-      var mot = selMot.value;
-      var listaMods = modelosDeMotor(mot);
-      var defMod = defaultModelo(mot);
-      var modGuardado = (typeof localStorage !== "undefined" && localStorage.getItem("flos_motor_modelo_" + tAct)) || defMod;
-      if(listaMods.indexOf(modGuardado) < 0) modGuardado = defMod;
-      selMod.innerHTML = "";
-      listaMods.forEach(function(mod){
-        var opt = document.createElement("option");
-        opt.value = mod; opt.textContent = mod;
-        if(mod === modGuardado) opt.selected = true;
-        selMod.appendChild(opt);
-      });
-    }
-
-    function refrescarEfforts(){
-      var mot = selMot.value;
-      var listaEffs = effortsDeMotor(mot);
-      var defEff = defaultEffort(mot);
-      var effGuardado = (typeof localStorage !== "undefined" && localStorage.getItem("flos_motor_effort_" + tAct)) || defEff;
-      if(listaEffs.indexOf(effGuardado) < 0) effGuardado = defEff;
-      selEff.innerHTML = "";
-      listaEffs.forEach(function(ef){
-        var opt = document.createElement("option");
-        opt.value = ef; opt.textContent = ef;
-        if(ef === effGuardado) opt.selected = true;
-        selEff.appendChild(opt);
-      });
-    }
-
-    refrescarModelos();
-    refrescarEfforts();
-
-    selMot.onchange = function(){
-      if(typeof localStorage !== "undefined") localStorage.setItem("flos_motor_motor_" + tAct, selMot.value);
-      refrescarModelos();
-      refrescarEfforts();
-      if(typeof localStorage !== "undefined"){
-        localStorage.setItem("flos_motor_modelo_" + tAct, selMod.value);
-        localStorage.setItem("flos_motor_effort_" + tAct, selEff.value);
-      }
-      mandarAparte = true;
-      try{
-        mandar("motor " + tAct + " " + selMot.value + " " + selMod.value, tAct, false);
-      }finally{ mandarAparte = false; }
-    };
-
-    selMod.onchange = function(){
-      if(typeof localStorage !== "undefined") localStorage.setItem("flos_motor_modelo_" + tAct, selMod.value);
-      mandarAparte = true;
-      try{
-        mandar("motor " + tAct + " " + selMod.value, tAct, false);
-      }finally{ mandarAparte = false; }
-    };
-
-    selEff.onchange = function(){
-      if(typeof localStorage !== "undefined") localStorage.setItem("flos_motor_effort_" + tAct, selEff.value);
-      mandarAparte = true;
-      try{
-        mandar("effort " + tAct + " " + selEff.value, tAct, false);
-      }finally{ mandarAparte = false; }
-    };
-  }
+  pintarFilaMotor();
   var r = document.createElement("span"); r.className = "relleno";
   barra.appendChild(r);
   $("prompt").textContent = "/";   // 1631: glifo de comandos (antes `f>`)
@@ -1818,6 +1690,300 @@ function pintarTabs(){
 // tiene que pasar DENTRO del gesto -guardar el layout, publicarlo, pedir la charla por red- sale despues,
 // cuando el navegador ya pinto. ninguna llamada de red adentro del handler del toque.
 function fueraDelGesto(fn){ setTimeout(fn, 0); }
+
+// 3333 {selector}: motor, modelo y effort por pestaña respaldados por el server (pestana_motor.py)
+var cfgMotor = null;
+
+function cargarCfgMotor(){
+  return crudo("pestanas-motor.json").then(function(r){
+    if(r && r.json){
+      cfgMotor = r.json;
+      if($("tab-motor-fila")) pintarFilaMotor();
+    }
+    return cfgMotor;
+  }).catch(function(){ return null; });
+}
+
+function filaDeTab(tAct){
+  if(!tAct) return null;
+  var base = tAct.split(/[#/]/)[0].toLowerCase();
+  var act = tAct.toLowerCase();
+  if(cfgMotor && cfgMotor.filas){
+    if(cfgMotor.filas[act]) return cfgMotor.filas[act];
+    if(cfgMotor.filas[base]) return cfgMotor.filas[base];
+  }
+  var esAwt = (base === "awtomic" || act === "qa" || act === "board");
+  var esFlos = (base === "flos");
+  var esJuegos = (base === "juegos");
+  var esServer = (base === "server");
+  var esPlata = (base === "plata");
+  if(esFlos) return {
+    modelos: ["claude", "agy", "opus", "sonnet", "fable", "geminiflash", "geminipro"],
+    modelo_default: "claude",
+    efforts: ["ultracode", "max", "xhigh", "high", "medium", "low"],
+    effort_default: "ultracode"
+  };
+  if(esAwt) return {
+    modelos: ["sonnet", "opus", "claude", "agy", "geminiflash"],
+    modelo_default: "sonnet",
+    efforts: ["max", "xhigh", "high", "medium", "low"],
+    effort_default: "medium"
+  };
+  if(esJuegos || esPlata) return {
+    modelos: ["sonnet", "opus", "claude", "agy", "fable", "geminiflash"],
+    modelo_default: "sonnet",
+    efforts: ["max", "xhigh", "high", "medium", "low"],
+    effort_default: "medium"
+  };
+  if(esServer) return {
+    modelos: ["sonnet", "opus", "claude", "agy", "geminiflash"],
+    modelo_default: "sonnet",
+    efforts: ["ultracode", "max", "xhigh", "high", "medium", "low"],
+    effort_default: "high"
+  };
+  return {
+    modelos: ["sonnet", "opus", "claude", "agy", "geminiflash"],
+    modelo_default: "sonnet",
+    efforts: ["max", "xhigh", "high", "medium", "low"],
+    effort_default: "medium"
+  };
+}
+
+function elegidoDeTab(tAct){
+  if(!tAct) return null;
+  var act = tAct.toLowerCase();
+  var base = act.split(/[#/]/)[0];
+  if(cfgMotor && cfgMotor.elegidos){
+    if(cfgMotor.elegidos[act]) return cfgMotor.elegidos[act];
+    if(cfgMotor.elegidos[base]) return cfgMotor.elegidos[base];
+  }
+  if(cfgMotor && cfgMotor.resueltos){
+    if(cfgMotor.resueltos[act]) return cfgMotor.resueltos[act];
+    if(cfgMotor.resueltos[base]) return cfgMotor.resueltos[base];
+  }
+  return null;
+}
+
+function ultimoCorridoDeTab(tAct){
+  if(!tAct) return null;
+  var act = tAct.toLowerCase();
+  var base = act.split(/[#/]/)[0];
+  var list = msgsHist[act] || (temaActivo() === act ? msgs : []);
+  if(list && list.length){
+    for(var i = list.length - 1; i >= 0; i--){
+      var m = list[i];
+      if(m && m.clase === "agente" && (m.motor || m.modelo || m.effort)){
+        var mot = m.motor || (m.modelo && (m.modelo.indexOf("gemini") >= 0 || m.modelo === "agy") ? "agy" : "claude");
+        var mod = m.modelo || (mot === "agy" ? "geminiflash" : "sonnet");
+        var eff = m.effort || "medium";
+        if(eff === "standard") eff = "medium";
+        return {motor: mot, modelo: mod, effort: eff};
+      }
+    }
+  }
+  if(cfgMotor && cfgMotor.ultimos){
+    if(cfgMotor.ultimos[act]) return cfgMotor.ultimos[act];
+    if(cfgMotor.ultimos[base]) return cfgMotor.ultimos[base];
+  }
+  var el = elegidoDeTab(act);
+  var fil = filaDeTab(act);
+  var motRes = (el && el.motor) || (el && el.modelo && (el.modelo.indexOf("gemini") >= 0 || el.modelo === "agy") ? "agy" : "claude");
+  var modRes = (el && el.modelo) || (fil && fil.modelo_default) || "sonnet";
+  var effRes = (el && el.effort) || (fil && fil.effort_default) || "medium";
+  if(effRes === "standard") effRes = "medium";
+  return {motor: motRes, modelo: modRes, effort: effRes};
+}
+
+function refrescarUltimoCorrido(t){
+  var u = $("tab-motor-fila") && $("tab-motor-fila").querySelector(".tab-motor-ultimo");
+  if(!u) return;
+  var act = t || temaActivo();
+  if(!act) return;
+  var ult = ultimoCorridoDeTab(act);
+  if(ult){
+    var motU = ult.motor || "claude";
+    var modU = ult.modelo || "sonnet";
+    var effU = ult.effort || "medium";
+    if(effU === "standard") effU = "medium";
+    u.textContent = motU + " · " + modU + " · " + effU;
+  }
+}
+
+function pintarFilaMotor(){
+  var filaMotor = $("tab-motor-fila");
+  if(!filaMotor) return;
+  var tAct = temaActivo();
+  if(!tAct){
+    filaMotor.classList.add("oculta");
+    return;
+  }
+  filaMotor.classList.remove("oculta");
+  filaMotor.innerHTML = "";
+  filaMotor.className = "tab-motor-fila";
+
+  var controles = document.createElement("div");
+  controles.className = "tab-motor-controles";
+  filaMotor.appendChild(controles);
+
+  var fil = filaDeTab(tAct);
+  var el = elegidoDeTab(tAct);
+
+  // Nivel 1: Motor
+  var selMot = document.createElement("select");
+  selMot.className = "sel-motor";
+  selMot.title = "motor de " + tAct;
+  var motores = ["claude", "agy"];
+
+  var motGuardado = null;
+  if(typeof localStorage !== "undefined") motGuardado = localStorage.getItem("flos_motor_motor_" + tAct);
+  if(!motGuardado && el && el.motor) motGuardado = el.motor;
+  if(!motGuardado && el && el.modelo){
+    if(el.modelo === "agy" || el.modelo.indexOf("gemini") >= 0) motGuardado = "agy";
+    else motGuardado = "claude";
+  }
+  if(!motGuardado) motGuardado = "claude";
+
+  motores.forEach(function(m){
+    var opt = document.createElement("option");
+    opt.value = m; opt.textContent = m;
+    if(m === motGuardado) opt.selected = true;
+    selMot.appendChild(opt);
+  });
+  controles.appendChild(selMot);
+
+  // Nivel 2: Modelo
+  var selMod = document.createElement("select");
+  selMod.className = "sel-modelo";
+  selMod.title = "modelo de " + tAct;
+  controles.appendChild(selMod);
+
+  // Nivel 3: Effort
+  var selEff = document.createElement("select");
+  selEff.className = "sel-effort";
+  selEff.title = "effort de " + tAct;
+  controles.appendChild(selEff);
+
+  function modelosDisponibles(mot){
+    var permitidos = (fil && fil.modelos) ? fil.modelos.slice() : [];
+    if(mot === "agy"){
+      var modsAgy = permitidos.filter(function(x){ return x === "geminiflash" || x === "geminipro" || x === "agy"; });
+      if(!modsAgy.length) modsAgy = ["geminiflash", "geminipro"];
+      return modsAgy;
+    }
+    var modsClaude = permitidos.filter(function(x){ return x !== "geminiflash" && x !== "geminipro" && x !== "agy"; });
+    if(!modsClaude.length) modsClaude = ["sonnet", "opus", "claude"];
+    return modsClaude;
+  }
+
+  function defaultModeloDe(mot){
+    var disp = modelosDisponibles(mot);
+    if(mot === "agy") return (disp.indexOf("geminiflash") >= 0) ? "geminiflash" : disp[0];
+    if(fil && fil.modelo_default && disp.indexOf(fil.modelo_default) >= 0) return fil.modelo_default;
+    if(disp.indexOf("sonnet") >= 0) return "sonnet";
+    return disp[0] || "sonnet";
+  }
+
+  function effortsDisponibles(mot){
+    var permitidos = (fil && fil.efforts) ? fil.efforts.slice() : ["max", "xhigh", "high", "medium", "low"];
+    permitidos = permitidos.filter(function(e){ return e !== "standard"; });
+    if(mot === "agy"){
+      var agyEffs = permitidos.filter(function(e){ return e === "high" || e === "medium" || e === "low"; });
+      return agyEffs.length ? agyEffs : ["high", "medium", "low"];
+    }
+    return permitidos.length ? permitidos : ["high", "medium", "low"];
+  }
+
+  function defaultEffortDe(mot){
+    var disp = effortsDisponibles(mot);
+    if(mot === "agy") return (disp.indexOf("medium") >= 0) ? "medium" : disp[0];
+    if(fil && fil.effort_default && fil.effort_default !== "standard" && disp.indexOf(fil.effort_default) >= 0) return fil.effort_default;
+    if(disp.indexOf("medium") >= 0) return "medium";
+    return disp[0] || "medium";
+  }
+
+  function refrescarModelos(){
+    var mot = selMot.value;
+    var listaMods = modelosDisponibles(mot);
+    var defMod = defaultModeloDe(mot);
+    var modGuardado = (el && el.modelo) || null;
+    if(typeof localStorage !== "undefined"){
+      var loc = localStorage.getItem("flos_motor_modelo_" + tAct);
+      if(loc) modGuardado = loc;
+    }
+    if(!modGuardado || listaMods.indexOf(modGuardado) < 0) modGuardado = defMod;
+    selMod.innerHTML = "";
+    listaMods.forEach(function(mod){
+      var opt = document.createElement("option");
+      opt.value = mod; opt.textContent = mod;
+      if(mod === modGuardado) opt.selected = true;
+      selMod.appendChild(opt);
+    });
+  }
+
+  function refrescarEfforts(){
+    var mot = selMot.value;
+    var listaEffs = effortsDisponibles(mot);
+    var defEff = defaultEffortDe(mot);
+    var effGuardado = (el && el.effort) || null;
+    if(typeof localStorage !== "undefined"){
+      var loc = localStorage.getItem("flos_motor_effort_" + tAct);
+      if(loc) effGuardado = loc;
+    }
+    if(!effGuardado || effGuardado === "standard" || listaEffs.indexOf(effGuardado) < 0) effGuardado = defEff;
+    selEff.innerHTML = "";
+    listaEffs.forEach(function(ef){
+      var opt = document.createElement("option");
+      opt.value = ef; opt.textContent = ef;
+      if(ef === effGuardado) opt.selected = true;
+      selEff.appendChild(opt);
+    });
+  }
+
+  refrescarModelos();
+  refrescarEfforts();
+
+  var ultimoDiv = document.createElement("div");
+  ultimoDiv.className = "tab-motor-ultimo";
+  var ult = ultimoCorridoDeTab(tAct);
+  if(ult){
+    var motU = ult.motor || "claude";
+    var modU = ult.modelo || "sonnet";
+    var effU = ult.effort || "medium";
+    if(effU === "standard") effU = "medium";
+    ultimoDiv.textContent = motU + " · " + modU + " · " + effU;
+  }
+  filaMotor.appendChild(ultimoDiv);
+
+  selMot.onchange = function(){
+    if(typeof localStorage !== "undefined") localStorage.setItem("flos_motor_motor_" + tAct, selMot.value);
+    refrescarModelos();
+    refrescarEfforts();
+    if(typeof localStorage !== "undefined"){
+      localStorage.setItem("flos_motor_modelo_" + tAct, selMod.value);
+      localStorage.setItem("flos_motor_effort_" + tAct, selEff.value);
+    }
+    mandarAparte = true;
+    try{
+      mandar("motor " + tAct + " " + selMot.value + " " + selMod.value, tAct, false);
+    }finally{ mandarAparte = false; }
+  };
+
+  selMod.onchange = function(){
+    if(typeof localStorage !== "undefined") localStorage.setItem("flos_motor_modelo_" + tAct, selMod.value);
+    mandarAparte = true;
+    try{
+      mandar("motor " + tAct + " " + selMod.value, tAct, false);
+    }finally{ mandarAparte = false; }
+  };
+
+  selEff.onchange = function(){
+    if(typeof localStorage !== "undefined") localStorage.setItem("flos_motor_effort_" + tAct, selEff.value);
+    mandarAparte = true;
+    try{
+      mandar("effort " + tAct + " " + selEff.value, tAct, false);
+    }finally{ mandarAparte = false; }
+  };
+}
 
 // ---------- acciones de pestañas ----------
 function abrirTab(tema){
@@ -4629,13 +4795,15 @@ function recibirChat(tema, d){
                 tema: t, explicito: true, tag: t, audio: f.audio || null, nodo: nodo, tarea: f.tarea || null,
                 ts_envio: f.ts || null,   // 2417 {boton}: el `ts` de ESTA fila, lo unico que identifica el turno
                 audios_seg: f.audios_seg || null,
-                modelo: f.nodo && f.modelo ? modeloCorto(f.modelo) : null,
+                motor: f.motor || null, effort: f.effort || null,
+                modelo: f.nodo && f.modelo ? modeloCorto(f.modelo) : (f.modelo ? modeloCorto(f.modelo) : null),
                 duracion_s: f.duracion_s !== undefined ? f.duracion_s : null, cuello: f.cuello || null,
                 opciones: f.opciones || null, opc_id: f.opc_id || null, tramos: Array.isArray(f.tramos) && f.tramos.length ? f.tramos : null,
                 tardes: Array.isArray(f.tardes) && f.tardes.length ? f.tardes : null});   // 2563: los `entendí` de despues del corte
     }
   });
   msgsHist[t] = out;
+  if(t === temaActivo() && $("tab-motor-fila")) refrescarUltimoCorrido(t);
   if(notiPush) setTimeout(refrescarNotiPush, 0);   // 1350: llego la fila de la tarea del modal abierto
   return out.length;
 }
@@ -4843,7 +5011,8 @@ function sincronizar(primera){
     cargarComentarios(!!primera),
     cargarWidgets().catch(function(e){ if(ruidoso(e)) pintarWidgets(null, e.message); }),
     cargarVotaciones().catch(function(){}),   // 1666: al abrir, la confirmacion fresca antes que nada
-    cargarTabs()
+    cargarTabs(),
+    cargarCfgMotor().catch(function(){})
   ]).then(function(){
     mezclar(); render();               // una sola pasada de pintado, ya con todo abajo
     clearTimeout(cartel); pintarSync(null);
@@ -9105,11 +9274,11 @@ function sinTrozo(texto, trozo){
 function enviarMensaje(texto){
   texto = (texto || "").trim();
   // adjunto pendiente (foto o audio): sale un solo mensaje con el archivo y el texto, sin clasificar
-  // ni preguntar por tema (siempre a la pestaña activa, como antes de que fuera pendiente).
-  if(adjunto) return mandarAdjunto(texto);
+  // ni preguntar por tema (siempre a la pestaña donde se mando).
+  if(adjunto) return mandarAdjunto(texto, (adjunto && adjunto.tema) || temaActivo());
   // 2124 {audios}: `enviar` tocado apenas se solto el micro, con el audio todavia cerrandose (la gracia del
   // dictado): antes no habia adjunto y el toque no hacia nada. ahora espera a que el audio llegue al pie y sale.
-  if(cierreGrab) return cierreGrab.then(function(){ if(adjunto) return mandarAdjunto(texto); if(texto) return enviarMensaje(texto); });
+  if(cierreGrab) return cierreGrab.then(function(){ if(adjunto) return mandarAdjunto(texto, (adjunto && adjunto.tema) || temaActivo()); if(texto) return enviarMensaje(texto); });
   if(!texto) return;
   if(cmdLocal(texto)){ if(txt.value.trim() === texto){ txt.value = ""; txt.style.height = ""; } return; }   // 1631: sin red
   // 2220 {ticket}: el mensaje que es SOLO el nombre de una sub de awtomic (`cx5129`, `CX-5129`) no es un
@@ -9747,11 +9916,12 @@ if(window.visualViewport) visualViewport.addEventListener("resize", posNotiModal
   b.addEventListener("pointerleave", soltar(false));
   b.addEventListener("contextmenu", function(e){ e.preventDefault(); });
 })();
-// el camino entero: comprimir -> hash -> subir -> mandar el mensaje de la pestaña activa.
-function mandarFoto(file, pieTexto, tsEnvio){
+// el camino entero: comprimir -> hash -> subir -> mandar el mensaje de la pestaña donde se mando.
+function mandarFoto(file, pieTexto, tsEnvio, temaDestino){
   if(!file) return Promise.resolve();
   if(subiendoFoto) return Promise.resolve();
   tsEnvio = tsEnvio || Date.now();      // se mando ahora, aunque el mensaje salga cuando termine de subir
+  var tema = temaDestino || temaActivo();
   if(!token && !fotoStub){ sistema("no se puede subir la foto sin token", "error"); return Promise.resolve(); }
   subiendoFoto = true;
   $("camara").disabled = true;   // 1658: mientras sube alcanza con el boton apagado,
@@ -9771,7 +9941,7 @@ function mandarFoto(file, pieTexto, tsEnvio){
     var pie = (pieTexto !== undefined ? pieTexto : txt.value || "").trim();
     txt.value = ""; txt.style.height = "";
     return mandar((pie ? pie + "\n" : "") + "![" + (file.name || "foto") + "](" + ruta + ")",
-                  temaActivo(), false, tsEnvio);
+                  tema, false, tsEnvio);
   }).catch(function(e){
     sistema("no pude subir la foto: " + e.message, "error");
     ruta = null;                                  // fallo: el que la mando la puede volver a adjuntar
@@ -9787,7 +9957,7 @@ $("camara").addEventListener("click", function(){
 });
 $("foto").addEventListener("change", function(e){
   var f = (e.target.files || [])[0];
-  if(f) adjuntarFoto(f);
+  if(f) adjuntarFoto(f, temaActivo());
   $("foto").value = "";                          // asi elegir dos veces la misma foto vuelve a disparar
 });
 
@@ -9839,39 +10009,41 @@ function descartarAdjunto(){
   adjunto = null;
   pintarAdjunto();
 }
-function adjuntarFoto(file){
+function adjuntarFoto(file, temaFijo){
   if(!file) return null;
   if(subiendoFoto || subiendoAudio) return null;
   descartarAdjunto();                            // uno a la vez: el nuevo reemplaza al anterior
   adjunto = {tipo: "img", file: file, mime: file.type || "image/jpeg",
-             nombre: file.name || "foto.jpg", url: URL.createObjectURL(file)};
+             nombre: file.name || "foto.jpg", url: URL.createObjectURL(file), tema: temaFijo || temaActivo()};
   pintarAdjunto();
   txt.focus();
   return adjunto;
 }
-function adjuntarAudio(blob, mime, ms, dicho){
+function adjuntarAudio(blob, mime, ms, dicho, temaFijo){
   if(!blob || !blob.size) return null;
   if(subiendoFoto) return null;   // {enviar}: un audio subiendo ya no descarta al siguiente (se encola solo)
+  var temaA = temaFijo || temaActivo();
   // 2124 {audios}: dos audios seguidos. si ya hay uno esperando en el pie, ese sale (en orden, por la cola de
   // subida) y el nuevo toma su lugar: nunca se descarta un audio que facundo grabo
-  if(adjunto && adjunto.tipo === "aud") mandarAdjunto(txt.value); else descartarAdjunto();
+  if(adjunto && adjunto.tipo === "aud") mandarAdjunto(txt.value, (adjunto && adjunto.tema) || temaA); else descartarAdjunto();
   adjunto = {tipo: "aud", blob: blob, mime: mime || blob.type || "audio/webm",
              nombre: "audio", ms: ms || 0, url: URL.createObjectURL(blob),
              // lo que entendio el celu (1209): viaja en el mensaje, nunca se muestra (1650)
-             dicho: (dicho && dicho.texto) || "", dictLocal: !!(dicho && dicho.local)};
+             dicho: (dicho && dicho.texto) || "", dictLocal: !!(dicho && dicho.local), tema: temaA};
   pintarAdjunto();
   return adjunto;
 }
 // enviar con adjunto: sube y manda **un solo** mensaje con el texto de la caja adentro.
-function mandarAdjunto(texto){
+function mandarAdjunto(texto, temaDestino){
   if(!adjunto) return Promise.resolve();
   var a = adjunto, pie = (texto || "").trim(), ts = Date.now();   // apretar enviar es la hora del mensaje
+  var tema = temaDestino || (a && a.tema) || temaCaja || temaActivo();
   adjunto = null;                                // se saca del pie ya: no se manda dos veces
   pintarAdjunto();
   txt.value = ""; txt.style.height = "";
-  borrarBorrador(temaCaja || temaActivo());
-  var p = a.tipo === "img" ? mandarFoto(a.file, pie, ts)
-                          : mandarAudio(a.blob, a.mime, pie, ts, a.dicho ? {texto: a.dicho, local: a.dictLocal} : null);
+  borrarBorrador(tema);
+  var p = a.tipo === "img" ? mandarFoto(a.file, pie, ts, tema)
+                          : mandarAudio(a.blob, a.mime, pie, ts, a.dicho ? {texto: a.dicho, local: a.dictLocal} : null, null, tema);
   return Promise.resolve(p).then(function(r){
     if(r){                                       // salio: recien ahi se suelta el object url
       if(a.url && /^blob:/.test(a.url)){ try{ URL.revokeObjectURL(a.url); }catch(e){} }
@@ -10160,11 +10332,12 @@ function empezarGrabacion(){
 }
 // soltar manda; `enviar=false` (arrastrar el dedo afuera, o un toque de menos de AUDIO_MIN_MS) descarta.
 // `ya=true` ({enviar}): vino de la flecha del pie, asi que el audio **sale solo**, no queda de adjunto pendiente.
-function terminarGrabacion(enviar, ya){
+function terminarGrabacion(enviar, ya, temaDestino){
   // el mismo audio se puede cerrar por dos lados a la vez (la flecha del pie y el dedo que suelta el micro):
   // el primero lo cierra y el segundo no vuelve a llamar a `stop()` sobre un grabador que ya se fue ({enviar})
   if(!grabador || cerrandoGrab) return Promise.resolve(null);
   cerrandoGrab = true;
+  var temaG = temaDestino || temaActivo();
   var g = grabador, ms = Date.now() - desdeGrab, mime = g.mimeType || mimeAudio() || "audio/webm";
   if(enviar && ms < AUDIO_MIN_MS){ enviar = false; sistema("mantené apretado para grabar", "sistema"); }
   // 2124 {audios}: el cierre anterior puede seguir esperando su dictado (hasta DICT_GRACIA) mientras este ya
@@ -10181,7 +10354,7 @@ function terminarGrabacion(enviar, ya){
     var pg = podGrabando; podGrabando = false;   // 1939: el audio es una respuesta del episodio, no un mensaje del chat
     if(!enviar){ audioDestino = null; cortarDictado(); return null; }
     var dictadoProm = terminarDictado();         // el dictado de ESTE audio se cierra ahora, no despues del anterior
-    return previo.then(function(){ return dictadoProm; }).then(function(d){ return cerrarAudio(blob, d, ms, mime, pg, ya); });
+    return previo.then(function(){ return dictadoProm; }).then(function(d){ return cerrarAudio(blob, d, ms, mime, pg, ya, temaG); });
   }, function(){ cerrandoGrab = false; audioDestino = null; soltarMicro(); cortarDictado(); return null; });
   var mio = cierre.then(function(r){ if(cierreGrab === mio) cierreGrab = null; return r; },
                         function(){ if(cierreGrab === mio) cierreGrab = null; return null; });
@@ -10189,7 +10362,7 @@ function terminarGrabacion(enviar, ya){
   return cierre;
 }
 // lo que pasa con el audio ya cerrado y con su dictado: sale, queda en el pie o va a la fila del podcast
-function cerrarAudio(blob, d, ms, mime, pg, ya){
+function cerrarAudio(blob, d, ms, mime, pg, ya, temaDestino){
   return Promise.resolve().then(function(){
     if(!blob || !blob.size){
       // el micro no dejo nada (en ios el reconocedor puede pelearle la sesion de audio): si el celu igual
@@ -10212,10 +10385,10 @@ function cerrarAudio(blob, d, ms, mime, pg, ya){
       if(pg) return podSumarAudio(blob, mime, ms, d);
       // {enviar}: la flecha del pie manda ESTE audio ya (con lo que haya escrito en la caja) y deja el micro
       // libre en el acto; no pasa por el adjunto pendiente, asi el siguiente no lo pisa ni lo borra
-      if(ya && !audioDestino) return mandarAudio(blob, mime, undefined, undefined, d);
+      if(ya && !audioDestino) return mandarAudio(blob, mime, undefined, undefined, d, null, temaDestino || temaActivo());
       // 1970: con la barra grande prendida el audio queda pre mandado arriba de ella hasta el `enviar`;
       // apagada (1573 {teclado}) el celu vuelve al camino de siempre: adjunto pendiente con play y `×`
-      if(audPieGrande() && !audioDestino) return audSumar(blob, mime, ms, d);
+      if(audPieGrande() && !audioDestino) return audSumar(blob, mime, ms, d, temaDestino);
       // 1350: la voz del modal de una push sale ya, a su tema y con la cita (no hay adjunto que revisar)
       if(audioDestino){
         var ad = audioDestino; audioDestino = null;
@@ -10226,7 +10399,7 @@ function cerrarAudio(blob, d, ms, mime, pg, ya){
         });
       }
       // no se manda al soltar (facundo, 2026-09-12): queda como adjunto pendiente con play y `×`
-      return adjuntarAudio(blob, mime, ms, d);
+      return adjuntarAudio(blob, mime, ms, d, temaDestino);
     });
   });
 }
@@ -10246,9 +10419,10 @@ function nombreAudio(hash, mime){ return "audio/" + hash + "." + extAudio(mime);
 // **no se descarta**: se encola y sale apenas termina el anterior, con su burbuja `enviando` a la vista desde el
 // primer momento y con su propia hora. el pie (el texto de la caja) se lee aca, al encolar, no al subir: asi el
 // segundo audio no se lleva lo que facundo escribio despues.
-function mandarAudio(blob, mime, pieTexto, tsEnvio, dicho, destino){
+function mandarAudio(blob, mime, pieTexto, tsEnvio, dicho, destino, temaDestino){
   // subir el audio y transcribirlo tarda: la hora del mensaje es esta, no la de cuando termina (1191)
   tsEnvio = tsEnvio || Date.now();
+  var tema = (destino && destino.tema) || temaDestino || temaActivo();
   if(!token && !fotoStub){ sistema("no se puede subir el audio sin token", "error"); return Promise.resolve(null); }
   if(blob.size > AUDIO_TOPE){
     sistema("el audio pesa " + Math.round(blob.size / 1024) + " kb, es mucho", "error");
@@ -10256,8 +10430,8 @@ function mandarAudio(blob, mime, pieTexto, tsEnvio, dicho, destino){
   }
   var pie = destino ? "" : (pieTexto !== undefined ? pieTexto : txt.value || "").trim();
   if(!destino && pieTexto === undefined){ txt.value = ""; txt.style.height = ""; }   // la caja se vacia al encolar
-  var prov = burbujaEnviando(blob, pie, tsEnvio, destino);   // 1650: se ve ya, a .8, en vez de "subiendo..."
-  var t = {blob: blob, mime: mime, pie: pie, ts: tsEnvio, dicho: dicho, destino: destino, prov: prov};
+  var prov = burbujaEnviando(blob, pie, tsEnvio, destino, tema);   // 1650: se ve ya, a .8, en vez de "subiendo..."
+  var t = {blob: blob, mime: mime, pie: pie, ts: tsEnvio, dicho: dicho, destino: destino, prov: prov, tema: tema};
   if(subiendoAudio) return new Promise(function(res){ colaAudios.push({t: t, res: res}); });
   return subirAudioYa(t);
 }
@@ -10267,7 +10441,7 @@ function siguienteAudio(){
   subirAudioYa(n.t).then(n.res, function(){ n.res(null); });
 }
 function subirAudioYa(t){
-  var blob = t.blob, mime = t.mime, tsEnvio = t.ts, dicho = t.dicho, destino = t.destino, prov = t.prov;
+  var blob = t.blob, mime = t.mime, tsEnvio = t.ts, dicho = t.dicho, destino = t.destino, prov = t.prov, tema = t.tema || temaActivo();
   subiendoAudio = true;
   marcarOcupado("subiendo", true);    // y tampoco se reinicia mientras el m4a viaja al server
   var ruta;
@@ -10295,7 +10469,7 @@ function subirAudioYa(t){
     }
     var pie = t.pie;
     return mandar((pie ? pie + "\n" : "") + (dictado_ ? MARCA_CELU + dictado_ + "\n" : "") +
-                  "[audio](" + ruta + ")", temaActivo(), false, tsEnvio);
+                  "[audio](" + ruta + ")", tema, false, tsEnvio);
   }).catch(function(e){
     sistema("no pude subir el audio: " + (e && e.message || e), "error");
     ruta = null;                                  // fallo: el audio vuelve a quedar pendiente
@@ -10309,13 +10483,14 @@ function subirAudioYa(t){
 // 1650 (facundo, 2026-09-15): "yo quiero ver el audio enviado como audio ... estilo whatsapp, con .8 de opacidad
 // mientras se esta enviando". la burbuja sale al toque con el reproductor del blob local y la clase `enviando`; no
 // viaja ni se guarda en ningun lado. cuando el server confirma, `mandar` pinta la de verdad y esta se saca.
-function burbujaEnviando(blob, pieTexto, tsEnvio, destino){
+function burbujaEnviando(blob, pieTexto, tsEnvio, destino, temaFijo){
   try{
     var src = "audio/enviando-" + tsEnvio + "." + extAudio(blob.type || "audio/webm");
     audioUrls[src] = URL.createObjectURL(blob);
     var pie = destino ? "" : (pieTexto || "").trim();
+    var tema = destino ? destino.tema : (temaFijo || temaActivo());
     var m = {id: "env:" + tsEnvio, clase: "yo", quien: QUIEN_F, texto: (pie ? pie + "\n" : "") + "[audio](" + src + ")",
-             iso: new Date(tsEnvio).toISOString(), explicito: true, tema: destino ? destino.tema : temaActivo(),
+             iso: new Date(tsEnvio).toISOString(), explicito: true, tema: tema,
              enviando: true, src: src};
     msgsCom.push(m); msgs.push(m); pintarMsg(m, false);
     if(!destino) alFinal();
@@ -10723,9 +10898,9 @@ function audGrabar(){
   });
 }
 // pausa (o el `enviar` con el micro abierto) deja el audio pre mandado arriba de la barra, como hoy el adjunto
-function audSumar(blob, mime, ms, dicho){
+function audSumar(blob, mime, ms, dicho, temaFijo){
   var a = {id: "ap" + (++audSeq), blob: blob, mime: mime || blob.type || "audio/webm", ms: ms || 0,
-           dicho: dicho || null, url: null};
+           dicho: dicho || null, url: null, tema: temaFijo || temaActivo()};
   try{ a.url = URL.createObjectURL(blob); }catch(e){}
   audPend.push(a);
   audPintar();
@@ -10742,7 +10917,8 @@ function audBorrar(id){
 // manda todo lo que haya: el que se esta grabando (sin pasar por pausa) y los que ya quedaron arriba
 function audEnviar(){
   if(audEnviando) return Promise.resolve(0);
-  var antes = grabador ? terminarGrabacion(true) : Promise.resolve(null);
+  var tema = temaActivo();
+  var antes = grabador ? terminarGrabacion(true, false, tema) : Promise.resolve(null);
   return Promise.resolve(antes).then(function(){
     if(!audPend.length) return 0;
     var fila = audPend.slice(), pie = ($("txt").value || "").trim();
@@ -10751,7 +10927,7 @@ function audEnviar(){
     audPintar();
     return fila.reduce(function(p, a, i){
       return p.then(function(n){
-        return mandarAudio(a.blob, a.mime, i === 0 ? pie : "", Date.now(), a.dicho).then(function(ruta){
+        return mandarAudio(a.blob, a.mime, i === 0 ? pie : "", Date.now(), a.dicho, null, (a && a.tema) || tema).then(function(ruta){
           if(!ruta) audPend.push(a);       // no salio: vuelve a la fila, no se pierde
           return n + (ruta ? 1 : 0);
         });
@@ -12797,6 +12973,10 @@ function cargarWidgets(fresco){
     if(r.status === 304){ pintarWidgets(null); return; }
     etagWid = r.etag;
     lanAnuncio(r.json);
+    if(r.json && r.json.motor){
+      cfgMotor = r.json.motor;
+      if($("tab-motor-fila")) pintarFilaMotor();
+    }
     selDesdeWidgets(r.json);   // 1407: respaldo del modal y del boton `votar` sin lan
     pintarWidgets(r.json);
   });
@@ -14872,6 +15052,12 @@ window.__agente = {
     total: (docs.idx || {}).total, archivados: (docs.idx || {}).archivados}; },
   medirCentro: medirCentro,
   fmtTiempo: fmtTiempo,
+  // 3333 {selector}: motor, modelo y effort por pestaña
+  pintarFilaMotor: pintarFilaMotor, cargarCfgMotor: cargarCfgMotor,
+  cfgMotor: function(){ return cfgMotor; },
+  setCfgMotor: function(c){ cfgMotor = c; },
+  ultimoCorridoDeTab: ultimoCorridoDeTab,
+  refrescarUltimoCorrido: refrescarUltimoCorrido,
   // 1631: glifo `/` de comandos (`prueba_web_comandos`)
   cmdAbrir: cmdAbrir, cmdLocal: cmdLocal, cmdCargar: cmdCargar,
   cmdPoner: function(l){ cmdLista = l; }, cmdAbierto: function(){ return !!(cmdModal && cmdModal.abierto); },

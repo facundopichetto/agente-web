@@ -1,0 +1,313 @@
+{
+  "filas": {
+    "flos": {
+      "modelos": [
+        "claude",
+        "agy",
+        "opus",
+        "sonnet",
+        "fable",
+        "geminiflash",
+        "geminipro"
+      ],
+      "modelo_default": "claude",
+      "efforts": [
+        "ultracode",
+        "max",
+        "xhigh",
+        "high",
+        "medium",
+        "low"
+      ],
+      "effort_default": "ultracode"
+    },
+    "awtomic": {
+      "modelos": [
+        "sonnet",
+        "opus",
+        "claude",
+        "agy",
+        "geminiflash"
+      ],
+      "modelo_default": "sonnet",
+      "efforts": [
+        "max",
+        "xhigh",
+        "high",
+        "medium",
+        "low"
+      ],
+      "effort_default": "medium"
+    },
+    "server": {
+      "modelos": [
+        "sonnet",
+        "opus",
+        "claude",
+        "agy",
+        "geminiflash"
+      ],
+      "modelo_default": "sonnet",
+      "efforts": [
+        "ultracode",
+        "max",
+        "xhigh",
+        "high",
+        "medium",
+        "low"
+      ],
+      "effort_default": "high"
+    },
+    "plata": {
+      "modelos": [
+        "sonnet",
+        "opus",
+        "claude",
+        "agy",
+        "fable",
+        "geminiflash"
+      ],
+      "modelo_default": "sonnet",
+      "efforts": [
+        "max",
+        "xhigh",
+        "high",
+        "medium",
+        "low"
+      ],
+      "effort_default": "medium"
+    },
+    "juegos": {
+      "modelos": [
+        "sonnet",
+        "opus",
+        "claude",
+        "agy",
+        "fable",
+        "geminiflash"
+      ],
+      "modelo_default": "sonnet",
+      "efforts": [
+        "max",
+        "xhigh",
+        "high",
+        "medium",
+        "low"
+      ],
+      "effort_default": "medium"
+    }
+  },
+  "defaults_global": {
+    "modelo": "sonnet",
+    "effort": "medium"
+  },
+  "elegidos": {
+    "flos": {
+      "modelo": "claude",
+      "effort": "ultracode"
+    },
+    "modelos": {
+      "motor": "agy",
+      "modelo": "geminiflash",
+      "effort": "high"
+    },
+    "tinder": {
+      "motor": "agy",
+      "modelo": "geminiflash",
+      "effort": "high"
+    },
+    "juegos": {
+      "motor": "agy",
+      "modelo": "geminiflash",
+      "effort": "medium"
+    }
+  },
+  "resueltos": {
+    "awtomic": {
+      "pestana": "awtomic",
+      "tema": null,
+      "fila": "awtomic",
+      "motor": "claude",
+      "modelo": "sonnet",
+      "effort": "medium",
+      "origen_motor": "default",
+      "origen_modelo": "default_fila",
+      "origen_effort": "default_fila",
+      "flags": [
+        "--model",
+        "sonnet",
+        "--effort",
+        "medium"
+      ],
+      "flags_effort": [
+        "--effort",
+        "medium"
+      ]
+    },
+    "flos": {
+      "pestana": "flos",
+      "tema": null,
+      "fila": "flos",
+      "motor": "claude",
+      "modelo": "claude",
+      "effort": "ultracode",
+      "origen_motor": "default",
+      "origen_modelo": "selector_exacto",
+      "origen_effort": "selector_exacto",
+      "flags": [
+        "--settings",
+        "{\"ultracode\":true}",
+        "--effort",
+        "max"
+      ],
+      "flags_effort": [
+        "--settings",
+        "{\"ultracode\":true}",
+        "--effort",
+        "max"
+      ]
+    },
+    "juegos": {
+      "pestana": "juegos",
+      "tema": null,
+      "fila": "juegos",
+      "motor": "agy",
+      "modelo": "geminiflash",
+      "effort": "medium",
+      "origen_motor": "selector_exacto",
+      "origen_modelo": "selector_exacto",
+      "origen_effort": "selector_exacto",
+      "flags": [
+        "--model",
+        "geminiflash",
+        "--effort",
+        "medium"
+      ],
+      "flags_effort": [
+        "--effort",
+        "medium"
+      ]
+    },
+    "modelos": {
+      "pestana": "modelos",
+      "tema": null,
+      "fila": null,
+      "motor": "agy",
+      "modelo": "geminiflash",
+      "effort": "high",
+      "origen_motor": "selector_exacto",
+      "origen_modelo": "selector_exacto",
+      "origen_effort": "selector_exacto",
+      "flags": [
+        "--model",
+        "geminiflash",
+        "--effort",
+        "high"
+      ],
+      "flags_effort": [
+        "--effort",
+        "high"
+      ]
+    },
+    "plata": {
+      "pestana": "plata",
+      "tema": null,
+      "fila": "plata",
+      "motor": "claude",
+      "modelo": "sonnet",
+      "effort": "medium",
+      "origen_motor": "default",
+      "origen_modelo": "default_fila",
+      "origen_effort": "default_fila",
+      "flags": [
+        "--model",
+        "sonnet",
+        "--effort",
+        "medium"
+      ],
+      "flags_effort": [
+        "--effort",
+        "medium"
+      ]
+    },
+    "server": {
+      "pestana": "server",
+      "tema": null,
+      "fila": "server",
+      "motor": "claude",
+      "modelo": "sonnet",
+      "effort": "high",
+      "origen_motor": "default",
+      "origen_modelo": "default_fila",
+      "origen_effort": "default_fila",
+      "flags": [
+        "--model",
+        "sonnet",
+        "--effort",
+        "high"
+      ],
+      "flags_effort": [
+        "--effort",
+        "high"
+      ]
+    },
+    "tinder": {
+      "pestana": "tinder",
+      "tema": null,
+      "fila": null,
+      "motor": "agy",
+      "modelo": "geminiflash",
+      "effort": "high",
+      "origen_motor": "selector_exacto",
+      "origen_modelo": "selector_exacto",
+      "origen_effort": "selector_exacto",
+      "flags": [
+        "--model",
+        "geminiflash",
+        "--effort",
+        "high"
+      ],
+      "flags_effort": [
+        "--effort",
+        "high"
+      ]
+    }
+  },
+  "ultimos": {
+    "awtomic": {
+      "motor": "qa",
+      "modelo": "sonnet",
+      "effort": "medium"
+    },
+    "flos": {
+      "motor": "claude",
+      "modelo": "opus",
+      "effort": "ultracode"
+    },
+    "juegos": {
+      "motor": "agy",
+      "modelo": "geminiflash",
+      "effort": "medium"
+    },
+    "modelos": {
+      "motor": "agy",
+      "modelo": "geminiflash",
+      "effort": "high"
+    },
+    "plata": {
+      "motor": "claude",
+      "modelo": "sonnet",
+      "effort": "medium"
+    },
+    "server": {
+      "motor": "claude",
+      "modelo": "sonnet",
+      "effort": "high"
+    },
+    "tinder": {
+      "motor": "agy",
+      "modelo": "geminiflash",
+      "effort": "high"
+    }
+  }
+}
