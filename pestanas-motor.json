@@ -136,8 +136,8 @@
   },
   "elegidos": {
     "flos": {
-      "modelo": "geminiflash",
-      "effort": "medium",
+      "modelo": "gemini-3.8-flash",
+      "effort": "high",
       "motor": "agy"
     },
     "modelos": {
@@ -183,20 +183,20 @@
       "tema": null,
       "fila": "flos",
       "motor": "agy",
-      "modelo": "geminiflash",
-      "effort": "medium",
+      "modelo": "gemini-3.8-flash",
+      "effort": "high",
       "origen_motor": "del_modelo",
       "origen_modelo": "selector_exacto",
       "origen_effort": "selector_exacto",
       "flags": [
         "--model",
-        "geminiflash",
+        "gemini-3.8-flash",
         "--effort",
-        "medium"
+        "high"
       ],
       "flags_effort": [
         "--effort",
-        "medium"
+        "high"
       ]
     },
     "juegos": {
@@ -307,13 +307,12 @@
   },
   "ultimos": {
     "flos": {
-      "motor": "agy",
-      "modelo": "agy"
+      "motor": "claude",
+      "modelo": "sonnet"
     },
     "juegos": {
       "motor": "agy",
-      "modelo": "geminiflash",
-      "effort": "medium"
+      "modelo": "agy"
     },
     "modelos": {
       "motor": "agy",
