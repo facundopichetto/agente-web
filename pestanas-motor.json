@@ -401,8 +401,8 @@
       "modelo": "sonnet"
     },
     "flos": {
-      "motor": "agy",
-      "modelo": "agy"
+      "motor": "claude",
+      "modelo": "fable"
     },
     "juegos": {
       "motor": "agy",
