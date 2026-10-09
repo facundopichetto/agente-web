@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.539">
-<link rel="manifest" href="manifest.json?v=4.539">
+<meta name="agente-web-version" content="4.540">
+<link rel="manifest" href="manifest.json?v=4.540">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.539">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.540">
 </head>
 <body>
 
@@ -1717,32 +1717,33 @@ function filaDeTab(tAct){
   var esJuegos = (base === "juegos");
   var esServer = (base === "server");
   var esPlata = (base === "plata");
+  var agyFallback = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.1-pro", "claude-opus-5-5", "claude-sonnet-5-5", "gpt-oss-120b", "geminiflash", "geminipro"];
   if(esFlos) return {
-    modelos: ["claude", "agy", "opus", "sonnet", "fable", "geminiflash", "geminipro"],
+    modelos: ["claude", "opus", "sonnet", "fable"].concat(agyFallback),
     modelo_default: "claude",
     efforts: ["ultracode", "max", "xhigh", "high", "medium", "low"],
     effort_default: "ultracode"
   };
   if(esAwt) return {
-    modelos: ["sonnet", "opus", "claude", "agy", "geminiflash"],
+    modelos: ["sonnet", "opus", "claude"].concat(agyFallback),
     modelo_default: "sonnet",
     efforts: ["max", "xhigh", "high", "medium", "low"],
     effort_default: "medium"
   };
   if(esJuegos || esPlata) return {
-    modelos: ["sonnet", "opus", "claude", "agy", "fable", "geminiflash"],
+    modelos: ["sonnet", "opus", "claude", "fable"].concat(agyFallback),
     modelo_default: "sonnet",
     efforts: ["max", "xhigh", "high", "medium", "low"],
     effort_default: "medium"
   };
   if(esServer) return {
-    modelos: ["sonnet", "opus", "claude", "agy", "geminiflash"],
+    modelos: ["sonnet", "opus", "claude"].concat(agyFallback),
     modelo_default: "sonnet",
     efforts: ["ultracode", "max", "xhigh", "high", "medium", "low"],
     effort_default: "high"
   };
   return {
-    modelos: ["sonnet", "opus", "claude", "agy", "geminiflash"],
+    modelos: ["sonnet", "opus", "claude"].concat(agyFallback),
     modelo_default: "sonnet",
     efforts: ["ultracode", "max", "xhigh", "high", "medium", "low"],
     effort_default: "medium"
@@ -1856,18 +1857,45 @@ function pintarFilaMotor(){
   function modelosDisponibles(mot){
     var permitidos = (fil && fil.modelos) ? fil.modelos.slice() : [];
     if(mot === "agy"){
-      var modsAgy = permitidos.filter(function(x){ return x === "geminiflash" || x === "geminipro" || x === "agy"; });
-      if(!modsAgy.length) modsAgy = ["geminiflash", "geminipro"];
-      return modsAgy;
+      var listaAgy = [];
+      if(cfgMotor && cfgMotor.modelos_agy){
+        listaAgy = Array.isArray(cfgMotor.modelos_agy) ? cfgMotor.modelos_agy.slice() : Object.keys(cfgMotor.modelos_agy);
+      }
+      if(!listaAgy.length){
+        listaAgy = permitidos.filter(function(x){
+          return x !== "agy" && x !== "claude" && x !== "sonnet" && x !== "opus" && x !== "fable";
+        });
+      }
+      if(!listaAgy.length){
+        listaAgy = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.1-pro", "claude-opus-5-5", "claude-sonnet-5-5", "gpt-oss-120b"];
+      }
+      // 3382 {dinamica}: excluir el alias generico 'agy' como opcion de modelo
+      listaAgy = listaAgy.filter(function(x){ return x !== "agy"; });
+      // Si la pestaña tenia elegido geminiflash/geminipro guardado de antes, mantenerlo en las opciones
+      var guardado = (el && el.modelo) || "";
+      if(guardado && (guardado === "geminiflash" || guardado === "geminipro") && listaAgy.indexOf(guardado) < 0){
+        listaAgy.unshift(guardado);
+      }
+      return listaAgy;
     }
-    var modsClaude = permitidos.filter(function(x){ return x !== "geminiflash" && x !== "geminipro" && x !== "agy"; });
+    var modsClaude = permitidos.filter(function(x){
+      if(x === "agy" || x === "geminiflash" || x === "geminipro") return false;
+      if(cfgMotor && cfgMotor.modelos_agy && cfgMotor.modelos_agy[x]) return false;
+      if(x.indexOf("gemini-") === 0 || x.indexOf("gpt-oss-") === 0 || x.indexOf("claude-") === 0) return false;
+      return true;
+    });
     if(!modsClaude.length) modsClaude = ["sonnet", "opus", "claude"];
     return modsClaude;
   }
 
   function defaultModeloDe(mot){
     var disp = modelosDisponibles(mot);
-    if(mot === "agy") return (disp.indexOf("geminiflash") >= 0) ? "geminiflash" : disp[0];
+    if(mot === "agy"){
+      if(fil && fil.modelo_default && disp.indexOf(fil.modelo_default) >= 0) return fil.modelo_default;
+      if(disp.indexOf("gemini-3.8-flash") >= 0) return "gemini-3.8-flash";
+      if(disp.indexOf("geminiflash") >= 0) return "geminiflash";
+      return disp[0];
+    }
     if(fil && fil.modelo_default && disp.indexOf(fil.modelo_default) >= 0) return fil.modelo_default;
     if(disp.indexOf("sonnet") >= 0) return "sonnet";
     return disp[0] || "sonnet";
@@ -1877,6 +1905,13 @@ function pintarFilaMotor(){
     var permitidos = (fil && fil.efforts) ? fil.efforts.slice() : ["max", "xhigh", "high", "medium", "low"];
     permitidos = permitidos.filter(function(e){ return e !== "standard"; });
     if(mot === "agy"){
+      var modSel = (selMod && selMod.value) || (el && el.modelo) || "gemini-3.8-flash";
+      if(cfgMotor && cfgMotor.modelos_agy && cfgMotor.modelos_agy[modSel]){
+        var effsMod = cfgMotor.modelos_agy[modSel];
+        if(Array.isArray(effsMod) && effsMod.length) return effsMod;
+      }
+      if(modSel === "gemini-3.1-pro" || modSel === "geminipro") return ["high", "low"];
+      if(modSel === "gpt-oss-120b") return ["medium"];
       var agyEffs = permitidos.filter(function(e){ return e === "high" || e === "medium" || e === "low"; });
       return agyEffs.length ? agyEffs : ["high", "medium", "low"];
     }
@@ -1897,7 +1932,7 @@ function pintarFilaMotor(){
     var defMod = defaultModeloDe(mot);
     var modGuardado = (el && el.modelo) || null;
     if(!modGuardado && !cfgMotor && typeof localStorage !== "undefined") modGuardado = localStorage.getItem("flos_motor_modelo_" + tAct);
-    if(!modGuardado || listaMods.indexOf(modGuardado) < 0) modGuardado = defMod;
+    if(!modGuardado || modGuardado === "agy" || listaMods.indexOf(modGuardado) < 0) modGuardado = defMod;
     selMod.innerHTML = "";
     listaMods.forEach(function(mod){
       var opt = document.createElement("option");
@@ -1949,9 +1984,13 @@ function pintarFilaMotor(){
 
   selMod.onchange = function(){
     if(typeof localStorage !== "undefined") localStorage.setItem("flos_motor_modelo_" + tAct, selMod.value);
+    refrescarEfforts();
     mandarAparte = true;
     try{
       mandar("motor " + tAct + " " + selMod.value, tAct, false);
+      if(selMot.value === "agy"){
+        mandar("effort " + tAct + " " + selEff.value, tAct, false);
+      }
     }finally{ mandarAparte = false; }
   };
 
@@ -3064,9 +3103,17 @@ function nodoMsg(m){
     });
     return cats.join(", ") || "herramientas";
   }
+  // las `ACCION <id>:` salen del cuerpo antes que nada: abajo van como caja verde `dale`, no como texto
+  var acc = m.clase === "agente" ? accionesDe(m.texto) : null;
+  var textoSinAcc = acc && acc.cuerpo !== null ? acc.cuerpo : m.texto;
+  var ops = m.clase === "agente" ? cajasDe({texto: textoSinAcc, opciones: m.opciones}) : null;
+  var dr = draftsDe(ops && ops.cuerpo !== null ? ops.cuerpo : textoSinAcc);
+  var cuerpoTxt = m.clase === "agente" && dr.bloques.length ? dr.cuerpo : (ops && ops.cuerpo !== null ? ops.cuerpo : (m.clase === "yo" ? sinMarcaMal(sinDictado(m.texto)) : textoSinAcc));
+  var finalCuerpo = cuerpoTxt || m.texto || "";
   var hilo = null;
   if(m.clase === "agente" && m.tramos && m.tramos.length){
-    var tt = m.tramos.filter(function(t){
+    var trs = tramosSinFinal(m.tramos, finalCuerpo) || [];
+    var tt = trs.filter(function(t){
       if(!t || !tipoTramo(t) || tipoTramo(t) === "caja") return false;
       var s = String(t.texto || "").trim();
       if(!s) return false;
@@ -3109,12 +3156,6 @@ function nodoMsg(m){
   }
   var b = document.createElement("div");
   b.className = "cuerpo";
-  // las `ACCION <id>:` salen del cuerpo antes que nada: abajo van como caja verde `dale`, no como texto
-  var acc = m.clase === "agente" ? accionesDe(m.texto) : null;
-  var textoSinAcc = acc && acc.cuerpo !== null ? acc.cuerpo : m.texto;
-  var ops = m.clase === "agente" ? cajasDe({texto: textoSinAcc, opciones: m.opciones}) : null;
-  var dr = draftsDe(ops && ops.cuerpo !== null ? ops.cuerpo : textoSinAcc);
-  var cuerpoTxt = m.clase === "agente" && dr.bloques.length ? dr.cuerpo : (ops && ops.cuerpo !== null ? ops.cuerpo : (m.clase === "yo" ? sinMarcaMal(sinDictado(m.texto)) : textoSinAcc));
   b.innerHTML = resaltar(auds.length ? sinMarcaAudio(cuerpoTxt) : cuerpoTxt);
   // 2336 {cambios} (facundo, 2026-09-23: "el mensaje deberia estar antes de las cajas de decision. las cajas de
   // decision siempre lo ultimo. incluso despues del audio. que el audio se inyecte antes, cuando este listo"):
@@ -8799,6 +8840,25 @@ function pintarVuelo(){
 function normTramo(t){
   return String(t || "").replace(/^\s*\[[\w\/#-]+\]\s*/, "").replace(/\s+/g, " ").trim();
 }
+// {encolar-deduplicar}: detecta si un tramo de texto duplica o es redundante contra el cuerpo final
+function tramoDuplicaCuerpo(tTexto, finalTxt){
+  if(!tTexto || !finalTxt) return false;
+  var a = normTramo(tTexto), b = normTramo(finalTxt);
+  if(!a || !b) return false;
+  if(a === b) return true;
+  var sa = opcionesDe(tTexto).cuerpo, sb = opcionesDe(finalTxt).cuerpo;
+  var a2 = sa !== null ? normTramo(sa) : a, b2 = sb !== null ? normTramo(sb) : b;
+  if(a2 && b2 && a2 === b2) return true;
+  var aMin = a2 || a, bMin = b2 || b;
+  var minLen = 12;
+  if(aMin.length >= minLen && bMin.indexOf(aMin) >= 0) return true;
+  if(bMin.length >= minLen && aMin.indexOf(bMin) >= 0) return true;
+  var prefA = aMin.slice(0, 120);
+  if(prefA.length >= minLen && bMin.indexOf(prefA) >= 0) return true;
+  var prefB = bMin.slice(0, 120);
+  if(prefB.length >= minLen && aMin.indexOf(prefB) >= 0) return true;
+  return false;
+}
 function tipoTramo(t){
   if(!t) return "texto";
   if(t.tipo === "hecho") return "hecho";
@@ -8920,14 +8980,19 @@ function tramosSinFinal(tramos, final){
   // 2557: las cajas que llegaron en vuelo no quedan en el hilo: la respuesta las trae como cajas tocables
   var l = (tramos || []).filter(function(t){ return t && tipoTramo(t) && tipoTramo(t) !== "caja" && String(t.texto || "").trim(); });
   if(!l.length) return null;
-  var ult = -1;
-  for(var i = 0; i < l.length; i++) if(tipoTramo(l[i]) === "texto") ult = i;
-  if(ult >= 0){
-    var a = normTramo(l[ult].texto), b = normTramo(final);
-    // 2557: con la votacion las opciones del final son otras: se compara tambien el cuerpo sin las `OPCION`
-    var sa = opcionesDe(l[ult].texto).cuerpo, sb = opcionesDe(final).cuerpo;
-    var a2 = sa !== null ? normTramo(sa) : a, b2 = sb !== null ? normTramo(sb) : b;
-    if(a && b && (a === b || b.indexOf(a.slice(0, 120)) === 0 || (a2 && a2 === b2))) l = l.slice(0, ult).concat(l.slice(ult + 1));
+  // {encolar-deduplicar}: si no hubo herramientas, los tramos de texto eran solo streaming del cuerpo final
+  var tieneHecho = l.some(function(t){ return tipoTramo(t) === "hecho"; });
+  if(!tieneHecho){
+    l = l.filter(function(t){
+      if(tipoTramo(t) !== "texto") return true;
+      return !tramoDuplicaCuerpo(t.texto, final);
+    });
+  } else {
+    var ult = -1;
+    for(var i = 0; i < l.length; i++) if(tipoTramo(l[i]) === "texto") ult = i;
+    if(ult >= 0 && tramoDuplicaCuerpo(l[ult].texto, final)){
+      l = l.slice(0, ult).concat(l.slice(ult + 1));
+    }
   }
   return l.length ? l : null;
 }
@@ -15983,7 +16048,7 @@ window.__agente = {
   // 1776: el hilo progresivo. `tramos()` = los textos pintados en el chat, en orden (vuelo y respuestas)
   tramos: function(){ return lista ? [].map.call(lista.querySelectorAll(".msg .hilo .tramo"), function(d){
     return {clase: d.className, texto: d.textContent, msg: (d.closest(".msg") || {}).id || ((d.closest(".msg") || {}).dataset || {}).id || ""}; }) : []; },
-  tramosSinFinal: tramosSinFinal, normTramo: normTramo,
+  tramosSinFinal: tramosSinFinal, normTramo: normTramo, tramoDuplicaCuerpo: tramoDuplicaCuerpo,
   // 1793: el board por modulos. `prueba_web_modulos` mira desde aca que un repintado no toque el chat,
   // que `destruir()` no deje timers ni handlers colgados y que el fallback al reload siga estando.
   modulos: MODULOS,

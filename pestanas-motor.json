@@ -3,12 +3,18 @@
     "flos": {
       "modelos": [
         "claude",
-        "agy",
         "opus",
         "sonnet",
         "fable",
         "geminiflash",
-        "geminipro"
+        "geminipro",
+        "gemini-3.8-flash",
+        "gemini-3.7-flash",
+        "gemini-3.6-flash",
+        "gemini-3.1-pro",
+        "claude-opus-5-5",
+        "claude-sonnet-5-5",
+        "gpt-oss-120b"
       ],
       "modelo_default": "claude",
       "efforts": [
@@ -26,8 +32,14 @@
         "sonnet",
         "opus",
         "claude",
-        "agy",
-        "geminiflash"
+        "geminiflash",
+        "gemini-3.8-flash",
+        "gemini-3.7-flash",
+        "gemini-3.6-flash",
+        "gemini-3.1-pro",
+        "claude-opus-5-5",
+        "claude-sonnet-5-5",
+        "gpt-oss-120b"
       ],
       "modelo_default": "sonnet",
       "efforts": [
@@ -45,8 +57,14 @@
         "sonnet",
         "opus",
         "claude",
-        "agy",
-        "geminiflash"
+        "geminiflash",
+        "gemini-3.8-flash",
+        "gemini-3.7-flash",
+        "gemini-3.6-flash",
+        "gemini-3.1-pro",
+        "claude-opus-5-5",
+        "claude-sonnet-5-5",
+        "gpt-oss-120b"
       ],
       "modelo_default": "sonnet",
       "efforts": [
@@ -64,9 +82,15 @@
         "sonnet",
         "opus",
         "claude",
-        "agy",
         "fable",
-        "geminiflash"
+        "geminiflash",
+        "gemini-3.8-flash",
+        "gemini-3.7-flash",
+        "gemini-3.6-flash",
+        "gemini-3.1-pro",
+        "claude-opus-5-5",
+        "claude-sonnet-5-5",
+        "gpt-oss-120b"
       ],
       "modelo_default": "sonnet",
       "efforts": [
@@ -84,9 +108,15 @@
         "sonnet",
         "opus",
         "claude",
-        "agy",
         "fable",
-        "geminiflash"
+        "geminiflash",
+        "gemini-3.8-flash",
+        "gemini-3.7-flash",
+        "gemini-3.6-flash",
+        "gemini-3.1-pro",
+        "claude-opus-5-5",
+        "claude-sonnet-5-5",
+        "gpt-oss-120b"
       ],
       "modelo_default": "sonnet",
       "efforts": [
@@ -258,12 +288,14 @@
       "tema": null,
       "fila": null,
       "motor": "agy",
-      "modelo": "agy",
+      "modelo": "gemini-3.8-flash",
       "effort": "high",
       "origen_motor": "del_modelo",
       "origen_modelo": "selector_exacto",
       "origen_effort": "selector_exacto",
       "flags": [
+        "--model",
+        "gemini-3.8-flash",
         "--effort",
         "high"
       ],
@@ -276,8 +308,7 @@
   "ultimos": {
     "flos": {
       "motor": "agy",
-      "modelo": "geminiflash",
-      "effort": "medium"
+      "modelo": "agy"
     },
     "juegos": {
       "motor": "agy",
@@ -286,13 +317,46 @@
     },
     "modelos": {
       "motor": "agy",
-      "modelo": "geminiflash",
-      "effort": "medium"
+      "modelo": "agy"
     },
     "tinder": {
       "motor": "agy",
       "modelo": "agy",
       "effort": "high"
     }
+  },
+  "modelos_agy": {
+    "gemini-3.8-flash": [
+      "high",
+      "medium",
+      "low"
+    ],
+    "gemini-3.7-flash": [
+      "high",
+      "medium",
+      "low"
+    ],
+    "gemini-3.6-flash": [
+      "high",
+      "medium",
+      "low"
+    ],
+    "gemini-3.1-pro": [
+      "high",
+      "low"
+    ],
+    "claude-opus-5-5": [
+      "high",
+      "medium",
+      "low"
+    ],
+    "claude-sonnet-5-5": [
+      "high",
+      "medium",
+      "low"
+    ],
+    "gpt-oss-120b": [
+      "medium"
+    ]
   }
 }
