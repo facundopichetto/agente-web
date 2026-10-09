@@ -875,7 +875,7 @@
   .opcerr{flex:1 1 100%;order:9;color:var(--rojo);font-size:12px;line-height:1.3;margin:0}
   .opciones .opc{
     position:relative;
-    flex:1 1 0;min-width:0;box-sizing:border-box;background:#000;border:1px solid;border-radius:4px;
+    flex:1 1 180px;min-width:0;box-sizing:border-box;background:#000;border:1px solid;border-radius:4px;
     padding:6px 8px;font:inherit;font-size:14px;line-height:1.35;text-align:left;cursor:pointer;
     min-height:40px;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
     touch-action:pan-y;word-break:break-word;
@@ -953,22 +953,24 @@
   /* 2026-10-06 (harness2 {cajas}) (facundo: "si dispara una orden, ponele un borde grueso de algun color que cruce con
      el color de la caja (y el fondo negro obvio) [...] arriba chiquito centrado (dentro del borde) --------orden--------";
      eligio A, el complementario): la caja que DISPARA una orden (`orden: true` del server) lleva borde de 3 px del
-     color opuesto al suyo, fondo negro y el rotulo `──── orden ────` arriba y centrado, adentro del borde. la que es
-     solo una pregunta para seguir charlando queda como siempre. verde -> violeta, cian -> naranja, magenta -> verde. */
+     color opuesto al suyo, fondo negro y el rotulo `──── orden ────`.
+     2026-10-09 (orden 3459 {encolar}, opcion A): la etiqueta pise el borde superior (corta la linea con su fondo negro
+     y queda centrada sobre el borde) y las cajas fluyan en fila con flex-wrap. */
   .orden{--comp:#da14ff}
   .orden[data-letra="B"],.orden[data-letra="E"],.orden[data-letra="H"],.orden[data-letra="K"],.orden[data-letra="N"]{--comp:#ee3d22}
   .orden[data-letra="C"],.orden[data-letra="F"],.orden[data-letra="I"],.orden[data-letra="L"],.orden[data-letra="O"]{--comp:#4fff76}
   .opciones .opc.orden,#notimodal .nmop.orden{
-    position:relative;border:3px solid var(--comp);background:#000;padding:17px 8px 6px 8px;
+    position:relative;border:3px solid var(--comp);background:#000;padding:12px 8px 6px 8px;
   }
-  .opciones .opc.orden.selec{border-width:4px;padding:16px 7px 5px 7px;box-shadow:none}
+  .opciones .opc.orden.selec{border-width:4px;padding:11px 7px 5px 7px;box-shadow:none}
   .ord{display:none}
   .orden > .ord{
-    display:block;position:absolute;top:2px;left:4px;right:4px;text-align:center;font-size:10px;line-height:12px;
+    display:block;position:absolute;top:-7px;left:0;right:0;margin:0 auto;width:fit-content;max-width:calc(100% - 16px);
+    padding:0 6px;background:#000;text-align:center;font-size:10px;line-height:12px;
     font-weight:600;letter-spacing:.04em;color:var(--comp);white-space:nowrap;overflow:hidden;pointer-events:none;
   }
-  .opciones .opc.orden.sel > .ord{color:#000}
-  @media (pointer:coarse){ .orden > .ord{font-size:11px;line-height:13px} .opciones .opc.orden{padding-top:18px} }
+  .opciones .opc.orden.sel > .ord{background:inherit;color:#000}
+  @media (pointer:coarse){ .orden > .ord{font-size:11px;line-height:13px;top:-8px} .opciones .opc.orden{padding-top:13px} }
   .sistema .cuerpo{color:var(--gris)}
   /* los mensajes se muestran siempre enteros: no hay plegado (facundo, 2026-09-10) */
   .cuerpo .ok{color:var(--verde)}

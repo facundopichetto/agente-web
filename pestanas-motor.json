@@ -147,7 +147,7 @@
     },
     "tinder": {
       "motor": "agy",
-      "modelo": "agy",
+      "modelo": "gemini-3.1-pro",
       "effort": "high"
     },
     "juegos": {
@@ -156,8 +156,8 @@
       "effort": "medium"
     },
     "awtomic": {
-      "motor": "agy",
-      "modelo": "gemini-3.8-flash",
+      "motor": "claude",
+      "modelo": "sonnet",
       "effort": "high"
     },
     "podcast": {
@@ -173,6 +173,16 @@
     "awtomic#88": {
       "motor": "claude",
       "modelo": "sonnet"
+    },
+    "awtomic#90": {
+      "motor": "claude",
+      "modelo": "sonnet",
+      "effort": "medium"
+    },
+    "awtomic#91": {
+      "motor": "claude",
+      "modelo": "sonnet",
+      "effort": "low"
     }
   },
   "resueltos": {
@@ -180,15 +190,15 @@
       "pestana": "awtomic",
       "tema": null,
       "fila": "awtomic",
-      "motor": "agy",
-      "modelo": "gemini-3.8-flash",
+      "motor": "claude",
+      "modelo": "sonnet",
       "effort": "high",
       "origen_motor": "del_modelo",
       "origen_modelo": "selector_exacto",
       "origen_effort": "selector_exacto",
       "flags": [
         "--model",
-        "gemini-3.8-flash",
+        "sonnet",
         "--effort",
         "high"
       ],
@@ -237,6 +247,48 @@
       "flags_effort": [
         "--effort",
         "high"
+      ]
+    },
+    "awtomic#90": {
+      "pestana": "awtomic#90",
+      "tema": null,
+      "fila": "awtomic",
+      "motor": "claude",
+      "modelo": "sonnet",
+      "effort": "medium",
+      "origen_motor": "del_modelo",
+      "origen_modelo": "selector_exacto",
+      "origen_effort": "selector_exacto",
+      "flags": [
+        "--model",
+        "sonnet",
+        "--effort",
+        "medium"
+      ],
+      "flags_effort": [
+        "--effort",
+        "medium"
+      ]
+    },
+    "awtomic#91": {
+      "pestana": "awtomic#91",
+      "tema": null,
+      "fila": "awtomic",
+      "motor": "claude",
+      "modelo": "sonnet",
+      "effort": "low",
+      "origen_motor": "del_modelo",
+      "origen_modelo": "selector_exacto",
+      "origen_effort": "selector_exacto",
+      "flags": [
+        "--model",
+        "sonnet",
+        "--effort",
+        "low"
+      ],
+      "flags_effort": [
+        "--effort",
+        "low"
       ]
     },
     "flos": {
@@ -370,14 +422,14 @@
       "tema": null,
       "fila": null,
       "motor": "agy",
-      "modelo": "gemini-3.8-flash",
+      "modelo": "gemini-3.1-pro",
       "effort": "high",
       "origen_motor": "del_modelo",
       "origen_modelo": "selector_exacto",
       "origen_effort": "selector_exacto",
       "flags": [
         "--model",
-        "gemini-3.8-flash",
+        "gemini-3.1-pro",
         "--effort",
         "high"
       ],
@@ -390,7 +442,7 @@
   "ultimos": {
     "awtomic": {
       "motor": "claude",
-      "modelo": "sonnet"
+      "modelo": "opus"
     },
     "awtomic#14": {
       "motor": "claude",
@@ -398,11 +450,20 @@
     },
     "awtomic#88": {
       "motor": "claude",
-      "modelo": "sonnet"
+      "modelo": "opus"
+    },
+    "awtomic#90": {
+      "motor": "claude",
+      "modelo": "sonnet",
+      "effort": "medium"
+    },
+    "awtomic#91": {
+      "motor": "claude",
+      "modelo": "opus"
     },
     "flos": {
-      "motor": "claude",
-      "modelo": "fable"
+      "motor": "gemini-3.1-pro",
+      "modelo": "gemini-3.1-pro"
     },
     "juegos": {
       "motor": "agy",
@@ -419,13 +480,12 @@
       "modelo": "agy"
     },
     "server": {
-      "motor": "claude",
-      "modelo": "fable"
+      "motor": "agy",
+      "modelo": "agy"
     },
     "tinder": {
-      "motor": "agy",
-      "modelo": "agy",
-      "effort": "high"
+      "motor": "claude",
+      "modelo": "sonnet"
     }
   },
   "modelos_agy": {
