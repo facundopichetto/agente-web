@@ -1,0 +1,269 @@
+/* ==========================================================================
+   tema-nuevo.css: rediseño armónico del board respetando el look consola
+   - paleta refinada (colores consola calibrados con contraste y menor fatiga)
+   - espaciados armónicos en chat, pestañas, modales, widgets y controles
+   - transiciones css livianas aceleradas por hardware (cero sobrecarga js)
+   - respetando las fuentes (+2px de la 1946, tope 14px de --texto-max)
+   - estética consola / terminal moderna y elegante
+   ========================================================================== */
+
+:root {
+  /* paleta de colores consola refinada */
+  --verde: #38ef7d;
+  --verde-tenue: #164e33;
+  --blanco: #f1f5f9;
+  --gris: #78889b;
+  --cian: #38bdf8;
+  --magenta: #e879f9;
+  --rojo: #f87171;
+  --rojo-apagado: #991b1b;
+  --amarillo: #fbbf24;
+  --naranja: #fb923c;
+  --yo: #6ee7b7;
+  --linea: #1e2533;
+  --linea-clara: #2c3547;
+
+  /* fuentes respetadas: tope 14px de --texto-max, chat a 14px, iconos a 18px */
+  --texto-max: 14px;
+  --icono-max: 18px;
+  --texto-chat: 14px;
+
+  /* fondos y tonos refinados de consola (obsidian / midnight slate) */
+  --tono-base: #0a0d12;
+  --tono-paso: 2%;
+  --fondo-chat: #0a0d12;
+  --fondo-panel: #0f131a;
+  --fondo-caja: #141822;
+  --fondo-hundido: #181d2a;
+  --capa-fondo: rgba(10, 13, 18, 0.88);
+
+  /* sombras suaves y elegantes con sutil borde de contraste */
+  --modal-sombra: 0 12px 40px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  --caja-sombra: 0 2px 10px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+@supports (background: color-mix(in srgb, #fff 1%, #000)) {
+  :root {
+    --fondo-panel: color-mix(in srgb, #fff var(--tono-paso), var(--tono-base));
+    --fondo-caja: color-mix(in srgb, #fff calc(var(--tono-paso) * 2), var(--tono-base));
+    --fondo-hundido: color-mix(in srgb, #fff calc(var(--tono-paso) * 3), var(--tono-base));
+  }
+}
+
+/* estructura base */
+html, body {
+  background: var(--tono-base);
+  color: var(--blanco);
+}
+
+/* cabecera y barra de navegación */
+#cabecera {
+  background: var(--tono-base);
+  border-bottom: 1px solid var(--linea);
+}
+
+/* pestañas (tabs) con espaciado armónico y transiciones sutiles */
+#tabs {
+  gap: 4px;
+  padding: 0 8px;
+}
+.tab {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--linea);
+  border-bottom: 0;
+  border-radius: 6px 6px 0 0;
+  padding: 6px 12px;
+  color: var(--gris);
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+.tab:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--blanco);
+}
+.tab.activa {
+  background: var(--fondo-caja);
+  color: var(--verde);
+  border-color: var(--linea-clara);
+  font-weight: 600;
+}
+.tab-mas {
+  border-radius: 6px;
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+.tab-mas:hover {
+  background: rgba(56, 189, 248, 0.12);
+  color: var(--cian);
+}
+
+/* panel de chat y mensajes */
+#panel-chat {
+  background: var(--fondo-chat);
+}
+#hist {
+  padding: 10px 14px;
+}
+.msg {
+  padding: 6px 0;
+  transition: background-color 0.15s ease;
+}
+.msg .cuerpo {
+  line-height: 1.6;
+  letter-spacing: 0.01em;
+}
+.msg .quien {
+  font-weight: 600;
+}
+.msg .ts {
+  color: var(--gris);
+  opacity: 0.85;
+}
+
+/* resaltado de código en mensajes */
+.cuerpo .cod {
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  border-radius: 4px;
+  padding: 1px 6px;
+  color: var(--cian);
+}
+
+/* tablas de markdown */
+.cuerpo table {
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--linea);
+  border-radius: 6px;
+  overflow: hidden;
+  margin: 8px 0;
+}
+.cuerpo th {
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--linea);
+  padding: 6px 10px;
+  color: var(--magenta);
+}
+.cuerpo td {
+  padding: 6px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+.cuerpo tr.par td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* panel de pie y entrada de texto */
+#pie {
+  background: var(--fondo-panel);
+  border-top: 1px solid var(--linea);
+  padding: 8px 12px;
+  transition: border-color 0.2s ease;
+}
+#fila {
+  gap: 8px;
+  align-items: center;
+}
+#txt {
+  background: var(--fondo-caja);
+  border: 1px solid var(--linea);
+  border-radius: 6px;
+  color: var(--blanco);
+  padding: 7px 11px;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+#txt:focus {
+  outline: none;
+  border-color: var(--cian);
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+}
+
+/* botones y controles interactivos con transiciones css livianas */
+.ico, .bb, .wbtn, .bglifo {
+  border-radius: 6px;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+.ico:hover, .bb:hover, .wbtn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--blanco);
+}
+.ico:active, .bb:active, .wbtn:active {
+  transform: scale(0.96);
+  background: rgba(255, 255, 255, 0.1);
+}
+#mandar {
+  color: var(--verde);
+}
+#mandar:hover {
+  background: rgba(56, 239, 125, 0.12);
+  color: var(--verde);
+}
+
+/* panel de widgets y cajas de estado */
+#panel-widgets {
+  background: var(--fondo-panel);
+  border-left: 1px solid var(--linea);
+}
+.caja {
+  background: var(--fondo-caja);
+  border: 1px solid var(--linea);
+  border-radius: 8px;
+  box-shadow: var(--caja-sombra);
+  margin-bottom: 12px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.caja:hover {
+  border-color: var(--linea-clara);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+.caja .tit {
+  border-bottom: 1px solid var(--linea);
+  padding: 8px 12px;
+  font-weight: 600;
+  color: var(--blanco);
+}
+
+/* modales y capas superpuestas */
+.capa {
+  background: var(--capa-fondo);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transition: opacity 0.2s ease;
+}
+.mcaja {
+  background: var(--fondo-caja);
+  border: 1px solid var(--linea-clara);
+  border-radius: 10px;
+  box-shadow: var(--modal-sombra);
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+.mhead {
+  border-bottom: 1px solid var(--linea);
+}
+
+/* cajas de opciones, decisiones y votos */
+.bcaja, .opcion {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--linea);
+  border-radius: 6px;
+  padding: 8px 12px;
+  transition: background-color 0.18s ease, border-color 0.18s ease, transform 0.15s ease;
+}
+.bcaja:hover, .opcion:hover {
+  background: rgba(56, 189, 248, 0.08);
+  border-color: var(--cian);
+  transform: translateY(-1px);
+}
+.bcaja:active, .opcion:active {
+  transform: translateY(0);
+}
+
+/* botón flotante ir al final */
+#alfinal {
+  background: var(--fondo-panel);
+  border: 1px solid var(--verde);
+  color: var(--verde);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6), 0 0 8px rgba(56, 239, 125, 0.25);
+  transition: transform 0.18s ease, opacity 0.18s ease, box-shadow 0.18s ease;
+}
+#alfinal:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.7), 0 0 12px rgba(56, 239, 125, 0.4);
+}

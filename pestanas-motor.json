@@ -136,7 +136,7 @@
   },
   "elegidos": {
     "flos": {
-      "modelo": "gemini-3.8-flash",
+      "modelo": "gemini-3.1-pro",
       "effort": "high",
       "motor": "agy"
     },
@@ -154,6 +154,25 @@
       "motor": "agy",
       "modelo": "geminiflash",
       "effort": "medium"
+    },
+    "awtomic": {
+      "motor": "agy",
+      "modelo": "gemini-3.8-flash",
+      "effort": "high"
+    },
+    "podcast": {
+      "motor": "agy",
+      "modelo": "gemini-3.8-flash",
+      "effort": "high"
+    },
+    "awtomic#14": {
+      "motor": "claude",
+      "modelo": "sonnet",
+      "effort": "low"
+    },
+    "awtomic#88": {
+      "motor": "claude",
+      "modelo": "sonnet"
     }
   },
   "resueltos": {
@@ -161,27 +180,6 @@
       "pestana": "awtomic",
       "tema": null,
       "fila": "awtomic",
-      "motor": "claude",
-      "modelo": "sonnet",
-      "effort": "medium",
-      "origen_motor": "del_modelo",
-      "origen_modelo": "default_fila",
-      "origen_effort": "default_fila",
-      "flags": [
-        "--model",
-        "sonnet",
-        "--effort",
-        "medium"
-      ],
-      "flags_effort": [
-        "--effort",
-        "medium"
-      ]
-    },
-    "flos": {
-      "pestana": "flos",
-      "tema": null,
-      "fila": "flos",
       "motor": "agy",
       "modelo": "gemini-3.8-flash",
       "effort": "high",
@@ -191,6 +189,69 @@
       "flags": [
         "--model",
         "gemini-3.8-flash",
+        "--effort",
+        "high"
+      ],
+      "flags_effort": [
+        "--effort",
+        "high"
+      ]
+    },
+    "awtomic#14": {
+      "pestana": "awtomic#14",
+      "tema": null,
+      "fila": "awtomic",
+      "motor": "claude",
+      "modelo": "sonnet",
+      "effort": "low",
+      "origen_motor": "del_modelo",
+      "origen_modelo": "selector_exacto",
+      "origen_effort": "selector_exacto",
+      "flags": [
+        "--model",
+        "sonnet",
+        "--effort",
+        "low"
+      ],
+      "flags_effort": [
+        "--effort",
+        "low"
+      ]
+    },
+    "awtomic#88": {
+      "pestana": "awtomic#88",
+      "tema": null,
+      "fila": "awtomic",
+      "motor": "claude",
+      "modelo": "sonnet",
+      "effort": "high",
+      "origen_motor": "del_modelo",
+      "origen_modelo": "selector_exacto",
+      "origen_effort": "selector_madre",
+      "flags": [
+        "--model",
+        "sonnet",
+        "--effort",
+        "high"
+      ],
+      "flags_effort": [
+        "--effort",
+        "high"
+      ]
+    },
+    "flos": {
+      "pestana": "flos",
+      "tema": null,
+      "fila": "flos",
+      "motor": "agy",
+      "modelo": "gemini-3.1-pro",
+      "effort": "high",
+      "origen_motor": "del_modelo",
+      "origen_modelo": "selector_exacto",
+      "origen_effort": "selector_exacto",
+      "flags": [
+        "--model",
+        "gemini-3.1-pro",
         "--effort",
         "high"
       ],
@@ -262,6 +323,27 @@
         "medium"
       ]
     },
+    "podcast": {
+      "pestana": "podcast",
+      "tema": null,
+      "fila": null,
+      "motor": "agy",
+      "modelo": "gemini-3.8-flash",
+      "effort": "high",
+      "origen_motor": "del_modelo",
+      "origen_modelo": "selector_exacto",
+      "origen_effort": "selector_exacto",
+      "flags": [
+        "--model",
+        "gemini-3.8-flash",
+        "--effort",
+        "high"
+      ],
+      "flags_effort": [
+        "--effort",
+        "high"
+      ]
+    },
     "server": {
       "pestana": "server",
       "tema": null,
@@ -306,17 +388,39 @@
     }
   },
   "ultimos": {
-    "flos": {
+    "awtomic": {
       "motor": "claude",
       "modelo": "sonnet"
     },
-    "juegos": {
+    "awtomic#14": {
+      "motor": "claude",
+      "modelo": "sonnet"
+    },
+    "awtomic#88": {
+      "motor": "claude",
+      "modelo": "sonnet"
+    },
+    "flos": {
       "motor": "agy",
       "modelo": "agy"
     },
+    "juegos": {
+      "motor": "agy",
+      "modelo": "geminiflash",
+      "effort": "medium"
+    },
     "modelos": {
       "motor": "agy",
+      "modelo": "geminiflash",
+      "effort": "medium"
+    },
+    "podcast": {
+      "motor": "agy",
       "modelo": "agy"
+    },
+    "server": {
+      "motor": "claude",
+      "modelo": "fable"
     },
     "tinder": {
       "motor": "agy",

@@ -1,7 +1,6 @@
 /* estilos del board (flaudio). salieron del `<style>` inline de index.html el 2026-09-16 (orden 1793,
    modelo de secciones de shopify): un cambio SOLO de css no recarga la pagina, se intercambia el `href`
-   del `<link id="cssppal">` en caliente. el `?v=` lo sube `bump_web()` de daemon.py.
-   3422 {rediseno}: temas alternables al vuelo (`web/tema-facu.css` intacto y `web/tema-nuevo.css`). */
+   del `<link id="cssppal">` en caliente. el `?v=` lo sube `bump_web()` de daemon.py. */
   :root{
     --verde:#39ff14; --blanco:#e8e8e8; --gris:#666; --cian:#22d3ee;
     --magenta:#ff4fd8; --rojo:#ff4d4d; --rojo-apagado:#b84a4a; --amarillo:#ffd60a; --linea:#1c1c1c;
