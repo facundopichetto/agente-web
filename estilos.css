@@ -401,6 +401,10 @@
   #seltarjeta a.tjchip{text-decoration:none;cursor:pointer}   /* 1677: el chip `pública` es link al perfil */
   #seltarjeta a.tjchip:hover{background:rgba(57,255,20,.12)}
   #seltarjeta .tjchip.tag{color:var(--magenta);border-color:currentColor}
+  #seltarjeta button.tjhd{padding:2px 7px;border:1px solid var(--cian);border-radius:999px;font-size:14px;background:transparent;color:var(--cian);cursor:pointer;font-family:inherit;line-height:inherit}
+  #seltarjeta button.tjhd:hover{background:rgba(0,229,255,.12)}
+  #seltarjeta button.tjhd.bajando{color:var(--amarillo,#d8b25a);border-color:currentColor;cursor:wait;opacity:.8}
+  #seltarjeta button.tjhd.hdok{color:var(--verde);border-color:currentColor;cursor:default}
   /* 1495 (facundo, 2026-09-15): la foto de perfil arriba y grande, siempre; abajo nombre, marca, estado y en comun */
   #seltarjeta .tjfotos{display:block;flex:0 0 auto;width:100%}
   /* 1772 (facundo, 2026-09-16): "placeholder del mismo tamaño que la foto, sin mask tipo esfera, foto normal 100% width".

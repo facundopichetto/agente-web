@@ -462,8 +462,8 @@
       "modelo": "sonnet"
     },
     "flos": {
-      "motor": "agy",
-      "modelo": "agy"
+      "motor": "claude",
+      "modelo": "sin modelo"
     },
     "juegos": {
       "motor": "agy",
@@ -473,6 +473,10 @@
       "motor": "agy",
       "modelo": "geminiflash",
       "effort": "medium"
+    },
+    "plata": {
+      "motor": "claude",
+      "modelo": "sin modelo"
     },
     "podcast": {
       "motor": "agy",

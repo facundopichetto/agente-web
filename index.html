@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.547">
-<link rel="manifest" href="manifest.json?v=4.547">
+<meta name="agente-web-version" content="4.548">
+<link rel="manifest" href="manifest.json?v=4.548">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.547">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.548">
 <link id="csstema" rel="stylesheet" href="tema-facu.css">
 </head>
 <body>
@@ -6223,6 +6223,7 @@ function filaFresca(col, lista, j){
   });
   if(!cs.length) return false;   // el server no tiene nada que mostrar: queda lo cacheado (punto 3)
   var cur = tjActual();
+  if(cur && cur._inyectada && !cs.some(function(x){ return String(x.id) === String(cur.id); })) cs.unshift(cur);
   cacheOlvidar(col, lista);      // lo viejo de esa lista no vuelve a colarse por la cache
   a.candidatas = tjOrdenSuper(cs);
   a.pendientes = j.pendientes;
@@ -6745,6 +6746,64 @@ function tjPedirFoto(c){
   });
   return true;
 }
+function tjPedirFotoHD(c, btn){
+  if(!c || !c.id) return false;
+  if(btn){
+    btn.disabled = true;
+    btn.classList.add("bajando");
+    btn.textContent = tjIng(sel.actual) ? "fetching HD…" : "bajando HD…";
+  }
+  votLan().then(function(base){
+    if(!base) throw new Error("sin lan");
+    return lanFetch(base + "/ig/foto/hd/" + encodeURIComponent(c.id), {method: "GET", cache: "no-store",
+      headers: {"authorization": "Bearer " + token}})
+      .then(function(r){ if(!r || !r.ok) throw new Error("http " + (r && r.status)); return r.json(); });
+  }).then(function(j){
+    if(!j) return;
+    if(j.ok && j.ruta){
+      c.fotos = [j.ruta]; c.foto = j.ruta; c.hd = true;
+      c.foto_pendiente = false; c.sin_foto = false;
+      delete tjFotoMotivo[c.id];
+      [j.ruta, srcBuzon(j.ruta)].forEach(function(k){
+        if(imgUrls[k]){
+          try{ URL.revokeObjectURL(imgUrls[k]); }catch(_e){}
+          delete imgUrls[k];
+        }
+      });
+      if(btn){
+        btn.classList.remove("bajando");
+        btn.classList.add("hdok");
+        btn.textContent = tjIng(sel.actual) ? "HD photo" : "foto HD";
+        btn.disabled = false;
+      }
+      var a = tjActual();
+      if(a && String(a.id) === String(c.id)) tjPintar();
+    } else {
+      if(btn){
+        btn.classList.remove("bajando");
+        btn.textContent = (j && j.motivo) || (tjIng(sel.actual) ? "HD unavailable" : "no disponible");
+        setTimeout(function(){
+          if(btn){
+            btn.disabled = false;
+            btn.textContent = tjIng(sel.actual) ? "get HD photo" : "bajar foto HD";
+          }
+        }, 3000);
+      }
+    }
+  }).catch(function(){
+    if(btn){
+      btn.classList.remove("bajando");
+      btn.textContent = "error HD";
+      setTimeout(function(){
+        if(btn){
+          btn.disabled = false;
+          btn.textContent = tjIng(sel.actual) ? "get HD photo" : "bajar foto HD";
+        }
+      }, 3000);
+    }
+  });
+  return true;
+}
 function tjBajarFoto(id, foto, pp, principal){
   var intento = 0;
   // 1729 {votador}: la bajada es de ESTA apertura. mirar solo el id no alcanza: entrar al votador por el chip de
@@ -6941,6 +7000,16 @@ function tjPintar(){
   // 2405 {tarjeta} pasos 2 y 3: los mismos chips que la ficha (`tjChipsSpec`), en ingles y sin el `not connected`
   // de `super candidatas`. el vinculo pasa a ser un chip mas: antes era texto suelto al lado
   tjChipsSpec(c, e).forEach(function(b){ chip(b.texto, b.cls, b.href || ""); });
+  var btnHd = document.createElement("button");
+  btnHd.type = "button";
+  btnHd.className = "tjhd" + (c.hd ? " hdok" : "");
+  btnHd.textContent = c.hd ? (tjIng(e) ? "HD photo" : "foto HD") : (tjIng(e) ? "get HD photo" : "bajar foto HD");
+  btnHd.title = tjIng(e) ? "Fetch high definition profile picture" : "Bajar foto de perfil en alta calidad";
+  btnHd.addEventListener("click", function(ev){
+    ev.stopPropagation();
+    tjPedirFotoHD(c, btnHd);
+  });
+  est.appendChild(btnHd);
   info.appendChild(est);
   // 1642: lo que el embudo ya sabe (seguidores, en comun, reacciones), la bio y el motivo; la linea igual al nombre no va
   if((c.datos || []).length){
@@ -7987,6 +8056,63 @@ function lisVolver(){
   }
   return tinderHome();
 }
+function tjDePersona(p, f){
+  if(!p) return null;
+  var fch = p.ficha || {};
+  var foto = p.foto || fch.foto || "";
+  var bio = fch.bio || "";
+  var lista = (f && f.clave) || p.lista || fch.lista || "";
+  var sup = p.sup || fch.sup || (f && f.clave === "super_candidatas" ? {puesto: 0} : null);
+  var virt = p.virt || fch.virt || (f && f.clave ? [f.clave] : []);
+  return {
+    id: String(p.id),
+    titulo: p.nombre || p.cuenta || fch.nombre || fch.cuenta || String(p.id),
+    cuenta: p.cuenta || fch.cuenta || "",
+    nombre: p.nombre || fch.nombre || "",
+    foto: foto,
+    fotos: foto ? [foto] : [],
+    sin_foto: false,
+    foto_pendiente: !foto,
+    _inyectada: true,
+    privada: !!(fch.privada || p.privada),
+    datos: (p.datos && p.datos.length) ? p.datos : (fch.datos || []),
+    bio: bio,
+    detalle: p.porque || fch.porque || "",
+    lista: lista,
+    sup: sup,
+    virt: virt,
+    link: p.link || fch.link || (p.cuenta ? ("https://www.instagram.com/" + p.cuenta.replace(/^@/, "") + "/") : "")
+  };
+}
+function tjInyectarPersona(col, p, f){
+  if(!col || !p) return null;
+  if(f && f.botones && f.botones.length) pieGuardar(col, f.clave, f);
+  if(lisEnFila(col, p.id)) return null;
+  var c = tjDePersona(p, f);
+  if(!c) return null;
+  var listaClave = (f && f.clave) || sel.filtro || "";
+  var e = (sel.abiertas || []).filter(function(a){ return a.coleccion === col; })[0];
+  if(!e){
+    e = {
+      coleccion: col,
+      titulo: (f && (f.proceso_titulo || f.titulo)) || col,
+      modo: "tarjetas",
+      continua: true,
+      circular: true,
+      abierta: true,
+      candidatas: [],
+      pendientes: 1
+    };
+    if(f && f.botones){ e.botones = f.botones; e.extras = f.extras || []; e.mover = f.mover || null; }
+    sel.abiertas = (sel.abiertas || []).concat([e]);
+  } else if(!e.botones && f && f.botones){
+    e.botones = f.botones; e.extras = f.extras || []; e.mover = f.mover || null;
+  }
+  if(listaClave) delete salioSet(col, listaClave)[c.id];
+  e.candidatas = e.candidatas || [];
+  e.candidatas.unshift(c);
+  return c;
+}
 // `desde` (2113): `"home"` si el votador lo abrio el toque en la tarjeta de la lista, `"una"` (el default) si lo
 // abrio el boton `votar esta lista` de la grilla de gente. es lo que decide a donde vuelve el back del final.
 function lisVotar(f, p, desde){
@@ -8000,9 +8126,9 @@ function lisVotar(f, p, desde){
   // 2113: sin persona tocada el plan B es la grilla de gente de ESA lista (antes no habia plan B: el toque moria)
   var carta = p ? function(){ lis.origen = null; return lisCartita(p); }
                 : function(){ lis.origen = null; return lisEntrar(f); };
-  // 1975 {arranque}: en `dejar de seguir` la fila se pide de nuevo, asi que el chequeo va DESPUES (adentro de
-  // `tinderAbrirCol`); en el resto alcanza con la fila que ya esta cargada
-  if(p && !selArranca(col) && !lisEnFila(col, p.id)) return carta();
+  // 3528 {forzar-votador}: tocar cualquier chip individual inyecta a la persona al frente de la fila y
+  // abre el votador de su lista con los botones correspondientes a ese grupo, destrabando la votacion
+  if(p) tjInyectarPersona(col, p, f);
   // 2095 paso 5: el votador se abre FILTRADO a esta lista (`f.clave`): la fila del proceso mezcla varias
   return tinderAbrirCol(col, p && p.id, carta, f.clave, f.titulo || f.clave);
 }
@@ -15413,6 +15539,7 @@ window.__agente = {
   lisDatos: function(d){ if(d){ lis.datos = d; lis.ts = lis.cacheTs = Date.now(); lis.aviso = ""; } return lis.datos; },
   // 1801: los procesos y la fila de botones de cada uno (el dropdown se fue en la 2078)
   votItems: votItems, votMenuAbrir: votMenuAbrir, tinderAbrirCol: tinderAbrirCol,
+  tjInyectarPersona: tjInyectarPersona, tjPedirFotoHD: tjPedirFotoHD,
   tinderHome: tinderHome, tinderSalir: tinderSalir, tjProcQs: tjProcQs, TJ_PROCS: TJ_PROCS,
   // 2078 {home}: salir de la vista entera (lo que hacia `votMenuCerrar` cuando el `home` era una capa aparte)
   tinderFuera: function(){ tinderSalir(); if(vistaEs("tinder")) vistaVolver(); },
