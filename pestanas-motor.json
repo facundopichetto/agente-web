@@ -459,11 +459,11 @@
     },
     "awtomic#91": {
       "motor": "claude",
-      "modelo": "opus"
+      "modelo": "sonnet"
     },
     "flos": {
-      "motor": "gemini-3.1-pro",
-      "modelo": "gemini-3.1-pro"
+      "motor": "agy",
+      "modelo": "agy"
     },
     "juegos": {
       "motor": "agy",
@@ -484,8 +484,7 @@
     },
     "tinder": {
       "motor": "agy",
-      "modelo": "gemini-3.1-pro",
-      "effort": "high"
+      "modelo": "agy"
     }
   },
   "modelos_agy": {

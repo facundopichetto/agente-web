@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.546">
-<link rel="manifest" href="manifest.json?v=4.546">
+<meta name="agente-web-version" content="4.547">
+<link rel="manifest" href="manifest.json?v=4.547">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.546">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.547">
 <link id="csstema" rel="stylesheet" href="tema-facu.css">
 </head>
 <body>
@@ -8934,22 +8934,27 @@ function vueloTramos(lista){
   if(!deEstaTab(vuelo.tema, temaActivo())) return 0;
   var n = document.getElementById("vuelo"), hilo = n && n.querySelector(".hilo"), nuevos = 0;
   var pego = pegadoAbajo(), ancla = pego ? null : anclaMedir();   // 1805
-  if(vuelo.tramos.length > 0 && lista.length >= vuelo.tramos.length){
-    var uIdx = vuelo.tramos.length - 1, tu = lista[uIdx], vu = vuelo.tramos[uIdx];
-    if(tu && vu && (tu.delta || vu.delta) && (tu.tipo === "texto" || tu.tipo === "thinking") && (vu.tipo === "texto" || vu.tipo === "thinking")){
-      if(String(tu.texto || "") !== String(vu.texto || "") || !!tu.delta !== !!vu.delta){
-        vu.texto = String(tu.texto || "");
-        vu.delta = !!tu.delta;
+  for(var k = 0; k < vuelo.tramos.length && k < lista.length; k++){
+    var tk = lista[k], vk = vuelo.tramos[k];
+    if(tk && vk && (tk.delta || vk.delta) && (tk.tipo === "texto" || tk.tipo === "thinking") && (vk.tipo === "texto" || vk.tipo === "thinking")){
+      var txtNuevo = String(tk.texto || "");
+      if(txtNuevo !== String(vk.texto || "") || !!tk.delta !== !!vk.delta){
+        if(vk.texto && txtNuevo && !txtNuevo.startsWith(vk.texto) && txtNuevo.length < vk.texto.length && tk.delta){
+          vk.texto += txtNuevo;
+        } else {
+          vk.texto = txtNuevo;
+        }
+        vk.delta = !!tk.delta;
         if(hilo){
-          var nu = hilo.querySelector('.tramo[data-i="' + uIdx + '"]') || hilo.children[uIdx];
-          if(nu){
-            nu.className = "tramo " + vu.tipo + (vu.i === 0 && vu.tipo === "texto" ? " entendi" : "") + (vu.delta ? " vivo" : "");
-            if(vu.tipo === "thinking"){
-              var cont = nu.querySelector(".thinking-contenido");
-              if(cont) cont.textContent = vu.texto;
-              else nu.textContent = vu.texto;
+          var nk = hilo.querySelector('.tramo[data-i="' + k + '"]') || hilo.children[k];
+          if(nk){
+            nk.className = "tramo " + vk.tipo + (vk.i === 0 && vk.tipo === "texto" ? " entendi" : "") + (vk.delta ? " vivo" : "");
+            if(vk.tipo === "thinking"){
+              var cont = nk.querySelector(".thinking-contenido");
+              if(cont) cont.textContent = vk.texto;
+              else nk.textContent = vk.texto;
             } else {
-              nu.innerHTML = resaltar(vu.texto);
+              nk.innerHTML = resaltar(vk.texto);
             }
           }
         }
