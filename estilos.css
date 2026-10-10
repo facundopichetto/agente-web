@@ -59,6 +59,8 @@
   body{
     font-family:"Fira Code",ui-monospace,SFMono-Regular,Menlo,Monaco,"Courier New",monospace;
     font-size:14px;line-height:1.55;letter-spacing:.01em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     height:100dvh;height:var(--alto,100dvh);
     position:fixed;top:0;left:0;right:0;width:100%;
     display:flex;flex-direction:column;overflow:hidden;
@@ -2551,3 +2553,50 @@
 #modal .viva .vivatx{color:var(--blanco);margin-top:6px}
 #modal .viva .vivacmd{margin-top:1px}
 #modal .viva .vivafin{color:var(--verde)}
+
+/* {stream-thinking}: pensamiento/razonamiento en vivo del modelo (monólogo interno en gris o colapsado) */
+.msg .hilo .tramo.thinking, .tramo.thinking {
+  color: var(--gris);
+  font-size: 12px;
+  margin: 4px 0 6px 0;
+  line-height: 1.4;
+}
+.msg .hilo .tramo.thinking .thinking-bloque, .tramo.thinking .thinking-bloque {
+  background: #090d13;
+  border: 1px solid #21262d;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-family: var(--mono, monospace);
+}
+.msg .hilo .tramo.thinking summary.thinking-resumen, .tramo.thinking summary.thinking-resumen {
+  color: var(--gris);
+  font-size: 11px;
+  cursor: pointer;
+  outline: none;
+  user-select: none;
+  opacity: .85;
+}
+.msg .hilo .tramo.thinking summary.thinking-resumen:hover, .tramo.thinking summary.thinking-resumen:hover {
+  color: var(--blanco);
+  opacity: 1;
+}
+.msg .hilo .tramo.thinking .thinking-bloque[open] summary.thinking-resumen, .tramo.thinking .thinking-bloque[open] summary.thinking-resumen {
+  margin-bottom: 6px;
+  border-bottom: 1px solid #21262d;
+  padding-bottom: 4px;
+}
+.msg .hilo .tramo.thinking .thinking-contenido, .tramo.thinking .thinking-contenido {
+  color: var(--gris);
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  opacity: .9;
+  padding-left: 4px;
+}
+.msg .hilo .tramo.thinking.vivo::after, .tramo.thinking.vivo::after {
+  content: " ▊";
+  color: var(--cian);
+  opacity: .8;
+  display: inline-block;
+  animation: lat .8s infinite;
+}

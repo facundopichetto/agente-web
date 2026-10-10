@@ -151,8 +151,8 @@
       "effort": "high"
     },
     "juegos": {
-      "motor": "agy",
-      "modelo": "geminiflash",
+      "motor": "claude",
+      "modelo": "sonnet",
       "effort": "medium"
     },
     "awtomic": {
@@ -316,15 +316,15 @@
       "pestana": "juegos",
       "tema": null,
       "fila": "juegos",
-      "motor": "agy",
-      "modelo": "geminiflash",
+      "motor": "claude",
+      "modelo": "sonnet",
       "effort": "medium",
       "origen_motor": "del_modelo",
       "origen_modelo": "selector_exacto",
       "origen_effort": "selector_exacto",
       "flags": [
         "--model",
-        "geminiflash",
+        "sonnet",
         "--effort",
         "medium"
       ],
@@ -462,13 +462,12 @@
       "modelo": "opus"
     },
     "flos": {
-      "motor": "gemini-3.8-flash",
-      "modelo": "gemini-3.8-flash"
+      "motor": "gemini-3.1-pro",
+      "modelo": "gemini-3.1-pro"
     },
     "juegos": {
       "motor": "agy",
-      "modelo": "geminiflash",
-      "effort": "medium"
+      "modelo": "agy"
     },
     "modelos": {
       "motor": "agy",

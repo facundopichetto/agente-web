@@ -3267,7 +3267,13 @@ function opcionesDe(texto){
     var mm = dentro ? null : RE_OPCION.exec(l);
     if(mm && !vistas[mm[1].toUpperCase()]){
       vistas[mm[1].toUpperCase()] = 1;
-      lista.push({letra: mm[1].toUpperCase(), texto: mm[2].replace(/\*\*$/, "").trim()});
+      var raw = mm[2].replace(/\*\*$/, "").trim();
+      var slug = "";
+      var ms = /^\{([a-z0-9][a-z0-9-]{0,39})\}\s*(.*)$/i.exec(raw) || /^\[(?:titulo|nombre|slug):\s*([a-z0-9][a-z0-9-]{0,39})\]\s*(.*)$/i.exec(raw);
+      if(ms){ slug = ms[1].toLowerCase(); raw = ms[2].trim(); }
+      var item = {letra: mm[1].toUpperCase(), texto: raw};
+      if(slug) item.slug = slug;
+      lista.push(item);
     }else fuera.push(l);
   });
   lista.sort(function(a, b){ return a.letra < b.letra ? -1 : 1; });
@@ -3391,7 +3397,7 @@ function cajasDe(m){
   if(m.opciones && m.opciones.length){
     // 2026-10-06 (harness2 {cajas}): `orden` lo pone el server (la caja que DISPARA una orden), la web no lo adivina
     o.lista = m.opciones.filter(function(x){ return x && /^[A-P]$/i.test(x.letra || ""); })
-      .map(function(x){ return {letra: String(x.letra).toUpperCase(), texto: String(x.texto || ""), orden: x.orden === true}; });
+      .map(function(x){ return {letra: String(x.letra).toUpperCase(), texto: String(x.texto || ""), orden: x.orden === true, slug: x.slug || ""}; });
   }
   // 1658 {cajas}: una oportunidad se ofrece como cajas grandes con el texto de cada opcion adentro (nunca
   // mas los chips `op N X`). el toque sigue mandando el `op N X` crudo, que el daemon resuelve sin modelo.
@@ -3883,7 +3889,8 @@ function nodoCajas(m, lista_){
                   '<span class="chkenv" aria-hidden="true">\u2713</span>';   // 2080: `enviada`, lo pinta `.sel`
     b.querySelector(".l").textContent = o.letra;
     b.querySelector(".t").textContent = o.texto;
-    b.title = o.cmd || (o.letra + ": " + o.texto);
+    if(o.slug) b.dataset.slug = o.slug;
+    b.title = (o.slug ? "{" + o.slug + "} " : "") + (o.cmd || (o.letra + ": " + o.texto));
     if(o.orden) marcaOrden(b);   // 2026-10-06 (harness2 {cajas}): esta caja dispara una orden: borde y rotulo
     if(ent && puntuable(o.texto)) b.appendChild(puntajeFila(m.tema || temaActivo(), o.letra, o.texto));
     var ini = null;
@@ -8866,6 +8873,7 @@ function tipoTramo(t){
   if(t.tipo === "hecho") return "hecho";
   if(t.tipo === "paso") return "paso";   // 1931: el rastro de la bolita
   if(t.tipo === "caja") return "caja";   // 2557: la caja de un modelo que ya contesto, mientras llegan las demas
+  if(t.tipo === "thinking") return "thinking";
   return (!t.tipo || t.tipo === "texto") ? "texto" : null;   // null = no se pinta
 }
 // 1931 (facundo, 2026-09-17: "cuando cambie, la anterior queda arriba en la linea de arriba como ya paso, en gris
@@ -8891,6 +8899,23 @@ function nodoTramo(t){
     d.appendChild(b);
     return d;
   }
+  if(tipo === "thinking"){
+    d.className = "tramo thinking" + (t.delta ? " vivo" : "");
+    d.dataset.i = String(t.i !== undefined ? t.i : "");
+    var det = document.createElement("details");
+    det.className = "thinking-bloque";
+    det.open = !!t.delta;
+    var sum = document.createElement("summary");
+    sum.className = "thinking-resumen";
+    sum.textContent = "› pensamiento";
+    var cont = document.createElement("div");
+    cont.className = "thinking-contenido";
+    cont.textContent = String(t.texto || "");
+    det.appendChild(sum);
+    det.appendChild(cont);
+    d.appendChild(det);
+    return d;
+  }
   d.className = "tramo " + tipo + (t.i === 0 && !apagado ? " entendi" : "") + (t.delta ? " vivo" : "");
   d.dataset.i = String(t.i !== undefined ? t.i : "");
   if(apagado) d.textContent = String(t.texto || "");
@@ -8911,15 +8936,21 @@ function vueloTramos(lista){
   var pego = pegadoAbajo(), ancla = pego ? null : anclaMedir();   // 1805
   if(vuelo.tramos.length > 0 && lista.length >= vuelo.tramos.length){
     var uIdx = vuelo.tramos.length - 1, tu = lista[uIdx], vu = vuelo.tramos[uIdx];
-    if(tu && vu && (tu.delta || vu.delta) && tu.tipo === "texto" && vu.tipo === "texto"){
+    if(tu && vu && (tu.delta || vu.delta) && (tu.tipo === "texto" || tu.tipo === "thinking") && (vu.tipo === "texto" || vu.tipo === "thinking")){
       if(String(tu.texto || "") !== String(vu.texto || "") || !!tu.delta !== !!vu.delta){
         vu.texto = String(tu.texto || "");
         vu.delta = !!tu.delta;
         if(hilo){
           var nu = hilo.querySelector('.tramo[data-i="' + uIdx + '"]') || hilo.children[uIdx];
           if(nu){
-            nu.className = "tramo " + vu.tipo + (vu.i === 0 ? " entendi" : "") + (vu.delta ? " vivo" : "");
-            nu.innerHTML = resaltar(vu.texto);
+            nu.className = "tramo " + vu.tipo + (vu.i === 0 && vu.tipo === "texto" ? " entendi" : "") + (vu.delta ? " vivo" : "");
+            if(vu.tipo === "thinking"){
+              var cont = nu.querySelector(".thinking-contenido");
+              if(cont) cont.textContent = vu.texto;
+              else nu.textContent = vu.texto;
+            } else {
+              nu.innerHTML = resaltar(vu.texto);
+            }
           }
         }
         nuevos++;
@@ -9174,6 +9205,36 @@ function vueloMirar(){
     vueloTerminar(); return;
   }
   if(!token) return;
+  if(lan.base && (vuelo.tema === "flos" || vuelo.tema.indexOf("flos#") === 0)) {
+    var sSeq = vuelo.subprocesoSeq || 0;
+    lanFetch(lan.base + "/subproceso/buffer?pestana=" + encodeURIComponent(vuelo.tema) + "&desde=" + sSeq, {headers: {"authorization": "Bearer " + token}})
+      .then(function(r) {
+        if(r && r.json && r.json.ok && r.json.chunks && r.json.chunks.length > 0) {
+           vuelo.subprocesoSeq = r.json.ultimo_seq;
+           var trs = vuelo.tramos ? vuelo.tramos.slice() : [];
+           r.json.chunks.forEach(function(c) {
+             if(c.t * 1000 < vuelo.t - 2000) return; // Ignore chunks from before this turn
+             if(c.tipo === "evento" && c.meta && c.meta.event === "chunk" && c.meta.texto) {
+               var tTipo = c.meta.thinking ? "thinking" : (c.meta.tipo || "texto");
+               if(trs.length > 0 && trs[trs.length-1].tipo === tTipo && trs[trs.length-1].delta !== false) {
+                 var last = Object.assign({}, trs[trs.length-1]);
+                 last.texto += c.meta.texto;
+                 trs[trs.length-1] = last;
+               } else {
+                 if(trs.length > 0) {
+                   var last = Object.assign({}, trs[trs.length-1]);
+                   last.delta = false;
+                   trs[trs.length-1] = last;
+                 }
+                 var isDelta = c.meta.delta !== false;
+                 trs.push({tipo: tTipo, texto: c.meta.texto, delta: isDelta});
+               }
+             }
+           });
+           if(typeof vueloTramos === "function") vueloTramos(trs);
+        }
+      }).catch(function(){});
+  }
   crudo("chat/estado-" + vuelo.clave + ".json", etagEstado).then(function(r){
     if(!r || r.status === 304) return;
     etagEstado = r.etag;
