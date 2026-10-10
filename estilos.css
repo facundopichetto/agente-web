@@ -49,7 +49,8 @@
     }
   }
   *{box-sizing:border-box}
-  html,body{margin:0;padding:0;background:#000;color:var(--blanco)}
+  html,body{margin:0;padding:0;background:#000;color:var(--blanco);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+  button,input,textarea,select{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
   /* ios safari: al abrir el teclado ademas de achicar el viewport visible scrollea la ventana
      entera, y el body (que mide el alto del viewport visible) se iba para arriba dejando una
      franja negra de ~150 px entre el input y el teclado (facundo, 2026-09-12). la ventana se

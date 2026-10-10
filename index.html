@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.545">
-<link rel="manifest" href="manifest.json?v=4.545">
+<meta name="agente-web-version" content="4.546">
+<link rel="manifest" href="manifest.json?v=4.546">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.545">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.546">
 <link id="csstema" rel="stylesheet" href="tema-facu.css">
 </head>
 <body>
@@ -9214,9 +9214,19 @@ function vueloMirar(){
            var trs = vuelo.tramos ? vuelo.tramos.slice() : [];
            r.json.chunks.forEach(function(c) {
              if(c.t * 1000 < vuelo.t - 2000) return; // Ignore chunks from before this turn
-             if(c.tipo === "evento" && c.meta && c.meta.event === "chunk" && c.meta.texto) {
-               var tTipo = c.meta.thinking ? "thinking" : (c.meta.tipo || "texto");
-               if(trs.length > 0 && trs[trs.length-1].tipo === tTipo && trs[trs.length-1].delta !== false) {
+             if(c.tipo === "evento" && c.meta && (c.meta.event === "chunk" || c.meta.event === "thinking" || c.meta.event === "paso" || c.meta.event === "hecho") && c.meta.texto) {
+               var esPaso = c.meta.tipo === "paso" || c.meta.tipo === "hecho" || c.meta.event === "paso" || c.meta.event === "hecho" || String(c.meta.texto).trim().indexOf("»") === 0;
+               var tTipo = (c.meta.thinking || c.meta.event === "thinking") ? "thinking" : (esPaso ? "paso" : (c.meta.tipo || "texto"));
+               if(tTipo === "paso") {
+                 if(!trs.some(function(x){ return (x.tipo === "paso" || x.tipo === "hecho") && x.texto === c.meta.texto; })) {
+                   if(trs.length > 0) {
+                     var last = Object.assign({}, trs[trs.length-1]);
+                     last.delta = false;
+                     trs[trs.length-1] = last;
+                   }
+                   trs.push({tipo: "paso", texto: c.meta.texto, delta: false});
+                 }
+               } else if(trs.length > 0 && trs[trs.length-1].tipo === tTipo && trs[trs.length-1].delta !== false) {
                  var last = Object.assign({}, trs[trs.length-1]);
                  last.texto += c.meta.texto;
                  trs[trs.length-1] = last;
