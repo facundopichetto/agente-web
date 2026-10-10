@@ -14,10 +14,12 @@
 
   function cajaSeguidores(p){
     p = p || {};
-    if(p.error) return caja("seguidores", "", vacio(p.error), false, "seguidores");
-    var extra = '<span class="b">' + (p.seguidores || 0) + '</span> <span class="g">te siguen ·</span> ' +
-                '<span class="b">' + (p.seguidos || 0) + '</span> <span class="g">seguís</span>' +
-                (p.dato_hora ? ' <span class="g">· ' + esc(p.dato_hora) + "</span>" : "") +   // 2161: de cuando es el numero (lo arma el server, 12 h)
+    if(p.error) return caja("IG FOLLOW", "", vacio(p.error), false, "seguidores");
+    var fechaHora = p.dato_hora || p.foto_hora || (p.fecha ? p.fecha.slice(5) : "");
+    var extra = '<span class="b">' + (p.seguidores || 0) + '</span> ' +
+                '<span class="g">/</span> ' +
+                '<span class="b">' + (p.seguidos || 0) + '</span>' +
+                (fechaHora ? ' <span class="g">- ' + esc(fechaHora) + "</span>" : "") +
                 (p.contador_viejo ? ' <span class="a">·</span>' : "");
     var filas = [], quien = function(u){
       return "@" + esc(u.usuario) + (u.nombre ? ' <span class="g">' + esc(u.nombre) + "</span>" : "");
@@ -32,7 +34,7 @@
     filas.push(pie);
     if(p.freno) filas.push('<span class="a">' + esc(p.freno) + "</span>");   // 2161: "instagram frena la lectura desde ..."
     if(p.problema) filas.push('<span class="a">' + esc(p.problema) + "</span>");
-    return caja("seguidores", extra, B.limFilas("seguidores", filas).join("\n"), false, "seguidores");
+    return caja("IG FOLLOW", extra, B.limFilas("seguidores", filas).join("\n"), false, "seguidores");
   }
 
   function nodoCaja(){ return document.querySelector('#widgets [data-w="seguidores"]'); }

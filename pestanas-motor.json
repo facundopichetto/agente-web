@@ -462,8 +462,8 @@
       "modelo": "opus"
     },
     "flos": {
-      "motor": "gemini-3.1-pro",
-      "modelo": "gemini-3.1-pro"
+      "motor": "gemini-3.8-flash",
+      "modelo": "gemini-3.8-flash"
     },
     "juegos": {
       "motor": "agy",
@@ -484,8 +484,8 @@
       "modelo": "agy"
     },
     "tinder": {
-      "motor": "claude",
-      "modelo": "sonnet"
+      "motor": "agy",
+      "modelo": "agy"
     }
   },
   "modelos_agy": {
