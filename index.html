@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.548">
-<link rel="manifest" href="manifest.json?v=4.548">
+<meta name="agente-web-version" content="4.549">
+<link rel="manifest" href="manifest.json?v=4.549">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.548">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.549">
 <link id="csstema" rel="stylesheet" href="tema-facu.css">
 </head>
 <body>
@@ -1663,16 +1663,15 @@ function pintarTabs(){
     b.className = "tab" + (t === temaActivo() ? " activo" : "") + (esperaTab(t) ? " espera" : "");
     b.dataset.tema = t;
     b.textContent = visibleTab(t);        // 2300 {visible}: el visible del clon, nunca el id crudo
-    // 2265 {clon}: la pestaña de tema activa lleva un `+` que crea el clon siguiente (`awtomic#2`,
-    // `awtomic#3`). va en la pestaña, no en la barra: el `+` de la barra sigue siendo "pestaña nueva".
-    if(t === temaActivo() && clonable(t)){
+    // punto 4 (facundo): todas las pestañas deben siempre mostrar x , y las principales el +
+    if(clonable(t) && padreTema(t) === t && !esClon(t)){
       var mas = document.createElement("span");
       mas.className = "mas"; mas.textContent = "+"; mas.dataset.clonar = t;
       mas.title = normTema(t) === TEMA_TICKET ? "pestaña de un ticket (cx5129, mvp6484)"
                                               : "otra pestaña de " + t;
       b.appendChild(mas);
     }
-    if(t === temaActivo() && tabs.length > 1 && !esModo(t)){   // 1959: un modo es fijo, no se cierra
+    if(!esModo(t)){
       var x = document.createElement("span");
       x.className = "x"; x.textContent = "×"; x.dataset.cerrar = t;
       b.appendChild(x);
@@ -2306,15 +2305,13 @@ function clonMas(tema){
   if(normTema(tema) === TEMA_TICKET) return tabTicketNuevo(tema);
   return clonCrear(tema);
 }
-// el `×` de un clon: cerrar la pestaña (el clon queda vivo) o borrar el clon del server.
 // 2220 {ticket}: una sub de `awtomic` se ARCHIVA y listo, sin preguntar: cerrarla es archivarla (la charla
 // queda y vuelve con su nombre), asi que no hay dos caminos que elegir.
+// punto 2 (facundo): las subpestañas (excepto tickets) se cierran pero pueden volver facil
 function cerrarOClon(tema){
   if(!esClon(tema)) return cerrarTab(tema);
   if(esSubTicket(tema)) return clonArchivar(tema);
-  dd(tema + ": qué hago?", [["cerrar la pestaña (el clon queda)", "cerrar"],
-                            ["borrar el clon " + tema, "borrar"]],
-     function(r){ if(r === "cerrar") cerrarTab(tema); else if(r === "borrar") clonBorrar(tema, false); });
+  return cerrarTab(tema);
 }
 // renombrar una pestaña (si ya habia una de ese tema, no se duplica). la general ya no se renombra sola
 // (facundo, 2026-09-11); queda por si hace falta renombrar a mano.
@@ -2344,13 +2341,49 @@ function cerrarTab(tema){
 function nuevaTab(){
   var lista = (typeof PESTANAS_TAB !== "undefined" ? PESTANAS_TAB : []);
   var ops = [["general (sin tema, la puerta de entrada)", AUTO]];
-  lista.forEach(function(m){
-    if(tabs.indexOf(m[0]) >= 0) return;   // ya la tenés abierta
-    // 1930 {visible}: si el tema tiene nombre puesto, el menu lo nombra como se ve en la barra
-    ops.push([visibleTab(m[0]) !== m[0] ? visibleTab(m[0]) : m[1], m[0]]);
+  var grupos = {};
+
+  // punto 1, 2 y 3 (facundo): agrupar subpestañas por su padre (baseTema), sin # (nombre visible literal como $/usa), salvo tickets
+  CLONES.forEach(function(t){
+    if(tabs.indexOf(t) >= 0 || !esTema(t) || esSubTicket(t)) return;
+    var base = baseTema(t);
+    if(!grupos[base]) grupos[base] = [];
+    grupos[base].push([visibleTab(t), t]);
   });
-  // 2265 {clon}: los clones ya creados son pestañas como cualquier otra (el `+` de la pestaña crea uno nuevo)
-  CLONES.forEach(function(t){ if(tabs.indexOf(t) < 0 && esTema(t)) ops.push([t, t]); });
+
+  lista.forEach(function(m){
+    var base = m[0];
+    var subtabs = grupos[base] || [];
+    delete grupos[base];
+    var abierto = tabs.indexOf(base) >= 0;
+    var nom = visibleTab(base) !== base ? visibleTab(base) : m[1];
+
+    if(!abierto && subtabs.length === 0){
+      ops.push([nom, base]);
+    } else if(subtabs.length > 0){
+      ops.push({
+        txt: nom,
+        val: base,
+        abierto: abierto,
+        hijos: subtabs
+      });
+    }
+  });
+
+  // Clones sueltos de algun tema no listado
+  Object.keys(grupos).forEach(function(base){
+    var subtabs = grupos[base];
+    if(subtabs.length > 0){
+      var nom = visibleTab(base);
+      ops.push({
+        txt: nom,
+        val: base,
+        abierto: tabs.indexOf(base) >= 0,
+        hijos: subtabs
+      });
+    }
+  });
+
   dd("pestaña nueva: cuál?", ops, abrirTab);
 }
 // ---------- dropdown (pestaña nueva / esto parece de otro tema) ----------
@@ -2361,10 +2394,66 @@ function dd(titulo, opciones, alElegir){
   t.className = "ddtit"; t.textContent = titulo;
   d.appendChild(t);
   opciones.forEach(function(o){
-    var b = document.createElement("button");
-    b.type = "button"; b.className = "ddop"; b.textContent = o[0];
-    b.addEventListener("click", function(){ cerrarDd(); alElegir(o[1]); });
-    d.appendChild(b);
+    if(Array.isArray(o)){
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "ddop"; b.textContent = o[0];
+      b.addEventListener("click", function(){ cerrarDd(); alElegir(o[1]); });
+      d.appendChild(b);
+    } else if(o && o.hijos && o.hijos.length){
+      var grp = document.createElement("div");
+      grp.className = "ddgrupo";
+
+      var fila = document.createElement("div");
+      fila.className = "ddpadre-fila";
+
+      var bPadre = document.createElement("button");
+      bPadre.type = "button";
+      bPadre.className = "ddop ddpadre-btn" + (o.abierto ? " ddabierta" : "");
+      bPadre.textContent = o.txt;
+      bPadre.addEventListener("click", function(){
+        cerrarDd();
+        alElegir(o.val);
+      });
+      fila.appendChild(bPadre);
+
+      if(o.abierto){
+        var badge = document.createElement("span");
+        badge.className = "ddbadge";
+        badge.textContent = "abierta";
+        fila.appendChild(badge);
+      }
+
+      var tog = document.createElement("button");
+      tog.type = "button";
+      tog.className = "ddtoggle";
+      tog.textContent = "▾";
+      tog.setAttribute("aria-label", "colapsar subpestañas de " + o.txt);
+      tog.addEventListener("click", function(e){
+        e.stopPropagation();
+        e.preventDefault();
+        var col = grp.classList.toggle("colapsado");
+        tog.textContent = col ? "▸" : "▾";
+      });
+      fila.appendChild(tog);
+      grp.appendChild(fila);
+
+      var hijosDiv = document.createElement("div");
+      hijosDiv.className = "ddhijos";
+      o.hijos.forEach(function(h){
+        var bHijo = document.createElement("button");
+        bHijo.type = "button";
+        bHijo.className = "ddop ddsubop";
+        bHijo.textContent = h[0];
+        bHijo.addEventListener("click", function(){
+          cerrarDd();
+          alElegir(h[1]);
+        });
+        hijosDiv.appendChild(bHijo);
+      });
+      grp.appendChild(hijosDiv);
+
+      d.appendChild(grp);
+    }
   });
   d.classList.remove("oculta");
   $("ddfondo").classList.remove("oculta");
@@ -4818,6 +4907,18 @@ function recibirChat(tema, d){
     if(mt && esTema(mt[1])) r = r.slice(mt[0].length);   // el `[tema]` ya lo dice la pestaña
     var lm = leerMeta(r), nodo = f.nodo || lm.meta.nodo || null;   // el `[cloud]` viejo sale del cuerpo
     r = lm.cuerpo;
+
+    // 2311/2026-10-10: mensaje puente contestado junto con otro del mismo turno:
+    // 1) no lleva reproductor de audio jamas (evita audio absurdo de "te lo contesté abajo")
+    // 2) si varios mensajes seguidos del mismo turno se contestaron juntos, no repetir la burbuja identica
+    var esPuente = !!(f.junto_con || /^\(esto te lo contest[eé] junto con/i.test(r));
+    if(esPuente){
+      f.audio = null;
+      var cPuente = "puente:" + (f.junto_con || "j") + "|" + r.slice(0, 30);
+      if(resp[cPuente]) return;
+      resp[cPuente] = true;
+    }
+
     // un mensaje partido en dos temas tuvo UNA sola respuesta: no se pinta dos veces
     var k = f.ts + "|" + r.slice(0, 80);
     if(r && !resp[k]){
@@ -4828,7 +4929,7 @@ function recibirChat(tema, d){
       out.push({id: "h:" + base + ":r", clase: "agente", quien: QUIEN_AGENTE, texto: r, iso: f.ts_llegada || f.ts,
                 srv: fecha(f.ts_llegada || f.ts),
                 clave: "r:" + t + "|" + (f.ts_llegada || f.ts || "") + "|" + hashTexto(r),   // 1211: no por posicion
-                tema: t, explicito: true, tag: t, audio: f.audio || null, nodo: nodo, tarea: f.tarea || null,
+                tema: t, explicito: true, tag: t, audio: esPuente ? null : (f.audio || null), nodo: nodo, tarea: f.tarea || null,
                 ts_envio: f.ts || null,   // 2417 {boton}: el `ts` de ESTA fila, lo unico que identifica el turno
                 audios_seg: f.audios_seg || null,
                 motor: f.motor || null, effort: f.effort || null, corrio: f.corrio || null,
@@ -14971,10 +15072,10 @@ vistaPintar();
 // tipeado (`cajaDeTema` recibe siempre el mismo tema, asi que ni guarda ni cambia el borrador).
 var TAB_PX = 6;                    // cuanto tiene que moverse el mouse para que sea un arrastre y no un click
 var arrT = null, arrTUlt = 0, arrTHold = null, arrTTocado = null;
-// la pestaña que se agarra: la `×`, el `+` del clon y los botones de la barra siguen siendo botones
+// la pestaña que se agarra: los botones de la barra siguen siendo botones aparte
 function tabDeTarget(target){
   if(!target || !target.closest) return null;
-  if(target.closest("[data-cerrar],[data-clonar],.barrabtn")) return null;
+  if(target.closest(".barrabtn")) return null;
   var n = target.closest("#tabs .tab[data-tema]");
   return n && n.dataset.tema ? n : null;
 }
@@ -15130,12 +15231,14 @@ $("tabs").addEventListener("click", function(e){
 // touch no es confiable y el hold ya lo agarra el arrastre). el `+` y la `×` siguen siendo botones.
 var TAP2_MS = 320, tab2 = null;
 $("tabs").addEventListener("dblclick", function(e){
+  if(e.target.closest && e.target.closest("[data-cerrar],[data-clonar]")) return;
   var n = tabDeTarget(e.target);
   if(!n) return;
   if(tabEditar(n.dataset.tema)){ e.preventDefault(); e.stopPropagation(); }
 });
 $("tabs").addEventListener("touchend", function(e){
   if(arrT) return;                                  // lo que se esta arrastrando no se edita
+  if(e.target.closest && e.target.closest("[data-cerrar],[data-clonar]")) return;
   var n = tabDeTarget(e.target);
   if(!n){ tab2 = null; return; }
   var t = n.dataset.tema, ahora = Date.now();
@@ -15764,7 +15867,7 @@ window.__agente = {
   llegadas: function(){ return JSON.parse(JSON.stringify(llegadas)); },
   recibirLlegadas: recibirLlegadas, borrarLlegadas: function(){ llegadas = {}; guardarCache(); },
   hhmmIso: desde, fecha: fecha,
-  abrirTab: abrirTab, renombrarTab: renombrarTab,
+  abrirTab: abrirTab, nuevaTab: nuevaTab, renombrarTab: renombrarTab,
   // 2265 {clon}: las pestañas clonadas (`recetas/prueba_web_tabs`). `clonesPoner` es lo que deja la
   // respuesta del server sin pedirla por red; `clonar` es lo que hace el `+` de la pestaña.
   clones: function(){ return CLONES.slice(); },

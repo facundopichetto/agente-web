@@ -183,6 +183,10 @@
       "motor": "claude",
       "modelo": "sonnet",
       "effort": "low"
+    },
+    "personal": {
+      "motor": "agy",
+      "modelo": "gemini-3.8-flash"
     }
   },
   "resueltos": {
@@ -354,6 +358,27 @@
         "medium"
       ]
     },
+    "personal": {
+      "pestana": "personal",
+      "tema": null,
+      "fila": null,
+      "motor": "agy",
+      "modelo": "gemini-3.8-flash",
+      "effort": "medium",
+      "origen_motor": "del_modelo",
+      "origen_modelo": "selector_exacto",
+      "origen_effort": "default_global",
+      "flags": [
+        "--model",
+        "gemini-3.8-flash",
+        "--effort",
+        "medium"
+      ],
+      "flags_effort": [
+        "--effort",
+        "medium"
+      ]
+    },
     "plata": {
       "pestana": "plata",
       "tema": null,
@@ -462,8 +487,8 @@
       "modelo": "sonnet"
     },
     "flos": {
-      "motor": "claude",
-      "modelo": "sin modelo"
+      "motor": "gemini-3.1-pro",
+      "modelo": "gemini-3.1-pro"
     },
     "juegos": {
       "motor": "agy",
@@ -474,6 +499,10 @@
       "modelo": "geminiflash",
       "effort": "medium"
     },
+    "personal": {
+      "motor": "claude",
+      "modelo": "sin modelo"
+    },
     "plata": {
       "motor": "claude",
       "modelo": "sin modelo"
@@ -483,8 +512,8 @@
       "modelo": "agy"
     },
     "server": {
-      "motor": "agy",
-      "modelo": "agy"
+      "motor": "claude",
+      "modelo": "fable"
     },
     "tinder": {
       "motor": "agy",
