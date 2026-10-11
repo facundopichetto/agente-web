@@ -22,7 +22,8 @@
                 (fechaHora ? ' <span class="g">- ' + esc(fechaHora) + "</span>" : "") +
                 (p.contador_viejo ? ' <span class="a">·</span>' : "");
     var filas = [], quien = function(u){
-      return "@" + esc(u.usuario) + (u.nombre ? ' <span class="g">' + esc(u.nombre) + "</span>" : "");
+      // {votador} (facundo, 2026-10-11): el arroba abre el votador de SU lista (`B.abrirCuenta`, handler de abajo)
+      return '<a class="arroba" href="#" data-cuenta="' + esc(u.usuario) + '">@' + esc(u.usuario) + "</a>" + (u.nombre ? ' <span class="g">' + esc(u.nombre) + "</span>" : "");
     };
     (p.dejaron || []).forEach(function(u){ filas.push('<span class="r">-</span> ' + quien(u) + ' <span class="g">' + esc(u.fecha.slice(5)) + "</span>"); });
     (p.nuevos || []).forEach(function(u){ filas.push('<span class="v">+</span> ' + quien(u) + ' <span class="g">' + esc(u.fecha.slice(5)) + "</span>"); });
@@ -68,6 +69,16 @@
     });
   }
   B.cada(POLL_MS, pedir);
+  // un solo handler delegado: la caja se repinta entera (`B.reemplazar`) y los nodos viejos se van con sus listeners
+  if(typeof document !== "undefined" && !document.__arrobasSeguidores){
+    document.__arrobasSeguidores = true;
+    document.addEventListener("click", function(ev){
+      var a = ev.target && ev.target.closest ? ev.target.closest('[data-w="seguidores"] a.arroba') : null;
+      if(!a) return;
+      ev.preventDefault(); ev.stopPropagation();
+      if(B.abrirCuenta) B.abrirCuenta(a.getAttribute("data-cuenta"));
+    });
+  }
 
   B.registrar("seguidores", {
     html: function(d){ return cajaSeguidores(adoptar(d)); },

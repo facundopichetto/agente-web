@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.549">
-<link rel="manifest" href="manifest.json?v=4.549">
+<meta name="agente-web-version" content="4.550">
+<link rel="manifest" href="manifest.json?v=4.550">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.549">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.550">
 <link id="csstema" rel="stylesheet" href="tema-facu.css">
 </head>
 <body>
@@ -6847,64 +6847,6 @@ function tjPedirFoto(c){
   });
   return true;
 }
-function tjPedirFotoHD(c, btn){
-  if(!c || !c.id) return false;
-  if(btn){
-    btn.disabled = true;
-    btn.classList.add("bajando");
-    btn.textContent = tjIng(sel.actual) ? "fetching HD…" : "bajando HD…";
-  }
-  votLan().then(function(base){
-    if(!base) throw new Error("sin lan");
-    return lanFetch(base + "/ig/foto/hd/" + encodeURIComponent(c.id), {method: "GET", cache: "no-store",
-      headers: {"authorization": "Bearer " + token}})
-      .then(function(r){ if(!r || !r.ok) throw new Error("http " + (r && r.status)); return r.json(); });
-  }).then(function(j){
-    if(!j) return;
-    if(j.ok && j.ruta){
-      c.fotos = [j.ruta]; c.foto = j.ruta; c.hd = true;
-      c.foto_pendiente = false; c.sin_foto = false;
-      delete tjFotoMotivo[c.id];
-      [j.ruta, srcBuzon(j.ruta)].forEach(function(k){
-        if(imgUrls[k]){
-          try{ URL.revokeObjectURL(imgUrls[k]); }catch(_e){}
-          delete imgUrls[k];
-        }
-      });
-      if(btn){
-        btn.classList.remove("bajando");
-        btn.classList.add("hdok");
-        btn.textContent = tjIng(sel.actual) ? "HD photo" : "foto HD";
-        btn.disabled = false;
-      }
-      var a = tjActual();
-      if(a && String(a.id) === String(c.id)) tjPintar();
-    } else {
-      if(btn){
-        btn.classList.remove("bajando");
-        btn.textContent = (j && j.motivo) || (tjIng(sel.actual) ? "HD unavailable" : "no disponible");
-        setTimeout(function(){
-          if(btn){
-            btn.disabled = false;
-            btn.textContent = tjIng(sel.actual) ? "get HD photo" : "bajar foto HD";
-          }
-        }, 3000);
-      }
-    }
-  }).catch(function(){
-    if(btn){
-      btn.classList.remove("bajando");
-      btn.textContent = "error HD";
-      setTimeout(function(){
-        if(btn){
-          btn.disabled = false;
-          btn.textContent = tjIng(sel.actual) ? "get HD photo" : "bajar foto HD";
-        }
-      }, 3000);
-    }
-  });
-  return true;
-}
 function tjBajarFoto(id, foto, pp, principal){
   var intento = 0;
   // 1729 {votador}: la bajada es de ESTA apertura. mirar solo el id no alcanza: entrar al votador por el chip de
@@ -7101,16 +7043,6 @@ function tjPintar(){
   // 2405 {tarjeta} pasos 2 y 3: los mismos chips que la ficha (`tjChipsSpec`), en ingles y sin el `not connected`
   // de `super candidatas`. el vinculo pasa a ser un chip mas: antes era texto suelto al lado
   tjChipsSpec(c, e).forEach(function(b){ chip(b.texto, b.cls, b.href || ""); });
-  var btnHd = document.createElement("button");
-  btnHd.type = "button";
-  btnHd.className = "tjhd" + (c.hd ? " hdok" : "");
-  btnHd.textContent = c.hd ? (tjIng(e) ? "HD photo" : "foto HD") : (tjIng(e) ? "get HD photo" : "bajar foto HD");
-  btnHd.title = tjIng(e) ? "Fetch high definition profile picture" : "Bajar foto de perfil en alta calidad";
-  btnHd.addEventListener("click", function(ev){
-    ev.stopPropagation();
-    tjPedirFotoHD(c, btnHd);
-  });
-  est.appendChild(btnHd);
   info.appendChild(est);
   // 1642: lo que el embudo ya sabe (seguidores, en comun, reacciones), la bio y el motivo; la linea igual al nombre no va
   if((c.datos || []).length){
@@ -8232,6 +8164,29 @@ function lisVotar(f, p, desde){
   if(p) tjInyectarPersona(col, p, f);
   // 2095 paso 5: el votador se abre FILTRADO a esta lista (`f.clave`): la fila del proceso mezcla varias
   return tinderAbrirCol(col, p && p.id, carta, f.clave, f.titulo || f.clave);
+}
+// {votador} (facundo, 2026-10-11, caja A): el arroba de un widget (`IG FOLLOW`) abre el votador de SU lista, parado en
+// esa persona y con los botones de esa lista. cada persona esta en UNA lista, asi que los botones no se mezclan.
+// primero se busca en las listas que el board ya tiene (cero pedidos); si no esta (las listas grandes no mandan su
+// gente), el server la ubica (`listas/@<arroba>.json`, `ig_listas.de_cuenta`). el camino al votador es `lisVotar`,
+// el mismo del chip de una lista: una lista que no se vota (`ignorada`, `activa`) cae sola a la cartita.
+function lisAbrirCuenta(cuenta){
+  var cu = String(cuenta || "").replace(/^@/, "").toLowerCase();
+  if(!cu) return Promise.resolve(false);
+  var d = lisCacheLeer(), hallada = null;
+  (((d || {}).listas) || []).forEach(function(f){
+    if(hallada || f.virtual) return;
+    (f.gente || []).forEach(function(p){
+      if(!hallada && String(p.cuenta || "").replace(/^@/, "").toLowerCase() === cu) hallada = {f: f, p: p};
+    });
+  });
+  if(hallada) return Promise.resolve(lisVotar(hallada.f, hallada.p, "home"));
+  return api("GET", "/repos/" + REPO + "/contents/listas/" + encodeURIComponent("@" + cu) + ".json", null, null,
+             "application/vnd.github.raw+json").then(function(r){
+    var j = r && r.json;
+    if(!j || !j.ok || !j.fila || !j.persona) return false;
+    return lisVotar(j.fila, j.persona, "home");
+  }).catch(function(){ return false; });
 }
 // 2325 {votador}: hay al menos UNA tarjeta de esa lista en la fila que ya esta cargada para el proceso? es lo que
 // decide si el votador puede abrirse con lo que hay o si primero hay que pedirle al server la fila de la lista.
@@ -13224,6 +13179,7 @@ var BOARD = {
   // copia al portapapeles con el mismo boton de siempre (1214), sin que el valor pase por `sistema()`
   pedir: function(ruta, opts){ return docsPedir(ruta, opts); },
   tocarCopiar: tocarCopiar,
+  abrirCuenta: function(c){ return lisAbrirCuenta(c); },   // {votador}: el arroba de un widget abre el votador de su lista
   repintarWidgets: repintarWidgets,
   // 1849 {fluida}: un widget puede pedir su pedazo fresco por la lan (nunca por github: sin lan no pide nada),
   // dejar ese dato en `widDatos` para que el repintado de 30 s no lo pise con uno mas viejo, y repintar su caja
@@ -15642,7 +15598,7 @@ window.__agente = {
   lisDatos: function(d){ if(d){ lis.datos = d; lis.ts = lis.cacheTs = Date.now(); lis.aviso = ""; } return lis.datos; },
   // 1801: los procesos y la fila de botones de cada uno (el dropdown se fue en la 2078)
   votItems: votItems, votMenuAbrir: votMenuAbrir, tinderAbrirCol: tinderAbrirCol,
-  tjInyectarPersona: tjInyectarPersona, tjPedirFotoHD: tjPedirFotoHD,
+  tjInyectarPersona: tjInyectarPersona, lisAbrirCuenta: lisAbrirCuenta,
   tinderHome: tinderHome, tinderSalir: tinderSalir, tjProcQs: tjProcQs, TJ_PROCS: TJ_PROCS,
   // 2078 {home}: salir de la vista entera (lo que hacia `votMenuCerrar` cuando el `home` era una capa aparte)
   tinderFuera: function(){ tinderSalir(); if(vistaEs("tinder")) vistaVolver(); },
