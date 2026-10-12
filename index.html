@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.550">
-<link rel="manifest" href="manifest.json?v=4.550">
+<meta name="agente-web-version" content="4.551">
+<link rel="manifest" href="manifest.json?v=4.551">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,8 +27,39 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.550">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.551">
 <link id="csstema" rel="stylesheet" href="tema-facu.css">
+<style id="css-listas-drag">
+#sellistas, #sellistas * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+#sellistas img {
+  -webkit-user-drag: none !important;
+  user-select: none !important;
+  pointer-events: none !important;
+}
+#sellistas .liscaja.toca {
+  cursor: grab !important;
+}
+#sellistas .liscaja.fantasma {
+  opacity: 0.25 !important;
+  border: 1px dashed var(--cian, #00f0ff) !important;
+  background: rgba(0, 240, 255, 0.05) !important;
+  box-shadow: none !important;
+}
+#sellistas .liscaja.arrastrando {
+  opacity: 0.95 !important;
+  box-shadow: 0 12px 36px rgba(0,0,0,0.9) !important;
+  cursor: grabbing !important;
+  border-color: var(--cian, #00f0ff) !important;
+}
+body.arrastrando-liscaja, body.arrastrando-liscaja * {
+  cursor: grabbing !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+</style>
 </head>
 <body>
 
@@ -203,7 +234,7 @@
   <div class="seltit mhead"><span id="clavestitulo">claves</span><span id="clavescuenta" class="mcuenta"></span><button id="clavesx" class="bglifo mesquina b-x" type="button" aria-label="cerrar" title="cerrar"></button></div>
   <div id="clavesvista"></div>
 </div></div>
-<div id="selmodal" class="capa oculta" role="dialog" aria-modal="true" aria-labelledby="seltitulo">
+<div id="selmodal" class="capa oculta" role="dialog" aria-modal="true" aria-labelledby="seltitulo" tabindex="-1">
   <div class="selcaja mcaja">
     <div class="seltit mhead"><button id="selback" class="bglifo mesquina b-atras apagado oculta" type="button" data-q="atras" aria-label="back" title="back"><span class="mglf">←</span></button><span id="seltitulo"></span><span id="selcuenta" class="mcuenta"></span><button id="selx" class="bglifo mesquina b-x" type="button" aria-label="cerrar sin enviar" title="cerrar sin enviar"></button></div>
     <div id="selcont" class="oculta" aria-live="polite"></div>
@@ -314,7 +345,7 @@ function capaTope(){
 // 3056: mostrar u ocultar el votador es el ULTIMO paso de abrir una tarjeta (despues de pintarla y de poner la vista
 // `tinder`), asi que la clase de la 2405 {tarjeta} paso 1 se reevalua aca: si no, la primera tarjeta dejaba la barra
 function capaMostrar(id, fondo){ $(id).classList.remove("oculta"); if(fondo) $(fondo).classList.remove("oculta"); capaOptico($(id));
-  if(id === "selmodal") tjFull(); }
+  if(id === "selmodal"){ tjFull(); tjFocoAsegurar(); } }   // caso 24: recien visible, el modal toma el foco si nadie a la vista lo tiene
 // 1642 (facundo, 2026-09-15 18:55): centro optico solo si sobra lugar. la caja sube al 45% (`.optico`) si deja al
 // menos 5% libre arriba y abajo, o sea si mide hasta el 80% del alto; si no, centro real y nunca se corta arriba.
 // se recalcula cuando cambia el alto de la caja (otra tarjeta) o de la pantalla
@@ -2519,9 +2550,18 @@ function abajo(){
   // 1622: mientras facundo selecciona, el piso no se mueve. el `pego` de cuando llego el mensaje lo anota
   // `render`, asi que al soltar se va al fondo solo si de verdad estaba pegado abajo.
   if(selTxViva()) return;
+  // caso 16: `abajo()` es la orden de ir al fondo (la flecha, mandar un mensaje): suelta el candado de lectura
+  leyendoSoltar();
   hist.scrollTop = hist.scrollHeight;
-  // segunda pasada: el teclado y el autosize del textarea cambian el alto despues del layout
-  requestAnimationFrame(function(){ hist.scrollTop = hist.scrollHeight; pintarAlFinal(); });
+  ultScrollTop = hist.scrollTop;
+  // segunda pasada: el teclado y el autosize del textarea cambian el alto despues del layout.
+  // caso 16: si entre la primera pasada y este frame facundo hizo un gesto (rueda, dedo, tecla), la segunda
+  // pasada NO lo pisa: era la que lo devolvia al fondo mientras subia a leer durante el streaming.
+  var g = gestoTs;
+  requestAnimationFrame(function(){
+    if(leyendo || gestoTs !== g){ pintarAlFinal(); return; }
+    hist.scrollTop = hist.scrollHeight; ultScrollTop = hist.scrollTop; pintarAlFinal();
+  });
   pintarAlFinal(false);
 }
 // 1997 {pestana} punto 3: la flecha se ve SOLO cuando facundo no esta al final (con el mismo criterio de
@@ -2545,7 +2585,25 @@ function pintarAlFinalPronto(){
 }
 // el margen de 80 px es la tolerancia de "estoy abajo": tapa el alto de una linea del textarea que
 // crece, el redondeo del zoom y el rebote del scroll del celu, y es mucho menos que un mensaje corto.
-function pegadoAbajo(){ return hist.scrollHeight - hist.scrollTop - hist.clientHeight < 80; }
+function pegadoAbajo(){ return !leyendo && pegadoAbajoMedido() < 80; }
+function pegadoAbajoMedido(){ return hist.scrollHeight - hist.scrollTop - hist.clientHeight; }
+// caso 16 (2026-10-11): el candado de lectura. durante el streaming de una respuesta larga cada delta repintaba
+// y, como `pegadoAbajo()` tolera 80 px, un gesto chico hacia arriba (un tick de rueda, un dedo que arranca) no
+// alcanzaba a salir de la tolerancia antes del delta siguiente: el autoscroll lo devolvia al fondo y le peleaba
+// la lectura a facundo. ahora un gesto PROPIO hacia arriba prende `leyendo`, y con el candado prendido nada
+// lo mueve (`pegadoAbajo()` es falso, la flecha se ve). se suelta solo cuando vuelve al fondo de verdad: por
+// gesto propio (dentro de los 80 px), por `abajo()` (la flecha o mandar un mensaje) o porque algo programado
+// lo dejo exactamente al final. un scroll que no es gesto (el layout que cambia de alto) nunca lo prende.
+var leyendo = false;
+var ultScrollTop = hist ? hist.scrollTop : 0;    // de donde venia el ultimo `scroll`, para saber la direccion
+function leyendoPoner(){ leyendo = true; }
+function leyendoSoltar(){ leyendo = false; }
+function leyendoMirar(){
+  var ahora = hist.scrollTop, subio = ahora < ultScrollTop - 1, bajo = ahora > ultScrollTop + 1, raw = pegadoAbajoMedido();
+  ultScrollTop = ahora;
+  if(raw < 2 || (bajo && gestoVivo() && raw < 80)){ leyendoSoltar(); return; }   // volvio al fondo de verdad
+  if(subio && gestoVivo()) leyendoPoner();                                       // subio por gesto propio: a leer
+}
 // 1657 {pelado} (facundo, 2026-09-21: "NO QUIERO QUE NUNCA JAMAS PASE QUE ALGO ME MUEVA EXCEPTO QUE ESTE
 // AL FINAL. AHI SI ME PUEDE MANDAR AL FINAL SI ALGO SE AGREGA ABAJO. SINO PASE LO QUE PASE QUIERO
 // QUEDARME DONDE ESTOY"): `seguirAlFinal()` es `pegadoAbajo()` PELADO, una condicion y ninguna excepcion.
@@ -2571,17 +2629,20 @@ function anotarVista(){
   vistaTimer = setTimeout(function(){ vistaTimer = null; guardarVista(); }, 400);
 }
 hist.addEventListener("scroll", function(){
+  leyendoMirar();                                                   // caso 16: primero el candado de lectura
   if(pegadoAbajo()){ pintarAlFinal(false); subioAManoSoltar(); }   // 1645: volvio al fondo
   else { subioAManoPoner(); pintarAlFinal(true); }                 // 1645: subio a mano (1997: y aparece la flecha)
   anclaMirar();      // 1805: la linea de arriba, medida antes de que algo mueva el layout
   anotarVista();
 });
 // 1770: scrollear a mano (dedo o rueda) apaga el asentado de la vista: no se le pelea al gesto
-hist.addEventListener("wheel", function(){ asentarHasta = 0; asentarPendiente = false; gestoScroll(); }, {passive:true});
+// caso 16: la rueda hacia arriba y las teclas de subir prenden el candado EN EL MISMO TICK del gesto, sin
+// esperar al `scroll` (que puede llegar despues del proximo delta del streaming)
+hist.addEventListener("wheel", function(e){ asentarHasta = 0; asentarPendiente = false; gestoScroll(); if(e && e.deltaY < 0) leyendoPoner(); }, {passive:true});
 hist.addEventListener("touchmove", function(){ asentarHasta = 0; asentarPendiente = false; gestoScroll(); }, {passive:true});
 // arrastrar la barra de scroll o el teclado con el foco en el historial tambien son gestos de facundo
 hist.addEventListener("pointerdown", gestoScroll);
-hist.addEventListener("keydown", gestoScroll);
+hist.addEventListener("keydown", function(e){ gestoScroll(); if(e && (e.key === "ArrowUp" || e.key === "PageUp" || e.key === "Home")) leyendoPoner(); });
 
 // celu: si facundo scrollea hacia arriba para leer, el teclado se cierra solo (blur del input).
 // solo por gesto propio (dedo o rueda) y solo hacia arriba: los scrolls programados (abajo(),
@@ -2594,7 +2655,7 @@ hist.addEventListener("touchstart", function(e){
 hist.addEventListener("touchmove", function(e){
   if(tocY === null || e.touches.length !== 1) return;
   var y = e.touches[0].clientY;
-  if(y - tocY > 12){ cerrarTeclado(); tocY = null; }   // dedo hacia abajo = mirar lo viejo
+  if(y - tocY > 12){ cerrarTeclado(); leyendoPoner(); tocY = null; }   // dedo hacia abajo = mirar lo viejo (caso 16: y a leer)
   else if(tocY - y > 12) tocY = y;                     // hacia abajo en la charla: no molesta
 }, {passive:true});
 hist.addEventListener("touchend", function(){ tocY = null; }, {passive:true});
@@ -2615,6 +2676,26 @@ function trabarScroll(){
   if(sy || sx) window.scrollTo(0, 0);
   return sy;
 }
+// caso 19 (2026-10-11, "input pegado al teclado virtual en ios/android sin desacomodar la pantalla"): el
+// teclado se detectaba como `window.innerHeight - alto > 120`. en android con `interactive-widget=resizes-content`
+// (y en los chrome nuevos con barra de gestos, que SI reservan `safe-area-inset-bottom`) `innerHeight` se achica
+// JUNTO con el teclado, la resta daba 0 y `body.teclado` no se prendia nunca: el pie se quedaba con el padding del
+// safe-area y entre el input y el teclado quedaba una franja. ahora la referencia es el alto mas grande que se vio
+// del viewport visible CON ESTE ANCHO (`vvBase`): el teclado nunca cambia el ancho, rotar el celu si, y ahi arranca
+// una base nueva. la resta contra `innerHeight` queda como segunda pista (ios, firefox y chrome viejo, donde
+// `innerHeight` no se mueve con el teclado).
+var TECLADO_MIN = 120;                   // px: menos que esto no es un teclado (barra de url, rebote del scroll)
+var vvBase = {w: 0, h: 0};
+function tecladoArriba(alto){
+  var v = vvActual(), w = Math.round((v && v.width) || window.innerWidth || 0);
+  if(w !== vvBase.w) vvBase = {w: w, h: alto};
+  else if(alto > vvBase.h) vvBase.h = alto;
+  return (vvBase.h - alto > TECLADO_MIN) || (window.innerHeight - alto > TECLADO_MIN);
+}
+// caso 19: se escribe SOLO lo que cambio. ios dispara `scroll` del visualViewport en cada frame mientras el teclado
+// sube o baja, y reescribir `--alto` y el `transform` del body con el mismo valor forzaba un layout del board
+// entero por frame: la pantalla temblaba y el input se "desacomodaba" un instante antes de volver a su lugar.
+var vvUlt = {alto: null, off: null};
 function ajustarAlto(){
   var v = vvActual();
   if(!v) return;
@@ -2622,11 +2703,24 @@ function ajustarAlto(){
   var alto = v.height;
   // lo que queda de desplazamiento del viewport visible dentro del layout viewport
   var off = v.offsetTop || 0;
-  document.documentElement.style.setProperty("--alto", alto + "px");
-  document.body.style.transform = off ? "translateY(" + off + "px)" : "";
+  if(alto !== vvUlt.alto){ document.documentElement.style.setProperty("--alto", alto + "px"); vvUlt.alto = alto; }
+  if(off !== vvUlt.off){ document.body.style.transform = off ? "translateY(" + off + "px)" : ""; vvUlt.off = off; }
   // teclado arriba: ios sigue reservando el safe-area de abajo y queda una franja negra entre el
   // input y el teclado (facundo, 2026-09-11). con `body.teclado` el pie va pegado.
-  document.body.classList.toggle("teclado", window.innerHeight - alto > 120);
+  document.body.classList.toggle("teclado", tecladoArriba(alto));
+}
+// caso 19: toda remedicion que achica o agranda `#hist` mide ANTES si la charla estaba al fondo y la devuelve ahi,
+// solo si ya estaba (1657 {pelado}). `vv.resize` ya lo hacia; el foco, el blur y la rotacion no, y por eso al abrir
+// o cerrar el teclado el chat quedaba corrido unas lineas respecto de donde estaba.
+function remedir(){ var p = pegadoAbajo(); ajustarAlto(); if(p) abajo(); }
+// el teclado del celu sube y baja animado (~250 ms en ios, ~300 en android) y los eventos llegan desparejos: el
+// `resize` del viewport al final, los `scroll` durante, y el foco/blur al principio. se remide en tandas cortas
+// hasta que la animacion termino, y como `ajustarAlto` solo escribe lo que cambio, las pasadas de mas no cuestan.
+var vvTandas = [];
+function remedirEnTandas(){
+  vvTandas.forEach(clearTimeout); vvTandas = [];
+  remedir();
+  [60, 120, 250, 400].forEach(function(ms){ vvTandas.push(setTimeout(remedir, ms)); });
 }
 if(vv){
   vv.addEventListener("resize", function(){ var p = pegadoAbajo(); ajustarAlto(); if(p) abajo(); });
@@ -2634,13 +2728,16 @@ if(vv){
   ajustarAlto();
 }
 // el foco del input es lo que abre el teclado: ios scrollea unos ms despues, asi que se remide ahi
-// tambien (y una vez mas en el proximo frame, cuando el teclado ya termino de subir).
+// tambien (y unas veces mas en los frames siguientes, cuando el teclado ya termino de subir).
 window.addEventListener("scroll", ajustarAlto, {passive:true});
-if(txt) txt.addEventListener("focus", function(){
-  ajustarAlto();
-  setTimeout(ajustarAlto, 120);
-  setTimeout(ajustarAlto, 350);
-});
+if(txt){
+  txt.addEventListener("focus", remedirEnTandas);
+  // caso 19: el blur es el teclado que baja. ios a veces manda el `resize` del viewport ANTES de devolver el
+  // `offsetTop` a 0 y el body quedaba corrido hasta el proximo gesto; android con `resizes-content` ni avisa.
+  txt.addEventListener("blur", remedirEnTandas);
+}
+// rotar el celu cambia el ancho: `tecladoArriba` arranca una base nueva en la primera medicion con el ancho nuevo
+window.addEventListener("orientationchange", remedirEnTandas);
 
 // urls clickeables (facundo, 2026-09-12: abrio una url de oauth cortada antes de `&state=` y claude.com
 // le dijo "Missing state parameter"). el texto YA viene escapado, asi que `&` llega como `&amp;` y va
@@ -3025,7 +3122,9 @@ function conLlegadas(l, ordenar){
 // 1658 (facundo, 2026-09-15): un estado transitorio ("subiendo la foto...", "grabando...") no es un mensaje del
 // chat: se ve en el boton, no en la linea de tiempo. si uno quedo pintado en una version vieja (historial del buzon,
 // otro dispositivo), aca no se vuelve a dibujar nunca.
-var TRANSITORIOS = /^(subiendo (la foto|el audio|la imagen)|grabando|mandando|enviando|procesando)\b/i;
+// caso 13 (2026-10-11): `copiado: ...` y `no pude copiar` eran lineas `sistema` del copiar al portapapeles; ya no se
+// escriben, y las que quedaron en un historial viejo tampoco se vuelven a pintar.
+var TRANSITORIOS = /^(subiendo (la foto|el audio|la imagen)|grabando|mandando|enviando|procesando|copiado(?=:)|no pude copiar)\b/i;
 function esEstadoTransitorio(m){
   return !!m && (m.clase === "sistema" || m.quien === "web") && TRANSITORIOS.test(String(m.texto || "").trim());
 }
@@ -6063,12 +6162,13 @@ function gracPintar(){
   c.classList.toggle("oculta", !ps.length || !tjPantalla());
   if(!ps.length) return gracReloj(false);
   var m = ps[0], seg = Math.max(0, Math.ceil((m.hasta - Date.now()) / 1000));
-  var b = moldeBoton({tipo: "caja", clase: "gracchip", txt: "deshacer " + (m.accion === "unfollow" ? "unfollow" : "follow") +
+  // caso 25: el chip de gracia solo existe en el instatinder (follow / unfollow), asi que se lee en ingles
+  var b = moldeBoton({tipo: "caja", clase: "gracchip", txt: "undo " + (m.accion === "unfollow" ? "unfollow" : "follow") +
                       " @" + (m.cuenta || m.id) + " · " + seg + "s",
                       accion: function(){ gracDeshacer(m.id); }});
-  b.setAttribute("title", "todavía no salió: " + seg + " s para arrepentirte");
+  b.setAttribute("title", "not sent yet: " + seg + " s to change your mind");
   c.appendChild(b);
-  if(ps.length > 1) c.appendChild(lisLinea("gracmas", "y " + (ps.length - 1) + " más esperando"));
+  if(ps.length > 1) c.appendChild(lisLinea("gracmas", "and " + (ps.length - 1) + " more waiting"));
   gracReloj(true);
   return true;
 }
@@ -6151,6 +6251,7 @@ function filaSumar(e, soloSacar){
   var a = sel.actual;
   if(!a || !a.continua) return false;
   var v = a.circular ? {} : filaVotadas(a.coleccion), fall = sel.tjFallidas || [], cur = tjActual(), antesAg = a.agotada;
+  var antesVacia = tjVaciaClave(a);   // caso 40: si cambio el motivo de la fila vacia, se repinta
   var fuera = salioSet(a.coleccion, sel.filtro);   // 2140: lo que saco un voto de esta carga no vuelve por un refresco
   var ya = {};
   a.candidatas.forEach(function(c){ ya[c.id] = true; });
@@ -6170,13 +6271,17 @@ function filaSumar(e, soloSacar){
     if(typeof e.circular === "boolean") a.circular = e.circular;   // 2140
     if(e.destinos) a.destinos = e.destinos;
     if(e.resumen) a.resumen = e.resumen;
+    // caso 40: el server dice POR QUE la fila vino vacia (`{estado, motivo}`); una respuesta con tarjetas lo borra
+    if("vacia" in e) a.vacia = e.vacia || null;
   }
-  if(a.candidatas.length > sel.tj) a.agotada = false;   // 1794: entro algo: la sesion sigue
+  if(a.candidatas.length > sel.tj){ a.agotada = false; a.vacia = null; }   // 1794: entro algo: la sesion sigue
   cacheGuardar(a);   // 2137 correccion 11:55: lo bajado queda guardado por lista mientras la vista viva
   var nuevo = tjActual();
-  if(!cur || !nuevo || cur.id !== nuevo.id || !!antesAg !== !!a.agotada) tjPintar(); else tjContar();
+  if(!cur || !nuevo || cur.id !== nuevo.id || !!antesAg !== !!a.agotada || antesVacia !== tjVaciaClave(a)) tjPintar(); else tjContar();
   return true;
 }
+// caso 40: la "firma" del motivo de fila vacia, para saber si hay que repintar
+function tjVaciaClave(a){ return a && a.vacia ? (a.vacia.estado || "") + "|" + (a.vacia.motivo || "") : ""; }
 // 1794: el resumen de la sesion de voto continuo (un solo `votaste N` por sesion, el mismo que deja flaudio en el
 // chat). con el texto del server se usa ese (sin el `[tema]`); si no, lo que se voto en esta pagina.
 function tjResumen(e){
@@ -6333,20 +6438,66 @@ function filaFresca(col, lista, j){
   if(typeof j.circular === "boolean") a.circular = j.circular;
   if(j.destinos) a.destinos = j.destinos;
   if(j.resumen) a.resumen = j.resumen;
+  if("vacia" in j) a.vacia = j.vacia || null;   // caso 40
   sel.tj = 0;
   cacheGuardar(a, lista);
   if(!(cur && tjIr(cur.id))) tjPintar();   // la tarjeta que estaba a la vista sigue siendo la primera si esta
   return true;
 }
 // sin tarjeta a la vista y sin `agotada`: pide el lote cada SEL_PEDIR_MS hasta que entre o el server diga que no hay mas
+// caso 40 (facundo: "lista vacía debe explicar con claridad el motivo en pantalla en lugar de quedar muda o rota"):
+// antes el poll se cortaba solo sin lan (`if(lan.base)`) y la pantalla quedaba en "no hay más por ahora" para
+// siempre, sin decir si era la lista, la lan o el server. ahora sigue pidiendo mientras el votador este abierto
+// (asi se recupera cuando la lan vuelve), y despues de CADA pedido vuelve a escribir el renglon de espera con lo
+// que sabe: el motivo del server (`vacia`), que el server no contesto (`selFallo`), que esta via no tiene las
+// listas (`selSinFila`) o que no hay lan. `sel.esperaDesde` dice hace cuanto se espera.
+var SEL_ESPERA_LARGA_MS = 20000;   // despues de esto el renglon tambien dice hace cuanto espera
 function selEsperar(col){
   if(selPedirT) return;
+  if(!sel.esperaDesde) sel.esperaDesde = Date.now();
   selPedirT = setTimeout(function(){
     selPedirT = null;
     var e = sel.actual;
     if(!e || e.coleccion !== col || tjActual() || e.agotada) return;
-    selPedir(col).then(function(hubo){ if(lan.base) selEsperar(col); });
+    selPedir(col).then(function(hubo){
+      var a = sel.actual;
+      if(!a || a.coleccion !== col || tjActual()) return;
+      if(a.agotada){ tjPintar(); return; }   // el server cerro la lista: el cierre con el resumen
+      tjEsperaRefrescar(a);
+      selEsperar(col);
+    });
   }, SEL_PEDIR_MS);
+}
+// caso 40: el renglon de la fila vacia, con el motivo mas preciso que se tenga. en castellano o en ingles segun la
+// lista (`tjIng`). el texto del server (`vacia.motivo`) viene en castellano; para la lista en ingles se traduce por
+// `estado` y se deja el motivo del server como segunda parte cuando aporta algo (la cantidad, por ejemplo).
+function tjEsperaTexto(e){
+  var ing = tjIng(e), col = e.coleccion, v = e.vacia || null, partes = [];
+  if(e.agotada) return (ing ? "no one left · " : "no quedan candidatas · ") + tjResumen(e);
+  if(v && v.estado === "sin_enviar")
+    partes.push(ing ? "you voted all " + (v.n || "") + " loaded cards: tap send and I'll bring the rest" : v.motivo);
+  else if(v && v.estado === "esperando")
+    partes.push(ing ? "waiting for data from instagram: " + String(v.motivo || "").replace(/^esperando datos:\s*/, "") : v.motivo);
+  else if(v && v.estado === "sin_lista")
+    partes.push(ing ? "nobody from this list in the queue today" : v.motivo);
+  else if(v && v.estado === "trabada")
+    partes.push(ing ? "the queue is empty and the server couldn't refill it (noted in log.md)" : v.motivo);
+  else if(v && v.motivo) partes.push(v.motivo);
+  // sin motivo del server, la frase de siempre; lo de la via (lan, server, nodo sin listas) va despues, siempre
+  if(!partes.length) partes.push(ing ? "nothing more for now: new ones come in at the end by themselves" : "no hay más por ahora: las nuevas entran solas al final");
+  if(selSinFila(col)) partes.push(ing ? "this route has no instagram lists (home server only)" : "esta vía no tiene las listas de instagram: solo el server de casa las sirve");
+  else if(!lan.base) partes.push(ing ? "no lan: waiting for widgets.json" : "sin lan: espero lo que traiga widgets.json");
+  else if(selFallo(col)) partes.push(ing ? "the server isn't answering, I retry every 2.5 s" : "el server no me contesta: reintento cada 2,5 s");
+  var desde = sel.esperaDesde ? Date.now() - sel.esperaDesde : 0;
+  if(desde > SEL_ESPERA_LARGA_MS && !(v && v.estado === "sin_enviar"))
+    partes.push(ing ? "waiting for " + Math.round(desde / 1000) + " s" : "espero hace " + Math.round(desde / 1000) + " s");
+  return partes.join(" · ");
+}
+function tjEsperaRefrescar(e){
+  var w = document.querySelector("#seltarjeta .tjespera");
+  if(!w) return;
+  w.textContent = tjEsperaTexto(e);
+  w.classList.toggle("tjaviso", !!(selFallo(e.coleccion) || selSinFila(e.coleccion) || !lan.base || (e.vacia && e.vacia.estado === "trabada")));
 }
 // 1794: la respuesta del POST de los votos ya es el estado de la fila, y el lote que repone `ejecutar` (proceso aparte)
 // llega un par de segundos despues: se vuelve a pedir a los 2 y a los 6 s
@@ -6361,19 +6512,21 @@ function selTrasSubir(col, j){
 // `tipo` es el glifo del molde. candidatas conserva sus decisiones de siempre (`ignorar`/`maybe`/`queda`) con los
 // glifos nuevos: el server no cambio de vocabulario, cambio la cara de los botones.
 var TJ_PROCS = {
-  "ig-embudo": {nombre: "candidatas", botones: [
-    {q: "ignorar", tipo: "bajar", aria: "ignorar"},
-    {q: "maybe", tipo: "maybe", aria: "mandar a maybe"},
-    {q: "queda", tipo: "subir", aria: "subir a interesan"}]},
-  "ig-seguir": {nombre: "empezar a seguir", botones: [
-    {q: "bajar", tipo: "bajar", aria: "bajar a maybe"},
-    {q: "igual", tipo: "igual", aria: "dejar en interesan"},
-    {q: "subir", tipo: "subir", aria: "follow + pasa a follow request sent"}]},
+  // caso 25 (2026-10-11): el nombre del proceso y el aria de cada boton se LEEN (el lector de pantalla, el title),
+  // asi que van en ingles como el resto del instatinder; `q` y `tipo` no cambian
+  "ig-embudo": {nombre: "candidates", botones: [
+    {q: "ignorar", tipo: "bajar", aria: "ignore"},
+    {q: "maybe", tipo: "maybe", aria: "move to maybe"},
+    {q: "queda", tipo: "subir", aria: "move up to interested"}]},
+  "ig-seguir": {nombre: "start following", botones: [
+    {q: "bajar", tipo: "bajar", aria: "move down to maybe"},
+    {q: "igual", tipo: "igual", aria: "keep in interested"},
+    {q: "subir", tipo: "subir", aria: "follow + move to follow request sent"}]},
   // 2247 {botones}: el tercero (`3 minimo para TODAS`), la `✕` roja: la ignoro sin dejar de seguirla
-  "ig-dejar": {nombre: "dejar de seguir", botones: [
-    {q: "bajar", tipo: "bajar", aria: "unfollow + bajar a maybe"},
-    {q: "igual", tipo: "igual", aria: "dejar donde está"},
-    {q: "ignorar", tipo: "no", aria: "ignorar, la seguís igual"}]},
+  "ig-dejar": {nombre: "unfollow", botones: [
+    {q: "bajar", tipo: "bajar", aria: "unfollow + move down to maybe"},
+    {q: "igual", tipo: "igual", aria: "leave as is"},
+    {q: "ignorar", tipo: "no", aria: "ignore, you keep following her"}]},
   // 1872 {maybe}: el cuarto proceso, la lista `maybe` (lo que junta el `-_-` de candidatas y el `↓` de empezar a seguir)
   // 1928 {arrepenti} (reemplaza la 1873): el quinto proceso es `activa` + `follow` y ya no deshace ningun voto.
   // 2019 {solicitudes}: `follow` son dos listas, `follow_request_sent` y `following` (mas `activar`); la cartita de
@@ -6382,21 +6535,21 @@ var TJ_PROCS = {
   // del corte (`unfollow + ignorar`: la manda a `ignorada` y ademas programa el unfollow en la cola, 2092
   // {franja}, con el ritmo unico
   // de todo lo de instagram, no de madrugada). el que no mueve a nadie, al medio
-  "ig-arrepentir": {nombre: "me arrepentí", botones: [
-    {q: "bajar", tipo: "bajar", aria: "ignorar"},
-    {q: "igual", tipo: "igual", aria: "dejar donde está"},
-    {q: "cortar", tipo: "no", aria: "unfollow + ignorar"}]},
+  "ig-arrepentir": {nombre: "second thoughts", botones: [
+    {q: "bajar", tipo: "bajar", aria: "ignore"},
+    {q: "igual", tipo: "igual", aria: "leave as is"},
+    {q: "cortar", tipo: "no", aria: "unfollow + ignore"}]},
   "ig-maybe": {nombre: "maybe", botones: [
-    {q: "bajar", tipo: "bajar", aria: "ignorar"},
-    {q: "igual", tipo: "igual", aria: "dejar en maybe"},
-    {q: "subir", tipo: "subir", aria: "subir a interesan"}]},
+    {q: "bajar", tipo: "bajar", aria: "ignore"},
+    {q: "igual", tipo: "igual", aria: "keep in maybe"},
+    {q: "subir", tipo: "subir", aria: "move up to interested"}]},
   // 2182 {foto}: la tanda de etiquetado de genero. no es un escalon del embudo: sus tres votos no mueven a nadie
   // de lista y no tocan instagram, solo guardan la etiqueta de facundo. el que no decide va en el medio, como en
   // todas las listas, asi el teclado (izquierda / espacio / derecha) vota siempre con la misma mano.
-  "ig-genero": {nombre: "etiquetar género", botones: [
-    {q: "etq_mujer", tipo: "mujer", aria: "mujer"},
-    {q: "etq_nose", tipo: "nose", aria: "no sé"},
-    {q: "etq_varon", tipo: "varon", aria: "varón"}]}
+  "ig-genero": {nombre: "gender tagging", botones: [
+    {q: "etq_mujer", tipo: "mujer", aria: "woman"},
+    {q: "etq_nose", tipo: "nose", aria: "not sure"},
+    {q: "etq_varon", tipo: "varon", aria: "man"}]}
 };
 var TJ_PROC_ORDEN = ["ig-embudo", "ig-seguir", "ig-dejar", "ig-maybe", "ig-arrepentir"];
 function tjProc(col){ return TJ_PROCS[col] || TJ_PROCS["ig-embudo"]; }
@@ -6618,6 +6771,39 @@ function tjEnCampoVotador(a){
   var m = $("selmodal");
   return tjEnCampo(a) && !!(m && m.contains(a));
 }
+// caso 24 (2026-10-11 {foco-invisible}): los guards de arriba miraban `document.activeElement` a secas, y un campo
+// puede quedarse con el foco DESPUES de esconderse (el `#txt` del chat cuando la vista `tinder` lo tapa, el `#seltxt`
+// cuando una votacion de lista pasa a tarjetas, el input de renombrar pestaña): chrome no siempre lo suelta y safari
+// nunca. con eso `tjEnCampoVotador` devolvia "escribiendo" y `tjEnCampo` "campo del chat" por un campo que facundo
+// no veia, y flechas, `a`/`s`/`d` y `backspace` morian en silencio. un campo que no se ve no es un campo con foco:
+// se le saca el foco y la tecla sigue su camino normal. lo que SI se ve no cambia (la 1905 queda igual).
+function tjVisible(el){
+  if(!el || el === document.body || el === document.documentElement || !el.isConnected) return false;
+  if(el.closest && el.closest(".oculta")) return false;
+  var cs = getComputedStyle(el);
+  if(cs.display === "none" || cs.visibility === "hidden") return false;
+  return el.getClientRects().length > 0;
+}
+function tjFocoReal(){
+  var a = document.activeElement;
+  if(!a || a === document.body) return null;
+  if(tjVisible(a)) return a;
+  try{ a.blur(); }catch(x){}
+  return null;
+}
+// cada tarjeta pintada deja el teclado con un dueño a la vista: si el foco quedo en algo escondido se suelta, y si
+// no lo tiene nadie (o lo tenia un boton que `tjPintar` acaba de reemplazar) lo toma el modal (`tabindex="-1"`,
+// sin outline), que no abre teclado en el celu y deja pasar las teclas a `tjTecla`. un campo VISIBLE con foco, el
+// del votador o cualquier otro, no se toca: la 1905 sigue mandando ahi.
+function tjFocoAsegurar(){
+  var m = $("selmodal");
+  if(!m || m.classList.contains("oculta")) return false;
+  var a = tjFocoReal();
+  if(a && m.contains(a)) return true;
+  if(a && tjEnCampo(a)) return true;   // escribiendo en un campo que se ve: el foco es suyo
+  try{ m.focus({preventScroll: true}); }catch(x){ try{ m.focus(); }catch(y){} }
+  return document.activeElement === m;
+}
 // 2079 {votador} (facundo, 2026-09-18, por audio: "la vista de tarjetas quiero que se pueda ir a la izquierda y a la
 // derecha sin necesariamente emitir una accion en esa tarjeta, no quiero tener que salir de eso"): mueve el cursor de
 // la fila SIN votar. `+1` es la tarjeta de la derecha (la siguiente), `-1` la de la izquierda (la anterior). no manda
@@ -6636,7 +6822,7 @@ function tjMover(d){
 }
 function tjTecla(ev){
   if(ev.defaultPrevented || ev.metaKey || ev.ctrlKey || ev.altKey) return;
-  var a = document.activeElement;
+  var a = tjFocoReal();   // caso 24: un campo escondido con foco no cuenta (y se lo suelta)
   if(tjEnCampoVotador(a)) return;   // escribiendo en el votador: ni vota ni deshace
   // los guards van ANTES de tocar la tecla: fuera del votador (otra vista, el modal cerrado, un modal arriba) la
   // tecla es del navegador y del input, como siempre
@@ -6756,7 +6942,7 @@ function tjAbrir(e){
   if(!e.candidatas.length) return false;
   if(e.continua) e.mas = typeof e.pendientes === "number" && e.pendientes > e.candidatas.length;
   sel.tjUlt = 0; sel.tjAtrasUlt = 0;   // 1567: el freno del doble toque es de esta apertura (si no, se come el primer toque de la siguiente)
-  sel.actual = e; sel.tj = 0; sel.tjVotos = 0; sel.tjFallidas = [];   // 1524: decisiones reales de esta apertura
+  sel.actual = e; sel.tj = 0; sel.tjVotos = 0; sel.tjFallidas = []; sel.esperaDesde = 0;   // 1524: decisiones reales de esta apertura (caso 40: y el reloj de espera)
   // 2002 {back}: cada apertura del modal es una SESION con su id. va en cada voto que sube, y es lo que la `✕`
   // manda al server para deshacer exactamente los de ESTA apertura (ni los de una anterior ni los de otra coleccion)
   sel.sesion = lidNuevo(); sel.sesionVotos = [];
@@ -6832,7 +7018,7 @@ function tjPedirFoto(c){
     if(!j) return;
     if(j.ok && j.ruta){
       c.fotos = [j.ruta]; c.foto_pendiente = false; c.sin_foto = false;
-      delete tjFotoMotivo[c.id];
+      delete tjFotoMotivo[c.id]; delete c.foto_vencida;   // caso #29: la fresca reemplaza a la vencida
     } else {
       // 2249 {foto}: el server ya contesto que no la tiene: deja de decir "bajando" para siempre y pasa al cuadro
       // con el arroba, que es lo que deja votar la tarjeta igual
@@ -6844,11 +7030,26 @@ function tjPedirFoto(c){
   }).catch(function(){
     // sin lan no se puede PEDIR, pero la cola del server la puede estar bajando igual: el cartel no cambia
     delete tjFotoPedida[c.id];
+    // caso #29: salvo que el pedido haya salido de una url vencida: ahi nadie la esta bajando por atras, y la
+    // tarjeta pasa al @arroba (se vota igual) en vez de quedarse en `bajando la foto…` para siempre
+    if(c.foto_vencida){
+      tjFotoPedida[c.id] = true;   // no se vuelve a pedir en esta carga
+      c.foto_pendiente = false; c.sin_foto = true;
+      var a = tjActual();
+      if(a && String(a.id) === String(c.id)) tjPintar();
+    }
   });
   return true;
 }
-function tjBajarFoto(id, foto, pp, principal){
+function tjBajarFoto(id, foto, pp, principal, alFallar){
   var intento = 0;
+  // caso #29 {carruselroto} (2026-10-11): una url `https:` (la firma temporal de la cdn de instagram) `bajarImagen`
+  // la devuelve tal cual, sin bajar nada: si la firma vencio el que falla es el `<img>` y hasta hoy nadie lo
+  // escuchaba. el cuadro quedaba con `.confoto` (la inicial escondida), una imagen rota de alto cero y vivo
+  // adentro del carrusel: contaba en `foto k de N` y seguia capturando el swipe. ahora el `error` del `<img>` es
+  // una bajada fallida mas; una https rota es firma vencida (reintentar la misma url no la revive) y `alFallar`
+  // (que pone `tjPintar`) saca ESE cuadro del carrusel en vez de dejarlo muerto.
+  var vencida = /^https?:/i.test(foto);
   // 1729 {votador}: la bajada es de ESTA apertura. mirar solo el id no alcanza: entrar al votador por el chip de
   // una persona, salir y volver a entrar reabre a la MISMA, y el reintento de la apertura anterior la sacaba de la
   // fila nueva (`tjSacar`) como si su foto no hubiera bajado nunca. `sel.sesion` (2002) cambia en cada apertura.
@@ -6860,19 +7061,36 @@ function tjBajarFoto(id, foto, pp, principal){
       var im = document.createElement("img"); im.alt = "";
       // 1772: la foto entra en el contenedor que ya mide lo final (css): nada de cambiar el tamaño en `onload`,
       // que era lo que hacia saltar la tarjeta de chica a grande (1642/1677 quedan atras)
+      // caso #29: la imagen que el browser no puede mostrar (firma vencida, 403/404 de la cdn, blob corrupto) se
+      // saca del cuadro y el placeholder con la inicial vuelve mientras se decide (`fallo`); el `__url` del visor
+      // recien cuando la foto cargo de verdad, asi la privada no agranda una imagen rota
+      im.addEventListener("load", function(){ pp.__url = url; });   // 1665: la privada se agranda con esta misma foto
+      im.addEventListener("error", function(){
+        if(im.parentNode === pp) pp.removeChild(im);
+        pp.classList.remove("confoto"); pp.__url = null;
+        if(!viva()) return;
+        fallo(vencida);
+      });
       im.src = url; pp.appendChild(im);
       pp.classList.add("confoto");   // 1580: la foto tapa la inicial del placeholder
-      pp.__url = url;   // 1665: la privada se agranda con esta misma foto (no hay otra bajada)
     }).catch(function(){
       if(!viva()) return;
-      // 2249 {foto} (facundo, 2026-09-28): la foto que no baja ya NO saca la tarjeta de la fila (1524). se queda,
-      // con el arroba grande y el renglon `sin foto de perfil`, y se vota como cualquier otra: una tanda no se
-      // puede trabar para siempre por una foto que instagram no da (las 8 de `etiquetar género`).
-      if(intento >= TJ_REINTENTOS.length) return principal ? tjSinFoto(id) : null;
-      setTimeout(function(){
-        (lan.base ? Promise.resolve() : probarLan()).then(bajar, bajar);
-      }, TJ_REINTENTOS[intento++]);
+      fallo(false);
     });
+  }
+  function fallo(sinReintento){
+    // 2249 {foto} (facundo, 2026-09-28): la foto que no baja ya NO saca la tarjeta de la fila (1524). se queda,
+    // con el arroba grande y el renglon `sin foto de perfil`, y se vota como cualquier otra: una tanda no se
+    // puede trabar para siempre por una foto que instagram no da (las 8 de `etiquetar género`).
+    // caso #29: con `alFallar` el cuadro se saca del carrusel (y recien sin ningun cuadro vivo cae a `tjSinFoto`,
+    // que si la url estaba vencida le pide al server una fresca); sin callback, lo de siempre
+    if(sinReintento || intento >= TJ_REINTENTOS.length){
+      if(alFallar) return alFallar(pp, foto, sinReintento);
+      return principal ? tjSinFoto(id, sinReintento) : null;
+    }
+    setTimeout(function(){
+      (lan.base ? Promise.resolve() : probarLan()).then(bajar, bajar);
+    }, TJ_REINTENTOS[intento++]);
   }
   bajar();
 }
@@ -6920,6 +7138,7 @@ function tjPintar(){
   $("selcerrar").textContent = (tjIng(e) ? "send" : "enviar") + (nv ? " (" + nv + ")" : "");
   bk.classList.remove("oculta");   // en tarjetas el back se ve siempre; `selModoLista` lo esconde en la lista
   bk.classList.toggle("apagado", !atras);
+  if(c) tjFocoAsegurar();   // caso 24: con tarjeta a la vista el teclado siempre tiene un dueño visible
   bk.disabled = !atras;
   // 2140 {listaentera}: la fila de una lista es CIRCULAR: si se acabo la vuelta y sigue habiendo gente en la lista,
   // vuelve a empezar en vez de quedarse sin tarjetas (una lista mas chica que el lote da la vuelta sola)
@@ -6933,11 +7152,13 @@ function tjPintar(){
     // pide por lan cada `SEL_PEDIR_MS` (sin lan lo trae `widgets.json`). el back `←` sigue vivo: vuelve a la anterior.
     t.removeAttribute("data-candidata");
     var w = document.createElement("div"); w.className = "tjdet " + (e.agotada ? "tjcierre" : "tjespera");
-    w.textContent = e.agotada ? (tjIng(e) ? "no one left · " : "no quedan candidatas · ") + tjResumen(e)
-      : (tjIng(e) ? "nothing more for now: new ones come in at the end by themselves"
-                 : "no hay más por ahora: las nuevas entran solas al final");
+    // caso 40: el renglon dice POR QUE no hay tarjeta (el motivo del server, la lan, el server que no contesta),
+    // nunca solo "no hay más por ahora"; `selEsperar` lo va refrescando con cada pedido
+    if(e.agotada) sel.esperaDesde = 0;
+    else if(!sel.esperaDesde) sel.esperaDesde = Date.now();
+    w.textContent = tjEsperaTexto(e);
     t.appendChild(w);
-    if(!e.agotada) selEsperar(e.coleccion);
+    if(!e.agotada){ tjEsperaRefrescar(e); selEsperar(e.coleccion); }
     return;
   }
   if(!c){ tjFin(); return; }
@@ -6963,7 +7184,23 @@ function tjPintar(){
   var fotos = (c.fotos || []).filter(Boolean);
   var cuadros = fotos.length ? fotos : ((c.foto_pendiente || c.sin_foto) ? [""] : []);
   if(cuadros.length > 1) fs.classList.add("tjcarr");
-  var pp = null;
+  var pp = null, fn = null, fnPintar = null;
+  // caso #29 {carruselroto}: la foto que no se puede mostrar (firma de la cdn vencida, bajada que no sale ni
+  // reintentando) SACA su cuadro del carrusel: las que quedan se siguen caminando de a una, el `foto k de N` cuenta
+  // las vivas, y con una sola (o ninguna) la clase `tjcarr` se va, asi el swipe de la tarjeta vuelve a ser de la
+  // fila. la url rota tambien se va de `c.fotos`: un repintado o la precarga no la vuelven a pedir. recien cuando
+  // no queda NINGUN cuadro vivo la tarjeta pasa por `tjSinFoto`, que con una url vencida pide una fresca al server.
+  function cuadroRoto(x, foto, vencida){
+    if(x.parentNode === fs) fs.removeChild(x);
+    c.fotos = (c.fotos || []).filter(function(f){ return f !== foto; });
+    var vivos = fs.querySelectorAll(".tjppal").length;
+    if(vivos <= 1){
+      fs.classList.remove("tjcarr");
+      if(fn && fn.parentNode) fn.parentNode.removeChild(fn);
+      fn = null;
+    } else if(fnPintar) fnPintar();
+    if(!vivos) tjSinFoto(c.id, vencida);
+  }
   cuadros.forEach(function(foto, i){
     var x = document.createElement(ppUrl ? "a" : "div"); x.className = "tjppal";
     if(ppUrl){ x.href = ppUrl; x.target = "_blank"; x.rel = "noopener"; }
@@ -6987,17 +7224,19 @@ function tjPintar(){
       if(x.__url) verImagen(x.__url, c.titulo || c.cuenta || "");
     });
     fs.appendChild(x);
-    if(foto) tjBajarFoto(c.id, foto, x, i === 0);
+    if(foto) tjBajarFoto(c.id, foto, x, i === 0, cuadroRoto);   // caso #29: el cuadro roto se saca, no se deja muerto
     if(!i) pp = x;
   });
   if(cuadros.length) t.appendChild(fs);   // {fotoancha2}: sin foto (y sin foto en camino) no hay bloque (ni hueco)
   // 1874: todo lo que no es la foto vive en UN bloque (`.tjinfo`): abajo de la foto en mobile, al lado en wide
   var info = document.createElement("div"); info.className = "tjinfo"; t.appendChild(info);
   if(fotos.length > 1){   // 1580: en que foto va, en el bloque de datos (la foto no lleva nada encima)
-    var fn = document.createElement("div"); fn.className = "tjfnum";
-    var fnPintar = function(){
-      var an = fs.clientWidth || 1, k = Math.min(fotos.length, Math.round(fs.scrollLeft / an) + 1);
-      fn.textContent = (tjIng(e) ? "photo " + k + " of " : "foto " + k + " de ") + fotos.length;
+    fn = document.createElement("div"); fn.className = "tjfnum";
+    fnPintar = function(){
+      // caso #29: cuenta los cuadros VIVOS del carrusel, no las fotos con las que nacio la tarjeta
+      var an = fs.clientWidth || 1, n = fs.querySelectorAll(".tjppal").length || 1;
+      var k = Math.min(n, Math.round(fs.scrollLeft / an) + 1);
+      if(fn) fn.textContent = (tjIng(e) ? "photo " + k + " of " : "foto " + k + " de ") + n;
     };
     fnPintar(); fs.addEventListener("scroll", fnPintar, {passive: true});
     info.appendChild(fn);
@@ -7242,7 +7481,7 @@ function tjPrecargar(e, i){
   }
   return pedidas;
 }
-function tjSinFoto(id){
+function tjSinFoto(id, vencida){
   // 2249 {foto}: la foto no bajo ni reintentando. hasta la 1524 la tarjeta SALIA de la apertura sin votar (y una
   // tanda entera sin fotos se cerraba con `tjSinFotos`); ahora se queda y se pinta con el @arroba grande y el
   // renglon `sin foto de perfil`, asi facundo la vota igual y la fila nunca queda trabada.
@@ -7253,6 +7492,11 @@ function tjSinFoto(id){
   e.candidatas.forEach(function(x){ if(String(x.id) === String(id)) c = x; });
   if(!c) return;
   c.fotos = []; c.foto_pendiente = false; c.sin_foto = true;
+  // caso #29 {carruselroto}: si lo que murio fue una url `https:` de la cdn (firma vencida) la foto EXISTE, solo
+  // que esa copia caduco: antes de rendirse al @arroba la tarjeta queda como `foto_pendiente` y `tjPintar` le pide
+  // la fresca al server (`/ig/foto/<pk>`, `ig_fotos.una`: disco, url guardada o relectura del perfil). una sola
+  // vez por persona (`tjFotoPedida`): si la fresca tambien se rompe, o no hay lan, cae al @arroba y se vota igual.
+  if(vencida && !tjFotoPedida[id]){ c.foto_pendiente = true; c.sin_foto = false; c.foto_vencida = true; }
   tjPintar();
 }
 function tjSinFotos(e){
@@ -7659,6 +7903,119 @@ function lisPoner(cual, fresco){
   lisRefrescar();
   return true;
 }
+var lisArrActivo = null, lisArrUlt = 0;
+function lisGuardarOrdenDOM(){
+  var c = $("sellistas");
+  if(!c) return;
+  var cajas = c.querySelectorAll(".liscaja[data-lista]");
+  var orden = [];
+  cajas.forEach(function(el){
+    var k = el.getAttribute("data-lista");
+    if(k && orden.indexOf(k) === -1) orden.push(k);
+  });
+  if(orden.length){
+    try{ localStorage.setItem("claudio_orden_listas", JSON.stringify(orden)); }catch(x){}
+    docsPedir("/ig/orden_listas", {
+      method: "POST",
+      headers: {"content-type": "application/json"},
+      body: JSON.stringify({orden: orden})
+    }).catch(function(){});
+  }
+}
+
+function iniciarArrastreCaja(caja, e, f){
+  if(e.button !== undefined && e.button !== 0) return;
+  if(e.target && e.target.closest && (e.target.closest(".lischip") || e.target.closest("button") || e.target.closest("input"))) return;
+
+  var x0 = e.clientX, y0 = e.clientY;
+  var dx = 0, dy = 0;
+  var arrastrando = false;
+  var ph = null;
+  var cont = $("sellistas");
+  if(!cont) return;
+
+  function onPointerMove(ev){
+    var dist = Math.hypot(ev.clientX - x0, ev.clientY - y0);
+    if(!arrastrando){
+      if(dist < 6) return;
+      arrastrando = true;
+      lisArrActivo = caja;
+      var r = caja.getBoundingClientRect();
+      dx = x0 - r.left;
+      dy = y0 - r.top;
+      ph = document.createElement("div");
+      ph.className = "liscaja fantasma";
+      ph.style.width = r.width + "px";
+      ph.style.height = r.height + "px";
+      cont.insertBefore(ph, caja);
+
+      caja.classList.add("arrastrando");
+      caja.style.position = "fixed";
+      caja.style.width = r.width + "px";
+      caja.style.height = r.height + "px";
+      caja.style.left = (ev.clientX - dx) + "px";
+      caja.style.top = (ev.clientY - dy) + "px";
+      caja.style.zIndex = "1000";
+      caja.style.pointerEvents = "none";
+      document.body.classList.add("arrastrando-liscaja");
+    }
+
+    ev.preventDefault();
+    caja.style.left = (ev.clientX - dx) + "px";
+    caja.style.top = (ev.clientY - dy) + "px";
+
+    var cajas = [].filter.call(cont.querySelectorAll(".liscaja"), function(el){
+      return el !== caja && el !== ph && el.dataset && el.dataset.lista;
+    });
+    var mejor = null, mejorDist = Infinity, ponerDespues = false;
+    for(var i = 0; i < cajas.length; i++){
+      var tr = cajas[i].getBoundingClientRect();
+      var cx = tr.left + tr.width / 2;
+      var cy = tr.top + tr.height / 2;
+      var d = Math.hypot(ev.clientX - cx, ev.clientY - cy);
+      if(d < mejorDist){
+        mejorDist = d;
+        mejor = cajas[i];
+        if(ev.clientY > cy + 15 || (Math.abs(ev.clientY - cy) <= tr.height / 2 && ev.clientX > cx)){
+          ponerDespues = true;
+        } else {
+          ponerDespues = false;
+        }
+      }
+    }
+    if(mejor && ph){
+      if(ponerDespues){
+        if(ph.previousSibling !== mejor) cont.insertBefore(ph, mejor.nextSibling);
+      } else {
+        if(ph.nextSibling !== mejor) cont.insertBefore(ph, mejor);
+      }
+    }
+  }
+
+  function onPointerUp(ev){
+    document.removeEventListener("pointermove", onPointerMove);
+    document.removeEventListener("pointerup", onPointerUp);
+    document.removeEventListener("pointercancel", onPointerUp);
+    document.body.classList.remove("arrastrando-liscaja");
+
+    if(arrastrando && ph){
+      lisArrUlt = Date.now();
+      caja.classList.remove("arrastrando");
+      caja.removeAttribute("style");
+      cont.insertBefore(caja, ph);
+      ph.remove();
+      lisGuardarOrdenDOM();
+      setTimeout(function(){ lisArrActivo = null; }, 150);
+    } else {
+      lisArrActivo = null;
+    }
+  }
+
+  document.addEventListener("pointermove", onPointerMove, {passive: false});
+  document.addEventListener("pointerup", onPointerUp);
+  document.addEventListener("pointercancel", onPointerUp);
+}
+
 function lisPintar(){
   var c = $("sellistas"), d = movVista(lisCacheLeer()), prev = c.scrollTop;   // {gracia}: con lo recien votado
   c.textContent = "";
@@ -7670,6 +8027,20 @@ function lisPintar(){
     v.textContent = "bajando las listas…";
     c.appendChild(v);
     return;
+  }
+  var ordG = null;
+  try{
+    var s = localStorage.getItem("claudio_orden_listas");
+    if(s) ordG = JSON.parse(s);
+  }catch(x){}
+  if(!ordG && d.orden_listas && Array.isArray(d.orden_listas)) ordG = d.orden_listas;
+  if(ordG && Array.isArray(ordG)){
+    var mapa = {};
+    d.listas.forEach(function(f){ mapa[f.clave] = f; });
+    var ordenadas = [];
+    ordG.forEach(function(k){ if(mapa[k]){ ordenadas.push(mapa[k]); delete mapa[k]; } });
+    d.listas.forEach(function(f){ if(mapa[f.clave]) ordenadas.push(f); });
+    d.listas = ordenadas;
   }
   if(lis.aviso) c.appendChild(lisLinea("lisaviso", lis.aviso));   // 2143: nunca una lista en blanco, pero se avisa
   c.appendChild(lisArroba());   // 2224 {follow}: el campo `@` con el boton `follow`, arriba de las listas
@@ -7813,7 +8184,13 @@ function lisCaja(f){
     caja.setAttribute("tabindex", "0");
     caja.setAttribute("title", "abrir `" + (f.titulo || f.clave) + "`");
     if(f.proceso) caja.setAttribute("data-proceso", f.proceso);
-    var abrirCaja = function(){ lisTocar(f); };   // 2113: el votador de ESA lista, y si no se puede, su gente
+    caja.addEventListener("pointerdown", function(e){
+      iniciarArrastreCaja(caja, e, f);
+    });
+    var abrirCaja = function(){
+      if(lisArrActivo || (Date.now() - lisArrUlt < 250)) return;
+      lisTocar(f);
+    };
     caja.addEventListener("click", abrirCaja);
     caja.addEventListener("keydown", function(ev){
       if(ev.target !== caja) return;   // el enter de un chip es del chip
@@ -7869,6 +8246,12 @@ function lisFila(p, f){
   fila.setAttribute("title", "@" + p.cuenta + ": votarla en `" + ((f || {}).titulo || (f || {}).clave || "") + "`");
   var abrir = function(ev){
     if(ev && ev.stopPropagation) ev.stopPropagation();   // 2087: el cuadrado entero abre la lista
+    // caso 36 {stories} (2026-10-11): un chip CON anillo de story abre la story, no el votador. el aro de la 2081
+    // era solo la foto (56 px con 3 px de aro): el toque que caia en el borde del chip (los 4 px de cada lado, el
+    // `gap` y el margen de la cuenta) burbujeaba a este handler y abria el votador de la lista. ahora el chip entero
+    // es la zona del aro mientras haya story viva: el votador de esa persona queda en su `@cuenta` (abajo) y en la
+    // lista misma (2113). `fila.__story` lo deja `stAnillo` y se apaga si el repintado saca el aro.
+    if(fila.__story && !(ev && ev.target && ev.target.closest && ev.target.closest(".liscuenta"))) return stAbrir(p);
     // sin la fila de la lista no hay votador posible: queda su cartita, como antes
     if(!f) return lisCartita(p);
     // el back: desde la grilla de gente (`una`) se vuelve a esa grilla, desde la home se vuelve a la home (2113)
@@ -7884,28 +8267,49 @@ function lisFila(p, f){
     var im = document.createElement("img"); im.alt = ""; im.src = url; fo.appendChild(im);
   }).catch(function(){});
   // 2081 {stories}: el anillo (solo si el server mando `story`, o sea solo `activar` y `activa`). tocarlo abre la
-  // story adentro del board y corta la burbuja: el toque de la foto es la story, el del chip sigue siendo el votador
-  stAnillo(fo, p);
+  // story adentro del board y corta la burbuja. caso 36: el chip ENTERO pasa a ser la zona del aro (ver `abrir`):
+  // solo el `@cuenta` sigue siendo el votador, y el `title` del chip lo dice
+  if(stAnillo(fo, p)){
+    fila.__story = true;
+    fila.classList.add("lischip-story");
+    fila.setAttribute("title", "ver la story de @" + p.cuenta + " (la cuenta de abajo la vota)");
+  }
   fila.appendChild(fo);
   var cu = document.createElement("span"); cu.className = "liscuenta"; cu.textContent = "@" + p.cuenta;
+  if(fila.__story) cu.setAttribute("title", "@" + p.cuenta + ": votarla en `" + ((f || {}).titulo || (f || {}).clave || "") + "`");
   fila.appendChild(cu);
   return fila;
 }
-// 2078 {home}: tocar en las listas. `p` es la persona tocada (o `null` si se toco el titulo de la lista) y `f` la
-// fila de la lista, que es la que trae el `proceso` (lo dice el server, la web no deduce nada).
-// la cartita entera (1948) si el server la mando; si no, el modal de la accion recomendada, que es lo unico que
-// se sabe de esa persona. nunca un callejon (1948: "toda persona tiene acciones")
+function lisFilaDe(p){
+  if(!p) return null;
+  var cl = p.lista || (p.ficha && p.ficha.titulo_lista) || "";
+  var d = lisCacheLeer();
+  var filas = ((d || {}).listas) || [];
+  for(var i = 0; i < filas.length; i++){
+    if(filas[i].clave === cl || (cl && filas[i].titulo === cl)) return filas[i];
+    var gente = filas[i].gente || [];
+    for(var j = 0; j < gente.length; j++){
+      if(String(gente[j].id) === String(p.id) || (p.cuenta && gente[j].cuenta === p.cuenta)) return filas[i];
+    }
+  }
+  return cl ? {clave: cl, titulo: cl, proceso: "ig-embudo"} : {clave: "candidata", titulo: "candidata", proceso: "ig-embudo"};
+}
+// caso 21 {votador} (2026-10-11): VOTADOR UNICO. tocar una persona entra SIEMPRE al votador de su lista, parado en
+// ella (1729). la cartita de la 1948 (`lisFicha`, el modal lateral con la ficha y sus acciones) y el modal de la
+// frase de accion (`lisAccionModal`) ya no se abren desde aca: el parche anterior derivaba a `lisVotar` pero dejaba
+// `if(p.ficha && p.acciones) return lisFicha(p)` adelante, y como el server manda `ficha` + `acciones` para TODA
+// persona (`ig_listas.ficha` / `.acciones`), en la practica seguia abriendo la ficha vieja. ademas una lista sin
+// `proceso` (`activa`, `ignorada`) hacia `lisVotar` -> `lisCartita` -> `lisVotar`... sin fin: ahora esa lista se vota
+// con el proceso del embudo y el pie sale de `tjBotonesSpec` (los botones de la lista si el server los mando, si
+// no la red de abajo de `TJ_PROCS`). `movPersona` sigue primero ({gracia}: la lista NUEVA, no la del json viejo).
+var LIS_PROCESO_DEFAULT = "ig-embudo";
 function lisCartita(p){
   if(!p) return false;
   p = movPersona(p);   // {gracia}: la ficha dice la lista NUEVA, no la que trae el json viejo del server
-  if(p.ficha) return lisFicha(p);
-  if((p.accion || {}).texto) return lisAccionModal(p);
-  // 2095 paso 8: desde que el chip ES la cartita (paso 7), una persona sin ficha ni accion seria un toque que no
-  // hace nada (1948: "toda persona tiene acciones"). con lo que ya vino en la lista alcanza para su ficha minima
-  return lisFicha(Object.assign({}, p, {ficha: {id: p.id, cuenta: p.cuenta, nombre: p.nombre || p.cuenta,
-    foto: p.foto || "", chips: [], datos: p.datos || [], bio: "", porque: p.porque || "",
-    titulo_lista: p.titulo_lista || p.lista || "", porque_lista: "", historial: [], dm: "",
-    trazabilidad: "", story: p.story, link: p.link || ""}}));
+  var f = lisFilaDe(p);
+  // una lista que el server no vota (sin `proceso`) se vota igual: copia, nunca se toca la fila cacheada
+  if(!f.proceso) f = Object.assign({}, f, {proceso: LIS_PROCESO_DEFAULT});
+  return lisVotar(f, p, "una");
 }
 // ---------- 2095 {instatinder} pasos 5, 6 y 7: la sub-vista `una`, UNA lista con SU gente ----------
 // la home (2078) sigue siendo la grilla de listas; tocar una entra ACA: el titulo de la lista arriba, su gente en
@@ -8144,6 +8548,7 @@ function tjInyectarPersona(col, p, f){
   if(listaClave) delete salioSet(col, listaClave)[c.id];
   e.candidatas = e.candidatas || [];
   e.candidatas.unshift(c);
+  cacheGuardar(col, listaClave, e.candidatas);
   return c;
 }
 // `desde` (2113): `"home"` si el votador lo abrio el toque en la tarjeta de la lista, `"una"` (el default) si lo
@@ -8152,24 +8557,23 @@ function lisVotar(f, p, desde){
   try{ lis.scroll = $("sellistas").scrollTop; }catch(x){ lis.scroll = 0; }
   var col = f && f.proceso;
   // paso 4: de donde salio el votador, para que el back grande vuelva a ESA lista en la misma posicion de scroll
-  lis.origen = col ? {col: col, lista: f.clave, scroll: lis.unaScroll || lis.scroll,
+  lis.origen = col ? {col: col, lista: f ? f.clave : "", scroll: lis.unaScroll || lis.scroll,
                       desde: desde === "home" ? "home" : "una"} : null;
-  if(!col) return p ? lisCartita(p) : false;   // una lista que no se vota: la cartita es lo que hay
-  // si el votador no puede abrirse en ella, el toque no deja un origen colgado: no salio de ninguna lista
-  // 2113: sin persona tocada el plan B es la grilla de gente de ESA lista (antes no habia plan B: el toque moria)
-  var carta = p ? function(){ lis.origen = null; return lisCartita(p); }
-                : function(){ lis.origen = null; return lisEntrar(f); };
+  // caso 21: una lista sin `proceso` con una persona tocada vuelve por `lisCartita`, que le pone el proceso del
+  // embudo y entra de nuevo aca CON `col` (no cicla); sin persona no hay nada que votar
+  if(!col) return p ? lisCartita(p) : false;
+  // si el votador no puede abrirse en ella, el toque no deja un origen colgado: nunca abre la ficha vieja
+  var carta = function(){ lis.origen = null; return lisEntrar(f); };
   // 3528 {forzar-votador}: tocar cualquier chip individual inyecta a la persona al frente de la fila y
   // abre el votador de su lista con los botones correspondientes a ese grupo, destrabando la votacion
-  if(p) tjInyectarPersona(col, p, f);
+  if(p && col) tjInyectarPersona(col, p, f);
   // 2095 paso 5: el votador se abre FILTRADO a esta lista (`f.clave`): la fila del proceso mezcla varias
-  return tinderAbrirCol(col, p && p.id, carta, f.clave, f.titulo || f.clave);
+  return tinderAbrirCol(col, p && p.id, carta, f ? f.clave : "", f ? (f.titulo || f.clave) : "");
 }
 // {votador} (facundo, 2026-10-11, caja A): el arroba de un widget (`IG FOLLOW`) abre el votador de SU lista, parado en
 // esa persona y con los botones de esa lista. cada persona esta en UNA lista, asi que los botones no se mezclan.
 // primero se busca en las listas que el board ya tiene (cero pedidos); si no esta (las listas grandes no mandan su
-// gente), el server la ubica (`listas/@<arroba>.json`, `ig_listas.de_cuenta`). el camino al votador es `lisVotar`,
-// el mismo del chip de una lista: una lista que no se vota (`ignorada`, `activa`) cae sola a la cartita.
+// gente), el server la ubica (`listas/@<arroba>.json`, `ig_listas.de_cuenta`). el camino al votador es `lisVotar`.
 function lisAbrirCuenta(cuenta){
   var cu = String(cuenta || "").replace(/^@/, "").toLowerCase();
   if(!cu) return Promise.resolve(false);
@@ -8180,11 +8584,15 @@ function lisAbrirCuenta(cuenta){
       if(!hallada && String(p.cuenta || "").replace(/^@/, "").toLowerCase() === cu) hallada = {f: f, p: p};
     });
   });
-  if(hallada) return Promise.resolve(lisVotar(hallada.f, hallada.p, "home"));
+  if(hallada){
+    if(!hallada.f.proceso) hallada.f.proceso = "ig-embudo";
+    return Promise.resolve(lisVotar(hallada.f, hallada.p, "home"));
+  }
   return api("GET", "/repos/" + REPO + "/contents/listas/" + encodeURIComponent("@" + cu) + ".json", null, null,
              "application/vnd.github.raw+json").then(function(r){
     var j = r && r.json;
     if(!j || !j.ok || !j.fila || !j.persona) return false;
+    if(!j.fila.proceso) j.fila.proceso = "ig-embudo";
     return lisVotar(j.fila, j.persona, "home");
   }).catch(function(){ return false; });
 }
@@ -8260,7 +8668,8 @@ function lisHablar(p){
 // no sabe pedirle nada a instagram. y NADA se baja ni se abre hasta que facundo toca el aro: recien ahi sale el
 // comando `ig story @cuenta` y el visor espera el json que deja el server.
 var ST_POLL = 2000, ST_TOPE = 20;
-var st = {modal: null, pk: null, cuenta: "", i: 0, datos: null, pedido: 0, timer: null, cu: null, msg: ""};
+var st = {modal: null, pk: null, cuenta: "", i: 0, datos: null, pedido: 0, timer: null, cu: null, msg: "",
+          video: null, reloj: null};   // caso 37: el `<video>` del cuadro que se esta viendo, para frenarlo al cambiar
 function stAnillo(fo, p){
   var s = p && p.story;
   if(!fo || !s || (s.tipo !== "normal" && s.tipo !== "close")) return false;
@@ -8298,7 +8707,12 @@ function stMolde(){
   }
   return st.modal;
 }
-function stParar(){ if(st.timer){ clearTimeout(st.timer); st.timer = null; } }
+function stParar(){
+  if(st.timer){ clearTimeout(st.timer); st.timer = null; }
+  // caso 37: un video que quedo sonando detras de otro cuadro o del visor cerrado, no
+  if(st.reloj){ clearTimeout(st.reloj); st.reloj = null; }
+  if(st.video){ try { st.video.pause(); st.video.removeAttribute("src"); st.video.load(); } catch(e){} st.video = null; }
+}
 function stAtras(){
   if(st.datos && st.i > 0){ st.i--; stPintar(); return true; }
   stParar();
@@ -8352,6 +8766,8 @@ function stEsperar(n){
 function stPintar(){
   var cu = st.cu;
   if(!cu) return false;
+  if(st.video){ try { st.video.pause(); } catch(e){} st.video = null; }   // caso 37: otro cuadro, el video anterior se calla
+  if(st.reloj){ clearTimeout(st.reloj); st.reloj = null; }
   cu.textContent = "";
   var m = st.modal, items = (st.datos || {}).items || [], it = items[st.i];
   if(m) m.el.querySelector(".mcuenta").textContent = items.length
@@ -8368,7 +8784,18 @@ function stPintar(){
     cu.appendChild(fo);
     var pie = document.createElement("div"); pie.className = "stpie";
     // 2095: la duracion la arma `fmtTiempo` (una sola tabla js/py, `chat_estado.fmt_tiempo`), nunca un ` s` a mano
-    if(it.tipo === "video") pie.appendChild(stLinea("stvideo", "video" + (it.dura ? " de " + fmtTiempo(it.dura) : "")));
+    var dura = "video" + (it.dura ? " de " + fmtTiempo(it.dura) : "");
+    // caso 37 {stories} (2026-10-11): el video se reproduce ACA, adentro del board. el server ya lo dejo en H.264
+    // (`ig_stories._video_listo`: si vino en HEVC lo recodifico), asi que el `<video>` html5 lo toca en cualquier
+    // navegador. la tapa queda de `poster` y, si igual el navegador no puede (`error` o `canplay` que no llega),
+    // se vuelve a la tapa y el pie lo dice: nunca un cuadro negro y mudo.
+    if(it.tipo === "video" && it.video){
+      var vd = stVideo(it, fo, im, pie, dura);
+      fo.insertBefore(vd, im); fo.classList.add("stconvideo");
+      pie.appendChild(stLinea("stvideo", dura));
+    } else if(it.tipo === "video"){
+      pie.appendChild(stLinea("stvideo", dura + " · solo la tapa: el video no se pudo bajar"));
+    }
     if(it.texto) pie.appendChild(stLinea("sttexto", it.texto));
     if(pie.childNodes.length) cu.appendChild(pie);
   }
@@ -8383,6 +8810,56 @@ function stLinea(clase, txt){
   var d = document.createElement("div"); d.className = clase; d.textContent = txt;
   return d;
 }
+// caso 37: el `<video>` de un cuadro. arranca solo (el toque en el aro ya fue el gesto de facundo, asi que el
+// navegador deja el sonido); si el autoplay con sonido rebota, arranca mudo y el pie avisa que se toca para oirlo.
+// `playsinline` para que ios no se lo lleve a pantalla completa fuera del board. cuando falla, `stVideoCae`.
+function stVideo(it, fo, im, pie, dura){
+  var vd = document.createElement("video");
+  vd.className = "stvid"; vd.controls = true; vd.autoplay = true; vd.preload = "auto";
+  vd.setAttribute("playsinline", ""); vd.setAttribute("webkit-playsinline", "");
+  vd.setAttribute("data-codec", it.codec || "");
+  var cayo = false;
+  var caer = function(motivo){
+    if(cayo) return; cayo = true;
+    stVideoCae(vd, fo, pie, dura, motivo);
+  };
+  vd.addEventListener("error", function(){ caer("el navegador no reproduce este video"); });
+  // una fuente que carga pero no decodifica (hevc en un navegador sin hevc) no siempre tira `error`: si en
+  // 8 s no llego `loadeddata`, es lo mismo que un error. el MISMO reloj manda sobre la bajada del mp4: el json
+  // de la story llega antes de que el server termine de copiar el mp4 (es mas grande que la tapa), asi que un
+  // rebote de `bajarImagen` no es "no hay video", se reintenta cada 1 s y recien al vencer el reloj se cae a la tapa
+  var reloj = setTimeout(function(){ if(vd.readyState < 2) caer("el video no arrancó"); }, 8000);
+  vd.addEventListener("loadeddata", function(){ clearTimeout(reloj); if(im.parentNode) im.classList.add("oculta"); });
+  st.video = vd; st.reloj = reloj;
+  if(it.foto) bajarImagen(it.foto).then(function(url){ vd.poster = url; }).catch(function(){});
+  var bajar = function(){
+    if(st.video !== vd || cayo) return;   // ya se paso de cuadro o ya cayo: no toca un visor que no es el suyo
+    bajarImagen(it.video).then(function(url){
+      if(st.video !== vd || cayo) return;
+      vd.src = url;
+      var p = vd.play();
+      if(p && p.catch) p.catch(function(){
+        vd.muted = true;
+        var p2 = vd.play();
+        if(p2 && p2.catch) p2.catch(function(){});
+        pie.insertBefore(stLinea("stmudo", "tocá el video para escucharlo"), pie.firstChild);
+        vd.addEventListener("volumechange", function(){
+          var m = pie.querySelector(".stmudo"); if(!vd.muted && m) m.remove();
+        });
+      });
+    }).catch(function(){ setTimeout(bajar, 1000); });
+  };
+  bajar();
+  return vd;
+}
+function stVideoCae(vd, fo, pie, dura, motivo){
+  try { vd.pause(); } catch(e){}
+  vd.removeAttribute("src"); vd.classList.add("oculta");
+  var im = fo.querySelector("img"); if(im) im.classList.remove("oculta");
+  fo.classList.remove("stconvideo"); fo.classList.add("stsinvideo");
+  var l = pie.querySelector(".stvideo");
+  if(l) l.textContent = dura + " · " + motivo + ": se ve la tapa";
+}
 
 // ---------- 1948 {cartita}: la cartita de una persona (facundo, 2026-09-17) ----------
 // "hacer que cada persona de una lista sea tocable y abra SU cartita completa, y que toda persona tenga acciones".
@@ -8390,15 +8867,11 @@ function stLinea(clase, txt){
 // `te dejo de seguir`, historial y el hilo de dm) y la arma ENTERA el server (`ig_listas.ficha`): aca no se calcula
 // ni se redacta nada, ni una hora. el molde no cambia: `.capa` + `.mcaja` + la `.selcaja` de la 1874 a pantalla
 // completa, `moldeBoton` en cada accion y `esc` por la pila de capas (arriba del votador, asi el teclado no vota).
-var lisFic = null, lisCmdModal = null;
-function lisFicMolde(){
-  if(lisFic) return lisFic;
-  lisFic = modalMolde({id: "lisficha", z: 45, sinServer: true});
-  lisFic.el.classList.add("pantalla");
-  var c = lisFic.el.querySelector(".mcaja");
-  if(c) c.classList.add("selcaja");
-  return lisFic;
-}
+// caso 21 {votador} (2026-10-11): la cartita de arriba NO existe mas como vista: `lisFicha` queda solo como alias
+// (lo exporta `__agente` y lo llamaban pruebas y widgets viejos) y entra al votador por `lisCartita`. el molde
+// `#lisficha`, `lisFicMolde` y `lisAccBoton` se fueron con ella; las acciones de una persona son los botones del
+// pie, los extras y el `mover` del votador, que ya manda el server por lista (2247 {botones}).
+var lisCmdModal = null;
 // 2247 paso 3: la tira de acciones de lista entera, y su modal de confirmacion.
 function lisMasivos(f){
   var tira = document.createElement("div"); tira.className = "lismasivos";
@@ -8441,69 +8914,9 @@ function lisLinea(clase, txt){
   var d = document.createElement("div"); d.className = clase; d.textContent = txt;
   return d;
 }
-function lisFicha(p){
-  var f = p && p.ficha;
-  if(!f) return false;
-  var m = lisFicMolde();
-  var cu = document.createElement("div"); cu.className = "fic";
-  // bloque 1: la foto lo mas grande que entre (el cuadro lo mide la grilla, la imagen entra con `contain`)
-  var fo = document.createElement("div"); fo.className = "ficfoto";
-  // el `<img>` entra YA (vacio) y la foto le llega despues: el cuadro lo mide la grilla, asi la cartita no salta
-  // cuando la imagen baja (1874) y el `object-fit:contain` ya esta puesto aunque todavia no haya nada que mostrar
-  var im = document.createElement("img"); im.alt = "";
-  fo.appendChild(im);
-  if(f.foto) bajarImagen(f.foto).then(function(url){ im.src = url; }).catch(function(){});
-  stAnillo(fo, {id: f.id, cuenta: f.cuenta, story: f.story});   // 2081 {stories}: el mismo aro en la cartita
-  cu.appendChild(fo);
-  // bloque 2: todo lo que ya se sabe, en el orden en que lo lee facundo
-  var inf = document.createElement("div"); inf.className = "ficinfo";
-  var chips = document.createElement("div"); chips.className = "ficchips";
-  (f.chips || []).forEach(function(x){
-    var c = document.createElement("span"); c.className = "ficchip"; c.textContent = x; chips.appendChild(c);
-  });
-  if(chips.childNodes.length) inf.appendChild(chips);
-  [["lisdatos", (f.datos || []).join(" · ")], ["ficlista", f.titulo_lista ? "está en `" + f.titulo_lista + "`" : ""],
-   ["lispq", f.porque_lista], ["ficbio", f.bio], ["lispq", f.porque], ["ficdm", f.dm]].forEach(function(x){
-    var n = lisLinea(x[0], x[1]); if(n) inf.appendChild(n);
-  });
-  // `por que esta aca`: la linea de trazabilidad, armada por el server desde el embudo y los snapshots
-  if(f.trazabilidad){
-    var tz = document.createElement("div"); tz.className = "fictraza";
-    var tt = document.createElement("span"); tt.className = "fictrazatit"; tt.textContent = "por qué está acá: ";
-    tz.appendChild(tt);
-    tz.appendChild(document.createTextNode(f.trazabilidad));
-    inf.appendChild(tz);
-  }
-  (f.historial || []).forEach(function(h){ inf.appendChild(lisLinea("fichist", h)); });
-  // 2120 {persona} (facundo, 2026-09-26): el cuadro de mudanza de la {cambios} paso 3 (los seis botones) ya no se
-  // pinta en la cartita: la ficha entera de arriba es lo que se ve, y las mudanzas siguen abajo, en la lista de
-  // acciones del server, con su caja `dale`. el `mover` del json se ignora.
-  // bloque 3: las acciones, cada una del molde (`moldeBoton`), abajo de la ficha
-  var acc = document.createElement("div"); acc.className = "ficacc";
-  (p.acciones || []).forEach(function(a){ var n = lisAccBoton(p, a); if(n) acc.appendChild(n); });
-  inf.appendChild(acc);
-  cu.appendChild(inf);
-  return m.abrir({titulo: f.nombre || f.cuenta, cuenta: "@" + f.cuenta, cuerpo: cu, botones: []});
-}
-// una accion = una caja del molde. la que abre el perfil o el ultimo post es un `<a target="_blank">` de verdad
-// (1791: nada de `window.open` en la pwa) con la misma pinta de caja
-function lisAccBoton(p, a){
-  if(!a || !a.texto) return null;
-  var clase = "ficbtn fic-" + (a.clave || a.tipo || "").replace(/[^a-z]/g, "") + (a.confirma === "dale" ? " toca" : "");
-  if(a.tipo === "link" && a.link){
-    var lk = document.createElement("a");
-    lk.className = "bcaja " + clase; lk.href = a.link; lk.target = "_blank"; lk.rel = "noopener";
-    lk.textContent = a.texto;
-    lk.setAttribute("data-accion", a.clave || "");
-    // "y armar el pie de charla sin mandar nada": el texto queda escrito en `personal`, no se manda
-    lk.addEventListener("click", function(){ if(a.chat) lisEscribir(a.chat, false); });
-    return lk;
-  }
-  var b = moldeBoton({tipo: "caja", txt: a.texto, clase: clase, accion: function(){ lisAccionar(p, a); }});
-  b.setAttribute("data-accion", a.clave || "");
-  if(a.tipo === "info") b.disabled = true;
-  return b;
-}
+function lisFicha(p){ return lisCartita(p); }   // caso 21: alias, nunca un modal
+// `lisAccionar` / `lisConfirmar` / `lisDraftModal` quedan: son el molde de confirmacion (`#liscmd`) que reusa
+// `lisMasivoModal`, y lo exporta `__agente`
 // lo de lectura sale directo; lo que escribe estado o toca instagram pide UNA caja verde `dale`, sin caja `no`
 function lisAccionar(p, a){
   if(a.confirma === "dale") return lisConfirmar(p, a);
@@ -8543,14 +8956,14 @@ function lisDraftModal(p, a){
       lisEscribir(a.chat || a.draft || "", true);
     }}]});
 }
-// deja el texto escrito en la pestaña `personal` SIN mandar nada; `irse` cierra la cartita y va al chat
+// deja el texto escrito en la pestaña `personal` SIN mandar nada; `irse` cierra el votador y va al chat
+// (caso 21: ya no hay cartita que cerrar, `selCerrar` cierra el votador)
 function lisEscribir(texto, irse){
   if(temaActivo() !== "personal") abrirTab("personal");
   ponerCaja(String(texto || "") + " ");
   guardarBorrador(temaActivo(), txt.value, true);
   if(!irse) return true;
   if(lisCmdModal) lisCmdModal.cerrar();
-  if(lisFic) lisFic.cerrar();
   selCerrar();
   vistaPoner("chat");
   try{ txt.focus(); }catch(x){}
@@ -8878,7 +9291,11 @@ $("selextras").addEventListener("click", function(ev){
 // largo y ambiguo no puede mandar a nadie a `ignorada`.
 // el umbral es el 18% del ancho, pero acotado a una franja de dedo: nunca menos de 44 px (un roce no cuenta) ni
 // mas de 120 px (en el desktop la vista va al 100% del ancho, y pedir 230 px de arrastre no es un swipe)
-var TJ_SW_UMBRAL = 0.18, TJ_SW_MIN = 44, TJ_SW_MAX = 120;
+// caso #23 (2026-10-11 {swipe-scroll}): el gesto se decide UNA sola vez, apenas el dedo sale de la franja muerta
+// (`TJ_SW_SLOP`): o es claramente de costado (el swipe) o es de la tarjeta (scroll), y lo que es de la tarjeta no
+// se vuelve a mirar. antes el handler "esperaba" mientras el gesto era ambiguo, el browser arrancaba a scrollear,
+// y si el pulgar derivaba 40 px de costado a mitad del scroll el swipe se lo robaba y cambiaba de perfil.
+var TJ_SW_UMBRAL = 0.18, TJ_SW_MIN = 44, TJ_SW_MAX = 120, TJ_SW_SLOP = 10, TJ_SW_RATIO = 1.5;
 var tjSw = null, tjSwUlt = 0;
 function tjSwGuard(){
   if(!sel.actual || !tjActual()) return false;
@@ -8892,9 +9309,11 @@ function tjSwPoner(dx){
   t.classList.toggle("tjsw", !!dx);
   t.style.transform = dx ? "translateX(" + dx + "px)" : "";
 }
-function tjSwSoltar(dx, ancho, ok){
+function tjSwSoltar(dx, ancho, ok, dy){
   var u = Math.max(TJ_SW_MIN, Math.min(ancho * TJ_SW_UMBRAL, TJ_SW_MAX));
-  var d = ok && Math.abs(dx) >= u ? (dx > 0 ? -1 : 1) : 0;
+  // caso 23: al soltar, el costado tiene que seguir ganandole al vertical. un gesto que arranco de costado y
+  // termino en diagonal (mas alto que ancho) no cambia de perfil: la tarjeta vuelve sola a su lugar.
+  var d = ok && Math.abs(dx) >= u && Math.abs(dx) > Math.abs(dy || 0) ? (dx > 0 ? -1 : 1) : 0;
   tjSwPoner(0);
   if(d) tjMover(d);   // izquierda = la siguiente; en el borde `tjMover` no hace nada y la tarjeta ya volvio
   return !!d;
@@ -8907,25 +9326,31 @@ $("seltarjeta").addEventListener("touchstart", function(e){
   // la foto grande ES un `<a>` al perfil (1665/1791) y ocupa casi toda la tarjeta: si el link se quedara con el
   // gesto no habria de donde agarrarla. el swipe arranca en cualquier parte y lo que cuida al link es el click de
   // abajo, que se come el que viene atras del gesto (un swipe no abre instagram)
-  tjSw = {x: e.touches[0].clientX, y: e.touches[0].clientY, dx: 0, lado: false,
-          ancho: $("seltarjeta").offsetWidth || 1};
+  // caso 23: `top` guarda donde estaba el scroll de la tarjeta; si se movio, el gesto ya es scroll y no swipe
+  tjSw = {x: e.touches[0].clientX, y: e.touches[0].clientY, dx: 0, dy: 0, lado: false,
+          ancho: $("seltarjeta").offsetWidth || 1, top: $("seltarjeta").scrollTop};
 }, {passive: true});
 $("seltarjeta").addEventListener("touchmove", function(e){
   var s = tjSw, p = e.touches[0];
   if(!s || !p) return;
   var dx = p.clientX - s.x, dy = p.clientY - s.y;
   if(!s.lado){
+    // caso 23: si el browser ya se quedo con el gesto (empezo a scrollear la tarjeta, el `touchmove` deja de ser
+    // cancelable o el `scrollTop` se movio), es scroll y se suelta para siempre: ningun `preventDefault` tardio
+    // lo frenaria y el swipe terminaria cambiando de perfil arriba de un scroll
+    if(e.cancelable === false || $("seltarjeta").scrollTop !== s.top){ tjSw = null; return; }
     var ady = Math.abs(dy), adx = Math.abs(dx);
-    if(ady > 10 && ady >= adx){ tjSw = null; return; }   // era el scroll de la tarjeta
-    if(adx < 10) return;
+    if(adx < TJ_SW_SLOP && ady < TJ_SW_SLOP) return;   // todavia dentro de la franja muerta: nada que decidir
     // 2286 {celu}: llegar a 10 px de costado no alcanza para quedarse con el gesto. el pulgar que arranca a
     // scrollear sale siempre un poco en diagonal (dx 11, dy 8 y el swipe se comia el scroll de la tarjeta, que
-    // en el celu es casi toda foto): el costado tiene que GANARLE claro al vertical, y si no, se espera.
-    if(adx < ady * 1.5) return;
+    // en el celu es casi toda foto): el costado tiene que GANARLE claro al vertical.
+    // caso 23: y si no le gana, el gesto es de la tarjeta DESDE YA, no "se espera": antes el handler seguia
+    // mirando, el browser scrolleaba mientras tanto, y una deriva de costado a mitad del scroll lo volvia swipe.
+    if(adx < ady * TJ_SW_RATIO){ tjSw = null; return; }   // vertical o diagonal: era el scroll de la tarjeta
     s.lado = true;
   }
   e.preventDefault();   // agarrado de costado, el dedo mueve la tarjeta y ya no scrollea
-  s.dx = dx;
+  s.dx = dx; s.dy = dy;
   tjSwPoner(dx);
 }, {passive: false});
 ["touchend", "touchcancel"].forEach(function(ev){
@@ -8933,7 +9358,7 @@ $("seltarjeta").addEventListener("touchmove", function(e){
     var s = tjSw; tjSw = null;
     if(!s || !s.lado) return;
     tjSwUlt = Date.now();
-    tjSwSoltar(s.dx, s.ancho, ev === "touchend");
+    tjSwSoltar(s.dx, s.ancho, ev === "touchend", s.dy);
   }, {passive: true});
 });
 // el click que viene atras de un swipe no es un toque: no abre el perfil ni la story de la tarjeta
@@ -8992,6 +9417,12 @@ function vueloTerminar(){
   if(n) n.remove();
   reprogramar();
 }
+function chatPararVuelo(){
+  var t = (vuelo && vuelo.tema) || temaActivo();
+  api("POST", "/chat/parar", {tema: t}).then(function(r){
+    console.log("chat parado:", r);
+  }).catch(function(e){ console.error("error al parar chat:", e); });
+}
 function pintarVuelo(){
   var n = document.getElementById("vuelo");
   if(!vuelo || !lista || !deEstaTab(vuelo.tema, temaActivo())){ if(n) n.remove(); return; }
@@ -8999,7 +9430,8 @@ function pintarVuelo(){
     n = document.createElement("div");
     n.id = "vuelo"; n.className = "msg agente vuelo";
     n.innerHTML = '<div><span class="quien">flaudio</span><span class="ts"></span></div><div class="hilo"></div>' +
-                  '<div class="cuerpo"><span class="giro" title="más de esto, menos de esto o una nota"></span> <span class="fase"></span><span class="eta"></span></div>';
+                  '<div class="cuerpo"><span class="giro" title="más de esto, menos de esto o una nota"></span> <span class="fase"></span><span class="eta"></span>' +
+                  '<button class="btn-stop-chat" type="button" title="detener respuesta" onclick="chatPararVuelo()">✕ parar</button></div>';
     vuelo.tramos.forEach(function(t){ n.querySelector(".hilo").appendChild(nodoTramo(t)); });   // el nodo se rehizo (cambio de pestaña): mismo hilo
     n.querySelector(".giro").addEventListener("click", function(){ animMenuAbrir(); });   // 1453: menu chico, nunca el votador
   }
@@ -10249,7 +10681,10 @@ if(window.visualViewport) visualViewport.addEventListener("resize", posNotiModal
     pararHablaNoti();
     b.classList.add("grabando");
     estadoNotiPush("grabando...");
-    empezarGrabacion().then(function(ok){
+    // caso 41: `sigue` le dice al micro si el dedo sigue ahi cuando termina de abrir (el cartel de permiso de
+    // ios corta el toque); si no, no graba nada y se avisa que vuelva a apretar
+    empezarGrabacion(function(){ return apretado; }).then(function(ok){
+      if(ok === SUELTO_ANTES){ audioDestino = null; b.classList.remove("grabando"); estadoNotiPush("el micro ya está: mantené apretado de nuevo"); return; }
       if(!ok){ audioDestino = null; b.classList.remove("grabando"); estadoNotiPush("no pude usar el micro"); return; }
       if(!apretado) terminarGrabacion(false);   // se solto antes de que el micro terminara de abrir
     });
@@ -10258,9 +10693,9 @@ if(window.visualViewport) visualViewport.addEventListener("resize", posNotiModal
     return function(e){
       if(!apretado) return;
       apretado = false;
-      if(e) e.preventDefault();
+      if(e && e.cancelable) e.preventDefault();
       b.classList.remove("grabando");
-      if(!grabador) return;
+      if(!grabador){ if(!abriendoMicro) audioDestino = null; return; }
       estadoNotiPush(enviar ? "subiendo el audio..." : "");
       terminarGrabacion(enviar);
     };
@@ -10269,6 +10704,13 @@ if(window.visualViewport) visualViewport.addEventListener("resize", posNotiModal
   b.addEventListener("pointercancel", soltar(false));
   b.addEventListener("pointerleave", soltar(false));
   b.addEventListener("contextmenu", function(e){ e.preventDefault(); });
+  // caso 41: el release que no vuelve al boton. la voz del modal se MANDA al soltar, asi que un corte que no es
+  // el dedo (pantalla tapada, toque cancelado) descarta: nada sale solo
+  document.addEventListener("pointerup", function(e){ if(apretado) soltar(true)(null); }, true);
+  document.addEventListener("pointercancel", function(e){ if(apretado) soltar(false)(null); }, true);
+  document.addEventListener("visibilitychange", function(){
+    if(document.visibilityState === "hidden" && apretado){ soltar(false)(null); estadoNotiPush("se cortó la grabación"); }
+  });
 })();
 // el camino entero: comprimir -> hash -> subir -> mandar el mensaje de la pestaña donde se mando.
 function mandarFoto(file, pieTexto, tsEnvio, temaDestino){
@@ -10567,11 +11009,23 @@ function extAudio(mime){
   if(/ogg/.test(mime || "")) return "ogg";
   return "webm";
 }
-// el celu puede no aceptar las constraints (safari ignora `sampleRate`): si las rechaza, micro pelado
+// el celu puede no aceptar las constraints (safari ignora `sampleRate`): si las rechaza, micro pelado.
+// caso 41 (2026-10-12): si lo que fallo fue el PERMISO (`NotAllowedError`/`SecurityError`) no se vuelve a pedir:
+// el segundo pedido salia fuera del gesto del dedo y en ios abria el cartel dos veces (o directamente se bloqueaba)
 function abrirMicro(){
-  return navigator.mediaDevices.getUserMedia({audio: AUDIO_PISTA}).catch(function(){
+  return navigator.mediaDevices.getUserMedia({audio: AUDIO_PISTA}).catch(function(e){
+    if(e && /NotAllowed|Security|PermissionDenied/.test(e.name || "")) throw e;
     return navigator.mediaDevices.getUserMedia({audio: true});
   });
+}
+// caso 41: el mensaje de un micro que no abrio, en criollo. en ios el permiso negado una vez queda negado para
+// el sitio hasta que facundo lo prende a mano (aA -> ajustes del sitio -> microfono)
+function motivoMicro(e){
+  var n = (e && e.name) || "";
+  if(/NotAllowed|Security|PermissionDenied/.test(n)) return "el micro está bloqueado para esta página: habilitalo en los ajustes del sitio (aA → micrófono) y volvé a apretar";
+  if(/NotFound|Devices/.test(n)) return "no encuentro ningún micrófono";
+  if(/NotReadable|Abort|TrackStart/.test(n)) return "otra app tiene el micro tomado: cerrala y volvé a apretar";
+  return "no pude usar el microfono: " + (e && e.message || e);
 }
 // ---------- el micro se pide en cada audio (facundo, 2026-09-14, orden 1372) ----------
 // "prefiero que me pida cada vez que quiero mandar un audio como antes". se saco el reuso de la 1349 (un
@@ -10665,25 +11119,53 @@ function relojTexto(ms){
   var s = Math.floor(ms / 1000);
   return "● " + Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2);
 }
-function empezarGrabacion(){
+// caso 41 (2026-10-12, "grabación tipo whatsapp, tap and hold"): el micro se pide SIEMPRE adentro del gesto.
+// en ios safari `getUserMedia` solo abre el cartel de permiso (y despues el micro) si el pedido sale en el mismo
+// tick del `pointerdown`: cualquier `await` antes (el `stop()` del audio anterior) lo sacaba del gesto y el pedido
+// se bloqueaba sin aviso. ahora `abrirMicro()` se llama primero y lo que haya que esperar se espera DESPUES, con
+// el stream ya en la mano. `sigue` es la pregunta "el dedo sigue en el micro": cuando el cartel de permiso
+// interrumpe el toque (ios manda `pointercancel`) el stream llega con el dedo ya levantado y antes el grabador
+// arrancaba igual, huerfano, con el micro abierto hasta el corte de 10 min. ahora se cierra ahi mismo y se avisa.
+var abriendoMicro = null;     // el `getUserMedia` en vuelo: un segundo `pointerdown` no abre otro
+var microApretadoInfo = null; // caso 41: el estado del hold del boton principal, para la prueba
+var SUELTO_ANTES = "suelto";  // lo que devuelve `empezarGrabacion` cuando el dedo se levanto antes de que abriera el micro
+function empezarGrabacion(sigue){
   // {enviar}: `subiendoAudio` ya NO frena: el segundo audio se puede arrancar mientras el primero viaja
   if(grabador && !cerrandoGrab) return Promise.resolve(false);
-  // 2124 {audios}: el dedo volvio al micro con el `stop()` del anterior todavia en curso (en ios cerrar el mp4
-  // tarda): antes se devolvia `false` y la grabacion nueva no arrancaba nunca. ahora espera ese `stop()` y
-  // arranca, siempre que el dedo siga en el micro (si ya lo solto, no hay nada que grabar).
-  if(cerrandoGrab) return (paradaGrab || Promise.resolve()).then(function(){
-    return grabApretado && !grabador && !cerrandoGrab ? empezarGrabacion() : false; });
+  if(abriendoMicro) return abriendoMicro;
   if(!hayGrabacion()){ sistema("este navegador no graba audio", "error"); return Promise.resolve(false); }
   // 2124 {audios}: grabar de nuevo con un audio esperando en el pie es "quiero mandar dos": el que espera sale
   // ya (con lo que haya en la caja), se encola detras del que este subiendo y el nuevo no lo pisa. antes
   // `adjuntarAudio` del segundo hacia `descartarAdjunto()` y el primero se perdia sin aviso.
   if(adjunto && adjunto.tipo === "aud" && !subiendoFoto) mandarAdjunto(txt.value);
-  return abrirMicro().then(function(st){
+  var dedo = typeof sigue === "function" ? sigue : function(){ return true; };
+  // 2124 {audios}: el dedo volvio al micro con el `stop()` del anterior todavia en curso (en ios cerrar el mp4
+  // tarda): antes se devolvia `false` y la grabacion nueva no arrancaba nunca. se espera ese `stop()`, pero con
+  // el micro YA pedido adentro del gesto (caso 41)
+  var espera = cerrandoGrab ? (paradaGrab || Promise.resolve()) : Promise.resolve();
+  var prom = abrirMicro().then(function(st){
+    return espera.then(function(){ return st; });
+  }).then(function(st){
+    abriendoMicro = null;
+    if(!dedo() || grabador || cerrandoGrab){
+      // el dedo ya no esta (el cartel de permiso se comio el toque) o alguien grabo mientras tanto: ese stream
+      // no graba nada y se cierra ya. el aviso es para el primer audio de la sesion en ios, que es donde pasa.
+      pararPistas(st);
+      if(!dedo() && !grabador){ sistema("listo, el micro ya está: mantené apretado de nuevo para grabar", "sistema"); return SUELTO_ANTES; }
+      return false;
+    }
     stream = st; microUltimo = st;
     var mime = mimeAudio();
     grabador = new MediaRecorder(st, mime ? {mimeType: mime, audioBitsPerSecond: AUDIO_BPS} : {});
     trozosAudio = [];
     grabador.ondataavailable = function(e){ if(e.data && e.data.size) trozosAudio.push(e.data); };
+    // caso 41: ios le saca el micro a la pagina sin avisar por el touch (una llamada, siri, otra app): la pista
+    // termina y el grabador queda muerto. se cierra como un release normal, y lo grabado hasta ahi no se pierde
+    var g = grabador;
+    ((st.getTracks && st.getTracks()) || []).forEach(function(t){
+      t.addEventListener("ended", function(){ if(grabador === g && !cerrandoGrab) terminarGrabacion(!audioDestino); });
+    });
+    g.onerror = function(){ if(grabador === g && !cerrandoGrab) terminarGrabacion(!audioDestino); };
     grabador.start();
     empezarDictado();                  // el celu transcribe mientras grabas (1209). si no puede, whisper
     marcarOcupado("grabando", true);   // el daemon no reinicia mientras el micro esta abierto (1204)
@@ -10700,10 +11182,13 @@ function empezarGrabacion(){
     cortarGrab = setTimeout(function(){ terminarGrabacion(true); }, AUDIO_MAX_MS);
     return true;
   }).catch(function(e){
+    abriendoMicro = null;
     soltarMicro(); cortarDictado();
-    sistema("no pude usar el microfono: " + (e && e.message || e), "error");
+    sistema(motivoMicro(e), "error");
     return false;
   });
+  abriendoMicro = prom;
+  return prom;
 }
 // soltar manda; `enviar=false` (arrastrar el dedo afuera, o un toque de menos de AUDIO_MIN_MS) descarta.
 // `ya=true` ({enviar}): vino de la flecha del pie, asi que el audio **sale solo**, no queda de adjunto pendiente.
@@ -10720,7 +11205,10 @@ function terminarGrabacion(enviar, ya, temaDestino){
   var previo = cierreGrab || Promise.resolve(null);
   var parada = new Promise(function(res){
     g.onstop = function(){ res(new Blob(vacioStub ? [] : trozosAudio, {type: mime})); };
-    try{ g.stop(); }catch(e){ res(null); }
+    // caso 41: si ios ya mato el grabador (pista terminada) `stop()` tira InvalidState y antes se perdia todo lo
+    // grabado; lo que haya en los trozos vale igual
+    if(g.state === "inactive"){ res(new Blob(vacioStub ? [] : trozosAudio, {type: mime})); return; }
+    try{ g.stop(); }catch(e){ res(new Blob(vacioStub ? [] : trozosAudio, {type: mime})); }
   });
   paradaGrab = parada.then(function(){ paradaGrab = null; }, function(){ paradaGrab = null; });
   var cierre = parada.then(function(blob){
@@ -10881,19 +11369,29 @@ function sacarEnviando(m){
   delete audioUrls[m.src];
 }
 // tap and hold: pointer para que valga igual el dedo y el mouse. soltar manda, salirse cancela.
+// caso 41 (2026-10-12): el release puede no volver al boton. en ios el cartel de permiso corta el toque con
+// `pointercancel`, el dedo puede irse del viewport, la pagina puede quedar tapada (otra app, el centro de control)
+// y a veces el `pointerup` con captura se pierde. por eso: (1) `empezarGrabacion` recibe `sigue` y si el dedo
+// ya no esta cuando el micro abre, no graba; (2) el documento entero escucha el `pointerup`/`pointercancel` de ESE
+// pointer y el `touchend` que deja la pantalla sin dedos, como respaldo del boton; (3) la pestaña que se oculta
+// cierra la grabacion como un release (lo grabado queda en el pie, no se manda solo).
 (function(){
-  var b = $("grabar"), apretado = false;
+  var b = $("grabar"), apretado = false, puntero = null;
+  function sigue(){ return apretado; }
   b.addEventListener("pointerdown", function(e){
     e.preventDefault();
+    if(e.button != null && e.button > 0) return;           // boton derecho del mouse: no graba
     apretado = grabApretado = true;
+    puntero = e.pointerId != null ? e.pointerId : null;
     if(b.setPointerCapture && e.pointerId != null){ try{ b.setPointerCapture(e.pointerId); }catch(err){} }
-    empezarGrabacion();
+    empezarGrabacion(sigue);                               // el `getUserMedia` sale en este mismo tick (gesto)
   });
   function soltar(enviar){
     return function(e){
       if(!apretado) return;
       apretado = grabApretado = false;
-      if(e){ e.preventDefault(); }
+      puntero = null;
+      if(e && e.cancelable){ e.preventDefault(); }
       terminarGrabacion(enviar);
     };
   }
@@ -10901,6 +11399,25 @@ function sacarEnviando(m){
   b.addEventListener("pointercancel", soltar(false));
   b.addEventListener("pointerleave", soltar(false));
   b.addEventListener("contextmenu", function(e){ e.preventDefault(); });   // el hold del celu no abre el menu
+  // caso 41: respaldo a nivel documento, solo para el pointer que apreto el micro
+  function respaldo(enviar){
+    return function(e){
+      if(!apretado) return;
+      if(e.pointerId != null && puntero != null && e.pointerId !== puntero) return;
+      soltar(enviar)(null);
+    };
+  }
+  document.addEventListener("pointerup", respaldo(true), true);
+  document.addEventListener("pointercancel", respaldo(false), true);
+  function sinDedos(e){ return !e.touches || e.touches.length === 0; }
+  document.addEventListener("touchend", function(e){ if(apretado && sinDedos(e)) soltar(true)(null); }, {passive: true, capture: true});
+  document.addEventListener("touchcancel", function(e){ if(apretado && sinDedos(e)) soltar(false)(null); }, {passive: true, capture: true});
+  // caso 41: la pagina se tapo con el dedo apretado (otra app, llamada, centro de control): ios corta el micro
+  // igual, asi que se cierra como un release y lo grabado queda en el pie para que facundo decida
+  document.addEventListener("visibilitychange", function(){
+    if(document.visibilityState === "hidden" && apretado) soltar(true)(null);
+  });
+  microApretadoInfo = function(){ return {apretado: apretado, puntero: puntero}; };   // lo mira `prueba_web_audio`
 })();
 // si te vas de la pagina en el medio de una grabacion, el micro se suelta igual
 window.addEventListener("pagehide", function(){
@@ -12371,24 +12888,36 @@ function podResponder(el, e){
 function podEstado(t){ var n = $("podestado"); if(n) n.textContent = t || ""; }
 // tap and hold, igual que el micro del chat (1372): cada audio abre y cierra su micro
 function podApretar(b){
+  var apretado = false;
   b.addEventListener("pointerdown", function(ev){
     ev.preventDefault();
     if(b.setPointerCapture && ev.pointerId != null){ try{ b.setPointerCapture(ev.pointerId); }catch(x){} }
-    podGrabando = true;
+    podGrabando = true; apretado = true;
     b.classList.add("grabando");
-    empezarGrabacion();
+    // caso 41: si el dedo se levanto mientras el micro abria (cartel de permiso de ios) no se graba nada
+    empezarGrabacion(function(){ return apretado; }).then(function(ok){
+      if(!ok){ podGrabando = false; b.classList.remove("grabando"); }
+    });
   });
   function soltar(mandar){
     return function(ev){
-      if(ev) ev.preventDefault();
-      if(!podGrabando && !grabador) return;
+      if(ev && ev.cancelable) ev.preventDefault();
+      if(!apretado && !podGrabando && !grabador) return;
+      apretado = false;
       b.classList.remove("grabando");
+      if(!grabador){ if(!abriendoMicro) podGrabando = false; return; }
       terminarGrabacion(mandar !== false);
     };
   }
   b.addEventListener("pointerup", soltar(true));
   b.addEventListener("pointercancel", soltar(false));
   b.addEventListener("pointerleave", soltar(false));
+  // caso 41: el release que no vuelve al boton (el audio del podcast queda en la fila, no se manda solo)
+  document.addEventListener("pointerup", function(){ if(apretado) soltar(true)(null); }, true);
+  document.addEventListener("pointercancel", function(){ if(apretado) soltar(false)(null); }, true);
+  document.addEventListener("visibilitychange", function(){
+    if(document.visibilityState === "hidden" && apretado) soltar(true)(null);
+  });
 }
 function podSumarAudio(blob, mime, ms, dicho){
   pod.audios.push({blob: blob, mime: mime || blob.type || "audio/webm", ms: ms || 0,
@@ -14293,21 +14822,44 @@ function menu(x, y, titulo, opciones, nodo){
 // 2299 {ordentabs}: `soloMouse` = el tap and hold de este contenedor lo maneja otro (en la barra de
 // pestañas el mismo hold es el que agarra la pestaña para moverla, y el menu sale si el dedo se levanta
 // sin moverse). el click derecho del mouse sigue siendo de aca.
+// caso 17 (2026-10-11): en ios el tap sostenido A VECES abria el menu nativo (copiar / buscar, o la preview del
+// link) ENCIMA del nuestro. safari decide su callout y su seleccion de palabra a los ~500 ms, igual que `HOLD_MS`,
+// y `body.sinsel` recien entraba cuando nuestro menu ya habia abierto: una carrera. la cura va de raiz:
+// 1. `.enhold` sobre el contenedor desde el `touchstart` (user-select y touch-callout apagados, css abajo de
+//    `#ctx`): cuando safari llega a mirar si puede seleccionar o mostrar callout, ya no puede. se saca al soltar,
+//    al mover el dedo (scroll) o si el hold no abrio nada, asi que fuera del gesto la seleccion del chat sigue
+//    igual que siempre (1622 {seleccion}).
+// 2. si igual alcanzo a abrir una seleccion de palabra DURANTE este hold, se limpia; una seleccion que ya estaba
+//    antes de apoyar el dedo no se toca.
+// 3. el `touchend` que cierra el hold ya no sintetiza el `click`: ese click caia en `#ctxfondo` (o en el item) y
+//    cerraba el menu recien abierto si el dedo se quedo mas de `MENU_MS`.
+function holdPoner(el){ el.classList.add("enhold"); }
+function holdSacar(el){ el.classList.remove("enhold"); }
+function selColapsada(){
+  try{ var s = window.getSelection(); return !s || s.isCollapsed || !String(s).trim(); }catch(x){ return true; }
+}
 function gestos(el, pedir, soloMouse){
   if(!el) return;
   el.addEventListener("contextmenu", function(e){
     if(pedir(e.target, e.clientX, e.clientY)) e.preventDefault();
   });
   if(soloMouse) return;
-  var t = null, x0 = 0, y0 = 0, blanco = null;
-  function cancelar(){ if(t){ clearTimeout(t); t = null; } }
+  var t = null, x0 = 0, y0 = 0, blanco = null, abrio = false, selAntes = false;
+  function cancelar(){ if(t){ clearTimeout(t); t = null; } holdSacar(el); }
   el.addEventListener("touchstart", function(e){
-    cancelar();
+    cancelar(); abrio = false;
     if(e.touches.length !== 1) return;
     blanco = e.target; x0 = e.touches[0].clientX; y0 = e.touches[0].clientY;
+    selAntes = !selColapsada();
+    holdPoner(el);
     t = setTimeout(function(){
       t = null;
-      if(pedir(blanco, x0, y0)){ try{ if(navigator.vibrate) navigator.vibrate(8); }catch(x){} }
+      if(pedir(blanco, x0, y0)){
+        abrio = true;
+        // la seleccion que safari abrio durante ESTE hold se va; la que ya estaba, queda (1622 {seleccion})
+        if(!selAntes && !selColapsada()){ try{ window.getSelection().removeAllRanges(); }catch(x){} }
+        try{ if(navigator.vibrate) navigator.vibrate(8); }catch(x){}
+      } else holdSacar(el);
     }, HOLD_MS);
   }, {passive: true});
   el.addEventListener("touchmove", function(e){
@@ -14315,7 +14867,11 @@ function gestos(el, pedir, soloMouse){
     if(!t || !p) return;
     if(Math.abs(p.clientX - x0) > HOLD_PX || Math.abs(p.clientY - y0) > HOLD_PX) cancelar();
   }, {passive: true});
-  ["touchend", "touchcancel"].forEach(function(ev){ el.addEventListener(ev, cancelar, {passive: true}); });
+  // no passive: el `touchend` del hold que abrio el menu frena el click sintetizado (punto 3 de arriba)
+  ["touchend", "touchcancel"].forEach(function(ev){ el.addEventListener(ev, function(e){
+    cancelar();
+    if(abrio){ abrio = false; if(e.cancelable) e.preventDefault(); }
+  }, {passive: false}); });
 }
 
 // fallback de seleccion: safari ios no copia con `a.select()` a secas, necesita un rango sobre el nodo y
@@ -14338,17 +14894,41 @@ function copiaSeleccion(texto){
   try{ if(antes && antes.focus && antes !== document.body) antes.focus({preventScroll: true}); }catch(x){}
   return pudo;
 }
-function copiarViejo(texto, listo){
-  if(copiaSeleccion(texto)) listo(); else sistema("no pude copiar", "error");
-}
-function copiar(texto){
-  texto = texto || "";
-  var listo = function(){ sistema("copiado: " + corto(texto, 60)); };
+// caso 13 (2026-10-11): en http (lan o tailscale sin https) `navigator.clipboard.writeText` no existe o rechaza
+// en safari/ios y en los navegadores del celu, y el rechazo llega ASINCRONO: para cuando corria el fallback de
+// seleccion, el gesto del usuario ya habia pasado y `execCommand('copy')` fallaba tambien. sin contexto seguro
+// (`isSecureContext` falso) o sin la api, el camino es la seleccion EN EL MISMO TICK del toque; la api
+// asincronica solo se intenta en https, y si rechaza se prueba la seleccion igual (ultimo recurso).
+function portapapelesApi(){
   try{
-    if(navigator.clipboard && navigator.clipboard.writeText)
-      return navigator.clipboard.writeText(texto).then(listo, function(){ copiarViejo(texto, listo); });
-  }catch(x){}
-  copiarViejo(texto, listo);
+    return !!(window.isSecureContext && navigator.clipboard && navigator.clipboard.writeText);
+  }catch(x){ return false; }
+}
+// `copiarSeguro` es el unico camino al portapapeles: resuelve `true` si copio. NUNCA pinta nada en el chat
+// (2151 {tira}: ningun aviso adentro de `#panel-chat`, tampoco como linea `sistema`): el que llama muestra el
+// resultado donde corresponde, en el boton o con un destello sobre el nodo copiado.
+function copiarSeguro(texto){
+  texto = texto || "";
+  return new Promise(function(res){
+    var viejo = function(){ res(copiaSeleccion(texto)); };
+    if(!portapapelesApi()) return viejo();
+    try{
+      return navigator.clipboard.writeText(texto).then(function(){ res(true); }, viejo);
+    }catch(x){}
+    viejo();
+  });
+}
+// destello sobre el nodo de donde salio el texto (menu del hold de un mensaje o de un item): verde si copio,
+// rojo si no. reemplaza la linea `sistema("copiado: ...")` / `sistema("no pude copiar")` que se pintaba en el chat.
+function destelloCopiado(nodo, ok){
+  if(!nodo || !nodo.classList) return;
+  nodo.classList.remove("copiado-ok", "copiado-no");
+  nodo.classList.add(ok ? "copiado-ok" : "copiado-no");
+  clearTimeout(nodo.__cpt);
+  nodo.__cpt = setTimeout(function(){ nodo.classList.remove("copiado-ok", "copiado-no"); }, COPIADO_MS);
+}
+function copiar(texto, nodo){
+  return copiarSeguro(texto).then(function(ok){ destelloCopiado(nodo, ok); return ok; });
 }
 
 // ---------- 1214: botones `copiar` de un toque en las respuestas de claudio ----------
@@ -14357,16 +14937,6 @@ function copiar(texto){
 var COPIADO_MS = 1000;
 var RE_CLAVE_LBL = /(?:^|[^\w<&])(clave|contraseña|password|passwd|pass|token|api[ _-]?key|secret|secreto|pin|usuario|user)\s*:\s*$/i;
 var RE_CLAVE_TXT = /(^|[^\w<&])(clave|contraseña|password|passwd|pass|token|api[ _-]?key|secret|secreto|pin|usuario|user)(\s*:\s*)([^\s<>`]{3,})/i;
-function copiarSeguro(texto){
-  return new Promise(function(res){
-    var viejo = function(){ res(copiaSeleccion(texto)); };
-    try{
-      if(navigator.clipboard && navigator.clipboard.writeText)
-        return navigator.clipboard.writeText(texto).then(function(){ res(true); }, viejo);
-    }catch(x){}
-    viejo();
-  });
-}
 function tocarCopiar(bt, texto){
   return copiarSeguro(texto).then(function(ok){
     var poner = function(t){ if(bt.classList.contains("cp")) bt.dataset.t = t; else bt.textContent = t; };
@@ -14374,7 +14944,7 @@ function tocarCopiar(bt, texto){
     bt.classList.toggle("ok", ok);
     clearTimeout(bt.__t);
     bt.__t = setTimeout(function(){ poner("copiar"); bt.classList.remove("ok"); }, COPIADO_MS);
-    if(!ok) sistema("no pude copiar", "error");
+    // caso 13: el resultado vive en el boton (`no pude`), nunca como linea en el chat (2151 {tira})
     return ok;
   });
 }
@@ -14469,7 +15039,7 @@ function menuMsg(nodo, x, y){
   var m = nodo.__msg;
   if(!m) return false;
   var ops = [["responder", function(){ responderA(m); }],
-             ["copiar", function(){ copiar(m.texto); }]];
+             ["copiar", function(){ copiar(m.texto, nodo); }]];
   // 2417 {boton}: la misma accion que el boton del pie, tambien en el menu del hold
   if(m.clase === "agente" && m.ts_envio) ops.push(["lo entendiste mal", function(){
     var b = nodo.querySelector(".malent");
@@ -14486,7 +15056,7 @@ function menuItem(nodo, x, y){
   if(!o) return false;
   return menu(x, y, o.tipo || "item", [
     ["ver y decidir (a/b/c)", function(){ abrirModal(o); }],
-    ["copiar", function(){ copiar((nodo.textContent || "").replace(/\s+/g, " ").trim()); }]
+    ["copiar", function(){ copiar((nodo.textContent || "").replace(/\s+/g, " ").trim(), nodo); }]
   ], nodo);
 }
 function menuTab(nodo, x, y){
@@ -15317,10 +15887,28 @@ function escTope(){
   c.cerrar();
   return c.nombre;
 }
+// caso #30 (2026-10-11): UN toque de `esc` cierra UNA capa. una tecla sostenida un poco mas de la cuenta dispara el
+// autorepeat del teclado (un `keydown` por repeticion, cada ~30 ms despues del primer medio segundo), y la pila los
+// tomaba como toques distintos: con el visor de una foto abierto encima del votador, un solo `esc` largo cerraba el
+// visor, despues la tarjeta (de vuelta a las listas) y despues la vista entera, antes de que facundo soltara la tecla.
+// ahora el primer `keydown` de la presion es el unico que cierra; los que siguen con `repeat` (o, en un browser que no
+// lo marca, cualquier `keydown` real antes del `keyup` de ese mismo `esc`) se tragan sin tocar nada. la presion se da
+// por terminada con el `keyup`, al perder el foco de la ventana o a los `ESC_PRESA_MS` si el `keyup` nunca llego.
+// un `keydown` sintetico (`isTrusted` falso: las pruebas) no cuenta como tecla sostenida: cada despacho es un toque.
+var escPresa = false, escPresaTs = 0, ESC_PRESA_MS = 1500;
+function escSoltar(){ escPresa = false; }
 document.addEventListener("keydown", function(e){
   if(e.key !== "Escape" && e.key !== "Esc") return;
+  var ahora = Date.now();
+  if(e.isTrusted && (e.repeat || (escPresa && ahora - escPresaTs < ESC_PRESA_MS))){
+    e.preventDefault(); e.stopImmediatePropagation();   // la misma presion: ya cerro lo suyo, no cierra una mas
+    return;
+  }
+  if(e.isTrusted){ escPresa = true; escPresaTs = ahora; }
   if(escTope()){ e.preventDefault(); e.stopImmediatePropagation(); }   // capture: ni el campo ni otro handler lo ven
 }, true);
+document.addEventListener("keyup", function(e){ if(e.key === "Escape" || e.key === "Esc") escSoltar(); }, true);
+window.addEventListener("blur", escSoltar);
 document.addEventListener("keydown", function(e){
   // con el modal abierto, a/b/c dispara la accion de esa letra
   if(!modalAbierto || e.metaKey || e.ctrlKey || e.altKey) return;
@@ -15533,6 +16121,7 @@ window.__agente = {
   movReset: function(){ movs = {}; try{ localStorage.removeItem(MOV_LS); }catch(x){} return true; },
   gracPend: gracPend, gracPintar: gracPintar, gracDeshacer: gracDeshacer,
   tjFila: function(){ return ((sel.actual || {}).candidatas || []).map(function(c){ return c.id; }); },   // 2073 {back}
+  tjFotos: function(){ var c = tjActual(); return c ? (c.fotos || []).slice() : null; },   // caso #29: las fotos vivas de la tarjeta
   tjHistorial: function(){ return (sel.tjHistorial || []).map(function(h){ return h.col + ":" + h.c.id + ":" + h.q; }); },   // 1640: el back
   filaFaltan: filaFaltan, filaSumar: filaSumar, tjToqueMs: function(ms){ TJ_TOQUE_MS = ms; TJ_BACK_MS = ms ? Math.min(ms, 120) : 0; },   // 1567: fila continua; 2002: el back tiene su propia ventana
   tjBackMs: function(ms){ if(ms !== undefined) TJ_BACK_MS = ms; return TJ_BACK_MS; },   // 2002 {back}
@@ -15563,10 +16152,11 @@ window.__agente = {
   lisFicha: lisFicha, lisAccionar: lisAccionar,   // 1948 {cartita}
   // 2081 {stories}: el aro y el visor (la prueba toca el aro y mira que ANTES no salga nada)
   stAbrir: stAbrir, stIr: stIr, stAtras: stAtras,
-  stEstado: function(){ return {pk: st.pk, cuenta: st.cuenta, i: st.i, n: ((st.datos || {}).items || []).length,
+  stEstado: function(){ return {pk: st.pk, cuenta: st.cuenta, i: st.i, n: ((st.datos || {}).items || []).length, video: !!st.video,
     pedido: st.pedido, abierto: !!(st.modal && st.modal.abierto)}; },
   stDatos: function(d){ if(d){ stParar(); st.datos = d; st.i = 0; st.msg = ""; stPintar(); } return st.datos; },
   tjMover: tjMover,   // 2079 {votador}: navegar la fila sin votar
+  tjVisible: tjVisible, tjFocoReal: tjFocoReal, tjFocoAsegurar: tjFocoAsegurar,   // caso 24 {foco-invisible}
   lisVotar: lisVotar, lisEnFila: lisEnFila, tjIr: tjIr,   // 2078 {home}: el toque en una fila abre el votador
   // 2095 {instatinder}: la sub-vista `una` (UNA lista con su gente) y el filtro por lista del votador
   lisEntrar: lisEntrar, lisAHome: lisAHome, lisVolver: lisVolver, lisUnaPintar: lisUnaPintar,
@@ -15767,6 +16357,7 @@ window.__agente = {
   // urls: enteras y clickeables, en el chat y en los widgets (prueba_web_tabs lo chequea)
   enlaces: enlaces, resaltar: resaltar,
   esClave: esClave, ponerCopiar: ponerCopiar,   // 1214: botones copiar (prueba_web_copiar)
+  copiarSeguro: copiarSeguro, portapapelesApi: portapapelesApi, copiar: copiar,   // caso 13: sin https va por seleccion, sin lineas en el chat
   // enter en el celu hace salto de linea, no manda (prueba_web_tabs lo chequea)
   esTactil: esTactil, ajustarCaja: ajustarCaja, topeLineas: TOPE_LINEAS,
   // 2150 {enter}: enter manda solo con teclado fisico de verdad (`pointer: fine` + `hover: hover`), leido en cada tecla
@@ -16123,9 +16714,11 @@ window.__agente = {
   // el micro se pide en cada audio (1372): la prueba mira que el ultimo stream no deje pistas `live`
   microUltimo: function(){ return {hay: !!microUltimo, vivas: pistasVivas(microUltimo),
                                    id: microUltimo ? microUltimo.id : null}; },
-  grabando: function(){ return {grabando: !!grabador, micro: !!stream,
+  grabando: function(){ return {grabando: !!grabador, micro: !!stream, abriendo: !!abriendoMicro,
                                 marcado: $("grabar").classList.contains("grabando"),
                                 reloj: $("grabinfo").textContent}; },
+  sueltoAntes: SUELTO_ANTES, motivoMicro: motivoMicro,   // caso 41
+  microApretado: function(){ return microApretadoInfo ? microApretadoInfo() : null; },
   plays: function(){        // los [▶] que hay pintados ahora, con de donde sale cada uno
     return [].map.call(document.querySelectorAll(".play"), function(b){
       return {src: b.dataset.src, donde: b.parentNode.className.indexOf("aud") >= 0 ? "cuerpo" : "cabecera"};
@@ -16330,6 +16923,7 @@ window.__agente = {
   // headless no dispara `scroll` cuando el test le escribe `scrollTop` (0 eventos, medido): la prueba
   // vuelve a medir a mano, igual que hace con `guardarVista(true)`
   alFinalMirar: function(){ return pintarAlFinal(); },
+  leyendo: function(){ return leyendo; },                       // caso 16: el candado de lectura, para las pruebas
   hist: function(t){ return (msgsHist[normTema(t)] || []).map(function(m){
     return {id: m.id, tema: m.tema, clase: m.clase, texto: m.texto, iso: m.iso, audio: m.audio || null}; }); },
   charla: function(){ return msgs.map(function(m){

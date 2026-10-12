@@ -412,15 +412,20 @@
      es `padding-bottom:100%` pelado (el `- 2px` de la 1772 eran los dos bordes que ya no estan). */
   #seltarjeta .tjppal{position:relative;width:100%;height:0;padding-bottom:100%;box-sizing:border-box;border-radius:4px;
     overflow:hidden;display:block;background:transparent;border:0;box-shadow:none}
-  #seltarjeta .tjppal img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block}
+  /* caso #28 {fotoentera} (2026-10-11): la foto del votador NUNCA se recorta: entra entera con `contain` (mismo cambio
+     que en `estilos.css`; este tema se carga despues y pisa esa regla, asi que va en los dos) */
+  #seltarjeta .tjppal img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;
+    object-position:center;display:block}
   #seltarjeta .tjmas{flex:1 1 auto;display:flex;gap:6px;flex-wrap:wrap;min-width:0}
   #seltarjeta .tjmas .tjf{width:56px;height:56px;border-radius:4px;overflow:hidden;border:1px solid var(--linea);background:#111}
-  #seltarjeta .tjfotos img{width:100%;height:100%;object-fit:cover;display:block}
+  /* caso #28 {fotoentera}: el `cover` es SOLO de las miniaturas (`.tjf`); antes esta regla pisaba la foto grande */
+  #seltarjeta .tjfotos .tjf img{width:100%;height:100%;object-fit:cover;display:block}
   #seltarjeta .tjnom{color:var(--blanco);font-size:var(--texto-max);font-weight:bold;word-break:break-word}
   #seltarjeta .tjcta{color:var(--gris);font-size:var(--texto-max);margin-left:6px;word-break:break-all}
   #seltarjeta a.tjcta{color:var(--verde);text-decoration:none}   /* 1515: link al perfil, mismo verde que el `ver` de la lista */
   #seltarjeta .tjdet,#seltarjeta .tjmot{color:var(--gris);font-size:14px;word-break:break-word}
   #seltarjeta .tjcierre{color:var(--amarillo)}   /* 1794: el cierre de la sesion de voto continuo (`votaste N: ...`) */
+  #seltarjeta .tjespera.tjaviso{color:var(--rojo-apagado)}   /* caso 40: la fila vacia por la lan, el server o una fila trabada, nunca muda */
   #seltarjeta .tjmot{font-style:italic}
   /* 2134 {supervirtual}: el puntaje de una super candidata (amarillo, la señal fuerte) y su por que */
   /* 2244 {superranking}: la que puntuo sin el perfil leido no se pinta como una medida entera: mismo renglon,
@@ -600,7 +605,8 @@
        manda, al 100% del ancho y con el alto que le toca por su relacion. cero recorte y cero salto: el cuadro
        nace medido igual que antes. en wide (>=700px) sigue el `contain` de la 1874, que ya entraba entera. */
     #selmodal.pantalla #seltarjeta .tjppal{height:0;padding-bottom:125%;border-radius:0;background:transparent}
-    #selmodal.pantalla #seltarjeta .tjppal img{object-fit:cover;object-position:center}
+    /* caso #28 {fotoentera}: tampoco en el celu hay `cover`: el 4:5 es solo el placeholder, la foto entra entera */
+    #selmodal.pantalla #seltarjeta .tjppal img{object-fit:contain;object-position:center}
     #selmodal.pantalla #seltarjeta .tjppal.confoto{height:auto;min-height:0;padding-bottom:0}
     #selmodal.pantalla #seltarjeta .tjppal.confoto img{position:static;width:100%;height:auto;
       object-fit:contain;object-position:center}
@@ -689,6 +695,8 @@
   #sellistas.una .lisunatira{padding-top:2px;margin-top:0}
   #sellistas.una .lisgrande{padding-top:4px}
   /* sin borde de color: fondo un paso mas claro y la sombra suave de los modales (1652) */
+  #sellistas, #sellistas * { user-select: none; -webkit-user-select: none; }
+  #sellistas img { -webkit-user-drag: none; user-select: none; pointer-events: none; }
   #sellistas .liscaja{border:1px solid transparent;border-radius:4px;padding:10px;height:100%;
     background:var(--fondo-caja);box-shadow:var(--caja-sombra);display:flex;flex-direction:column;gap:6px}
   #sellistas .listit{display:flex;align-items:center;gap:8px}   /* 2080: el titulo de la lista a la altura de su numero */
@@ -704,6 +712,9 @@
     white-space:nowrap;font-size:14px}
   #sellistas .lischip.toca{cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   #sellistas .lischip.toca:active{opacity:.6}
+  /* caso 36 {stories}: el chip con anillo es TODO zona de story (el toque en el borde del chip ya no cae en el
+     votador); el `@cuenta` queda como el unico lugar del chip que vota, y se nota al pasar por arriba */
+  #sellistas .lischip.lischip-story .liscuenta{cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px}
   /* 2078 {home}: lo tocable parece tocable (1808). 1729 {votador}: el chip de una persona entra al votador de su
      lista parado en ella; el boton `ficha` de la 2078 no existe mas (lo saco la 2095) y su `.lisfic` tampoco */
   /* 2087 {resume-3}: lo tocable es el CUADRADO ENTERO de la lista, no el renglon del titulo */
@@ -803,7 +814,8 @@
   #sellistas .lisfoto.staro-close,#lisficha .ficfoto.staro-close{background:#3ad168}
   #sellistas .lisfoto.staro.stvisto,#lisficha .ficfoto.staro.stvisto{opacity:.5}
   /* el visor: el mismo molde a pantalla completa de la cartita (1874 + 2002), la foto se lleva todo el alto y el
-     texto de la story va abajo. de un video se ve la tapa y cuanto dura: el board nunca reproduce nada. */
+     texto de la story va abajo. caso 37 (2026-10-11): un video se REPRODUCE aca, con la tapa de poster; el server lo
+     deja en H.264 (el HEVC se recodifica) y si igual el navegador no puede, cae a la tapa y el pie lo dice. */
   #stvisor{z-index:47;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom) 0;justify-content:stretch}
   #stvisor::after{display:none}
   #stvisor .mcaja{max-width:none;width:100%;height:100%;max-height:100%;flex:1 1 auto;min-height:0;
@@ -814,6 +826,10 @@
     display:flex;align-items:center;justify-content:center;overflow:hidden}
   #stvisor .stfoto img{width:100%;height:100%;object-fit:contain;display:block}
   #stvisor .stfoto img:not([src]){visibility:hidden}
+  #stvisor .stfoto video.stvid{width:100%;height:100%;object-fit:contain;display:block;background:#111}
+  #stvisor .stfoto.stconvideo img{display:none}
+  #stvisor .stfoto video.oculta{display:none}
+  #stvisor .stmudo{color:var(--amarillo,#f9ce34);font-size:14px}
   #stvisor .stpie{flex:0 0 auto;max-height:35%;overflow-y:auto;display:flex;flex-direction:column;gap:4px}
   #stvisor .sttexto{color:var(--blanco);font-size:14px;word-break:break-word}
   #stvisor .stvideo{color:var(--cian);font-size:14px}

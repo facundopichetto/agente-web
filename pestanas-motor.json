@@ -484,11 +484,11 @@
     },
     "awtomic#91": {
       "motor": "claude",
-      "modelo": "sonnet"
+      "modelo": "opus"
     },
     "flos": {
-      "motor": "agy",
-      "modelo": "agy"
+      "motor": "claude",
+      "modelo": "fable"
     },
     "juegos": {
       "motor": "agy",
