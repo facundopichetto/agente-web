@@ -1642,9 +1642,17 @@
   .ub.n-sin .ub-lleno{background:#333}
   .v{color:var(--verde)} .r{color:var(--rojo)} .a{color:var(--amarillo)}
   .c{color:var(--cian)} .m{color:var(--magenta)} .g{color:var(--gris)}
-  /* widget queue (1521): blanco lo que paso, verde lo que corre, verde apagado lo que espera; la hora mas tenue */
-  .qpaso{color:var(--blanco)} .qcorre{color:var(--verde)} .qcola{color:#5f8a58} .qpaso .qh,.qcola .qh{opacity:.6}
-  .qcorre .qh{color:#8fcf7f}
+  /* widget queue (1521, 3553): separacion por color segun tipo o estado (facundo, 2026-10-12) */
+  .qpaso{color:var(--blanco)} .qcorre{color:var(--verde)} .qcola{color:#5f8a58} .qfallo{color:var(--rojo)}
+  .qborrada{color:var(--gris);opacity:.45}
+  .qpaso .qh,.qcola .qh{opacity:.6} .qcorre .qh{color:#8fcf7f} .qfallo .qh{color:#ff8585;opacity:.8}
+  .qtipo-chat.qcorre{color:var(--cian)} .qtipo-chat.qcorre .qh{color:#7dd3fc}
+  .qtipo-chat.qcola{color:#38bdf8;opacity:.85} .qtipo-chat.qcola .qh{color:#38bdf8;opacity:.65}
+  .qtipo-chat.qpaso{color:#bae6fd} .qtipo-chat.qpaso .qh{opacity:.6}
+  .qtipo-fondo.qcorre{color:var(--verde)} .qtipo-fondo.qcola{color:#5f8a58} .qtipo-fondo.qpaso{color:var(--blanco)}
+  .qtipo-proceso{color:var(--magenta)} .qtipo-proceso.qcorre{color:var(--magenta)} .qtipo-proceso .qh{color:#d38aea;opacity:.8}
+  .qfallo, .qtipo-chat.qfallo, .qtipo-fondo.qfallo, .qtipo-proceso.qfallo{color:var(--rojo)}
+  .qfallo .qh, .qtipo-chat.qfallo .qh, .qtipo-fondo.qfallo .qh{color:#ff8585;opacity:.85}
   /* 1792 (facundo, 2026-09-16): la cola es una tabla, dibujada con css. cinco columnas: nombre (lo unico
      que se achica y se corta con `…`), pedida, iniciada, delta (1845; antes transcurrido/tardo) y termino. las horas no se
      parten nunca (`max-content` + `nowrap`), asi que no hay scroll horizontal: lo que falta lo cede el nombre. */
@@ -1657,10 +1665,11 @@
      con `B.gridFr` segun lo que hay en cada columna; esto es el default con el ancho fijo de `08:49:12 pm` (11)
      y `0:04:12` (7). el nombre sigue siendo el unico que se achica (`minmax(0,...)`): sin scroll horizontal. */
   /* 1862 {cola}: seis columnas, `delay` (7, `0:04:12`) entre `pedida` e `iniciada` */
+  /* 3553: tipografia achicada 2px a 12px (facundo, 2026-10-12) */
   .qtab{display:grid;grid-template-columns:minmax(0,14fr) 11fr 7fr 11fr 7fr 11fr;width:100%;
-        column-gap:4px;row-gap:1px;white-space:nowrap;font-size:14px;line-height:1.6;max-width:100%}
+        column-gap:4px;row-gap:1px;white-space:nowrap;font-size:12px;line-height:1.6;max-width:100%}
   .qtab .it{display:contents}
-  .qtab .qth{color:var(--gris);font-size:14px;letter-spacing:.3px;opacity:.75}
+  .qtab .qth{color:var(--gris);font-size:12px;letter-spacing:.3px;opacity:.75}
   /* 1843: la cabecera de la duracion se partia en dos lineas para no aplastar el nombre; desde la 1845 dice `delta`
      (5 letras, mas angosta que `0:04:12`) asi que ya no se parte, la regla queda por si vuelve a crecer */
   .qtab .qth.qtiempo{white-space:normal;line-height:1.15;align-self:end;padding-bottom:2px}
@@ -1683,7 +1692,7 @@
   .igtab .qpaso{opacity:.55} .igtab .qcorre{color:#8fcf7f} .igtab .qfren{color:var(--rojo)}
   /* 1681 {cuelgue}: una pendiente esperando hace mas de 2 h va en rojo, para ver el atasco antes de que se acumule */
   .igtab .qvieja{color:var(--rojo);opacity:1}
-  .igpie{font-size:14px;margin-top:3px}
+  .igpie{font-size:12px;margin-top:3px}
   /* 1959: el widget `madrugada`. la tabla es la misma `.igtab` (cuatro columnas: tarea, arranca, dura, semana),
      asi que lo unico propio es el boton de largar la cola, la ficha de una tarea y sus dos campos. las fuentes
      salen de `--texto-max` (14 px) y no hay ningun tamaño nuevo. */
@@ -1745,14 +1754,14 @@
      lineas del widget siguen siendo `pre`. la sangria deja la segunda linea debajo de los chips, no del label. */
   .caja .cuerpo.tabla .ahorafila{display:block;white-space:normal;padding-left:11ch;text-indent:-11ch}
   .esctab.mdtab .it{cursor:pointer;touch-action:manipulation}
-  .qtab .qpaso.qh,.qtab .qcola.qh{opacity:.6} .qtab .qcorre.qh{color:#8fcf7f}
+  .qtab .qpaso.qh,.qtab .qcola.qh{opacity:.6} .qtab .qcorre.qh{color:#8fcf7f} .qtab .qfallo.qh{color:#ff8585;opacity:.85}
   /* 2202 {forzar}: una pendiente usa las dos celdas que tenia vacias (`iniciada` y `terminó`) para decir por
      que espera (el recurso concreto, en ambar) y ofrecer el boton que la larga igual. el boton es el molde
      chico de siempre (`.btn`) con el area tactil de la 2080 ({diseno}, controles chicos al 160%): la fuente
      no baja de los 14 px de la tabla, lo que crece es el padding. */
   .qtab .qcel.a{white-space:normal;word-break:break-word}
   .qtab .qforz{background:#000;color:var(--cian);border:1px solid var(--linea);border-radius:10px;
-                padding:1px 7px;font:inherit;font-size:14px;line-height:1.3;cursor:pointer;
+                padding:1px 7px;font:inherit;font-size:12px;line-height:1.3;cursor:pointer;
                 min-height:22px;touch-action:manipulation}
   .qtab .qforz:hover{border-color:var(--cian)}
   .qtab .qforz:disabled{opacity:.5;cursor:default}
@@ -1760,7 +1769,7 @@
   /* 1862: con la sexta columna (`delay`) las cinco horas ocupan mas: la tabla baja a 11.5px (1938: era 9.5) y 4px de gap tambien
      en la compu (antes 10.5/7, solo el celu bajaba), asi el nombre sigue teniendo lugar y no se corta con `…`;
      en 390 px baja un poco mas */
-  @media (max-width:430px){ .qtab{font-size:14px;column-gap:2px} }   /* 2014: 3 -> 2, el gap es el lever de la 1946 */
+  @media (max-width:430px){ .qtab{font-size:12px;column-gap:2px} }   /* 2014: 3 -> 2, el gap es el lever de la 1946; 3553: 12px */
   .b{font-weight:500}
   .btn{
     background:#000;color:var(--cian);border:1px solid var(--linea);border-radius:12px;

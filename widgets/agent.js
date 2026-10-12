@@ -18,10 +18,23 @@
   // sin texto, recursos ni modelo: el detalle esta en el modal de cada fila. la clave sigue `agent` (orden y settings).
   function qNom(t){ return esc(t.nombre || B.corto(t.texto || "?", 24)); }
   function qHora(h){ return '<span class="qh">' + esc(h || "--:--") + "</span>"; }
+  // 3553 (facundo, 2026-10-12): formato de hora 11:57:33a (sin espacio ni m)
+  function qFmtHora(h){
+    if(!h) return "";
+    return String(h).replace(/\s*([ap])m\b/i, "$1");
+  }
+  // 3553: tipo de tarea (chat/interactivo vs fondo/script vs proceso adoptado)
+  function qTipo(f){
+    if(!f) return "fondo";
+    if(f.adoptado || f.proceso || f.tipo === "proceso" || f.estado === "corre") return "proceso";
+    var txt = (f.completo || f.texto || "");
+    if(f.interactivo || f.tipo === "chat" || /\(de chat\)|\[pestana\b/i.test(txt)) return "chat";
+    return "fondo";
+  }
   // 1792: una fila de la tabla de la cola. las horas y las duraciones ya vienen armadas del server
   // (`recetas/cola_tiempos.py`): aca no se calcula ninguna, solo se pintan. la unica excepcion (1849 {fluida}) es
   // el `delta` de la que corre, que el reloj de abajo hace avanzar segundo a segundo desde el `dur_s` del server.
-  var QCLASE = {hecha: "qpaso", fallo: "qpaso", corriendo: "qcorre", cola: "qcola"};
+  var QCLASE = {hecha: "qpaso", fallo: "qfallo", corriendo: "qcorre", corre: "qcorre", cola: "qcola", borrada: "qborrada"};
   function qCelda(cl, v, mas, attrs){
     return '<span class="' + cl + " qcel qh" + (mas || "") + '"' + (attrs || "") + '>' + esc(v || "") + "</span>";
   }
@@ -36,29 +49,31 @@
     return qCelda("a", f.espera, "", ' title="' + esc(f.espera_motivo || "") + '"');
   }
   function qForzarCelda(f){
-    if(f.forzada || !f.espera) return qCelda("qcola", f.termino || "");
+    if(f.forzada || !f.espera) return qCelda("qcola", qFmtHora(f.termino) || "");
     return '<span class="qcel qh"><button class="qforz" type="button" data-msg="forzar ' + esc(String(f.n)) +
            '" title="largarla igual, sin mirar el choque de recursos">forzar</button></span>';
   }
   function qFila(f){
-    var cl = QCLASE[f.estado] || "qcola";
-    var corre = f.estado === "corriendo";
+    var tipo = qTipo(f);
+    var clEstado = QCLASE[f.estado] || "qcola";
+    var cl = clEstado + " qtipo-" + tipo;
+    var corre = f.estado === "corriendo" || f.estado === "corre";
     var pend = f.estado === "cola";
     // 1862 {cola}: `cola: true` marca que esta fila es una orden de la cola local, la unica que puede ofrecer
     // forzar inicio, frenar y reordenar en su modal (el widget `server` tambien pinta items `tarea`, ajenos)
-    return it({tipo: "tarea", cola: true, estado: f.estado, tema: f.tema, d: f},
+    return it({tipo: "tarea", cola: true, estado: f.estado, tipo_cola: tipo, tema: f.tema, d: f},
       '<span class="' + cl + ' qnom">' + esc(f.nombre || ("" + f.n)) +
       (f.estado === "fallo" ? ' <span class="r b">!!</span>' : "") +
       (f.veces > 1 ? ' <span class="g" title="' + esc(f.veces + ' ordenes con este nombre, juntas en una fila') + '">×' +
                      esc(String(f.veces)) + "</span>" : "") + "</span>" +
-      qCelda(cl, f.pedida) + qCelda(cl, f.delay) +
-      (pend ? qEsperaCelda(f) : qCelda(cl, f.iniciada)) +
+      qCelda(cl, qFmtHora(f.pedida)) + qCelda(cl, f.delay) +
+      (pend ? qEsperaCelda(f) : qCelda(cl, qFmtHora(f.iniciada))) +
       qCelda(cl, corre ? durVivo(f) : f.dur, corre ? " b qdelta" : "", corre ? ' data-n="' + esc(String(f.n)) + '"' : "") +
-      (pend ? qForzarCelda(f) : qCelda(cl, f.termino)));
+      (pend ? qForzarCelda(f) : qCelda(cl, qFmtHora(f.termino))));
   }
   // lo que va en la columna `iniciada` / `terminó` de una fila, para medir el ancho de la columna (1843)
-  function qTxtEspera(f){ return f.estado === "cola" ? (f.forzada ? "forzada" : (f.espera || "")) : f.iniciada; }
-  function qTxtFin(f){ return f.estado === "cola" ? (f.forzada || !f.espera ? "" : "forzar") : f.termino; }
+  function qTxtEspera(f){ return f.estado === "cola" ? (f.forzada ? "forzada" : (f.espera || "")) : qFmtHora(f.iniciada); }
+  function qTxtFin(f){ return f.estado === "cola" ? (f.forzada || !f.espera ? "" : "forzar") : qFmtHora(f.termino); }
   function qCabecera(){
     return '<span class="qth qnom">nombre</span><span class="qth qcel">pedida</span>' +
            '<span class="qth qcel">delay</span>' +          // 1862: lo que espero de `pedida` a `iniciada`
@@ -93,7 +108,7 @@
     filas = B.limFilas("agent", filas);
     // 1843: columnas `fr` proporcionales a lo que hay en cada una, para ocupar el 100% del ancho de la caja
     var vis = tabla.filter(function(f){ return verCola || f.estado !== "cola"; });
-    var cols = [vis.map(function(f){ return f.nombre || ("" + f.n); }), vis.map(function(f){ return f.pedida; }),
+    var cols = [vis.map(function(f){ return f.nombre || ("" + f.n); }), vis.map(function(f){ return qFmtHora(f.pedida); }),
                 vis.map(function(f){ return f.delay; }),
                 vis.map(qTxtEspera), vis.map(function(f){ return f.dur; }),
                 vis.map(qTxtFin)];

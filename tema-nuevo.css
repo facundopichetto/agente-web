@@ -364,3 +364,14 @@ html, body {
   transform: scale(1.08);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.7), 0 0 12px rgba(56, 239, 125, 0.4);
 }
+
+/* widget queue: separacion por color segun tipo o estado y fuentes a 12px (orden 3553) */
+.qtab { font-size: 12px; }
+.qtab .qth { font-size: 12px; }
+.qtab .qforz { font-size: 12px; }
+@media (max-width: 430px) { .qtab { font-size: 12px; } }
+.qfallo { color: var(--rojo); }
+.qtipo-chat.qcorre { color: var(--cian); }
+.qtipo-chat.qcola { color: #38bdf8; opacity: .85; }
+.qtipo-chat.qpaso { color: #bae6fd; }
+.qtipo-proceso { color: var(--magenta); }
