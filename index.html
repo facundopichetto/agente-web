@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.551">
-<link rel="manifest" href="manifest.json?v=4.551">
+<meta name="agente-web-version" content="4.552">
+<link rel="manifest" href="manifest.json?v=4.552">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.551">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.552">
 <link id="csstema" rel="stylesheet" href="tema-facu.css">
 <style id="css-listas-drag">
 #sellistas, #sellistas * {
@@ -38,6 +38,10 @@
   -webkit-user-drag: none !important;
   user-select: none !important;
   pointer-events: none !important;
+}
+#sellistas input, #sellistas #lisarrinp {
+  user-select: text !important;
+  -webkit-user-select: text !important;
 }
 #sellistas .liscaja.toca {
   cursor: grab !important;
@@ -7006,34 +7010,42 @@ function tjFull(){
 // (`tjFotoPedida`), y lo que contesta el server se guarda para pintarlo (`tjFotoMotivo`): o la foto entra en la
 // tarjeta y se repinta, o queda el motivo en castellano (la lectura frenada, la cuenta sin foto de perfil).
 var tjFotoPedida = {}, tjFotoMotivo = {};
-function tjPedirFoto(c){
-  if(!c || !c.id || tjFotoPedida[c.id]) return false;
-  tjFotoPedida[c.id] = true;
+function tjPedirFoto(c, esHD){
+  if(!c || !c.id) return false;
+  var k = c.id + (esHD ? ":hd" : "");
+  if(tjFotoPedida[k]) return false;
+  tjFotoPedida[k] = true;
   votLan().then(function(base){
     if(!base) throw new Error("sin lan");
-    return lanFetch(base + "/ig/foto/" + encodeURIComponent(c.id), {method: "GET", cache: "no-store",
+    var q = esHD ? "?hd=1" : "";
+    return lanFetch(base + "/ig/foto/" + encodeURIComponent(c.id) + q, {method: "GET", cache: "no-store",
       headers: {"authorization": "Bearer " + token}})
       .then(function(r){ if(!r || !r.ok) throw new Error("http " + (r && r.status)); return r.json(); });
   }).then(function(j){
     if(!j) return;
     if(j.ok && j.ruta){
-      c.fotos = [j.ruta]; c.foto_pendiente = false; c.sin_foto = false;
+      delete imgUrls[j.ruta];
+      var r = j.ruta + (j.ruta.indexOf("?") >= 0 ? "&" : "?") + "t=" + Date.now();
+      c.fotos = [r].concat((c.fotos || []).filter(function(x){ return x !== j.ruta && x !== r; }));
+      c.foto_pendiente = false; c.sin_foto = false;
       delete tjFotoMotivo[c.id]; delete c.foto_vencida;   // caso #29: la fresca reemplaza a la vencida
     } else {
       // 2249 {foto}: el server ya contesto que no la tiene: deja de decir "bajando" para siempre y pasa al cuadro
       // con el arroba, que es lo que deja votar la tarjeta igual
       if(j.motivo) tjFotoMotivo[c.id] = j.motivo;
-      c.foto_pendiente = false; c.sin_foto = true;
+      if(!c.fotos || !c.fotos.length){
+        c.foto_pendiente = false; c.sin_foto = true;
+      }
     }
     var a = tjActual();
     if(a && String(a.id) === String(c.id)) tjPintar();
   }).catch(function(){
     // sin lan no se puede PEDIR, pero la cola del server la puede estar bajando igual: el cartel no cambia
-    delete tjFotoPedida[c.id];
+    delete tjFotoPedida[k];
     // caso #29: salvo que el pedido haya salido de una url vencida: ahi nadie la esta bajando por atras, y la
     // tarjeta pasa al @arroba (se vota igual) en vez de quedarse en `bajando la foto…` para siempre
     if(c.foto_vencida){
-      tjFotoPedida[c.id] = true;   // no se vuelve a pedir en esta carga
+      tjFotoPedida[k] = true;   // no se vuelve a pedir en esta carga
       c.foto_pendiente = false; c.sin_foto = true;
       var a = tjActual();
       if(a && String(a.id) === String(c.id)) tjPintar();
@@ -7261,6 +7273,11 @@ function tjPintar(){
     info.appendChild(fp);
     tjPedirFoto(c);
   }
+  var esSuper = (sel.filtro === "super") || (c && (c.lista === "super" || (c.virt && c.virt.indexOf("super") >= 0) || c.sup));
+  if(esSuper && c && c.id && !c.__hdSolicitada){
+    c.__hdSolicitada = true;
+    tjPedirFoto(c, true);
+  }
   tjPrecargar(e, sel.tj);   // 1772: las dos tarjetas siguientes bajan mientras vota esta
   var nom = document.createElement("div"); nom.className = "tjnom"; nom.textContent = c.titulo || c.id;
   if(c.cuenta){   // 1515: el @cuenta es link al perfil (solo https), abre aparte y no vota ni avanza la tarjeta
@@ -7471,7 +7488,12 @@ function tjPrecargar(e, i){
   var pedidas = [];
   if(!e || !e.candidatas) return pedidas;
   for(var k = i + 1; k <= i + 2 && k < e.candidatas.length; k++){
-    var f = e.candidatas[k] && e.candidatas[k].fotos && e.candidatas[k].fotos[0];
+    var candK = e.candidatas[k];
+    if(candK && (sel.filtro === "super" || candK.lista === "super" || candK.sup) && !candK.__hdSolicitada){
+      candK.__hdSolicitada = true;
+      tjPedirFoto(candK, true);
+    }
+    var f = candK && candK.fotos && candK.fotos[0];
     if(!f || tjPre[f]) continue;
     tjPre[f] = true; pedidas.push(f);
     (function(f){
@@ -7940,6 +7962,7 @@ function iniciarArrastreCaja(caja, e, f){
       if(dist < 6) return;
       arrastrando = true;
       lisArrActivo = caja;
+      if(window.getSelection) try{ window.getSelection().removeAllRanges(); }catch(x){}
       var r = caja.getBoundingClientRect();
       dx = x0 - r.left;
       dy = y0 - r.top;
