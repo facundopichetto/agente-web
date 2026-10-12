@@ -2303,7 +2303,7 @@
      es `:not(.activo)`. sin `@media (hover:hover)` a proposito: en el celu un hover pegado no se ve (la
      pestaña que se toca pasa a ser la activa y la regla deja de aplicarle), y el media query dejaba el color
      sin poder chequear (chrome headless se declara sin mouse: `hover: none`). */
-  #tabs .tab:not(.activo):hover{color:var(--verde-tenue);background:rgba(57,255,20,.08)}
+  #tabs .tab:not(.activo):hover{color:var(--verde-tenue)}
   #tabs .tab.activo{
     color:var(--verde);background:var(--fondo-caja);
   }
@@ -2335,20 +2335,23 @@
   }
   #tabs .tab .x,#tabs .tab .mas{
     display:inline-flex;align-items:center;justify-content:center;
-    width:22px;height:22px;color:#555;margin-left:18px;font-size:22px;line-height:1;
+    width:22px;height:22px;color:#555;margin-left:4px;font-size:22px;line-height:1;
   }
   #tabs .tab.activo .mas,#tabs .tab.activo .x{color:var(--gris)}
   #tabs .tab .mas:hover,#tabs .tab .x:hover{color:var(--verde)}
   /* 2097 {pestanas}: con la pestaña en 56.8 px un boton de 27.7 px flotando 3 px arriba del piso quedaba
      descolgado. el boton no fija su alto: se estira al de la fila (`align-self:stretch`) y centra su glifo,
      asi queda del mismo alto que las pestañas y apoyado abajo, sin numeros a mano que haya que recalcular
-     cada vez que cambia el padding de `.tab`. */
+     cada vez que cambia el padding de `.tab`.
+     3556 {pestanas-ajustes-completos}: boton nueva pestana sin borde, fondo transparente, color #888 y glifo 22px
+     igual que crear subpestana pero mas claro. */
   #tabs .barrabtn{
-    flex:0 0 auto;align-self:stretch;background:#000;color:var(--gris);border:1px solid var(--linea);
-    border-radius:4px;padding:2px 7px;font:inherit;font-size:14px;cursor:pointer;white-space:nowrap;
-    margin:0 0 0 5px;display:inline-flex;align-items:center;
+    flex:0 0 auto;align-self:stretch;background:transparent;color:#888;border:0;
+    border-radius:4px;padding:0;font:inherit;font-size:22px;line-height:1;cursor:pointer;white-space:nowrap;
+    margin:0 0 0 4px;display:inline-flex;align-items:center;justify-content:center;width:22px;
   }
-  #tabs .barrabtn:active{background:#111}
+  #tabs .barrabtn:hover{color:var(--verde)}
+  #tabs .barrabtn:active{background:transparent}
   /* + de pestaña nueva sin borde (facundo, 2026-09-15, orden 1557): el 1px vuelve al padding, mismo alto */
   #tabs .relleno{flex:1 1 auto;min-width:8px}
   /* Selector de modelo y effort por pestaña en segunda linea (PLAN-pestanas.md P12) */
