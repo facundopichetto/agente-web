@@ -2276,7 +2276,7 @@
   /* la barra es el borde de arriba del panel de chat (estilo vscode): la pestaña activa se
      come el borde y se funde con la charla, sin renglon extra. */
   #tabs{
-    flex:0 0 auto;display:flex;align-items:flex-end;gap:0;overflow-x:auto;
+    flex:0 0 auto;display:flex;align-items:flex-end;gap:0;overflow-x:auto;overflow-y:hidden;
     padding:0 2px;scrollbar-width:none;
     -webkit-overflow-scrolling:touch;
   }
@@ -2290,10 +2290,10 @@
      lado; facundo lo pidio como el DOBLE del que hay, 8 -> 16, y la pestaña queda en 56.8 px. el texto sigue
      centrado vertical con el flex del propio boton (punto 3), nunca con un `line-height` a mano. */
   #tabs .tab{
-    flex:0 1 auto;min-width:0;background:#000;color:var(--gris);border:0;
+    flex:0 1 auto;min-width:60px;background:#000;color:var(--gris);border:0;
     border-radius:4px 4px 0 0;padding:16px 9px;font:inherit;font-size:14px;cursor:pointer;
     white-space:nowrap;display:inline-flex;align-items:center;
-    letter-spacing:3px;
+    letter-spacing:1.2px;
   }
   #tabs .tab.enpanel{color:var(--cian)}
   /* 2299 {ordentabs} punto 2 (facundo, 2026-09-23: "deberian tener un color hover, un verde no tan fuerte
@@ -2411,12 +2411,12 @@
   #dd .ddtit{color:var(--gris);font-size:14px;text-transform:uppercase;letter-spacing:.06em;padding:2px 4px}
   #dd .ddop{
     background:#000;color:var(--cian);border:1px solid var(--linea);border-radius:4px;
-    padding:8px 10px;font:inherit;font-size:14px;cursor:pointer;text-align:left;letter-spacing:3px;
+    padding:8px 10px;font:inherit;font-size:14px;cursor:pointer;text-align:left;letter-spacing:4px;
   }
   #dd .ddop:active{background:#111}
   #dd .ddgrupo{display:flex;flex-direction:row;align-items:center;gap:4px;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;white-space:nowrap;max-width:100%;flex:0 0 auto}
   #dd .ddpadre-fila{display:inline-flex;align-items:center;gap:4px;flex:0 0 auto;white-space:nowrap}
-  #dd .ddpadre-btn{flex:0 0 auto;min-width:0;white-space:nowrap;letter-spacing:3px}
+  #dd .ddpadre-btn{flex:0 0 auto;min-width:0;white-space:nowrap;letter-spacing:4px}
   #dd .ddtoggle{
     background:#000;color:var(--gris);border:1px solid var(--linea);border-radius:4px;
     padding:0 8px;height:32px;font:inherit;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;
@@ -2431,7 +2431,7 @@
     display:inline-flex;flex-direction:row;align-items:center;gap:4px;padding-left:4px;border-left:1px solid var(--linea);margin:0;flex:0 0 auto;flex-wrap:nowrap;white-space:nowrap;
   }
   #dd .ddgrupo.colapsado .ddhijos{display:none}
-  #dd .ddsubop{background:#050505;border-color:var(--linea-clara);font-size:13px;padding:6px 10px;white-space:nowrap;flex:0 0 auto;letter-spacing:3px}
+  #dd .ddsubop{background:#050505;border-color:var(--linea-clara);font-size:13px;padding:6px 10px;white-space:nowrap;flex:0 0 auto;letter-spacing:4px}
 
   /* ---------- modal de item de widget (facundo, 2026-09-11) ----------
      tocar cualquier fila de un widget la expande y ofrece 2 a 4 acciones a/b/c. look terminal. */
