@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.556">
-<link rel="manifest" href="manifest.json?v=4.556">
+<meta name="agente-web-version" content="4.557">
+<link rel="manifest" href="manifest.json?v=4.557">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.556">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.557">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.554">
 <style id="css-listas-drag">
 #sellistas, #sellistas * {
@@ -2906,7 +2906,9 @@ function imgHueco(src){
 }
 var imgUrls = {};        // src -> object url (una sola bajada por imagen)
 function srcBuzon(src){  // ruta local vieja del server (`/home/.../tmp/img/x.png`) -> `img/x.png` del buzon
-  return /^[\/~]/.test(src) ? "img/" + src.split("/").pop() : src;
+  var limpio = (src || "").split("?")[0];
+  var qs = (src || "").indexOf("?") >= 0 ? src.substring(src.indexOf("?")) : "";
+  return (/^[\/~]/.test(limpio) ? "img/" + limpio.split("/").pop() : limpio) + qs;
 }
 function bajarImagen(src){
   if(/^(https?:|data:)/i.test(src)) return Promise.resolve(src);
@@ -2924,7 +2926,8 @@ function bajarImagen(src){
 // 3022 {recibe}: una ruta del server (`/home/...`, `~/...`, `qa/...` del tema) se la pido al server, no 404
 function bajarLocal(src){
   if(!lan.base || !token) return Promise.reject(new Error("sin server"));
-  return lanFetch(lan.base + "/local?ruta=" + encodeURIComponent(src) + "&tema=" + encodeURIComponent(temaActivo() || ""),
+  var limpio = (src || "").split("?")[0];
+  return lanFetch(lan.base + "/local?ruta=" + encodeURIComponent(limpio) + "&tema=" + encodeURIComponent(temaActivo() || ""),
                   {headers: {"authorization": "Bearer " + token}, cache: "no-store"})
     .then(function(r){ if(!r.ok) throw new Error("http " + r.status); return r.blob(); });
 }
@@ -4836,14 +4839,21 @@ function apiLan(metodo, ruta, cuerpo, etag, accept){
 }
 // bytes de `img/...` o `audio/...`: del endpoint si esta, si no (o si no lo tiene) del buzon
 function bajarBlob(repo){
+  var qs = "";
+  var qidx = (repo || "").indexOf("?");
+  var rutaRepo = repo || "";
+  if(qidx >= 0){
+    qs = rutaRepo.substring(qidx);
+    rutaRepo = rutaRepo.substring(0, qidx);
+  }
   function github(){
     if(!token) return Promise.reject(new Error("401"));
-    var ruta = API + "/repos/" + REPO + "/contents/" + repo.split("/").map(encodeURIComponent).join("/");
+    var ruta = API + "/repos/" + REPO + "/contents/" + rutaRepo.split("/").map(encodeURIComponent).join("/");
     return fetch(ruta, {headers: {"authorization": "Bearer " + token, "accept": "application/vnd.github.raw"}})
       .then(function(r){ if(!r.ok) throw new Error("http " + r.status); return r.blob(); });
   }
-  if(!lan.base || !/^(img|audio)\//.test(repo)) return github();
-  return lanFetch(lan.base + "/" + repo.split("/").map(encodeURIComponent).join("/"),
+  if(!lan.base || !/^(img|audio)\//.test(rutaRepo)) return github();
+  return lanFetch(lan.base + "/" + rutaRepo.split("/").map(encodeURIComponent).join("/") + qs,
                   {headers: {"authorization": "Bearer " + token}, cache: "no-store"})
     .then(function(r){ if(!r.ok) throw new Error("http " + r.status); return r.blob(); })
     .catch(function(){ return github(); });
@@ -7105,9 +7115,14 @@ function tjPedirFoto(c, esHD){
   }).then(function(j){
     if(!j) return;
     if(j.ok && j.ruta){
+      var rutaLimpia = j.ruta.split("?")[0];
       delete imgUrls[j.ruta];
-      var r = j.ruta + (j.ruta.indexOf("?") >= 0 ? "&" : "?") + "t=" + Date.now();
-      c.fotos = [r].concat((c.fotos || []).filter(function(x){ return x !== j.ruta && x !== r; }));
+      delete imgUrls[rutaLimpia];
+      var r = rutaLimpia + "?t=" + Date.now();
+      c.fotos = [r].concat((c.fotos || []).filter(function(x){
+        var xl = (x || "").split("?")[0];
+        return xl !== rutaLimpia && x !== j.ruta && x !== r && !/^https?:/i.test(x);
+      }));
       c.foto_pendiente = false; c.sin_foto = false;
       delete tjFotoMotivo[c.id]; delete c.foto_vencida;   // caso #29: la fresca reemplaza a la vencida
     } else {
