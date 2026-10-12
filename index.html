@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.552">
-<link rel="manifest" href="manifest.json?v=4.552">
+<meta name="agente-web-version" content="4.554">
+<link rel="manifest" href="manifest.json?v=4.554">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.552">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.554">
 <link id="csstema" rel="stylesheet" href="tema-facu.css">
 <style id="css-listas-drag">
 #sellistas, #sellistas * {
@@ -44,7 +44,13 @@
   -webkit-user-select: text !important;
 }
 #sellistas .liscaja.toca {
+  cursor: pointer;
+}
+#sellistas .listit {
   cursor: grab !important;
+}
+#sellistas .liscaja.arrastrando .listit {
+  cursor: grabbing !important;
 }
 #sellistas .liscaja.fantasma {
   opacity: 0.25 !important;
@@ -62,6 +68,29 @@ body.arrastrando-liscaja, body.arrastrando-liscaja * {
   cursor: grabbing !important;
   user-select: none !important;
   -webkit-user-select: none !important;
+}
+body.arrastrando-liscaja #sellistas {
+  overflow: hidden !important;
+}
+#seltarjeta .tjppal.tjchica {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: radial-gradient(circle at center, rgba(255,255,255,0.06) 0%, rgba(10,10,10,0.95) 70%) !important;
+}
+#seltarjeta .tjppal.tjchica img {
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  width: auto !important;
+  height: auto !important;
+  max-width: 200px !important;
+  max-height: 200px !important;
+  border-radius: 50% !important;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.9) !important;
+  border: 2px solid var(--borde, #444) !important;
+  object-fit: cover !important;
+  image-rendering: -webkit-optimize-contrast;
 }
 </style>
 </head>
@@ -575,6 +604,7 @@ var CLONES = [];                       // los que el server dio de alta (se pide
 // arrancaba con el id crudo. queda cacheado en localStorage: el primer pintado ya sale con el nombre de
 // la ultima vez y el del server lo pisa apenas llega (`clonVisPoner` repinta la barra sola).
 var CLON_VIS_LS = "agente_clon_vis";
+var CLON_INFO = {};
 var CLON_VIS = (function(){
   try{ var m = JSON.parse(localStorage.getItem(CLON_VIS_LS) || "{}"); return (m && typeof m === "object") ? m : {}; }
   catch(x){ return {}; }
@@ -583,12 +613,41 @@ var CLON_VIS = (function(){
 // nombre su visible, y el resto es su propio nombre.
 // 2277 {cambios}: un clon SIN nombre tampoco muestra su id (`plata#2`): se pinta `<tema> N` (`$ 2`), con
 // el tema como se ve (un tema renombrado manda: `tools` -> `flos`). el id interno no cambia nunca.
+function ticketDeTema(t){
+  if(CLON_INFO && CLON_INFO[t] && CLON_INFO[t].nombre) return CLON_INFO[t].nombre;
+  var list = msgsHist[t] || (temaActivo() === t ? msgs : []);
+  if(list && list.length){
+    for(var i = list.length - 1; i >= 0; i--){
+      var m = list[i];
+      if(!m) continue;
+      var txt = (m.texto || "") + " " + (m.pregunta || "") + " " + (m.respuesta || "");
+      var mat = /\b(cx|mvp)[ -]?(\d{2,6})\b/i.exec(txt);
+      if(mat) return mat[1].toLowerCase() + mat[2];
+    }
+  }
+  return null;
+}
 function visibleTab(t){
   var n = normTema(t);
   if(ETIQUETA[t]) return ETIQUETA[t];
   if(CLON_VIS[n]) return CLON_VIS[n];
+  if(CLON_INFO && CLON_INFO[n] && CLON_INFO[n].nombre){
+    var b = CLON_INFO[n].base || baseTema(n);
+    var ini = (b === "awtomic" ? "a" : ((CLON_VIS && CLON_VIS[b]) || b || "?").charAt(0));
+    CLON_VIS[n] = ini + "/" + CLON_INFO[n].nombre;
+    return CLON_VIS[n];
+  }
   var m = RE_CLON.exec(n);
-  if(m) return (ETIQUETA[m[1]] || CLON_VIS[m[1]] || m[1]) + " " + parseInt(m[2], 10);
+  if(m){
+    if(m[1] === "awtomic" || baseTema(n) === "awtomic"){
+      var tk = ticketDeTema(n);
+      if(tk){
+        CLON_VIS[n] = "a/" + tk;
+        return CLON_VIS[n];
+      }
+    }
+    return (ETIQUETA[m[1]] || CLON_VIS[m[1]] || m[1]) + " " + parseInt(m[2], 10);
+  }
   return t;
 }
 function esClon(t){ return RE_CLON.test(normTema(t)); }
@@ -2134,7 +2193,8 @@ clonPendProgramar();   // lo que quedo encolado en una sesion anterior sigue viv
 function clonesPedir(){
   return clonPedir("/clones").then(function(j){
     CLONES = (j && j.clones) || [];
-    clonVisPoner(j && j.visibles);
+    if(j && j.info) CLON_INFO = j.info;
+    clonVisPoner(j && j.visibles, j && j.info);
     return CLONES;
   }).catch(function(){ return CLONES; });
 }
@@ -2144,7 +2204,8 @@ function clonCrear(tema, dePend){
     .then(function(j){
       if(!j || !j.ok){ sistema("no pude crear la pestaña: " + ((j && j.motivo) || "?"), "error"); return null; }
       CLONES = j.clones || CLONES;
-      clonVisPoner(j.visibles);
+      if(j.info) CLON_INFO = j.info;
+      clonVisPoner(j.visibles, j.info);
       abrirTab(j.nombre);
       sistema("pestaña " + visibleTab(j.nombre) + " lista");   // 2277: el id interno no se nombra
       return j.nombre;
@@ -2168,7 +2229,8 @@ function clonBorrar(tema, forzar, dePend){
         return null;
       }
       CLONES = j.clones || [];
-      clonVisPoner(j.visibles);
+      if(j.info) CLON_INFO = j.info;
+      clonVisPoner(j.visibles, j.info);
       if(tabs.indexOf(tema) >= 0) cerrarTab(tema);
       sistema("pestaña " + visibleTab(tema) + " borrada (el tema " + visibleTab(baseTema(tema)) + " no se toca)");
       return tema;
@@ -2179,11 +2241,23 @@ function clonBorrar(tema, forzar, dePend){
 // ---------- 2300 {visible}: el nombre visible de un clon (doble toque en la pestaña) ----------
 // el registro lo manda el server (`pestanas_clon.json`): la web pinta lo que vuelve. nada de un nombre que
 // exista solo en este navegador (el chat, la cola y la tui tienen que ver el mismo).
-function clonVisPoner(m){
-  if(!m || typeof m !== "object") return CLON_VIS;
+function clonVisPoner(m, info){
+  if(!m || typeof m !== "object") m = {};
   var antes = JSON.stringify(CLON_VIS);
-  CLON_VIS = {};
-  Object.keys(m).forEach(function(k){ if(m[k]) CLON_VIS[normTema(k)] = m[k]; });
+  var nuevo = {};
+  var inf = (info && typeof info === "object") ? info : CLON_INFO;
+  if(inf && typeof inf === "object"){
+    Object.keys(inf).forEach(function(k){
+      var item = inf[k];
+      if(item && item.nombre){
+        var b = item.base || normTema(k).split(/[#/]/)[0];
+        var ini = (b === "awtomic" ? "a" : ((m && m[b]) || b || "?").charAt(0));
+        nuevo[normTema(k)] = ini + "/" + item.nombre;
+      }
+    });
+  }
+  Object.keys(m).forEach(function(k){ if(m[k]) nuevo[normTema(k)] = m[k]; });
+  CLON_VIS = nuevo;
   var ahora = JSON.stringify(CLON_VIS);
   if(ahora === antes) return CLON_VIS;
   try{ localStorage.setItem(CLON_VIS_LS, ahora); }catch(x){}   // 2277: el proximo arranque ya lo sabe
@@ -2197,7 +2271,8 @@ function clonRenombrar(tema, nombre, sacar, dePend){
                                body: JSON.stringify({renombrar: tema, nombre: nombre || "", sacar: !!sacar})})
     .then(function(j){
       if(!j || !j.ok){ sistema("no pude renombrar la pestaña: " + ((j && j.motivo) || "?"), "error"); return null; }
-      clonVisPoner(j.visibles);
+      if(j.info) CLON_INFO = j.info;
+      clonVisPoner(j.visibles, j.info);
       if(j.clones) CLONES = j.clones;
       pintarTabs();                    // solo la barra: ni el scroll del chat ni lo tipeado se tocan
       return j.visible || null;
@@ -2234,7 +2309,12 @@ function clonTicket(ticket, dePend){
     .then(function(j){
       if(!j || !j.ok || !j.nombre){ sistema("no pude abrir la pestaña de " + tk + ": " + ((j && j.motivo) || "?"), "error"); return null; }
       CLONES = j.clones || CLONES;
-      clonVisPoner(j.visibles);
+      if(j.info) CLON_INFO = j.info;
+      if(j.visible && j.nombre && (!j.visibles || !j.visibles[j.nombre])) {
+        if(!j.visibles) j.visibles = {};
+        j.visibles[j.nombre] = j.visible;
+      }
+      clonVisPoner(j.visibles, j.info);
       abrirTab(j.nombre);
       return j.nombre;
     }).catch(function(e){
@@ -2248,7 +2328,8 @@ function clonArchivar(tema, dePend){
     .then(function(j){
       if(!j || !j.ok){ sistema("no pude archivar la pestaña: " + ((j && j.motivo) || "?"), "error"); return null; }
       CLONES = j.clones || CLONES;
-      clonVisPoner(j.visibles);
+      if(j.info) CLON_INFO = j.info;
+      clonVisPoner(j.visibles, j.info);
       if(tabs.indexOf(tema) >= 0) cerrarTab(tema);
       sistema("pestaña " + (j.visible || tema) + " archivada: la charla queda y vuelve escribiendo su nombre.");
       return tema;
@@ -7076,7 +7157,14 @@ function tjBajarFoto(id, foto, pp, principal, alFallar){
       // caso #29: la imagen que el browser no puede mostrar (firma vencida, 403/404 de la cdn, blob corrupto) se
       // saca del cuadro y el placeholder con la inicial vuelve mientras se decide (`fallo`); el `__url` del visor
       // recien cuando la foto cargo de verdad, asi la privada no agranda una imagen rota
-      im.addEventListener("load", function(){ pp.__url = url; });   // 1665: la privada se agranda con esta misma foto
+      im.addEventListener("load", function(){
+        pp.__url = url;
+        if(im.naturalWidth > 0 && (im.naturalWidth <= 200 || im.naturalHeight <= 200)){
+          pp.classList.add("tjchica");
+        } else {
+          pp.classList.remove("tjchica");
+        }
+      });
       im.addEventListener("error", function(){
         if(im.parentNode === pp) pp.removeChild(im);
         pp.classList.remove("confoto"); pp.__url = null;
@@ -7947,7 +8035,7 @@ function lisGuardarOrdenDOM(){
 
 function iniciarArrastreCaja(caja, e, f){
   if(e.button !== undefined && e.button !== 0) return;
-  if(e.target && e.target.closest && (e.target.closest(".lischip") || e.target.closest("button") || e.target.closest("input"))) return;
+  if(e.target && e.target.closest && (e.target.closest(".lischip") || e.target.closest("button") || e.target.closest("input") || e.target.closest("a"))) return;
 
   var x0 = e.clientX, y0 = e.clientY;
   var dx = 0, dy = 0;
@@ -7987,30 +8075,30 @@ function iniciarArrastreCaja(caja, e, f){
     caja.style.left = (ev.clientX - dx) + "px";
     caja.style.top = (ev.clientY - dy) + "px";
 
-    var cajas = [].filter.call(cont.querySelectorAll(".liscaja"), function(el){
-      return el !== caja && el !== ph && el.dataset && el.dataset.lista;
+    var contRect = cont.getBoundingClientRect();
+    if(ev.clientY < contRect.top + 40){
+      cont.scrollTop -= 8;
+    } else if(ev.clientY > contRect.bottom - 40){
+      cont.scrollTop += 8;
+    }
+
+    var cs = [].filter.call(cont.children, function(c){
+      return c !== caja && c !== ph && c.classList && c.classList.contains("liscaja") && c.dataset && c.dataset.lista;
     });
-    var mejor = null, mejorDist = Infinity, ponerDespues = false;
-    for(var i = 0; i < cajas.length; i++){
-      var tr = cajas[i].getBoundingClientRect();
-      var cx = tr.left + tr.width / 2;
-      var cy = tr.top + tr.height / 2;
-      var d = Math.hypot(ev.clientX - cx, ev.clientY - cy);
-      if(d < mejorDist){
-        mejorDist = d;
-        mejor = cajas[i];
-        if(ev.clientY > cy + 15 || (Math.abs(ev.clientY - cy) <= tr.height / 2 && ev.clientX > cx)){
-          ponerDespues = true;
-        } else {
-          ponerDespues = false;
+    var insertado = false;
+    for(var i = 0; i < cs.length; i++){
+      var r = cs[i].getBoundingClientRect();
+      if(ev.clientY < r.top || (ev.clientY <= r.bottom && ev.clientX < r.left + r.width / 2)){
+        if(ph.nextSibling !== cs[i]){
+          cont.insertBefore(ph, cs[i]);
         }
+        insertado = true;
+        break;
       }
     }
-    if(mejor && ph){
-      if(ponerDespues){
-        if(ph.previousSibling !== mejor) cont.insertBefore(ph, mejor.nextSibling);
-      } else {
-        if(ph.nextSibling !== mejor) cont.insertBefore(ph, mejor);
+    if(!insertado && cs.length){
+      if(ph.previousSibling !== cs[cs.length - 1]){
+        cont.insertBefore(ph, cs[cs.length - 1].nextSibling);
       }
     }
   }
@@ -8040,6 +8128,7 @@ function iniciarArrastreCaja(caja, e, f){
 }
 
 function lisPintar(){
+  if(lisArrActivo) return;
   var c = $("sellistas"), d = movVista(lisCacheLeer()), prev = c.scrollTop;   // {gracia}: con lo recien votado
   c.textContent = "";
   c.classList.remove("una");
@@ -16446,7 +16535,7 @@ window.__agente = {
   clonVisibles: function(){ return JSON.parse(JSON.stringify(CLON_VIS)); },
   // 2277 {cambios}: SIN `pintarTabs()` aca a proposito: el repintado lo tiene que hacer `clonVisPoner`
   // sola (es lo que prueba `recetas/prueba_web_tabnombre`), como cuando el mapa llega del server.
-  clonVisPoner: function(m){ return clonVisPoner(m); },
+  clonVisPoner: function(m, inf){ return clonVisPoner(m, inf); },
   visibleTab: visibleTab, tabEditar: tabEditar, clonRenombrar: clonRenombrar,
   tabEditando: function(){ return tabEdit ? tabEdit.tema : null; },
   esClon: esClon, baseTema: baseTema, clonable: clonable, esTema: esTema, padreTema: padreTema,

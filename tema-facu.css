@@ -416,6 +416,12 @@
      que en `estilos.css`; este tema se carga despues y pisa esa regla, asi que va en los dos) */
   #seltarjeta .tjppal img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;
     object-position:center;display:block}
+  #seltarjeta .tjppal.tjchica{display:flex!important;align-items:center!important;justify-content:center!important;
+    background:radial-gradient(circle at center,rgba(255,255,255,.06) 0%,rgba(10,10,10,.95) 70%)!important}
+  #seltarjeta .tjppal.tjchica img{position:relative!important;top:auto!important;left:auto!important;width:auto!important;
+    height:auto!important;max-width:200px!important;max-height:200px!important;border-radius:50%!important;
+    box-shadow:0 10px 30px rgba(0,0,0,.9)!important;border:2px solid var(--borde,#444)!important;object-fit:cover!important;
+    image-rendering:-webkit-optimize-contrast}
   #seltarjeta .tjmas{flex:1 1 auto;display:flex;gap:6px;flex-wrap:wrap;min-width:0}
   #seltarjeta .tjmas .tjf{width:56px;height:56px;border-radius:4px;overflow:hidden;border:1px solid var(--linea);background:#111}
   /* caso #28 {fotoentera}: el `cover` es SOLO de las miniaturas (`.tjf`); antes esta regla pisaba la foto grande */
@@ -2275,10 +2281,10 @@
      lado; facundo lo pidio como el DOBLE del que hay, 8 -> 16, y la pestaña queda en 56.8 px. el texto sigue
      centrado vertical con el flex del propio boton (punto 3), nunca con un `line-height` a mano. */
   #tabs .tab{
-    flex:0 0 auto;background:#000;color:var(--gris);border:0;
+    flex:0 1 auto;min-width:0;background:#000;color:var(--gris);border:0;
     border-radius:4px 4px 0 0;padding:16px 9px;font:inherit;font-size:14px;cursor:pointer;
     white-space:nowrap;display:inline-flex;align-items:center;
-    letter-spacing:-1px;
+    letter-spacing:0.5px;
   }
   #tabs .tab.enpanel{color:var(--cian)}
   /* 2299 {ordentabs} punto 2 (facundo, 2026-09-23: "deberian tener un color hover, un verde no tan fuerte
@@ -2316,11 +2322,11 @@
   #tabs .tab .tabnom{
     background:transparent;border:0;border-bottom:1px solid var(--verde-tenue);
     color:inherit;font:inherit;font-size:14px;padding:0;margin:0;min-width:5em;max-width:14em;
-    outline:0;caret-color:var(--verde);
+    outline:0;caret-color:var(--verde);letter-spacing:inherit;
   }
   #tabs .tab .x,#tabs .tab .mas{
     display:inline-flex;align-items:center;justify-content:center;
-    width:9px;color:#555;margin-left:1px;font-size:11px;line-height:1;
+    width:18px;height:18px;color:#555;margin-left:6px;font-size:18px;line-height:1;
   }
   #tabs .tab.activo .mas,#tabs .tab.activo .x{color:var(--gris)}
   #tabs .tab .mas:hover,#tabs .tab .x:hover{color:var(--verde)}
@@ -2399,12 +2405,12 @@
     padding:8px 10px;font:inherit;font-size:14px;cursor:pointer;text-align:left;
   }
   #dd .ddop:active{background:#111}
-  #dd .ddgrupo{display:flex;flex-direction:column;gap:4px}
-  #dd .ddpadre-fila{display:flex;align-items:center;gap:4px}
-  #dd .ddpadre-btn{flex:1;min-width:0}
+  #dd .ddgrupo{display:flex;flex-direction:row;align-items:center;gap:4px;flex-wrap:nowrap;overflow-x:auto}
+  #dd .ddpadre-fila{display:inline-flex;align-items:center;gap:4px;flex:0 0 auto}
+  #dd .ddpadre-btn{flex:0 0 auto;min-width:0}
   #dd .ddtoggle{
     background:#000;color:var(--gris);border:1px solid var(--linea);border-radius:4px;
-    padding:0 12px;height:36px;font:inherit;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    padding:0 8px;height:32px;font:inherit;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;
   }
   #dd .ddtoggle:hover{color:var(--verde);border-color:var(--linea-clara)}
   #dd .ddtoggle:active{background:#111}
@@ -2413,10 +2419,10 @@
     padding:2px 6px;text-transform:lowercase;white-space:nowrap;
   }
   #dd .ddhijos{
-    display:flex;flex-direction:column;gap:4px;padding-left:14px;border-left:2px solid var(--linea);margin-left:8px;margin-top:2px;
+    display:inline-flex;flex-direction:row;align-items:center;gap:4px;padding-left:4px;border-left:1px solid var(--linea);margin:0;
   }
   #dd .ddgrupo.colapsado .ddhijos{display:none}
-  #dd .ddsubop{background:#050505;border-color:var(--linea-clara);font-size:13px;padding:6px 10px}
+  #dd .ddsubop{background:#050505;border-color:var(--linea-clara);font-size:13px;padding:6px 10px;white-space:nowrap;flex:0 0 auto}
 
   /* ---------- modal de item de widget (facundo, 2026-09-11) ----------
      tocar cualquier fila de un widget la expande y ofrece 2 a 4 acciones a/b/c. look terminal. */
