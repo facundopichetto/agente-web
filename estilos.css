@@ -725,6 +725,12 @@
   #sellistas .lisnom{color:var(--blanco);font-size:var(--texto-max)}
   /* la cantidad resalta por peso y color, nunca por tamaño (1541) */
   #sellistas .lisn{color:var(--cian);font-size:var(--texto-max);font-weight:600}
+  /* 3560 {drag-handle}: iconito de agarradera en la barra de titulo para arrastrar solo desde aca */
+  #sellistas .lishandle{display:inline-flex;align-items:center;justify-content:center;
+    width:24px;height:24px;margin-left:auto;color:var(--gris);cursor:grab;
+    touch-action:none;-webkit-tap-highlight-color:transparent;border-radius:4px;flex-shrink:0}
+  #sellistas .lishandle:hover{color:var(--blanco);background:rgba(255,255,255,.08)}
+  #sellistas .liscaja.arrastrando .lishandle{cursor:grabbing;color:var(--verde)}
   /* la tira de fotitos de una lista chica: cada chip es una persona tocable (`.lisfila`, el mismo dato de antes) */
   #sellistas .listira{display:flex;flex-wrap:wrap;gap:10px;padding-top:6px;margin-top:auto}
   #sellistas .lisfila.lischip{display:flex;flex-direction:column;align-items:center;gap:3px;width:64px;
@@ -767,10 +773,12 @@
   #sellistas .lisfoto{flex:0 0 auto;overflow:hidden;border:1px solid var(--linea);background:#111}
   #sellistas .lisfoto img{width:100%;height:100%;object-fit:cover;display:block}
   #sellistas .liscuenta{color:var(--gris);word-break:break-all}
-  /* 2035 {columnas}: en el celu angosto (vertical) la grilla vuelve a UNA columna (facundo: "celu 1 columna"); en
-     ipad (768) y desktop siguen las dos. va DESPUES de la regla de dos columnas o la gana por orden. */
+  /* 3560 {drag-handle} (facundo, 2026-10-12): en el celu la grilla mantiene las dos columnas con flujo horizontal
+     (arriba a la izquierda, arriba a la derecha, luego segunda linea...) en vez de romperse en una sola columna */
   @media (max-width:599px){
-    #sellistas{grid-template-columns:minmax(0,1fr)}
+    #sellistas{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+    #sellistas.una{grid-template-columns:minmax(0,1fr)}
+    #sellistas .liscaja{padding:8px}
   }
   #lismodal .lisdet{display:flex;flex-direction:column;gap:6px}
   #lismodal .lisdetacc{color:var(--blanco);font-size:var(--texto-max);word-break:break-word}
@@ -2312,10 +2320,13 @@
      lado; facundo lo pidio como el DOBLE del que hay, 8 -> 16, y la pestaña queda en 56.8 px. el texto sigue
      centrado vertical con el flex del propio boton (punto 3), nunca con un `line-height` a mano. */
   #tabs .tab{
-    flex:0 1 auto;min-width:60px;background:#000;color:var(--gris);border:0;
+    flex:0 0 auto;min-width:60px;background:#000;color:var(--gris);border:0;
     border-radius:4px 4px 0 0;padding:16px 9px;font:inherit;font-size:14px;cursor:pointer;
     white-space:nowrap;display:inline-flex;align-items:center;
     letter-spacing:1.2px;
+  }
+  @media (min-width:900px) and (min-aspect-ratio: 1/1){
+    #tabs .tab{flex:0 1 auto}
   }
   #tabs .tab.enpanel{color:var(--cian)}
   /* 2299 {ordentabs} punto 2 (facundo, 2026-09-23: "deberian tener un color hover, un verde no tan fuerte

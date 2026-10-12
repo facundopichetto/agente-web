@@ -513,12 +513,11 @@
     },
     "board": {
       "motor": "agy",
-      "modelo": "gemini-3.8-flash",
-      "effort": "medium"
+      "modelo": "agy"
     },
     "flos": {
-      "motor": "gemini-3.1-pro",
-      "modelo": "gemini-3.1-pro"
+      "motor": "claude",
+      "modelo": "fable"
     },
     "juegos": {
       "motor": "agy",

@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.560">
-<link rel="manifest" href="manifest.json?v=4.560">
+<meta name="agente-web-version" content="4.561">
+<link rel="manifest" href="manifest.json?v=4.561">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.560">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.561">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.559">
 <style id="css-listas-drag">
 #sellistas, #sellistas * {
@@ -46,10 +46,11 @@
 #sellistas .liscaja.toca {
   cursor: pointer;
 }
-#sellistas .listit {
+#sellistas .lishandle {
   cursor: grab !important;
+  touch-action: none !important;
 }
-#sellistas .liscaja.arrastrando .listit {
+#sellistas .liscaja.arrastrando .lishandle {
   cursor: grabbing !important;
 }
 #sellistas .liscaja.fantasma {
@@ -1780,6 +1781,23 @@ function pintarTabs(){
   $("prompt").textContent = "/";   // 1631: glifo de comandos (antes `f>`)
   fueraDelGesto(guardarLayout);   // 2149 {pestana}: guardar y publicar el layout no va adentro del toque
   cajaDeTema(temaActivo());     // cada pestaña se lleva su borrador y trae el suyo
+  scrollTabActiva();
+}
+// scroll automatico con scrollIntoView a la pestana activa (3561 {pestanas-mobile-scroll})
+function scrollTabActiva(suave){
+  try{
+    var barra = $("tabs");
+    if(!barra) return;
+    var el = barra.querySelector(".tab.activo");
+    if(!el) return;
+    if(typeof el.scrollIntoView === "function"){
+      try{
+        el.scrollIntoView({behavior: suave ? "smooth" : "auto", block: "nearest", inline: "nearest"});
+      }catch(_){
+        el.scrollIntoView();
+      }
+    }
+  }catch(_){}
 }
 // 2149 {pestana} (facundo, 2026-09-23: "quiero tocar en la pestaña y que vaya inmediatamente"): lo que no
 // tiene que pasar DENTRO del gesto -guardar el layout, publicarlo, pedir la charla por red- sale despues,
@@ -2115,6 +2133,7 @@ function abrirTab(tema){
     perf.tabRender = Math.round((ahoraMs() - t1) * 100) / 100;
     var t2 = ahoraMs(); irDonde(true); perf.tabIr = Math.round((ahoraMs() - t2) * 100) / 100;
   });
+  scrollTabActiva(true);
   fueraDelGesto(function(){ chatDeTab(tema); });   // si nunca se bajo su charla, llega sola
 }
 // ---------- clones (2265 {clon}) ----------
@@ -6585,7 +6604,7 @@ function tjEsperaTexto(e){
   else if(selFallo(col)) partes.push(ing ? "the server isn't answering, I retry every 2.5 s" : "el server no me contesta: reintento cada 2,5 s");
   var desde = sel.esperaDesde ? Date.now() - sel.esperaDesde : 0;
   if(desde > SEL_ESPERA_LARGA_MS && !(v && v.estado === "sin_enviar"))
-    partes.push(ing ? "waiting for " + Math.round(desde / 1000) + " s" : "espero hace " + Math.round(desde / 1000) + " s");
+    partes.push(ing ? "waiting for " + fmtTiempo(Math.round(desde / 1000)) : "espero hace " + fmtTiempo(Math.round(desde / 1000)));
   return partes.join(" · ");
 }
 function tjEsperaRefrescar(e){
@@ -8050,7 +8069,7 @@ function lisGuardarOrdenDOM(){
 
 function iniciarArrastreCaja(caja, e, f){
   if(e.button !== undefined && e.button !== 0) return;
-  if(e.target && e.target.closest && (e.target.closest(".lischip") || e.target.closest("button") || e.target.closest("input") || e.target.closest("a"))) return;
+  if(!e.target || !e.target.closest || !e.target.closest(".lishandle")) return;
 
   var x0 = e.clientX, y0 = e.clientY;
   var dx = 0, dy = 0;
@@ -8062,7 +8081,7 @@ function iniciarArrastreCaja(caja, e, f){
   function onPointerMove(ev){
     var dist = Math.hypot(ev.clientX - x0, ev.clientY - y0);
     if(!arrastrando){
-      if(dist < 6) return;
+      if(dist < 4) return;
       arrastrando = true;
       lisArrActivo = caja;
       if(window.getSelection) try{ window.getSelection().removeAllRanges(); }catch(x){}
@@ -8286,6 +8305,26 @@ function lisCaja(f){
     var n = document.createElement("span"); n.className = "lisn"; n.textContent = String(num);
     h.appendChild(n);
   }
+  // 3560 {drag-handle} (facundo, 2026-10-12): iconito de agarradera en la barra de titulo. solo se arrastra desde aca,
+  // el resto de la caja queda libre para scrollear en el celular sin mover listas
+  var handle = document.createElement("span");
+  handle.className = "lishandle";
+  handle.setAttribute("role", "button");
+  handle.setAttribute("tabindex", "0");
+  handle.setAttribute("aria-label", "arrastrar para reordenar " + (f.titulo || f.clave));
+  handle.setAttribute("title", "arrastrar para reordenar");
+  handle.innerHTML = '<svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor" aria-hidden="true" focusable="false">' +
+    '<circle cx="7" cy="5" r="1.5"/><circle cx="13" cy="5" r="1.5"/>' +
+    '<circle cx="7" cy="10" r="1.5"/><circle cx="13" cy="10" r="1.5"/>' +
+    '<circle cx="7" cy="15" r="1.5"/><circle cx="13" cy="15" r="1.5"/></svg>';
+  handle.addEventListener("pointerdown", function(e){
+    e.stopPropagation();
+    iniciarArrastreCaja(caja, e, f);
+  });
+  handle.addEventListener("click", function(e){
+    e.stopPropagation();
+  });
+  h.appendChild(handle);
   caja.appendChild(h);
   // 2095 {instatinder} pasos 5, 6 y 7 (facundo, 2026-09-18: "toco following y lo primero que veo es una que es de
   // `follow request sent`, asi que aca hay algo mal"): tocar una lista YA NO abre el votador de su proceso. varias
@@ -8311,10 +8350,8 @@ function lisCaja(f){
     caja.setAttribute("tabindex", "0");
     caja.setAttribute("title", "abrir `" + (f.titulo || f.clave) + "`");
     if(f.proceso) caja.setAttribute("data-proceso", f.proceso);
-    caja.addEventListener("pointerdown", function(e){
-      iniciarArrastreCaja(caja, e, f);
-    });
-    var abrirCaja = function(){
+    var abrirCaja = function(ev){
+      if(ev && ev.target && ev.target.closest && ev.target.closest(".lishandle")) return;
       if(lisArrActivo || (Date.now() - lisArrUlt < 250)) return;
       lisTocar(f);
     };
@@ -16051,6 +16088,8 @@ document.addEventListener("keydown", function(e){
   if(j >= 0 && j < bs.length){ e.preventDefault(); bs[j].click(); }
 });
 pintarTabs();
+scrollTabActiva();
+setTimeout(function(){ scrollTabActiva(); }, 50);
 
 // 1793: los widgets migrados viven en `web/widgets/`: se cargan una vez al arrancar y, cuando
 // terminan, repintan su caja (hasta entonces la caja dice "cargando...", nada mas).
@@ -16380,7 +16419,8 @@ window.__agente = {
                                  marcadas: selMarcadas(), abiertas: sel.abiertas.map(function(a){ return a.coleccion; })}; },
   selFlushMin: function(){ return SEL_FLUSH_MIN; },   // 1836
   selReset: function(){ sel.actual = null; sel.abiertas = []; sel.ignorada = {}; sel.filaDe = {}; sel.tjHistorial = []; selTs = 0; sel.agotadas = []; sel.totales = {}; filaCache = {}; salidos = {}; tjVotandoYa = {};
-                        ["pend", "hechas", "fila"].forEach(function(s){ try{ localStorage.removeItem("agente_sel_" + s); }catch(x){} }); },
+                        ["pend", "hechas", "fila"].forEach(function(s){ try{ localStorage.removeItem("agente_sel_" + s); }catch(x){} });
+                        movs = {}; try{ localStorage.removeItem(MOV_LS); }catch(x){} },
   selFila: function(){ return selLeer("fila", {}); },   // correccion 18:12
   animRanking: animRanking, animSpinner: animSpinner, animSinVer: animSinVer, animValida: animValida,
   // 1453: rotacion y menu del toque
@@ -17107,6 +17147,7 @@ window.__agente = {
   temaActual: function(){ return temaActual; },
   mod: function(clave){ return mods[clave] || null; },   // 1849: la prueba le habla al modulo (`recibir`, `vivo`)
   widDatos: function(){ return widDatos; }, visibleForzar: function(v){ visibleForzada = !!v; },
+  scrollTabActiva: scrollTabActiva,
   modHtml: modHtml, partes: function(){ return {vistas: partesVistas, ult: partesUlt}; },
   ponerPartes: function(p){ partesVistas = p || null; },
   partesDistintas: partesDistintas, partePintable: partePintable, aplicarPartes: aplicarPartes
