@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.554">
-<link rel="manifest" href="manifest.json?v=4.554">
+<meta name="agente-web-version" content="4.555">
+<link rel="manifest" href="manifest.json?v=4.555">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,8 +27,8 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.554">
-<link id="csstema" rel="stylesheet" href="tema-facu.css">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.555">
+<link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.554">
 <style id="css-listas-drag">
 #sellistas, #sellistas * {
   user-select: none !important;
@@ -13737,7 +13737,8 @@ function aplicarTema(nombre, avisar){
     link.rel = "stylesheet";
     document.head.appendChild(link);
   }
-  var nuevaRuta = nombre === "nuevo" ? "tema-nuevo.css" : "tema-facu.css";
+  var ver = (document.querySelector('meta[name="agente-web-version"]') || {}).content || verEmbebida || verWeb || "";
+  var nuevaRuta = (nombre === "nuevo" ? "tema-nuevo.css" : "tema-facu.css") + (ver ? "?v=" + encodeURIComponent(ver) : "");
   if(link.getAttribute("href") !== nuevaRuta){
     link.setAttribute("href", nuevaRuta);
   }
@@ -13926,6 +13927,7 @@ function repintarMod(clave, v){
 // sin perder scroll, ni lo tipeado, ni un modal abierto). es el hot reload de assets de shopify theme dev.
 function swapCss(v){
   var vieja = $("cssppal");
+  var viejaTema = $("csstema");
   if(!vieja) return Promise.resolve(false);
   anclaClavar();                      // 1805: el css nuevo puede cambiar los altos del chat
   return new Promise(function(res){
@@ -13933,6 +13935,10 @@ function swapCss(v){
     n.rel = "stylesheet";
     n.href = "estilos.css?v=" + encodeURIComponent(v);
     vieja.id = "cssviejo";
+    if(viejaTema){
+      var actualTema = (temaActual === "nuevo" ? "tema-nuevo.css" : "tema-facu.css") + "?v=" + encodeURIComponent(v);
+      viejaTema.setAttribute("href", actualTema);
+    }
     var listo = function(){
       if(vieja.parentNode) vieja.parentNode.removeChild(vieja);
       n.id = "cssppal";

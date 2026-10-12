@@ -74,7 +74,31 @@ html, body {
   border-radius: 6px 6px 0 0;
   padding: 6px 12px;
   color: var(--gris);
+  letter-spacing: 3px;
   transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+#tabs .tab {
+  letter-spacing: 3px;
+}
+#tabs .tab .tabnom {
+  letter-spacing: inherit;
+}
+#tabs .tab .x, #tabs .tab .mas {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  color: #555;
+  margin-left: 18px;
+  font-size: 22px;
+  line-height: 1;
+}
+#tabs .tab.activo .mas, #tabs .tab.activo .x {
+  color: var(--gris);
+}
+#tabs .tab .mas:hover, #tabs .tab .x:hover {
+  color: var(--verde);
 }
 .tab:hover {
   background: rgba(255, 255, 255, 0.06);
@@ -93,6 +117,79 @@ html, body {
 .tab-mas:hover {
   background: rgba(56, 189, 248, 0.12);
   color: var(--cian);
+}
+#dd .ddop, #dd .ddsubop, #dd .ddpadre-btn {
+  letter-spacing: 3px;
+}
+#dd .ddgrupo {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  max-width: 100%;
+  flex: 0 0 auto;
+}
+#dd .ddpadre-fila {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+#dd .ddpadre-btn {
+  flex: 0 0 auto;
+  min-width: 0;
+  white-space: nowrap;
+  letter-spacing: 3px;
+}
+#dd .ddtoggle {
+  background: #000;
+  color: var(--gris);
+  border: 1px solid var(--linea);
+  border-radius: 4px;
+  padding: 0 8px;
+  height: 32px;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+#dd .ddbadge {
+  font-size: 11px;
+  color: var(--gris);
+  border: 1px solid #333;
+  border-radius: 3px;
+  padding: 2px 6px;
+  text-transform: lowercase;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+#dd .ddhijos {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  padding-left: 4px;
+  border-left: 1px solid var(--linea);
+  margin: 0;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+#dd .ddgrupo.colapsado .ddhijos {
+  display: none;
+}
+#dd .ddsubop {
+  white-space: nowrap;
+  flex: 0 0 auto;
+  letter-spacing: 3px;
 }
 
 /* panel de chat y mensajes */

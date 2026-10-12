@@ -187,6 +187,10 @@
     "personal": {
       "motor": "agy",
       "modelo": "gemini-3.8-flash"
+    },
+    "board": {
+      "motor": "agy",
+      "modelo": "gemini-3.8-flash"
     }
   },
   "resueltos": {
@@ -293,6 +297,27 @@
       "flags_effort": [
         "--effort",
         "low"
+      ]
+    },
+    "board": {
+      "pestana": "board",
+      "tema": null,
+      "fila": null,
+      "motor": "agy",
+      "modelo": "gemini-3.8-flash",
+      "effort": "medium",
+      "origen_motor": "del_modelo",
+      "origen_modelo": "selector_exacto",
+      "origen_effort": "default_global",
+      "flags": [
+        "--model",
+        "gemini-3.8-flash",
+        "--effort",
+        "medium"
+      ],
+      "flags_effort": [
+        "--effort",
+        "medium"
       ]
     },
     "flos": {
@@ -485,6 +510,11 @@
     "awtomic#91": {
       "motor": "claude",
       "modelo": "opus"
+    },
+    "board": {
+      "motor": "agy",
+      "modelo": "gemini-3.8-flash",
+      "effort": "medium"
     },
     "flos": {
       "motor": "gemini-3.1-pro",
