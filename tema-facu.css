@@ -119,7 +119,7 @@
   .msg .mini{margin-left:6px}
   /* mensaje en vuelo: spinner de texto, fase y eta mientras contesta el agente */
   .msg.vuelo .cuerpo{color:var(--gris)}
-  .msg.vuelo .giro{color:var(--verde);display:inline-block;min-width:1ch;cursor:pointer}
+  .msg.vuelo .giro{color:var(--verde);display:inline-block;min-width:1ch;cursor:default}
   /* 1776 (facundo, 2026-09-16): la respuesta es un hilo que crece. `.hilo` son los tramos que el modelo ya termino
      (texto), en orden y nunca editados; abajo, en vuelo, la unica linea que cambia es `.cuerpo` (bolita + lo que esta
      haciendo). en la respuesta guardada el hilo queda arriba del cuerpo final.
@@ -143,8 +143,7 @@
   .msg .hilo .tramo.paso{color:var(--gris);font-size:12px;opacity:.7;margin:0 0 2px 0}
   .msg .hilo .tramo.paso + .tramo.texto{margin-top:8px}
   .msg .hilo .tramo.paso:last-child{margin-bottom:8px}
-  .msg .hilo .tramo.paso, .msg .hilo .tramo.hecho{cursor:pointer}
-  .msg .hilo .tramo.paso:hover, .msg .hilo .tramo.hecho:hover{opacity:1}
+  .msg .hilo .tramo.paso, .msg .hilo .tramo.hecho{cursor:default}
   /* 3307 (facundo, 2026-10-08): consola colapsable de herramientas */
   .msg .hilo .consola-pasos{background:#090d13;border:1px solid #21262d;border-radius:6px;padding:4px 8px;margin:4px 0 6px 0;font-family:var(--mono, monospace)}
   .msg .hilo .consola-pasos summary.consola-resumen{color:var(--cian);font-size:11px;cursor:pointer;outline:none;user-select:none;opacity:.85}

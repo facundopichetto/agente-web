@@ -8,8 +8,8 @@
         "fable",
         "geminiflash",
         "geminipro",
-        "gemini-4-argon",
         "gemini-3.8-flash",
+        "gemini-4-argon",
         "claude-opus-5-5",
         "claude-sonnet-5-5",
         "gpt-oss-120b"
@@ -31,8 +31,8 @@
         "opus",
         "claude",
         "geminiflash",
-        "gemini-4-argon",
         "gemini-3.8-flash",
+        "gemini-4-argon",
         "claude-opus-5-5",
         "claude-sonnet-5-5",
         "gpt-oss-120b"
@@ -54,8 +54,8 @@
         "opus",
         "claude",
         "geminiflash",
-        "gemini-4-argon",
         "gemini-3.8-flash",
+        "gemini-4-argon",
         "claude-opus-5-5",
         "claude-sonnet-5-5",
         "gpt-oss-120b"
@@ -78,8 +78,8 @@
         "claude",
         "fable",
         "geminiflash",
-        "gemini-4-argon",
         "gemini-3.8-flash",
+        "gemini-4-argon",
         "claude-opus-5-5",
         "claude-sonnet-5-5",
         "gpt-oss-120b"
@@ -102,8 +102,8 @@
         "claude",
         "fable",
         "geminiflash",
-        "gemini-4-argon",
         "gemini-3.8-flash",
+        "gemini-4-argon",
         "claude-opus-5-5",
         "claude-sonnet-5-5",
         "gpt-oss-120b"
@@ -503,8 +503,7 @@
     },
     "board": {
       "motor": "agy",
-      "modelo": "gemini-3.8-flash",
-      "effort": "medium"
+      "modelo": "agy"
     },
     "flos": {
       "motor": "gemini-3.8-flash",
@@ -536,18 +535,17 @@
       "modelo": "fable"
     },
     "tinder": {
-      "motor": "agy",
-      "modelo": "agy",
-      "effort": "high"
+      "motor": "claude",
+      "modelo": "sin modelo"
     }
   },
   "modelos_agy": {
-    "gemini-4-argon": [
+    "gemini-3.8-flash": [
       "high",
       "medium",
       "low"
     ],
-    "gemini-3.8-flash": [
+    "gemini-4-argon": [
       "high",
       "medium",
       "low"
