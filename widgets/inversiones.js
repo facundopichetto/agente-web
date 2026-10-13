@@ -50,28 +50,27 @@
            '<span class="invusd b">' + esc(conSigno(dl.usd)) + "</span>" +
            '<span class="invpct">' + esc(conSigno(dl.pct, "%")) + "</span></div>";
   }
-  // 2966: el `año`, el retorno anual de la cartera (independiente de la plata). `ESTIMADO` hasta los 365 dias, `REAL`
-  // (ultimos 12 meses) despues; el calculo lo hace el server (`recetas/inversiones_anual.py`), la web solo lo pinta.
-  // 3591 {rango-pesimista}: rango pesimista / medio / optimista por volatilidad cuando es estimado y hay rango.
+  // 3592 {promedio-simple}: fila de proyeccion (reemplaza las dos de año y rango):
+  // valor menor en bordo / valor promedio en blanco / valor mayor en verde. sin indicaciones ni textos.
   function filaAnual(a){
     if(!a) return "";
     if(a.pct === null || a.pct === undefined)
-      return '<div class="invanio"><span class="invet g">año</span> <span class="g">' + esc(a.motivo || "sin dato todavia") + "</span></div>";
-    var rot = a.rotulo || (a.estimado ? "ESTIMADO" : "REAL");
-    var html = '<div class="invanio ' + clase(a.pct) + '"><span class="invet g">año</span> ' +
-           '<span class="invusd b">' + esc(conSigno(a.pct, "%")) + "</span> " +
-           '<span class="' + "g" + '">' + esc(rot) + "</span> " +
-           '<span class="g">' + esc((a.desde || "") + " → " + (a.hasta || "")) + "</span></div>";
-    if(a.pesimista !== undefined && a.optimista !== undefined && (a.pesimista !== a.optimista)){
-      var med = a.medio !== undefined ? a.medio : a.pct;
-      html += '<div class="invanio"><span class="invet g">rango</span> ' +
-             '<span class="' + clase(a.pesimista) + '">' + esc(conSigno(a.pesimista, "%")) + '</span> ' +
-             '<span class="g">/</span> <span class="' + clase(med) + '">' + esc(conSigno(med, "%")) + '</span> ' +
-             '<span class="g">/</span> <span class="' + clase(a.optimista) + '">' + esc(conSigno(a.optimista, "%")) + '</span>' +
-             (a.volatilidad ? ' <span class="g">(vol ' + esc(usd(a.volatilidad)) + '%)</span>' : '') +
-             '</div>';
+      return '<div class="invanio"><span class="g">' + esc(a.motivo || "sin dato todavia") + "</span></div>";
+    var v1 = a.proyeccion_real !== undefined ? a.proyeccion_real : (a.real_anual_pct !== undefined ? a.real_anual_pct : a.pct);
+    var v2 = a.proyeccion_anio !== undefined ? a.proyeccion_anio : a.pct;
+    var vmin = a.minimo !== undefined ? a.minimo : Math.min(v1, v2);
+    var vmax = a.maximo !== undefined ? a.maximo : Math.max(v1, v2);
+    var med = a.promedio !== undefined ? a.promedio : Math.round((v1 + v2) / 2 * 100) / 100;
+    if(vmin === vmax){
+      return '<div class="invanio"><span class="blanco">' + esc(conSigno(med, "%")) + '</span></div>';
     }
-    return html;
+    return '<div class="invanio">' +
+           '<span class="bordo">' + esc(conSigno(vmin, "%")) + '</span> ' +
+           '<span class="g">/</span> ' +
+           '<span class="blanco">' + esc(conSigno(med, "%")) + '</span> ' +
+           '<span class="g">/</span> ' +
+           '<span class="v">' + esc(conSigno(vmax, "%")) + '</span>' +
+           '</div>';
   }
   function filaActivo(a){
     return '<div class="invfila"><span class="invtk b">' + esc(a.ticker || "?") + "</span>" +
@@ -102,14 +101,25 @@
     }
     var h = historial(d), acts = d.activos || [];
     if(h.length < 2 && !acts.length) return caja("inversiones", "", vacio("sin datos todavia"), false, "inversiones");
-    var ayer = h.length >= 2 ? delta(h[h.length - 1], h[h.length - 2]) : {usd: 0, pct: 0};
     var mes = h.length >= 2 ? delta(h[h.length - 1], h[0]) : {usd: 0, pct: 0};
     var vale = h.length ? h[h.length - 1] : acts.reduce(function(s, a){ return s + Number(a.valor || 0); }, Number(d.efectivo || 0));
+    var puse = Number(d.total_invertido || 0);
+    var diff_usd = vale - puse;
+    var diff_pct = puse ? (diff_usd / puse) * 100 : 0;
+    // 3592 {promedio-simple}: tengo en blanco si diferencia < 5%, verde si > 5%, rojo si < -5%
+    var colorTengo = diff_pct > 5 ? "v" : (diff_pct < -5 ? "r" : "blanco");
+
+    // fila total (sin nombre): puse en blanco, tengo con buffer del 5%, cambio % real sin buffer
+    var filaTot = '<div class="invtot">' +
+      '<span class="blanco">' + esc(usd(puse)) + '</span> ' +
+      '<span class="g">·</span> ' +
+      '<span class="' + colorTengo + '">' + esc(usd(vale)) + '</span> ' +
+      '<span class="g">·</span> ' +
+      '<span class="' + clase(diff_usd) + '">' + esc(conSigno(diff_pct, "%")) + '</span>' +
+      '</div>';
+
     var cuerpo = '<div class="inv">' +
-      '<div class="invtop">' + numGrande("ayer", ayer) + numGrande("mes", mes) + "</div>" +
-      '<div class="invtot"><span class="g">invertido</span> <span class="b">' + esc(usd(d.total_invertido)) + "</span>" +
-      ' <span class="g">· vale</span> <span class="' + clase(vale - Number(d.total_invertido || 0)) + '">' + esc(usd(vale)) + "</span>" +
-      (d.efectivo ? ' <span class="g">· efectivo ' + esc(usd(d.efectivo)) + "</span>" : "") + "</div>" +
+      filaTot +
       filaAnual(d.anual) +
       (acts.length ? '<div class="invact">' + acts.map(filaActivo).join("") + "</div>" : "") +
       sparkline(h, clase(mes.usd)) +

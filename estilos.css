@@ -4,7 +4,7 @@
    3422 {rediseno}: temas alternables al vuelo (`web/tema-facu.css` intacto y `web/tema-nuevo.css`). */
   :root{
     --verde:#39ff14; --blanco:#e8e8e8; --gris:#666; --cian:#22d3ee;
-    --magenta:#ff4fd8; --rojo:#ff4d4d; --rojo-apagado:#b84a4a; --amarillo:#ffd60a; --linea:#1c1c1c;
+    --magenta:#ff4fd8; --rojo:#ff4d4d; --rojo-apagado:#b84a4a; --bordo:#9e2a3b; --amarillo:#ffd60a; --linea:#1c1c1c;
     --verde-tenue:#1f7a12; --linea-clara:#3a3a3a; --yo:#9be88a;
     --naranja:#ff9f1a;
     /* 1541 (facundo, 2026-09-15): ningun texto del board mas grande que el del chat (`.msg`); lo que resalta usa peso o color.
@@ -1662,6 +1662,7 @@
   .ub.n-sin .ub-lleno{background:#333}
   .v{color:var(--verde)} .r{color:var(--rojo)} .a{color:var(--amarillo)}
   .c{color:var(--cian)} .m{color:var(--magenta)} .g{color:var(--gris)}
+  .bordo{color:var(--bordo)} .blanco{color:var(--blanco)}
   /* widget queue (1521, 3553): separacion por color segun tipo o estado (facundo, 2026-10-12) */
   .qpaso{color:var(--blanco)} .qcorre{color:var(--verde)} .qcola{color:#5f8a58} .qfallo{color:var(--rojo)}
   .qborrada{color:var(--gris);opacity:.45}
