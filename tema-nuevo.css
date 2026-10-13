@@ -84,6 +84,12 @@ html, body {
   font-weight: 100;
   transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
 }
+/* 3599 {enlazar-estilos}: estilos compartidos entre pestañas y modal de pestaña nueva (#dd) */
+#tabs .tab, .tab, .tabnom, #dd .ddtit, #dd .ddop, #dd .ddsubop, #dd .ddpadre-btn {
+  font-size: 12px;
+  letter-spacing: normal;
+  font-weight: 100;
+}
 #tabs .tab {
   flex: 0 0 auto;
   min-width: 60px;
@@ -110,6 +116,7 @@ html, body {
   font-size: 22px;
   line-height: 1;
   font-weight: normal;
+  transform: translateY(-2px);
 }
 #tabs .tab .x {
   display: inline-flex;
@@ -123,6 +130,7 @@ html, body {
   font-weight: normal;
   font-size: 27px;
   line-height: 1;
+  transform: translateY(-2px);
 }
 #tabs .tab .mas + .x {
   margin-left: 1px;
@@ -168,9 +176,6 @@ html, body {
 #tabs .barrabtn:active {
   background: transparent;
 }
-#dd .ddop, #dd .ddsubop, #dd .ddpadre-btn {
-  letter-spacing: 4px;
-}
 #dd .ddgrupo {
   display: flex;
   flex-direction: row;
@@ -194,7 +199,6 @@ html, body {
   flex: 0 0 auto;
   min-width: 0;
   white-space: nowrap;
-  letter-spacing: 4px;
 }
 #dd .ddtoggle {
   background: #000;
@@ -204,7 +208,7 @@ html, body {
   padding: 0 8px;
   height: 32px;
   font: inherit;
-  font-size: 13px;
+  font-size: 12px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -239,7 +243,6 @@ html, body {
 #dd .ddsubop {
   white-space: nowrap;
   flex: 0 0 auto;
-  letter-spacing: 4px;
 }
 
 /* panel de chat y mensajes */

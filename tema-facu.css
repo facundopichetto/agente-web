@@ -2287,6 +2287,10 @@
      pestaña no se veia mas alta que antes, asi que en un control de 16 px "un poquito mas" no son +4 px por
      lado; facundo lo pidio como el DOBLE del que hay, 8 -> 16, y la pestaña queda en 56.8 px. el texto sigue
      centrado vertical con el flex del propio boton (punto 3), nunca con un `line-height` a mano. */
+  /* 3599 {enlazar-estilos}: estilos compartidos entre pestañas y modal de pestaña nueva (#dd) */
+  #tabs .tab, .tabnom, #dd .ddtit, #dd .ddop, #dd .ddsubop, #dd .ddpadre-btn{
+    font:inherit;font-size:12px;letter-spacing:normal;font-weight:100;
+  }
   #tabs .tab{
     flex:0 0 auto;min-width:60px;background:#000;color:var(--gris);border:0;
     border-radius:4px 4px 0 0;padding:16px 9px;font:inherit;font-size:12px;cursor:pointer;
@@ -2337,10 +2341,12 @@
   #tabs .tab .mas{
     display:inline-flex;align-items:center;justify-content:center;
     width:22px;height:22px;color:#555;margin-left:5px;font-size:22px;line-height:1;font-weight:normal;
+    transform:translateY(-2px);
   }
   #tabs .tab .x{
     display:inline-flex;align-items:center;justify-content:center;
     width:22px;height:22px;color:#555;margin-left:5px;margin-right:-3px;font-size:27px;line-height:1;font-weight:normal;
+    transform:translateY(-2px);
   }
   #tabs .tab .mas + .x{margin-left:1px}
   #tabs .tab.activo .mas,#tabs .tab.activo .x{color:var(--gris)}
@@ -2417,18 +2423,18 @@
     max-width:460px;margin:0 auto;background:#000;border:1px solid transparent;border-radius:6px;box-shadow:var(--modal-sombra);
     padding:6px;display:flex;flex-direction:column;gap:4px;max-height:60dvh;overflow-y:auto;
   }
-  #dd .ddtit{color:var(--gris);font-size:13px;text-transform:uppercase;letter-spacing:.06em;padding:2px 4px}
+  #dd .ddtit{color:var(--gris);text-transform:uppercase;padding:2px 4px}
   #dd .ddop{
     background:#000;color:var(--cian);border:1px solid var(--linea);border-radius:4px;
-    padding:8px 10px;font:inherit;font-size:13px;cursor:pointer;text-align:left;letter-spacing:4px;
+    padding:8px 10px;cursor:pointer;text-align:left;
   }
   #dd .ddop:active{background:#111}
   #dd .ddgrupo{display:flex;flex-direction:row;align-items:center;gap:4px;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;white-space:nowrap;max-width:100%;flex:0 0 auto}
   #dd .ddpadre-fila{display:inline-flex;align-items:center;gap:4px;flex:0 0 auto;white-space:nowrap}
-  #dd .ddpadre-btn{flex:0 0 auto;min-width:0;white-space:nowrap;letter-spacing:4px}
+  #dd .ddpadre-btn{flex:0 0 auto;min-width:0;white-space:nowrap}
   #dd .ddtoggle{
     background:#000;color:var(--gris);border:1px solid var(--linea);border-radius:4px;
-    padding:0 8px;height:32px;font:inherit;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;
+    padding:0 8px;height:32px;font:inherit;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;
   }
   #dd .ddtoggle:hover{color:var(--verde);border-color:var(--linea-clara)}
   #dd .ddtoggle:active{background:#111}
@@ -2440,7 +2446,7 @@
     display:inline-flex;flex-direction:row;align-items:center;gap:4px;padding-left:4px;border-left:1px solid var(--linea);margin:0;flex:0 0 auto;flex-wrap:nowrap;white-space:nowrap;
   }
   #dd .ddgrupo.colapsado .ddhijos{display:none}
-  #dd .ddsubop{background:#050505;border-color:var(--linea-clara);font-size:13px;padding:6px 10px;white-space:nowrap;flex:0 0 auto;letter-spacing:4px}
+  #dd .ddsubop{background:#050505;border-color:var(--linea-clara);padding:6px 10px;white-space:nowrap;flex:0 0 auto}
 
   /* ---------- modal de item de widget (facundo, 2026-09-11) ----------
      tocar cualquier fila de un widget la expande y ofrece 2 a 4 acciones a/b/c. look terminal. */

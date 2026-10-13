@@ -8,8 +8,8 @@
         "fable",
         "geminiflash",
         "geminipro",
-        "gemini-3.8-flash",
         "gemini-4-argon",
+        "gemini-3.8-flash",
         "claude-opus-5-5",
         "claude-sonnet-5-5",
         "gpt-oss-120b"
@@ -31,8 +31,8 @@
         "opus",
         "claude",
         "geminiflash",
-        "gemini-3.8-flash",
         "gemini-4-argon",
+        "gemini-3.8-flash",
         "claude-opus-5-5",
         "claude-sonnet-5-5",
         "gpt-oss-120b"
@@ -54,8 +54,8 @@
         "opus",
         "claude",
         "geminiflash",
-        "gemini-3.8-flash",
         "gemini-4-argon",
+        "gemini-3.8-flash",
         "claude-opus-5-5",
         "claude-sonnet-5-5",
         "gpt-oss-120b"
@@ -78,8 +78,8 @@
         "claude",
         "fable",
         "geminiflash",
-        "gemini-3.8-flash",
         "gemini-4-argon",
+        "gemini-3.8-flash",
         "claude-opus-5-5",
         "claude-sonnet-5-5",
         "gpt-oss-120b"
@@ -102,8 +102,8 @@
         "claude",
         "fable",
         "geminiflash",
-        "gemini-3.8-flash",
         "gemini-4-argon",
+        "gemini-3.8-flash",
         "claude-opus-5-5",
         "claude-sonnet-5-5",
         "gpt-oss-120b"
@@ -506,8 +506,8 @@
       "modelo": "agy"
     },
     "flos": {
-      "motor": "gemini-3.8-flash",
-      "modelo": "gemini-3.8-flash"
+      "motor": "claude",
+      "modelo": "fable"
     },
     "juegos": {
       "motor": "agy",
@@ -535,17 +535,17 @@
       "modelo": "fable"
     },
     "tinder": {
-      "motor": "claude",
-      "modelo": "sin modelo"
+      "motor": "agy",
+      "modelo": "agy"
     }
   },
   "modelos_agy": {
-    "gemini-3.8-flash": [
+    "gemini-4-argon": [
       "high",
       "medium",
       "low"
     ],
-    "gemini-4-argon": [
+    "gemini-3.8-flash": [
       "high",
       "medium",
       "low"
