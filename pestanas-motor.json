@@ -498,8 +498,7 @@
     },
     "board": {
       "motor": "agy",
-      "modelo": "gemini-3.8-flash",
-      "effort": "medium"
+      "modelo": "agy"
     },
     "flos": {
       "motor": "gemini-3.8-flash",

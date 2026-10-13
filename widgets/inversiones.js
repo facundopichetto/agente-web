@@ -52,15 +52,26 @@
   }
   // 2966: el `año`, el retorno anual de la cartera (independiente de la plata). `ESTIMADO` hasta los 365 dias, `REAL`
   // (ultimos 12 meses) despues; el calculo lo hace el server (`recetas/inversiones_anual.py`), la web solo lo pinta.
+  // 3591 {rango-pesimista}: rango pesimista / medio / optimista por volatilidad cuando es estimado y hay rango.
   function filaAnual(a){
     if(!a) return "";
     if(a.pct === null || a.pct === undefined)
       return '<div class="invanio"><span class="invet g">año</span> <span class="g">' + esc(a.motivo || "sin dato todavia") + "</span></div>";
     var rot = a.rotulo || (a.estimado ? "ESTIMADO" : "REAL");
-    return '<div class="invanio ' + clase(a.pct) + '"><span class="invet g">año</span> ' +
+    var html = '<div class="invanio ' + clase(a.pct) + '"><span class="invet g">año</span> ' +
            '<span class="invusd b">' + esc(conSigno(a.pct, "%")) + "</span> " +
            '<span class="' + "g" + '">' + esc(rot) + "</span> " +
            '<span class="g">' + esc((a.desde || "") + " → " + (a.hasta || "")) + "</span></div>";
+    if(a.pesimista !== undefined && a.optimista !== undefined && (a.pesimista !== a.optimista)){
+      var med = a.medio !== undefined ? a.medio : a.pct;
+      html += '<div class="invanio"><span class="invet g">rango</span> ' +
+             '<span class="' + clase(a.pesimista) + '">' + esc(conSigno(a.pesimista, "%")) + '</span> ' +
+             '<span class="g">/</span> <span class="' + clase(med) + '">' + esc(conSigno(med, "%")) + '</span> ' +
+             '<span class="g">/</span> <span class="' + clase(a.optimista) + '">' + esc(conSigno(a.optimista, "%")) + '</span>' +
+             (a.volatilidad ? ' <span class="g">(vol ' + esc(usd(a.volatilidad)) + '%)</span>' : '') +
+             '</div>';
+    }
+    return html;
   }
   function filaActivo(a){
     return '<div class="invfila"><span class="invtk b">' + esc(a.ticker || "?") + "</span>" +
