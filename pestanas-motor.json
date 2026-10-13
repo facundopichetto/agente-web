@@ -9,9 +9,6 @@
         "geminiflash",
         "geminipro",
         "gemini-3.8-flash",
-        "gemini-3.7-flash",
-        "gemini-3.6-flash",
-        "gemini-3.1-pro",
         "claude-opus-5-5",
         "claude-sonnet-5-5",
         "gpt-oss-120b"
@@ -34,9 +31,6 @@
         "claude",
         "geminiflash",
         "gemini-3.8-flash",
-        "gemini-3.7-flash",
-        "gemini-3.6-flash",
-        "gemini-3.1-pro",
         "claude-opus-5-5",
         "claude-sonnet-5-5",
         "gpt-oss-120b"
@@ -59,9 +53,6 @@
         "claude",
         "geminiflash",
         "gemini-3.8-flash",
-        "gemini-3.7-flash",
-        "gemini-3.6-flash",
-        "gemini-3.1-pro",
         "claude-opus-5-5",
         "claude-sonnet-5-5",
         "gpt-oss-120b"
@@ -85,9 +76,6 @@
         "fable",
         "geminiflash",
         "gemini-3.8-flash",
-        "gemini-3.7-flash",
-        "gemini-3.6-flash",
-        "gemini-3.1-pro",
         "claude-opus-5-5",
         "claude-sonnet-5-5",
         "gpt-oss-120b"
@@ -111,9 +99,6 @@
         "fable",
         "geminiflash",
         "gemini-3.8-flash",
-        "gemini-3.7-flash",
-        "gemini-3.6-flash",
-        "gemini-3.1-pro",
         "claude-opus-5-5",
         "claude-sonnet-5-5",
         "gpt-oss-120b"
@@ -324,15 +309,13 @@
       "pestana": "flos",
       "tema": null,
       "fila": "flos",
-      "motor": "agy",
-      "modelo": "gemini-3.1-pro",
+      "motor": "claude",
+      "modelo": "claude",
       "effort": "high",
-      "origen_motor": "del_modelo",
-      "origen_modelo": "selector_exacto",
+      "origen_motor": "del_modelo (guardado `agy` no va con `claude`)",
+      "origen_modelo": "default_fila",
       "origen_effort": "selector_exacto",
       "flags": [
-        "--model",
-        "gemini-3.1-pro",
         "--effort",
         "high"
       ],
@@ -513,7 +496,8 @@
     },
     "board": {
       "motor": "agy",
-      "modelo": "agy"
+      "modelo": "gemini-3.8-flash",
+      "effort": "medium"
     },
     "flos": {
       "motor": "claude",
@@ -546,27 +530,14 @@
     },
     "tinder": {
       "motor": "agy",
-      "modelo": "agy"
+      "modelo": "agy",
+      "effort": "high"
     }
   },
   "modelos_agy": {
     "gemini-3.8-flash": [
       "high",
       "medium",
-      "low"
-    ],
-    "gemini-3.7-flash": [
-      "high",
-      "medium",
-      "low"
-    ],
-    "gemini-3.6-flash": [
-      "high",
-      "medium",
-      "low"
-    ],
-    "gemini-3.1-pro": [
-      "high",
       "low"
     ],
     "claude-opus-5-5": [

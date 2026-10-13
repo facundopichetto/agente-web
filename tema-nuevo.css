@@ -126,7 +126,6 @@ html, body {
   color: var(--blanco);
 }
 .tab.activa {
-  background: var(--fondo-caja);
   color: var(--verde);
   border-color: var(--linea-clara);
   font-weight: 600;

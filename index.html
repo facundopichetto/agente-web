@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.562">
-<link rel="manifest" href="manifest.json?v=4.562">
+<meta name="agente-web-version" content="4.563">
+<link rel="manifest" href="manifest.json?v=4.563">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.562">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.563">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.559">
 <style id="css-listas-drag">
 #sellistas, #sellistas * {
@@ -7144,6 +7144,7 @@ function tjPedirFoto(c, esHD){
       }));
       c.foto_pendiente = false; c.sin_foto = false;
       delete tjFotoMotivo[c.id]; delete c.foto_vencida;   // caso #29: la fresca reemplaza a la vencida
+      bajarImagen(r).then(function(u){ var im = new Image(); im.src = u; }).catch(function(){});
     } else {
       // 2249 {foto}: el server ya contesto que no la tiene: deja de decir "bajando" para siempre y pasa al cuadro
       // con el arroba, que es lo que deja votar la tarjeta igual
@@ -7193,20 +7194,35 @@ function tjBajarFoto(id, foto, pp, principal, alFallar){
       // recien cuando la foto cargo de verdad, asi la privada no agranda una imagen rota
       im.addEventListener("load", function(){
         pp.__url = url;
+        pp.__foto = foto;
         if(im.naturalWidth > 0 && (im.naturalWidth <= 200 || im.naturalHeight <= 200)){
           pp.classList.add("tjchica");
         } else {
           pp.classList.remove("tjchica");
         }
+        pp.classList.add("confoto");
+        var viejo = pp.querySelector("img");
+        if(viejo && viejo !== im && viejo.parentNode === pp){
+          pp.replaceChild(im, viejo);
+        } else if(!viejo || viejo === im){
+          if(im.parentNode !== pp) pp.appendChild(im);
+        }
       });
       im.addEventListener("error", function(){
         if(im.parentNode === pp) pp.removeChild(im);
-        pp.classList.remove("confoto"); pp.__url = null;
+        if(!pp.querySelector("img")) pp.classList.remove("confoto");
+        pp.__url = null;
         if(!viva()) return;
         fallo(vencida);
       });
-      im.src = url; pp.appendChild(im);
-      pp.classList.add("confoto");   // 1580: la foto tapa la inicial del placeholder
+      im.src = url;
+      // 3566 {sinparpadeo}: si todavia no hay imagen cargada, agregamos im;
+      // si ya hay una visible, se mantiene en pantalla hasta que la nueva termine de cargar
+      var viejo = pp.querySelector("img");
+      if(!viejo){
+        pp.appendChild(im);
+        pp.classList.add("confoto");   // 1580: la foto tapa la inicial del placeholder
+      }
     }).catch(function(){
       if(!viva()) return;
       fallo(false);
@@ -7244,7 +7260,17 @@ function tjNota(){
 }
 function tjPintar(){
   var e = sel.actual, c = tjActual(), t = $("seltarjeta");
-  t.textContent = "";
+  // 3566 {sinparpadeo}: si la cuenta no cambio, reutilizar el contenedor e imagen existente
+  var mismoCandidato = c && t.getAttribute("data-candidata") === String(c.id);
+  var fsViejo = mismoCandidato ? t.querySelector(".tjfotos") : null;
+  if(!mismoCandidato){
+    t.textContent = "";
+  } else {
+    var viejoInfo = t.querySelector(".tjinfo");
+    if(viejoInfo && viejoInfo.parentNode === t) t.removeChild(viejoInfo);
+    var viejoFnum = t.querySelector(".tjfnum");
+    if(viejoFnum && viejoFnum.parentNode === t) t.removeChild(viejoFnum);
+  }
   $("seltxt").classList.add("oculta"); $("seltxt").value = "";
   tjContar();
   // 1657: la fila de abajo son SOLO los tres votos (`✕` `-_-` `🔥`) y se ve con tarjeta a la vista. el back (`←`)
@@ -7298,7 +7324,7 @@ function tjPintar(){
   if(!c){ tjFin(); return; }
   t.setAttribute("data-candidata", c.id);   // 1495: la tarjeta a la vista, la que firma el voto
   // 1495: la foto de perfil arriba y grande. si no baja, la tarjeta no se muestra: se salta sin votar
-  var fs = document.createElement("div"); fs.className = "tjfotos";
+  var fs = fsViejo;
   // 1791 (facundo, 2026-09-16): en la pwa del ipad `window.open` abria safari aparte y facundo tenia que cerrarlo a mano
   // para volver al board; un `<a target="_blank">` de verdad (el mismo envoltorio que el `@cuenta`) abre el in-app
   // browser y al volver cae directo en el board. la privada sigue siendo un `div`: su foto va al visor, no al perfil
@@ -7317,7 +7343,6 @@ function tjPintar(){
   // que se puede mirar de esa persona, y sin el cuadro la tarjeta quedaba sin nada donde va la foto.
   var fotos = (c.fotos || []).filter(Boolean);
   var cuadros = fotos.length ? fotos : ((c.foto_pendiente || c.sin_foto) ? [""] : []);
-  if(cuadros.length > 1) fs.classList.add("tjcarr");
   var pp = null, fn = null, fnPintar = null;
   // caso #29 {carruselroto}: la foto que no se puede mostrar (firma de la cdn vencida, bajada que no sale ni
   // reintentando) SACA su cuadro del carrusel: las que quedan se siguen caminando de a una, el `foto k de N` cuenta
@@ -7335,33 +7360,109 @@ function tjPintar(){
     } else if(fnPintar) fnPintar();
     if(!vivos) tjSinFoto(c.id, vencida);
   }
-  cuadros.forEach(function(foto, i){
-    var x = document.createElement(ppUrl ? "a" : "div"); x.className = "tjppal";
-    if(ppUrl){ x.href = ppUrl; x.target = "_blank"; x.rel = "noopener"; }
-    // 1772: el alto sale del css (cuadrado); si la candidata trae `ratio` (ancho/alto) el placeholder ya nace con ese.
-    // 1874: en la vista entera el cuadro lo mide la grilla y la foto entra con `contain`, asi que no lleva `ratio`
-    // 1580 {fotoancha}: en el celu el cuadro es 4:5 fijo a ancho completo (css), tampoco lleva `ratio`
-    if(!tjPantalla() && typeof c.ratio === "number" && c.ratio > 0.2 && c.ratio < 5) x.style.paddingBottom = (100 / c.ratio).toFixed(2) + "%";
-    var ini = document.createElement("span"); ini.className = "tjini";
-    var letra = document.createElement("span"); letra.className = "tjinil";
-    letra.textContent = (String(c.titulo || c.cuenta || "?").trim().charAt(0) || "?").toUpperCase();
-    // 2249 {foto}: sin foto (y sin ninguna en camino) el cuadro lleva el @arroba grande y centrado, no la inicial
-    if(c.sin_foto && !foto && c.cuenta){ letra.className = "tjinil tjinia"; letra.textContent = "@" + c.cuenta; }
-    ini.appendChild(letra); x.appendChild(ini);
-    // 1665 (facundo): tocar la foto. cuenta publica -> el perfil de instagram en otra pestaña; privada (donde el perfil
-    // no muestra nada) -> la foto a pantalla completa en el visor, que ya cierra con esc, la ✕ y el fondo
-    x.setAttribute("role", "button");
-    x.setAttribute("aria-label", c.privada ? "agrandar la foto" : "abrir el perfil");
-    x.addEventListener("click", function(ev){
-      ev.stopPropagation();   // tocar la foto nunca vota ni avanza la tarjeta
-      if(ppUrl) return;       // 1791: el `<a>` navega solo (in-app browser), nada de `window.open`
-      if(x.__url) verImagen(x.__url, c.titulo || c.cuenta || "");
+  var reusarFoto = fs && fotos.length > 0 && !c.sin_foto && fs.querySelector(".tjppal");
+  if(reusarFoto){
+    pp = fs.querySelector(".tjppal");
+    if(pp){
+      var fotoNueva = cuadros[0] || "";
+      if(fotoNueva && pp.__foto !== fotoNueva){
+        pp.__foto = fotoNueva;
+        var bufNueva = tjBuffer[fotoNueva];
+        var cachedNueva = (bufNueva && bufNueva.listo) ? bufNueva.url : (imgUrls[fotoNueva] || imgUrls[srcBuzon(fotoNueva)] || (/^(https?:|data:)/i.test(fotoNueva) ? fotoNueva : null));
+        var imExistente = pp.querySelector("img");
+        if(cachedNueva && imExistente){
+          imExistente.src = cachedNueva;
+          pp.__url = cachedNueva;
+          if(bufNueva && bufNueva.img && bufNueva.img.naturalWidth > 0 && (bufNueva.img.naturalWidth <= 200 || bufNueva.img.naturalHeight <= 200)){
+            pp.classList.add("tjchica");
+          }
+        } else {
+          bajarImagen(fotoNueva).then(function(newUrl){
+            if(!t || t.getAttribute("data-candidata") !== String(c.id)) return;
+            var temp = new Image();
+            temp.addEventListener("load", function(){
+              if(!t || t.getAttribute("data-candidata") !== String(c.id)) return;
+              if(imExistente){
+                imExistente.src = newUrl;
+              } else {
+                var nImg = document.createElement("img");
+                nImg.alt = "";
+                nImg.src = newUrl;
+                pp.appendChild(nImg);
+                pp.classList.add("confoto");
+              }
+              pp.__url = newUrl;
+              if(temp.naturalWidth > 0 && (temp.naturalWidth <= 200 || temp.naturalHeight <= 200)){
+                pp.classList.add("tjchica");
+              } else {
+                pp.classList.remove("tjchica");
+              }
+            });
+            temp.src = newUrl;
+          }).catch(function(){});
+        }
+      }
+    }
+  } else {
+    if(fs && fs.parentNode === t) t.removeChild(fs);
+    fs = document.createElement("div"); fs.className = "tjfotos";
+    if(cuadros.length > 1) fs.classList.add("tjcarr");
+    cuadros.forEach(function(foto, i){
+      var x = document.createElement(ppUrl ? "a" : "div"); x.className = "tjppal";
+      if(ppUrl){ x.href = ppUrl; x.target = "_blank"; x.rel = "noopener"; }
+      // 1772: el alto sale del css (cuadrado); si la candidata trae `ratio` (ancho/alto) el placeholder ya nace con ese.
+      // 1874: en la vista entera el cuadro lo mide la grilla y la foto entra con `contain`, asi que no lleva `ratio`
+      // 1580 {fotoancha}: en el celu el cuadro es 4:5 fijo a ancho completo (css), tampoco lleva `ratio`
+      if(!tjPantalla() && typeof c.ratio === "number" && c.ratio > 0.2 && c.ratio < 5) x.style.paddingBottom = (100 / c.ratio).toFixed(2) + "%";
+      var ini = document.createElement("span"); ini.className = "tjini";
+      var letra = document.createElement("span"); letra.className = "tjinil";
+      letra.textContent = (String(c.titulo || c.cuenta || "?").trim().charAt(0) || "?").toUpperCase();
+      // 2249 {foto}: sin foto (y sin ninguna en camino) el cuadro lleva el @arroba grande y centrado, no la inicial
+      if(c.sin_foto && !foto && c.cuenta){ letra.className = "tjinil tjinia"; letra.textContent = "@" + c.cuenta; }
+      ini.appendChild(letra); x.appendChild(ini);
+      // 1665 (facundo): tocar la foto. cuenta publica -> el perfil de instagram en otra pestaña; privada (donde el perfil
+      // no muestra nada) -> la foto a pantalla completa en el visor, que ya cierra con esc, la ✕ y el fondo
+      x.setAttribute("role", "button");
+      x.setAttribute("aria-label", c.privada ? "agrandar la foto" : "abrir el perfil");
+      x.addEventListener("click", function(ev){
+        ev.stopPropagation();   // tocar la foto nunca vota ni avanza la tarjeta
+        if(ppUrl) return;       // 1791: el `<a>` navega solo (in-app browser), nada de `window.open`
+        if(x.__url) verImagen(x.__url, c.titulo || c.cuenta || "");
+      });
+      fs.appendChild(x);
+      if(foto){
+        x.__foto = foto;
+        var buf = tjBuffer[foto];
+        var cachedUrl = (buf && buf.listo) ? buf.url : (imgUrls[foto] || imgUrls[srcBuzon(foto)] || (/^(https?:|data:)/i.test(foto) ? foto : null));
+        if(cachedUrl){
+          var im = document.createElement("img"); im.alt = "";
+          im.src = cachedUrl;
+          x.__url = cachedUrl;
+          if(buf && buf.img && buf.img.naturalWidth > 0 && (buf.img.naturalWidth <= 200 || buf.img.naturalHeight <= 200)){
+            x.classList.add("tjchica");
+          }
+          im.addEventListener("load", function(){
+            if(im.naturalWidth > 0 && (im.naturalWidth <= 200 || im.naturalHeight <= 200)){
+              x.classList.add("tjchica");
+            } else {
+              x.classList.remove("tjchica");
+            }
+          });
+          im.addEventListener("error", function(){
+            if(im.parentNode === x) x.removeChild(im);
+            x.classList.remove("confoto"); x.__url = null;
+            cuadroRoto(x, foto, /^https?:/i.test(foto));
+          });
+          x.appendChild(im);
+          x.classList.add("confoto");
+        } else {
+          tjBajarFoto(c.id, foto, x, i === 0, cuadroRoto);   // caso #29: el cuadro roto se saca, no se deja muerto
+        }
+      }
+      if(!i) pp = x;
     });
-    fs.appendChild(x);
-    if(foto) tjBajarFoto(c.id, foto, x, i === 0, cuadroRoto);   // caso #29: el cuadro roto se saca, no se deja muerto
-    if(!i) pp = x;
-  });
-  if(cuadros.length) t.appendChild(fs);   // {fotoancha2}: sin foto (y sin foto en camino) no hay bloque (ni hueco)
+    if(cuadros.length) t.appendChild(fs);   // {fotoancha2}: sin foto (y sin foto en camino) no hay bloque (ni hueco)
+  }
   // 1874: todo lo que no es la foto vive en UN bloque (`.tjinfo`): abajo de la foto en mobile, al lado en wide
   var info = document.createElement("div"); info.className = "tjinfo"; t.appendChild(info);
   if(fotos.length > 1){   // 1580: en que foto va, en el bloque de datos (la foto no lleva nada encima)
@@ -7447,7 +7548,7 @@ function tjPintar(){
     info.appendChild(hs);
   }
   tjFicha(e, c);   // 2051 paso 4 + 2120 {persona}: y su espejo entero, el que queda a la vista arriba de los votos en el celu
-  t.scrollTop = 0; info.scrollTop = 0;
+  if(!mismoCandidato){ t.scrollTop = 0; info.scrollTop = 0; }
   tjPedirMas(e);   // 2137 paso 4: quedan pocas adelante -> se pide el lote siguiente (GET), y entra al final
 }
 // 2137 {votolocal} paso 4: la paginacion la dispara el AVANCE EN LA FILA (la posicion del indice, la mueva un voto,
@@ -7602,11 +7703,10 @@ function tjAtras(){
 }
 var TJ_REINTENTOS = [1000, 3000];   // 1524: ms antes de cada reintento de una foto que no bajo
 var tjPre = {};   // 1772: fotos ya pedidas para las tarjetas siguientes (src -> true), asi no se piden dos veces
+var tjBuffer = {}; // doble buffer en memoria con imagenes precargadas y decodificadas
 function tjPrecargar(e, i){
-  // 1772 (facundo, 2026-09-16): "que la foto de la tarjeta siguiente y la otra ya esten precargadas mientras voto".
-  // pide la foto principal de las dos candidatas que siguen a la `i` por `bajarImagen` (que deja el object url en
-  // `imgUrls`, la misma cache que usa la tarjeta) y la pasa por un `Image` para que el navegador la decodifique.
-  // solo la principal: las chicas (`fotos[1..]`) hoy no se pintan en la tarjeta. devuelve lo pedido (pruebas).
+  // 1772 (facundo, 2026-09-16) + {fila-mobile-2} (facundo, 2026-10-12): doble buffer con precarga de las
+  // siguientes fotos en el votador para transiciones instantaneas y sin parpadeo
   var pedidas = [];
   if(!e || !e.candidatas) return pedidas;
   for(var k = i + 1; k <= i + 2 && k < e.candidatas.length; k++){
@@ -7619,8 +7719,24 @@ function tjPrecargar(e, i){
     if(!f || tjPre[f]) continue;
     tjPre[f] = true; pedidas.push(f);
     (function(f){
-      bajarImagen(f).then(function(url){ var im = new Image(); im.src = url; })
-        .catch(function(){ delete tjPre[f]; });   // no bajo: la tarjeta la reintenta cuando le toque
+      bajarImagen(f).then(function(url){
+        var im = new Image();
+        tjBuffer[f] = {url: url, img: im, listo: false};
+        im.addEventListener("load", function(){
+          if(tjBuffer[f]) tjBuffer[f].listo = true;
+        });
+        im.addEventListener("error", function(){
+          delete tjBuffer[f];
+          delete tjPre[f];
+        });
+        im.src = url;
+        if(im.complete && im.naturalWidth > 0){
+          tjBuffer[f].listo = true;
+        }
+      }).catch(function(){
+        delete tjPre[f];
+        delete tjBuffer[f];
+      });
     })(f);
   }
   return pedidas;
@@ -8120,14 +8236,38 @@ function iniciarArrastreCaja(caja, e, f){
       return c !== caja && c !== ph && c.classList && c.classList.contains("liscaja") && c.dataset && c.dataset.lista;
     });
     var insertado = false;
-    for(var i = 0; i < cs.length; i++){
-      var r = cs[i].getBoundingClientRect();
-      if(ev.clientY < r.top || (ev.clientY <= r.bottom && ev.clientX < r.left + r.width / 2)){
-        if(ph.nextSibling !== cs[i]){
-          cont.insertBefore(ph, cs[i]);
+    var esUnaCol = false;
+    if(cs.length >= 2){
+      var r0 = cs[0].getBoundingClientRect();
+      var r1 = cs[1].getBoundingClientRect();
+      if(Math.abs(r0.left - r1.left) < 15){
+        esUnaCol = true;
+      }
+    } else {
+      esUnaCol = true;
+    }
+
+    if(esUnaCol){
+      for(var i = 0; i < cs.length; i++){
+        var r = cs[i].getBoundingClientRect();
+        if(ev.clientY < r.top + r.height / 2){
+          if(ph.nextSibling !== cs[i]){
+            cont.insertBefore(ph, cs[i]);
+          }
+          insertado = true;
+          break;
         }
-        insertado = true;
-        break;
+      }
+    } else {
+      for(var i = 0; i < cs.length; i++){
+        var r = cs[i].getBoundingClientRect();
+        if(ev.clientY < r.top || (ev.clientY <= r.bottom && ev.clientX < r.left + r.width / 2)){
+          if(ph.nextSibling !== cs[i]){
+            cont.insertBefore(ph, cs[i]);
+          }
+          insertado = true;
+          break;
+        }
       }
     }
     if(!insertado && cs.length){
