@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.563">
-<link rel="manifest" href="manifest.json?v=4.563">
+<meta name="agente-web-version" content="4.564">
+<link rel="manifest" href="manifest.json?v=4.564">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.563">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.564">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.559">
 <style id="css-listas-drag">
 #sellistas, #sellistas * {
@@ -72,26 +72,6 @@ body.arrastrando-liscaja, body.arrastrando-liscaja * {
 }
 body.arrastrando-liscaja #sellistas {
   overflow: hidden !important;
-}
-#seltarjeta .tjppal.tjchica {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  background: radial-gradient(circle at center, rgba(255,255,255,0.06) 0%, rgba(10,10,10,0.95) 70%) !important;
-}
-#seltarjeta .tjppal.tjchica img {
-  position: relative !important;
-  top: auto !important;
-  left: auto !important;
-  width: auto !important;
-  height: auto !important;
-  max-width: 200px !important;
-  max-height: 200px !important;
-  border-radius: 50% !important;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.9) !important;
-  border: 2px solid var(--borde, #444) !important;
-  object-fit: cover !important;
-  image-rendering: -webkit-optimize-contrast;
 }
 </style>
 </head>
@@ -1768,7 +1748,7 @@ function pintarTabs(){
     }
     if(!esModo(t)){
       var x = document.createElement("span");
-      x.className = "x"; x.textContent = "×"; x.dataset.cerrar = t;
+      x.className = "x"; x.textContent = "X"; x.dataset.cerrar = t;
       b.appendChild(x);
     }
     barra.appendChild(b);
@@ -7195,11 +7175,6 @@ function tjBajarFoto(id, foto, pp, principal, alFallar){
       im.addEventListener("load", function(){
         pp.__url = url;
         pp.__foto = foto;
-        if(im.naturalWidth > 0 && (im.naturalWidth <= 200 || im.naturalHeight <= 200)){
-          pp.classList.add("tjchica");
-        } else {
-          pp.classList.remove("tjchica");
-        }
         pp.classList.add("confoto");
         var viejo = pp.querySelector("img");
         if(viejo && viejo !== im && viejo.parentNode === pp){
@@ -7260,8 +7235,11 @@ function tjNota(){
 }
 function tjPintar(){
   var e = sel.actual, c = tjActual(), t = $("seltarjeta");
-  // 3566 {sinparpadeo}: si la cuenta no cambio, reutilizar el contenedor e imagen existente
-  var mismoCandidato = c && t.getAttribute("data-candidata") === String(c.id);
+  // 3566 {sinparpadeo}: si la cuenta no cambio en la misma sesion y coleccion, reutilizar el contenedor e imagen existente
+  var mismoCandidato = c && e && sel.sesion &&
+                       t.getAttribute("data-candidata") === String(c.id) &&
+                       t.getAttribute("data-coleccion") === String(e.coleccion || "") &&
+                       t.getAttribute("data-sesion") === String(sel.sesion);
   var fsViejo = mismoCandidato ? t.querySelector(".tjfotos") : null;
   if(!mismoCandidato){
     t.textContent = "";
@@ -7311,6 +7289,8 @@ function tjPintar(){
     // queda ninguna candidata) muestra el cierre con el resumen de la sesion; si no, espera el lote siguiente y lo
     // pide por lan cada `SEL_PEDIR_MS` (sin lan lo trae `widgets.json`). el back `←` sigue vivo: vuelve a la anterior.
     t.removeAttribute("data-candidata");
+    t.removeAttribute("data-coleccion");
+    t.removeAttribute("data-sesion");
     var w = document.createElement("div"); w.className = "tjdet " + (e.agotada ? "tjcierre" : "tjespera");
     // caso 40: el renglon dice POR QUE no hay tarjeta (el motivo del server, la lan, el server que no contesta),
     // nunca solo "no hay más por ahora"; `selEsperar` lo va refrescando con cada pedido
@@ -7323,6 +7303,8 @@ function tjPintar(){
   }
   if(!c){ tjFin(); return; }
   t.setAttribute("data-candidata", c.id);   // 1495: la tarjeta a la vista, la que firma el voto
+  if(e && e.coleccion) t.setAttribute("data-coleccion", e.coleccion);
+  if(sel.sesion) t.setAttribute("data-sesion", sel.sesion);
   // 1495: la foto de perfil arriba y grande. si no baja, la tarjeta no se muestra: se salta sin votar
   var fs = fsViejo;
   // 1791 (facundo, 2026-09-16): en la pwa del ipad `window.open` abria safari aparte y facundo tenia que cerrarlo a mano
@@ -7370,36 +7352,19 @@ function tjPintar(){
         var bufNueva = tjBuffer[fotoNueva];
         var cachedNueva = (bufNueva && bufNueva.listo) ? bufNueva.url : (imgUrls[fotoNueva] || imgUrls[srcBuzon(fotoNueva)] || (/^(https?:|data:)/i.test(fotoNueva) ? fotoNueva : null));
         var imExistente = pp.querySelector("img");
-        if(cachedNueva && imExistente){
-          imExistente.src = cachedNueva;
-          pp.__url = cachedNueva;
-          if(bufNueva && bufNueva.img && bufNueva.img.naturalWidth > 0 && (bufNueva.img.naturalWidth <= 200 || bufNueva.img.naturalHeight <= 200)){
-            pp.classList.add("tjchica");
+        if(cachedNueva){
+          if(imExistente){
+            imExistente.src = cachedNueva;
+          } else {
+            var nImg = document.createElement("img");
+            nImg.alt = "";
+            nImg.src = cachedNueva;
+            pp.appendChild(nImg);
+            pp.classList.add("confoto");
           }
+          pp.__url = cachedNueva;
         } else {
-          bajarImagen(fotoNueva).then(function(newUrl){
-            if(!t || t.getAttribute("data-candidata") !== String(c.id)) return;
-            var temp = new Image();
-            temp.addEventListener("load", function(){
-              if(!t || t.getAttribute("data-candidata") !== String(c.id)) return;
-              if(imExistente){
-                imExistente.src = newUrl;
-              } else {
-                var nImg = document.createElement("img");
-                nImg.alt = "";
-                nImg.src = newUrl;
-                pp.appendChild(nImg);
-                pp.classList.add("confoto");
-              }
-              pp.__url = newUrl;
-              if(temp.naturalWidth > 0 && (temp.naturalWidth <= 200 || temp.naturalHeight <= 200)){
-                pp.classList.add("tjchica");
-              } else {
-                pp.classList.remove("tjchica");
-              }
-            });
-            temp.src = newUrl;
-          }).catch(function(){});
+          tjBajarFoto(c.id, fotoNueva, pp, true, cuadroRoto);
         }
       }
     }
@@ -7438,16 +7403,6 @@ function tjPintar(){
           var im = document.createElement("img"); im.alt = "";
           im.src = cachedUrl;
           x.__url = cachedUrl;
-          if(buf && buf.img && buf.img.naturalWidth > 0 && (buf.img.naturalWidth <= 200 || buf.img.naturalHeight <= 200)){
-            x.classList.add("tjchica");
-          }
-          im.addEventListener("load", function(){
-            if(im.naturalWidth > 0 && (im.naturalWidth <= 200 || im.naturalHeight <= 200)){
-              x.classList.add("tjchica");
-            } else {
-              x.classList.remove("tjchica");
-            }
-          });
           im.addEventListener("error", function(){
             if(im.parentNode === x) x.removeChild(im);
             x.classList.remove("confoto"); x.__url = null;
@@ -7496,8 +7451,8 @@ function tjPintar(){
     info.appendChild(fp);
     tjPedirFoto(c);
   }
-  var esSuper = (sel.filtro === "super") || (c && (c.lista === "super" || (c.virt && c.virt.indexOf("super") >= 0) || c.sup));
-  if(esSuper && c && c.id && !c.__hdSolicitada){
+  // 3572 {unificar-tarjeta}: pedir foto HD siempre para las candidatas del votador
+  if(c && c.id && !c.__hdSolicitada){
     c.__hdSolicitada = true;
     tjPedirFoto(c, true);
   }
@@ -7711,7 +7666,7 @@ function tjPrecargar(e, i){
   if(!e || !e.candidatas) return pedidas;
   for(var k = i + 1; k <= i + 2 && k < e.candidatas.length; k++){
     var candK = e.candidatas[k];
-    if(candK && (sel.filtro === "super" || candK.lista === "super" || candK.sup) && !candK.__hdSolicitada){
+    if(candK && candK.id && !candK.__hdSolicitada){
       candK.__hdSolicitada = true;
       tjPedirFoto(candK, true);
     }
@@ -16558,7 +16513,8 @@ window.__agente = {
                                  n: sel.actual ? (sel.actual.candidatas || []).length : 0,   // 2325 {votador}: cuantas tarjetas quedaron en la fila abierta
                                  marcadas: selMarcadas(), abiertas: sel.abiertas.map(function(a){ return a.coleccion; })}; },
   selFlushMin: function(){ return SEL_FLUSH_MIN; },   // 1836
-  selReset: function(){ sel.actual = null; sel.abiertas = []; sel.ignorada = {}; sel.filaDe = {}; sel.tjHistorial = []; selTs = 0; sel.agotadas = []; sel.totales = {}; filaCache = {}; salidos = {}; tjVotandoYa = {};
+  selReset: function(){ sel.actual = null; sel.sesion = null; sel.abiertas = []; sel.ignorada = {}; sel.filaDe = {}; sel.tjHistorial = []; selTs = 0; sel.agotadas = []; sel.totales = {}; filaCache = {}; salidos = {}; tjVotandoYa = {};
+                        var _st = $("seltarjeta"); if(_st){ _st.removeAttribute("data-candidata"); _st.removeAttribute("data-coleccion"); _st.removeAttribute("data-sesion"); _st.textContent = ""; }
                         ["pend", "hechas", "fila"].forEach(function(s){ try{ localStorage.removeItem("agente_sel_" + s); }catch(x){} });
                         movs = {}; try{ localStorage.removeItem(MOV_LS); }catch(x){} },
   selFila: function(){ return selLeer("fila", {}); },   // correccion 18:12

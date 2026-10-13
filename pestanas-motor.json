@@ -121,7 +121,7 @@
   },
   "elegidos": {
     "flos": {
-      "modelo": "gemini-3.1-pro",
+      "modelo": "gemini-3.8-flash",
       "effort": "high",
       "motor": "agy"
     },
@@ -309,13 +309,15 @@
       "pestana": "flos",
       "tema": null,
       "fila": "flos",
-      "motor": "claude",
-      "modelo": "claude",
+      "motor": "agy",
+      "modelo": "gemini-3.8-flash",
       "effort": "high",
-      "origen_motor": "del_modelo (guardado `agy` no va con `claude`)",
-      "origen_modelo": "default_fila",
+      "origen_motor": "del_modelo",
+      "origen_modelo": "selector_exacto",
       "origen_effort": "selector_exacto",
       "flags": [
+        "--model",
+        "gemini-3.8-flash",
         "--effort",
         "high"
       ],
@@ -500,8 +502,8 @@
       "effort": "medium"
     },
     "flos": {
-      "motor": "claude",
-      "modelo": "fable"
+      "motor": "gemini-3.8-flash",
+      "modelo": "gemini-3.8-flash"
     },
     "juegos": {
       "motor": "agy",

@@ -429,12 +429,6 @@
      y el cuadro sigue midiendo lo mismo (1772), asi que nada salta. `cover` queda solo para miniaturas. */
   #seltarjeta .tjppal img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;
     object-position:center;display:block}
-  #seltarjeta .tjppal.tjchica{display:flex!important;align-items:center!important;justify-content:center!important;
-    background:radial-gradient(circle at center,rgba(255,255,255,.06) 0%,rgba(10,10,10,.95) 70%)!important}
-  #seltarjeta .tjppal.tjchica img{position:relative!important;top:auto!important;left:auto!important;width:auto!important;
-    height:auto!important;max-width:200px!important;max-height:200px!important;border-radius:50%!important;
-    box-shadow:0 10px 30px rgba(0,0,0,.9)!important;border:2px solid var(--borde,#444)!important;object-fit:cover!important;
-    image-rendering:-webkit-optimize-contrast}
   #seltarjeta .tjmas{flex:1 1 auto;display:flex;gap:6px;flex-wrap:wrap;min-width:0}
   #seltarjeta .tjmas .tjf{width:56px;height:56px;border-radius:4px;overflow:hidden;border:1px solid var(--linea);background:#111}
   /* caso #28 {fotoentera}: esta regla era `#seltarjeta .tjfotos img` y, con la misma especificidad y mas abajo,
@@ -589,14 +583,9 @@
     /* 2247: los chicos van pegados ARRIBA de los tres grandes, y el pie de `enviar` queda por encima de ellos */
     #selmodal.pantalla .selpie{order:7}
     #selmodal.pantalla #selextras{order:8;flex:0 0 auto;max-width:none}
-    /* 2051 {votador} paso 4 (facundo, 2026-09-25: "en mobile de `super` no se ve el arroba: poner info de la
-       persona donde estaban esos botones chicos") + 2120 {persona} (2026-09-26: "esos botones del medio no los
-       quiero ver. ahi deberia aparecer toda la info que tengas de la persona"): la ficha entera ocupa EL LUGAR del
-       cuadro de mudanza (`order:5`, entre la tarjeta y el pie), no scrollea con la tarjeta, y como es larga tiene
-       su propio tope de alto con scroll: los votos grandes nunca se van de la pantalla */
-    #selmodal.pantalla #selficha{order:5;flex:0 0 auto;max-width:none;display:flex;flex-direction:column;gap:3px;
-      padding:4px 10px 6px 10px;box-sizing:border-box;max-height:34vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
-      overscroll-behavior-y:contain}
+    /* 3572 {unificar-tarjeta} (facundo, 2026-10-13): unificar tarjeta móvil a ancho completo con foto HD y bloque
+       único. los datos van en la tarjeta (#seltarjeta .tjinfo) con scroll normal; la ficha duplicada no se pinta */
+    #selmodal.pantalla #selficha{display:none!important}
     #selmodal.pantalla #selgracia{order:6;flex:0 0 auto;max-width:none}   /* {gracia}: arriba del pie */
   }
   @media (min-width:700px){
@@ -2320,9 +2309,9 @@
      centrado vertical con el flex del propio boton (punto 3), nunca con un `line-height` a mano. */
   #tabs .tab{
     flex:0 0 auto;min-width:60px;background:#000;color:var(--gris);border:0;
-    border-radius:4px 4px 0 0;padding:16px 9px;font:inherit;font-size:14px;cursor:pointer;
+    border-radius:4px 4px 0 0;padding:16px 9px;font:inherit;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:13px;cursor:pointer;
     white-space:nowrap;display:inline-flex;align-items:center;
-    letter-spacing:1.2px;
+    letter-spacing:normal;font-weight:100;
   }
   @media (min-width:900px) and (min-aspect-ratio: 1/1){
     #tabs .tab{flex:0 1 auto}
@@ -2362,16 +2351,16 @@
      alto mientras se edita (el `padding` de `.tab` sigue mandando). */
   #tabs .tab .tabnom{
     background:transparent;border:0;border-bottom:1px solid var(--verde-tenue);
-    color:inherit;font:inherit;font-size:14px;padding:0;margin:0;min-width:5em;max-width:14em;
-    outline:0;caret-color:var(--verde);letter-spacing:inherit;
+    color:inherit;font:inherit;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:13px;padding:0;margin:0;min-width:5em;max-width:14em;
+    outline:0;caret-color:var(--verde);letter-spacing:inherit;font-weight:100;
   }
   #tabs .tab .mas{
     display:inline-flex;align-items:center;justify-content:center;
-    width:22px;height:22px;color:#555;margin-left:5px;font-size:calc(var(--icono-max) + 4px);line-height:1;
+    width:22px;height:22px;color:#555;margin-left:5px;font-size:calc(var(--icono-max) + 4px);line-height:1;font-weight:normal;
   }
   #tabs .tab .x{
     display:inline-flex;align-items:center;justify-content:center;
-    width:22px;height:22px;color:#555;margin-left:2px;margin-right:-2px;font-size:calc(var(--icono-max) + 4px);line-height:1;
+    width:22px;height:22px;color:#555;margin-left:1px;margin-right:-3px;font-size:calc(var(--icono-max) + 4px);line-height:1;font-weight:normal;text-transform:uppercase;
   }
   #tabs .tab.activo .mas,#tabs .tab.activo .x{color:var(--gris)}
   #tabs .tab .mas:hover,#tabs .tab .x:hover{color:var(--verde)}
