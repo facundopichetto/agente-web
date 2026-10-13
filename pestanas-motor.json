@@ -515,8 +515,7 @@
     },
     "modelos": {
       "motor": "agy",
-      "modelo": "geminiflash",
-      "effort": "medium"
+      "modelo": "agy"
     },
     "personal": {
       "motor": "claude",
@@ -536,7 +535,8 @@
     },
     "tinder": {
       "motor": "agy",
-      "modelo": "agy"
+      "modelo": "agy",
+      "effort": "high"
     }
   },
   "modelos_agy": {

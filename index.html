@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.571">
-<link rel="manifest" href="manifest.json?v=4.571">
+<meta name="agente-web-version" content="4.572">
+<link rel="manifest" href="manifest.json?v=4.572">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.571">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.572">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.559">
 <style id="css-listas-drag">
 #sellistas, #sellistas * {
@@ -7298,7 +7298,7 @@ function tjPintar(){
   // vive arriba a la izquierda: siempre visible en tarjetas, apagado en gris cuando no hay nada que deshacer.
   // 2078 {home} paso 4: el back grande vuelve a la tarjeta anterior (2002) y, cuando no queda ninguna por deshacer,
   // a la LISTA de la que salio el votador. solo queda gris si el votador no salio de una lista (el push, un icono)
-  var atras = tjHist(e).length > 0 || !!lis.origen, bk = $("selback");
+  var atras = tjHist(e).length > 0 || !!lis.origen || (sel.tjEnviados || []).some(function(x){ return x.col === e.coleccion && x.ses === (sel.sesion || ""); }), bk = $("selback");
   tjBotones(e);   // 1801: los botones son los del proceso de esta coleccion
   tjExtras(e);    // 2247: y los chicos de arriba, los de ESTA lista
   $("selacciones").classList.toggle("oculta", !c);
@@ -7317,6 +7317,7 @@ function tjPintar(){
   // 2405 {tarjeta} pasos 3 y 6: en ingles, y el `send` ya no comparte renglon con el `ignore @...`: el pie es
   // un boton solo, ancho, abajo de todo (el css), con el aviso del voto arriba
   $("selcerrar").textContent = (tjIng(e) ? "send" : "enviar") + (nv ? " (" + nv + ")" : "");
+  $("selcerrar").style.display = (e.continua && tjPantalla()) ? "none" : "";   // {enviar}: el votador continuo no tiene `enviar`
   bk.classList.remove("oculta");   // en tarjetas el back se ve siempre; `selModoLista` lo esconde en la lista
   bk.classList.toggle("apagado", !atras);
   if(c) tjFocoAsegurar();   // caso 24: con tarjeta a la vista el teclado siempre tiene un dueño visible
@@ -7593,6 +7594,7 @@ function tjVoto(e, c, q, txt){
   if(i >= 0) hs.splice(i, 1);   // votada de nuevo: su voto viejo se va y el nuevo queda ULTIMO (el `←` deshace lo ultimo que hiciste)
   hs.push({col: e.coleccion, c: c, q: q, txt: txt || "", ts: Date.now()});   // 1640: lo que el back deshace
   sel.tjVotos = tjHist(e).length;   // 1524: sin ninguna decision real, `tjFin` no manda `fin`
+  tjSubirViejos(e);   // {enviar}: en el votador de la fila continua solo quedan locales los ultimos TJ_VENTANA
   // {gracia}: la persona cambia de lista EN EL MOMENTO, en la home, en la lista abierta y en su cartita, sin
   // esperar al server; si el voto dispara follow o unfollow, arranca ahi la ventana de 60 s con su `deshacer`
   movPoner(e, c, q);
@@ -7632,6 +7634,59 @@ function tjVotando(e){
   return tjPedirMas(e, true);
 }
 var tjVotandoYa = {};
+// {enviar} (facundo, 2026-10-13: "que se vaya enviando solo 2 votos para atras"): sin boton `enviar`. los ultimos
+// TJ_VENTANA votos de la fila quedan locales (el `←` los deshace sin red); el que queda mas viejo sale al votar el
+// siguiente, y el resto sale al cerrar (`tjSubirLocales`). lo ya enviado se recuerda en `sel.tjEnviados` para que un
+// `←` mas atras mande el `deshacer` al server (cancela el follow/unfollow pendiente o programa la inversa).
+var TJ_VENTANA = 2;
+function tjEnviarVoto(e, h){
+  var r = {id: lidNuevo(), tipo: "tarjeta", ts: h.ts || Date.now(), candidata_id: h.c.id, cuenta: h.c.cuenta || "",
+           decision: h.q, texto: h.txt || "", sesion: sel.sesion || ""};
+  var pend = selLeer("pend", []); pend.push({col: e.coleccion, r: r}); selEscribir("pend", pend);
+  filaMarcar(e.coleccion, h.c.id);   // ya votada: no vuelve a la fila
+  (sel.sesionVotos = sel.sesionVotos || []).push(h.c.id);
+  var en = sel.tjEnviados = sel.tjEnviados || [];
+  en.push({col: e.coleccion, c: h.c, q: h.q, txt: h.txt || "", ts: r.ts, enviado: Date.now(), ses: sel.sesion || ""});
+  if(en.length > 50) en.shift();
+  movEnviados(e.coleccion, sel.sesion || "");
+  selSubirPronto();
+  return r;
+}
+function tjSubirViejos(e){
+  if(!e || !e.continua) return 0;
+  var n = 0;
+  while(tjHist(e).length > TJ_VENTANA){
+    var h = tjHist(e)[0];
+    sel.tjHistorial = (sel.tjHistorial || []).filter(function(x){ return x !== h; });
+    tjEnviarVoto(e, h); n++;
+  }
+  return n;
+}
+// el `←` mas atras de la ventana: el voto ya salio. manda el `deshacer` y avisa si el follow/unfollow pudo haber salido
+function tjDeshacerEnviado(e){
+  var en = sel.tjEnviados || [], i = en.length - 1;
+  while(i >= 0 && !(en[i].col === e.coleccion && en[i].ses === (sel.sesion || ""))) i--;
+  if(i < 0) return false;
+  var h = en.splice(i, 1)[0], c = h.c, k = -1;
+  var accion = (e.colas || {})[h.q] || "";
+  var salio = accion && (Date.now() - h.ts) > Math.max(0, e.gracia_ms || 0);
+  var rd = {id: lidNuevo(), tipo: "deshacer", ts: Date.now(), candidata_id: c.id, cuenta: c.cuenta || "", texto: "", sesion: sel.sesion || ""};
+  var pd = selLeer("pend", []); pd.push({col: e.coleccion, r: rd}); selEscribir("pend", pd);
+  var f = selLeer("fila", {}); if(f[e.coleccion]){ delete f[e.coleccion][c.id]; selEscribir("fila", f); }
+  sel.sesionVotos = (sel.sesionVotos || []).filter(function(x){ return x !== c.id; });
+  delete salioSet(e.coleccion, sel.filtro)[c.id];
+  movSacar(c.id);
+  e.candidatas.forEach(function(x, j){ if(x.id === c.id && k < 0) k = j; });
+  if(k < 0){ e.candidatas.splice(Math.min(sel.tj, e.candidatas.length), 0, c); k = Math.min(sel.tj, e.candidatas.length - 1); }
+  sel.tj = k;
+  sel.tjVotos = tjHist(e).length;
+  $("selestado").textContent = salio
+    ? "back @" + (c.cuenta || c.id) + ": el " + accion + " ya pudo haber salido, programo el contrario"
+    : "back @" + (c.cuenta || c.id) + ": " + (accion ? accion + " cancelado" : "deshecho");
+  selSubirPronto();
+  tjPintar();
+  return true;
+}
 // 2137 {votolocal}: lo votado en esta tirada y todavia sin mandar, listo para el POST del `enviar`. si una tarjeta
 // se voto, se volvio y se voto de nuevo, vale el ultimo (en `tjHistorial` hay una sola entrada por persona).
 function tjRegistros(e){
@@ -7670,6 +7725,11 @@ function tjAtras(){
   // 2078 {home} paso 4: sin nada que deshacer, el back vuelve a la lista de la que salio el votador (misma posicion
   // de scroll). la anti-rebote de la 2002 vale igual: dos disparos del mismo toque no vuelven dos veces
   if(i < 0){
+    if(e.continua && (sel.tjEnviados || []).some(function(x){ return x.col === e.coleccion && x.ses === (sel.sesion || ""); })){
+      if(Date.now() - (sel.tjAtrasUlt || 0) < TJ_BACK_MS) return false;
+      sel.tjAtrasUlt = Date.now();
+      return tjDeshacerEnviado(e);   // {enviar}: mas atras de la ventana el voto ya salio: `deshacer` al server
+    }
     if(!lis.origen) return false;
     if(Date.now() - (sel.tjAtrasUlt || 0) < TJ_BACK_MS) return false;
     sel.tjAtrasUlt = Date.now();
@@ -7831,6 +7891,16 @@ function selCancelar(){
 // vista, igual que el back grande. la vista `tinder` no se cierra con la `✕` de una lista: se cierra desde su home
 // (con `esc` o tocando otro icono de la barra), y ahi la `✕` directamente no se pinta (`lisXVer`).
 function selX(){
+  // {enviar}: en el votador continuo la `✕` ya no descarta: manda los 1 o 2 votos que quedan y vuelve a la home
+  if(sel.actual && tjPantalla() && sel.actual.continua){
+    tjSubirLocales(sel.actual);
+    sel.ignorada[sel.actual.coleccion] = sel.actual.abrir_ts;
+    sel.actual = null; sel.sesion = null; sel.sesionVotos = []; sel.tjEnviados = [];
+    selModoLista(true);
+    if(vistaEs("tinder")){ lis.origen = null; tinderHome(); } else selSalir();
+    tjFull(); selBoton(); selSubir();
+    return true;
+  }
   if(sel.actual) return tjPantalla() ? selCancelar() : (selCerrar(), true);
   if(vistaEs("tinder") && lis.sub === "una") return lisAHome();
   lis.sub = "listas";
@@ -16505,6 +16575,7 @@ window.__agente = {
   tjFila: function(){ return ((sel.actual || {}).candidatas || []).map(function(c){ return c.id; }); },   // 2073 {back}
   tjFotos: function(){ var c = tjActual(); return c ? (c.fotos || []).slice() : null; },   // caso #29: las fotos vivas de la tarjeta
   tjHistorial: function(){ return (sel.tjHistorial || []).map(function(h){ return h.col + ":" + h.c.id + ":" + h.q; }); },   // 1640: el back
+  tjVentana: function(n){ TJ_VENTANA = n; }, tjEnviados: function(){ return (sel.tjEnviados || []).map(function(h){ return h.col + ":" + h.c.id + ":" + h.q; }); },   // {enviar}
   filaFaltan: filaFaltan, filaSumar: filaSumar, tjToqueMs: function(ms){ TJ_TOQUE_MS = ms; TJ_BACK_MS = ms ? Math.min(ms, 120) : 0; },   // 1567: fila continua; 2002: el back tiene su propia ventana
   tjBackMs: function(ms){ if(ms !== undefined) TJ_BACK_MS = ms; return TJ_BACK_MS; },   // 2002 {back}
   selCancelar: selCancelar, selX: selX, selSesion: function(){ return sel.sesion || null; },   // 2002 {back}
