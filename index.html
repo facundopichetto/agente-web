@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.566">
-<link rel="manifest" href="manifest.json?v=4.566">
+<meta name="agente-web-version" content="4.567">
+<link rel="manifest" href="manifest.json?v=4.567">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.566">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.567">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.559">
 <style id="css-listas-drag">
 #sellistas, #sellistas * {
@@ -4453,6 +4453,7 @@ function renderYa(){
     try{ sincronizarLista(); } finally { renderando = false; }
     sepDias();                       // 2132 {dia}: una sola pasada al final del render, no una por mensaje
     if(!vueloContestado()) pintarVuelo();
+    if(!vuelo) vueloHidratarSiFalta();
     if(ancla && !ancla.abajo) anclaPoner(ancla);
     pintarAlFinalPronto();           // 1997 {pestana}: llego charla abajo y facundo esta arriba -> la flecha
   });
@@ -5281,6 +5282,7 @@ function tick(){
   cargarIssue(false);   // cada 5 min: si el daemon rotó el issue del buzón, el próximo tick ya va al nuevo
   Promise.all([cargarEstado(), cargarComentarios(false)])
     .catch(function(e){ if(ruidoso(e)) sistema("error: " + e.message, "error"); });
+  if(!vuelo) vueloHidratarSiFalta();
   // los widgets y las pestañas van a 30 s a la vista y 120 s en background (facundo, 2026-09-13):
   // el daemon publica `widgets.json` cada 60 s (`widgets_web`), pedir cada 10 s traia el mismo archivo.
   // al abrir o volver al foco se sincroniza aparte, asi que el celu no ve datos viejos por esto.
@@ -10082,7 +10084,7 @@ function vueloMirar(){
   if(Date.now() - vuelo.t > VUELO_MAX_MS || (vuelo.listo && Date.now() - vuelo.listo > VUELO_LISTO_MS)){
     vueloTerminar(); return;
   }
-  if(!token) return;
+  if(!token && !apiStub) return;
   if(lan.base && (vuelo.tema === "flos" || vuelo.tema.indexOf("flos#") === 0)) {
     var sSeq = vuelo.subprocesoSeq || 0;
     lanFetch(lan.base + "/subproceso/buffer?pestana=" + encodeURIComponent(vuelo.tema) + "&desde=" + sSeq, {headers: {"authorization": "Bearer " + token}})
@@ -10139,6 +10141,85 @@ function vueloContestado(){
     if(m.tag || vuelo.listo){ vueloTerminar(); return true; }
   }
   return false;
+}
+// {hidratar-vuelo}: hidrata el bloque de vuelo en cualquier instancia activa leyendo el estado
+// de la pestaña cuando detecta un turno reciente sin respuesta (orden 3586)
+var vueloHidratando = false;
+function claveDeTema(tema){
+  return (!tema || tema === AUTO) ? "auto" : slugChat(tema);
+}
+function vueloHidratarSiFalta(tema){
+  tema = tema || temaActivo();
+  if(!token && !apiStub) return Promise.resolve(false);
+  if(vuelo && deEstaTab(vuelo.tema, tema)) return Promise.resolve(false);
+  if(vuelo && (!deEstaTab(vuelo.tema, tema) && (vueloContestado() || Date.now() - vuelo.t > VUELO_MAX_MS || (vuelo.listo && Date.now() - vuelo.listo > VUELO_LISTO_MS)))){
+    vueloTerminar();
+  }
+  if(vuelo || vueloHidratando) return Promise.resolve(false);
+
+  var ultYo = null;
+  for(var i = msgs.length - 1; i >= 0; i--){
+    var m = msgs[i];
+    if(!deEstaTab(m.tema, tema)) continue;
+    if(m.clase === "agente"){
+      return Promise.resolve(false);
+    }
+    if(m.clase === "yo"){
+      ultYo = m;
+      break;
+    }
+  }
+  if(!ultYo || ultYo.enviando) return Promise.resolve(false);
+  var tMsg = fecha(ultYo.iso) || Date.now();
+  if(Date.now() - tMsg > VUELO_MAX_MS) return Promise.resolve(false);
+
+  var clave = claveEstado(ultYo.texto);
+  if(clave === "auto"){
+    if(ultYo.tag) clave = slugChat(ultYo.tag);
+    else if(ultYo.tema) clave = claveDeTema(ultYo.tema);
+    else clave = claveDeTema(tema);
+  }
+
+  vueloHidratando = true;
+  return crudo("chat/estado-" + clave + ".json").then(function(r){
+    vueloHidratando = false;
+    if(!r || !r.json || vuelo) return false;
+    var e = r.json, ahora = Date.now();
+    var tEstado = (e.ts || e.ts_inicio || 0) * 1000;
+    if(tEstado && Math.abs(ahora - tEstado) > VUELO_MAX_MS) return false;
+    if(e.ts_inicio && e.ts_inicio * 1000 < tMsg - 15000) return false;
+    if((e.fase === "listo" || e.fase === "sin claude") && ahora - ((e.ts || 0) * 1000 || tMsg) > VUELO_LISTO_MS) return false;
+
+    var t0 = tMsg;
+    vuelo = {
+      id: ultYo.id,
+      tema: ultYo.tema || tema,
+      iso: ultYo.iso,
+      t: t0,
+      ref: fecha(ultYo.creado) || t0,
+      clave: clave,
+      palabra: "",
+      eta: null,
+      fin: 0,
+      giro: 0,
+      listo: (e.fase === "listo" || e.fase === "sin claude") ? ahora : 0,
+      anim: animSpinner(),
+      tramos: []
+    };
+    etagEstado = r.etag || null;
+    if(vueloGiro) clearInterval(vueloGiro);
+    if(vueloPoll) clearInterval(vueloPoll);
+    vueloGiro = setInterval(vueloGirar, 120);
+    vueloPoll = setInterval(vueloMirar, 1000);
+    pintarVuelo();
+    recibirEstado(e, ahora);
+    reprogramar();
+    if(seguirAlFinal()) alFinal();
+    return true;
+  }).catch(function(){
+    vueloHidratando = false;
+    return false;
+  });
 }
 var REPE_MS = 2000;
 var ultimoTexto = "", ultimoTs = 0;
@@ -16703,6 +16784,7 @@ window.__agente = {
   clonPendientes: function(){ return clonPendLeer(); }, clonPendFlush: clonPendFlush,
   clonPendLimpiar: function(){ return clonPendGuardar([]); },
   clonStub: function(fn){ clonStub = fn; },
+  apiStub: function(fn){ apiStub = fn; },
   tabs: function(){ return {tabs: tabs.slice(), activo: activo}; },
   // 2299 {ordentabs}: reordenar las pestañas arrastrandolas (`recetas/prueba_web_tabs`). `ordenTabs` es lo
   // que se ve en la barra, `arrastrarTab` mueve `tema` a la posicion `i` de las otras como lo haria el mouse.
@@ -17219,6 +17301,7 @@ window.__agente = {
   // estado en vivo y una sola respuesta por mensaje (2026-09-13, prueba_web_tabs lo chequea)
   leerMeta: leerMeta, modeloCorto: modeloCorto, sinDobles: sinDobles, claveEstado: claveEstado,
   vueloIniciar: vueloIniciar, vueloTerminar: vueloTerminar, recibirEstado: recibirEstado,
+  vueloHidratar: vueloHidratarSiFalta,
   vueloOcultarActivo: vueloOcultarActivo, coincideAccionVuelo: coincideAccionVuelo,
   vuelo: function(){ return vuelo ? {clave: vuelo.clave, palabra: vuelo.palabra, paso: vuelo.paso || null, eta: vuelo.eta, giro: vuelo.giro} : null; },
   // 1776: el hilo progresivo. `tramos()` = los textos pintados en el chat, en orden (vuelo y respuestas)
