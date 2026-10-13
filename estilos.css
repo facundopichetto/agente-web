@@ -8,8 +8,9 @@
     --verde-tenue:#1f7a12; --linea-clara:#3a3a3a; --yo:#9be88a;
     --naranja:#ff9f1a;
     /* 1541 (facundo, 2026-09-15): ningun texto del board mas grande que el del chat (`.msg`); lo que resalta usa peso o color.
-       1938 (facundo, 2026-09-17: "agranda 2 puntos TODAS LAS FUENTES DEL BOARD"): el tope pasa de 12 a 14 px, como todo lo demas */
-    --texto-max:14px;
+       1938 (facundo, 2026-09-17: "agranda 2 puntos TODAS LAS FUENTES DEL BOARD"): el tope pasa de 12 a 14 px, como todo lo demas
+       3585 (facundo, 2026-10-13): las fuentes de 14px pasalas a 13px (me refiero al chat y a los widgets) */
+    --texto-max:13px;
     /* 2334 {caja} (facundo, 2026-09-24: "achica el tamaño maximo de las fuentes (excepto iconos) a 14px, pero
        trimeando"): el tope del TEXTO bajo a 14 px y los glifos y iconos NO bajan con el: crecen a mano (el
        `[⚙]`/`[↻]` al 160%, el `←`/`✕` de todo modal, los votos) y ahi el numero es el dibujo, no la letra.
@@ -17,8 +18,9 @@
     --icono-max:18px;
     /* 2333 {panel} (facundo, 2026-09-24: "bajar TODO el texto del panel del chat a 14 px parejo"): el chat
        tiene su propio tamaño, no una resta del tope del board. `--texto-max` (14 px desde la 2334) sigue mandando en
-       widgets, vistas y modales; adentro de `#panel-chat` manda este. */
-    --texto-chat:14px;
+       widgets, vistas y modales; adentro de `#panel-chat` manda este.
+       3585 (facundo, 2026-10-13): chat a 13px parejo */
+    --texto-chat:13px;
     /* molde de componentes (1558): el fondo de las capas y la sombra de los modales, un solo lugar */
     --capa-fondo:rgba(0,0,0,.9);
     /* 1652 (facundo, 2026-09-15): modales sin borde de color, solo una sombra suave clara que los despega del fondo negro */
@@ -59,7 +61,7 @@
   html{height:100%;overflow:hidden;position:fixed;top:0;left:0;right:0;bottom:0}
   body{
     font-family:"Fira Code",ui-monospace,SFMono-Regular,Menlo,Monaco,"Courier New",monospace;
-    font-size:14px;line-height:1.55;letter-spacing:.01em;
+    font-size:13px;line-height:1.55;letter-spacing:.01em;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     height:100dvh;height:var(--alto,100dvh);
@@ -93,7 +95,7 @@
   .bb{
     flex:0 0 auto;box-sizing:border-box;background:#000;color:var(--gris);
     border:1px solid var(--linea);border-radius:4px;padding:4px 8px;margin:0;
-    font:inherit;font-size:14px;line-height:14px;height:24px;cursor:pointer;white-space:nowrap;
+    font:inherit;font-size:13px;line-height:14px;height:24px;cursor:pointer;white-space:nowrap;
     display:inline-flex;align-items:center;justify-content:center;gap:5px;
   }
   .bb:active{background:#111}
@@ -159,9 +161,9 @@
   .msg .hilo .consola-pasos summary.consola-resumen:hover{color:var(--verde);opacity:1}
   .msg .hilo .consola-pasos[open] summary.consola-resumen{margin-bottom:6px;border-bottom:1px solid #21262d;padding-bottom:4px}
   .msg .hilo .consola-pasos .tramo.hecho, .msg .hilo .consola-pasos .tramo.paso{padding-left:8px}
-  #rastromenu .rmfrase{color:var(--gris);font-size:14px;margin:0 0 8px 0}
+  #rastromenu .rmfrase{color:var(--gris);font-size:13px;margin:0 0 8px 0}
   #rastromenu textarea{width:100%;box-sizing:border-box;min-height:56px;background:transparent;color:var(--blanco);
-    border:1px solid var(--linea-clara);border-radius:6px;padding:6px;font:inherit;font-size:14px}
+    border:1px solid var(--linea-clara);border-radius:6px;padding:6px;font:inherit;font-size:13px}
   .msg.vuelo .hilo + .cuerpo{margin-top:2px}
   /* animaciones de caracteres (1373): una linea, todos los cuadros del mismo ancho (`Nch` lo pone animPoner), el
      alto fijo de una linea: ni saltan de costado ni empujan el renglon.
@@ -192,8 +194,8 @@
   /* 1652: sin borde de color; el 1px queda transparente para no mover medidas (tarjeta, lista) y despega la sombra */
   .mcaja{background:#000;border:1px solid transparent;border-radius:4px;box-shadow:var(--modal-sombra)}
   /* 2002 {back}: con una esquina de 52 px a cada lado el `baseline` dejaba el titulo pegado al borde de arriba */
-  .mhead{display:flex;justify-content:space-between;align-items:center;gap:8px;color:var(--verde);font-size:14px}
-  .mcuenta,.mestado{color:var(--gris);font-size:14px}
+  .mhead{display:flex;justify-content:space-between;align-items:center;gap:8px;color:var(--verde);font-size:13px}
+  .mcuenta,.mestado{color:var(--gris);font-size:13px}
   .mestado{min-height:1em}
   .mfila{display:flex;gap:8px}
   .mpie{display:flex;justify-content:space-between;align-items:center;gap:8px}
@@ -201,7 +203,7 @@
   .mlink,#modal .mcuerpo a,#notimodal .nmtexto a{color:var(--cian);text-decoration:none;border-bottom:1px dotted #1f3a44}
   /* a/b/c con look terminal (#modal, notimodal, `modalMolde` tipo `term`) */
   .bterm{background:#000;color:var(--cian);border:1px solid var(--linea);border-radius:4px;padding:8px 10px;font:inherit;
-    font-size:14px;cursor:pointer;text-align:left}
+    font-size:13px;cursor:pointer;text-align:left}
   .bterm:active{background:#111}
   .bterm.principal{color:var(--verde);border-color:var(--verde)}
   .bterm .let{color:var(--verde);font-weight:600;margin-right:6px}
@@ -214,8 +216,8 @@
   .bverde.llena:active{background:var(--verde);color:#000}
   .acciones{display:flex;flex-direction:column;gap:6px;margin:6px 0 2px}
   .accion{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  .accion .acctxt{flex:1;min-width:140px;color:var(--gris);font-size:14px}
-  .accion .acccuenta{color:var(--verde);font-size:14px;opacity:.8}
+  .accion .acctxt{flex:1;min-width:140px;color:var(--gris);font-size:13px}
+  .accion .acccuenta{color:var(--verde);font-size:13px;opacity:.8}
   .accion .accdale{position:relative;min-width:74px}
   /* 2080 {diseno} punto 5: la mandada se apaga con el gris del borde y del texto, NO con `opacity` sobre toda
      la caja: la opacidad del padre tambien apagaba el cuadradito blanco del checkmark, que tiene que leerse. */
@@ -282,10 +284,10 @@
      tope de siempre (`--texto-max`), que es lo que se agranda, nunca el glifo a mano. */
   .mchk{display:flex;align-items:center;gap:8px;min-height:38px;cursor:pointer}
   .mchk input{flex:0 0 auto;width:18px;height:18px;margin:0;accent-color:var(--verde);cursor:pointer}
-  .mchktxt{color:var(--cian);font-size:14px;line-height:1.2}
+  .mchktxt{color:var(--cian);font-size:13px;line-height:1.2}
   .msw{display:flex;align-items:stretch;gap:0;border:1px solid var(--linea);border-radius:6px;overflow:hidden}
   .msw .mswb{flex:1 1 0;min-height:30px;padding:4px 6px;background:#000;color:#8a8a8a;color:var(--gris);border:0;
-    border-left:1px solid var(--linea);font:inherit;font-size:14px;line-height:1.2;cursor:pointer;
+    border-left:1px solid var(--linea);font:inherit;font-size:13px;line-height:1.2;cursor:pointer;
     touch-action:manipulation;-webkit-appearance:none;appearance:none;-webkit-text-fill-color:currentColor}
   .msw .mswb:first-child{border-left:0}
   .msw .mswb.puesto{color:#4ad07d;color:var(--verde)}
@@ -293,24 +295,24 @@
   .msw .mswb[disabled]{cursor:default;opacity:.6}
   /* `modalMolde`: la caja de un modal nuevo */
   .mmolde{width:100%;max-width:360px;max-height:100%;overflow-y:auto;box-sizing:border-box;display:flex;flex-direction:column;
-    gap:8px;padding:12px;font-size:14px}
+    gap:8px;padding:12px;font-size:13px}
   .mmolde .mcuerpo2{color:var(--blanco);line-height:1.5;white-space:pre-wrap;word-break:break-word}
   .mmolde .mbotones{flex-wrap:wrap}
   .mmolde .mbotones > *{flex:1 1 0}
   /* 1453: tocar el spinner abre un menu chico (mas de esto / menos de esto / ...), nunca el votador */
   #animmenu{z-index:40;padding:10px;background:rgba(0,0,0,.75)}
   #animmenu .oculta{display:none!important}
-  #animmenu .amcaja{width:100%;max-width:260px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;padding:12px;font-size:14px}
+  #animmenu .amcaja{width:100%;max-width:260px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;padding:12px;font-size:13px}
   #animmenu .amtit{display:flex;align-items:center;gap:8px;color:var(--gris)}
   #animmenu .amtit .anim{color:var(--verde);font-size:var(--texto-max);font-weight:bold}
   #amnom{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   #amcerrar{padding:4px 6px}
   #animmenu .ambtn{min-height:40px;padding:8px 10px;text-align:left;background:#000;color:var(--verde);border:1px solid var(--linea);
-    border-radius:4px;font:inherit;font-size:14px;cursor:pointer}
+    border-radius:4px;font:inherit;font-size:13px;cursor:pointer}
   #animmenu .ambtn[data-tipo="mas"]{border-color:var(--verde)}
   #amnota{display:flex;flex-direction:column;gap:6px}
   #amtxt{width:100%;box-sizing:border-box;min-height:56px;padding:6px;background:#000;color:var(--verde);border:1px solid var(--linea);
-    border-radius:4px;font:inherit;font-size:14px;resize:vertical}
+    border-radius:4px;font:inherit;font-size:13px;resize:vertical}
   /* votador por pares (1373): dos animaciones en vivo, `esta` debajo de cada una y `basta`. lado a lado en la mac,
      una arriba de la otra si no entran (celu) */
   #votar{z-index:40}
@@ -324,9 +326,9 @@
   #votar .vtlado{flex:0 1 150px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid var(--linea);border-radius:4px}
   #votar .vtanim{display:flex;align-items:center;justify-content:center;height:62px;font-size:var(--texto-max);color:var(--verde)}
   @media (max-width:600px){ #votar .vtpar{flex-direction:column;align-items:center} #votar .vtlado{flex:none;width:150px} }
-  #votar .vtchico{text-align:center;font-size:14px;color:var(--gris)}
+  #votar .vtchico{text-align:center;font-size:13px;color:var(--gris)}
   #votar .vtchico .anim{color:var(--verde)}
-  #votar .vtnom{text-align:center;font-size:14px;color:var(--gris)}
+  #votar .vtnom{text-align:center;font-size:13px;color:var(--gris)}
   #votar .vtfin{display:flex;flex-direction:column;gap:8px}
   #vttxt{min-height:90px;padding:8px;background:#000;color:var(--blanco);border:1px solid var(--linea);border-radius:4px;
     font:inherit;font-size:var(--texto-max);resize:vertical}
@@ -358,14 +360,14 @@
   #sellista input{flex:0 0 auto;width:18px;height:18px;margin:0;accent-color:var(--verde);cursor:pointer}   /* 2080: centrado por la fila, sin empujon de arriba */
   #sellista .seltxt{display:flex;flex-direction:column;gap:1px;min-width:0}
   #sellista .selnom{color:var(--blanco);font-size:var(--texto-max)}
-  #sellista .seldet,#sellista .selmot{color:var(--gris);font-size:14px;word-break:break-word}
+  #sellista .seldet,#sellista .selmot{color:var(--gris);font-size:13px;word-break:break-word}
   #sellista .selmot{font-style:italic}
   /* 1404: foto redonda (96 px servida por chat_lan, se pinta a 32 desde 1533) y `@cuenta` al lado del nombre. sin
      foto o mientras baja, la inicial sobre gris neutro: se lee igual con fondo oscuro y claro */
   #sellista .selfoto{flex:0 0 auto;flex-shrink:0;box-sizing:border-box;width:32px;height:32px;min-height:32px;border-radius:50%;overflow:hidden;align-self:center;display:flex;
     align-items:center;justify-content:center;background:#8a8a8a;color:#fff;font-size:var(--texto-max);border:1px solid var(--linea)}
   #sellista .selfoto img{width:100%;height:100%;object-fit:cover;display:block}
-  #sellista .selcta{color:var(--gris);font-size:14px;margin-left:6px;word-break:break-all}
+  #sellista .selcta{color:var(--gris);font-size:13px;margin-left:6px;word-break:break-all}
   /* 1398: la candidata puede traer su animacion corriendo en el renglon (`anim`), a la derecha del checkbox */
   #sellista .selanim{flex:0 0 auto;min-width:4ch;color:var(--verde);font-size:var(--texto-max);text-align:center}
   /* 1394: plantilla contador + meta + lista premarcada + ok = accion. arriba el contador en vivo (`actual - marcadas`
@@ -374,12 +376,12 @@
      arriba; centrame las cosas verticalmente"): toda fila que mezcla texto con otra cosa al lado (icono, valor,
      boton, checkbox) centra vertical. las tres que quedaban en `baseline` y la de `flex-start` pasan a `center`;
      el titulo de una caja queda a la misma altura que el numero o el icono que tiene al lado. */
-  #selcont{display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:var(--gris);font-size:14px}
+  #selcont{display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:var(--gris);font-size:13px}
   #selcont.oculta{display:none}
   #selcont .selnum{color:var(--blanco);font-size:var(--texto-max);font-weight:bold;line-height:1}
   #selcont.llego .selnum{color:var(--verde)}
   #sellista .sellink{flex:0 0 auto;margin-left:auto;align-self:center;min-width:44px;min-height:32px;display:flex;align-items:center;
-    justify-content:center;color:var(--verde);font-size:14px;text-decoration:none;border:1px solid var(--linea);border-radius:4px}
+    justify-content:center;color:var(--verde);font-size:13px;text-decoration:none;border:1px solid var(--linea);border-radius:4px}
   /* 1533: el campo crece con lo escrito (`selTxtCrecer`, hasta 40% del alto visible) en vez de scrollear adentro de
      64 px, letra de 13 px casi blanca sobre gris muy oscuro y borde verde con foco: se lee mientras se escribe */
   #seltxt{flex:0 0 auto;min-height:52px;max-height:40vh;padding:7px 9px;box-sizing:border-box;background:#0b0b0b;color:#f2f2f2;
@@ -401,8 +403,8 @@
      dedo) y al soltar vuelve sola a su lugar: la clase `tjsw` es "agarrada", sacarla es lo que anima la vuelta */
   #seltarjeta{transition:transform .18s ease;touch-action:pan-y}
   #seltarjeta.tjsw{transition:none}
-  #seltarjeta .tjestado{display:flex;align-items:center;gap:6px;flex-wrap:wrap;color:var(--gris);font-size:14px}
-  #seltarjeta .tjchip{padding:2px 7px;border:1px solid var(--linea);border-radius:999px;font-size:14px;color:var(--gris)}
+  #seltarjeta .tjestado{display:flex;align-items:center;gap:6px;flex-wrap:wrap;color:var(--gris);font-size:13px}
+  #seltarjeta .tjchip{padding:2px 7px;border:1px solid var(--linea);border-radius:999px;font-size:13px;color:var(--gris)}
   #seltarjeta .tjchip.priv{color:var(--amarillo,#d8b25a);border-color:currentColor}
   #seltarjeta .tjchip.pub{color:var(--verde);border-color:currentColor}
   #seltarjeta a.tjchip{text-decoration:none;cursor:pointer}   /* 1677: el chip `pública` es link al perfil */
@@ -438,7 +440,7 @@
   #seltarjeta .tjnom{color:var(--blanco);font-size:var(--texto-max);font-weight:bold;word-break:break-word}
   #seltarjeta .tjcta{color:var(--gris);font-size:var(--texto-max);margin-left:6px;word-break:break-all}
   #seltarjeta a.tjcta{color:var(--verde);text-decoration:none}   /* 1515: link al perfil, mismo verde que el `ver` de la lista */
-  #seltarjeta .tjdet,#seltarjeta .tjmot{color:var(--gris);font-size:14px;word-break:break-word}
+  #seltarjeta .tjdet,#seltarjeta .tjmot{color:var(--gris);font-size:13px;word-break:break-word}
   #seltarjeta .tjcierre{color:var(--amarillo)}   /* 1794: el cierre de la sesion de voto continuo (`votaste N: ...`) */
   #seltarjeta .tjespera.tjaviso{color:var(--rojo-apagado)}   /* caso 40: la fila vacia por la lan, el server o una fila trabada, nunca muda */
   #seltarjeta .tjmot{font-style:italic}
@@ -448,16 +450,16 @@
   /* 2405 {tarjeta} paso 4: el puntaje y el puesto se fueron de la tarjeta y de la ficha (`.tjsuper`,
      `.tjsupmot`, `.tjfsuper`, `.tjfsupmot`): facundo no los quiere ver y no los reemplaza nada */
   /* 1642: seguidores, en comun y reacciones en una fila de texto (sin caja), la bio abajo en blanco apagado */
-  #seltarjeta .tjdatos{display:flex;flex-wrap:wrap;gap:2px 10px;color:var(--cian);font-size:14px}
-  #seltarjeta .tjbio{color:#cfcfcf;font-size:14px;white-space:pre-line;word-break:break-word}
+  #seltarjeta .tjdatos{display:flex;flex-wrap:wrap;gap:2px 10px;color:var(--cian);font-size:13px}
+  #seltarjeta .tjbio{color:#cfcfcf;font-size:13px;white-space:pre-line;word-break:break-word}
   /* 1665: la foto se toca (publica: perfil en otra pestaña; privada: la agranda en el visor) y abajo van `desde`
      y el historial de votos, en gris chico para que no le compitan a los datos */
   #seltarjeta .tjppal{cursor:pointer}
   #seltarjeta a.tjppal{text-decoration:none;color:inherit}   /* 1791: la foto de una publica es un `<a>`, no un `div` */
-  #seltarjeta .tjdesde{color:var(--gris);font-size:14px}
-  #seltarjeta .tjhist{display:flex;flex-direction:column;gap:1px;color:var(--gris);font-size:14px;opacity:.85}
+  #seltarjeta .tjdesde{color:var(--gris);font-size:13px}
+  #seltarjeta .tjhist{display:flex;flex-direction:column;gap:1px;color:var(--gris);font-size:13px;opacity:.85}
   #seltarjeta .tjlink{align-self:flex-start;min-height:34px;display:flex;align-items:center;padding:0 10px;color:var(--verde);
-    font-size:14px;text-decoration:none;border:1px solid var(--linea);border-radius:4px}
+    font-size:13px;text-decoration:none;border:1px solid var(--linea);border-radius:4px}
   /* 1561 (facundo, 2026-09-15): "no quiero volver a ver maybes ni si ni no". dos glifos en una fila: `✕` roja (no va)
      y `→` blanca (queda). sin `escribir` ni campo de texto en la tarjeta.
      1657 (facundo, 2026-09-15): tres glifos de VOTO: `✕` no va, `-_-` blanco en el medio (maybe: a la lista `maybe`) y `🔥` a la
@@ -488,7 +490,7 @@
      aviso: no compite con los tres votos grandes del pie ni tapa la foto. */
   #selgracia{display:flex;flex-direction:column;align-items:center;gap:4px}
   #selgracia.oculta{display:none!important}
-  #selgracia .bcaja{min-height:34px;padding:5px 14px;border-radius:17px;font-size:14px;line-height:1.1;
+  #selgracia .bcaja{min-height:34px;padding:5px 14px;border-radius:17px;font-size:13px;line-height:1.1;
     border-color:var(--amarillo);color:var(--amarillo);width:auto;text-align:center}
   #selgracia .gracmas{color:var(--gris);font-size:13px;opacity:.85}
   /* 2051 {votador} paso 4 + 2120 {persona} (facundo, 2026-09-26: "esos botones del medio no los quiero ver. ahi
@@ -510,8 +512,8 @@
   #selficha .tjfchip.priv{color:var(--amarillo,#d8b25a);border-color:currentColor}
   #selficha .tjfchip.tag{color:var(--magenta);border-color:currentColor}
   #selficha .tjfdatos{color:var(--cian);font-size:var(--texto-max);line-height:1.2;overflow-wrap:anywhere}
-  #selficha .tjfdet,#selficha .tjfmot{color:var(--gris);font-size:14px;overflow-wrap:anywhere}
-  #selficha .tjfbio{color:var(--blanco);opacity:.85;font-size:14px;line-height:1.25;white-space:pre-wrap;overflow-wrap:anywhere}
+  #selficha .tjfdet,#selficha .tjfmot{color:var(--gris);font-size:13px;overflow-wrap:anywhere}
+  #selficha .tjfbio{color:var(--blanco);opacity:.85;font-size:13px;line-height:1.25;white-space:pre-wrap;overflow-wrap:anywhere}
   #selficha .tjfdesde{color:var(--gris);font-size:13px}
   #selficha .tjfhist{color:var(--gris);font-size:13px;opacity:.8;overflow-wrap:anywhere}
   #selacciones{display:flex;flex-wrap:wrap;gap:6px}
@@ -532,7 +534,7 @@
      los tres siguen entrando sin scroll horizontal */
   #selacciones .tjbtn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
     height:auto;line-height:1.15}
-  #selacciones .tjbtn .tjtxt{font-size:14px;font-weight:normal;color:var(--blanco);opacity:.75;text-align:center;
+  #selacciones .tjbtn .tjtxt{font-size:13px;font-weight:normal;color:var(--blanco);opacity:.75;text-align:center;
     white-space:normal;overflow-wrap:anywhere;max-width:100%}
   /* 1883 {teclado} (facundo, 2026-09-17: "cerrar se reemplaza por enviar y tiene que ser mas grande. enter envia"):
      el boton del pie es `enviar`, con el molde `.bverde` de `docs/componentes-web.md`. mas grande es mas caja, no
@@ -658,9 +660,9 @@
     scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;touch-action:pan-x;scrollbar-width:none}
   #selmodal #seltarjeta .tjfotos.tjcarr::-webkit-scrollbar{display:none}
   #selmodal #seltarjeta .tjfotos.tjcarr > .tjppal{flex:0 0 100%;scroll-snap-align:center}
-  #seltarjeta .tjfnum{color:var(--gris);font-size:14px}
+  #seltarjeta .tjfnum{color:var(--gris);font-size:13px}
   /* 2277 {foto}: la tarjeta que entro a la fila sin la foto bajada lo dice, con el mismo tono gris de los datos */
-  #seltarjeta .tjfotopend{color:var(--gris);font-size:14px}
+  #seltarjeta .tjfotopend{color:var(--gris);font-size:13px}
   /* 1879 {listas} (facundo, 2026-09-17): la vista `tinder` son DOS sub-vistas, `votar` y `listas`; desde la 2078
      {home} `listas` es la HOME (se entra directo aca) y el votador se abre tocando una fila o el titulo de una
      lista, sin ningun boton de sub-vista. `listas` es una grilla de cajas, una por lista del embudo: titulo, cuantos son y
@@ -682,19 +684,19 @@
     display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-content:start;
     width:100%;max-width:none;margin:0}
   #sellistas.oculta{display:none!important}
-  #sellistas .lisvacio{color:var(--gris);font-size:14px;grid-column:1 / -1}
+  #sellistas .lisvacio{color:var(--gris);font-size:13px;grid-column:1 / -1}
   /* 2143 {cache}: el pedido fresco no salio y se ve lo ultimo que bajo. una linea, en el amarillo de aviso,
      arriba de la grilla (nunca una lista en blanco ni un cartel que tape lo que facundo quiere mirar). */
-  #sellistas .lisaviso{color:var(--amarillo);font-size:14px;grid-column:1 / -1;opacity:.85}
+  #sellistas .lisaviso{color:var(--amarillo);font-size:13px;grid-column:1 / -1;opacity:.85}
   /* 2224 {follow}: el campo `@` + `follow` de la home de instatinder, a todo el ancho de la grilla */
   #sellistas .lisarroba{grid-column:1 / -1;display:flex;flex-direction:column;gap:4px;margin:2px 0 6px}
   #sellistas .lisarrfila{display:flex;align-items:center;gap:8px}
   #sellistas .lisarrat{color:var(--gris);font-size:var(--texto-max)}
-  #sellistas .lisarrinp{flex:1;min-width:0;background:transparent;color:var(--texto,#eee);border:1px solid var(--borde,#444);border-radius:8px;padding:8px 10px;font-size:14px}
+  #sellistas .lisarrinp{flex:1;min-width:0;background:transparent;color:var(--texto,#eee);border:1px solid var(--borde,#444);border-radius:8px;padding:8px 10px;font-size:13px}
   #sellistas .lisarrinp:focus{outline:none;border-color:var(--verde,#3c6)}
-  #sellistas .lisarrbtn{background:var(--verde,#3c6);color:#000;border:0;border-radius:8px;padding:9px 16px;font-size:14px;cursor:pointer}
+  #sellistas .lisarrbtn{background:var(--verde,#3c6);color:#000;border:0;border-radius:8px;padding:9px 16px;font-size:13px;cursor:pointer}
   #sellistas .lisarrbtn:disabled{opacity:.5;cursor:default}
-  #sellistas .lisarrmsg{font-size:14px;min-height:1.2em;color:var(--gris)}
+  #sellistas .lisarrmsg{font-size:13px;min-height:1.2em;color:var(--gris)}
   #sellistas .lisarrmsg.lisarrok{color:var(--verde,#3c6)}
   #sellistas .lisarrmsg.lisarrmal{color:var(--amarillo)}
   /* 2095 {instatinder} pasos 5 y 6: la sub-vista `una` (UNA lista abierta) usa el MISMO contenedor y los mismos
@@ -726,7 +728,7 @@
     padding-top:0;border-top:0;text-align:center}
   #sellistas .lischip .lisfoto{width:56px;height:56px;border-radius:50%}
   #sellistas .lischip .liscuenta{margin-left:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;
-    white-space:nowrap;font-size:14px}
+    white-space:nowrap;font-size:13px}
   #sellistas .lischip.toca{cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   #sellistas .lischip.toca:active{opacity:.6}
   /* caso 36 {stories}: el chip con anillo es TODO zona de story (el toque en el borde del chip ya no cae en el
@@ -741,19 +743,19 @@
   /* 2134 {supervirtual}: la lista virtual se reconoce por el nombre en amarillo, nada de un molde propio */
   #sellistas .liscaja.virt .lisnom{color:var(--amarillo)}
   #sellistas .liscaja.toca:focus-visible{border-color:var(--verde)}
-  #sellistas .lisporque{color:var(--gris);font-size:14px;word-break:break-word}
-  #sellistas .lisgrande{color:var(--gris);font-size:14px;opacity:.85}
+  #sellistas .lisporque{color:var(--gris);font-size:13px;word-break:break-word}
+  #sellistas .lisgrande{color:var(--gris);font-size:13px;opacity:.85}
   /* 2244 {superranking} paso 2: por que esta vacia una lista que se puede destrabar (falta de lecturas). va en
      el amarillo de aviso de la 2143, adentro de la tarjeta y tambien arriba de la lista abierta. */
-  #sellistas .lisnota{color:var(--amarillo);font-size:14px;opacity:.85;word-break:break-word}
+  #sellistas .lisnota{color:var(--amarillo);font-size:13px;opacity:.85;word-break:break-word}
   /* 1605 {piso}: por que el toque no abrio el votador. mismo amarillo de aviso que la nota, arriba de todo y a
      opacidad entera: es lo primero que se lee cuando la lista no tenia nada para votar o no se pudo leer. */
-  #sellistas .lispiso{color:var(--amarillo);font-size:14px;word-break:break-word}
+  #sellistas .lispiso{color:var(--amarillo);font-size:13px;word-break:break-word}
   /* 2247 {botones} paso 3: las acciones de LISTA ENTERA, abajo del `por que` del cuadrado. son chips chicos, bien
      distintos del cuadrado (que abre el votador): cortan la burbuja y abren el modal con la caja `dale` */
   #sellistas .lismasivos{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
   #sellistas .lismas{border:1px solid var(--linea);background:transparent;color:var(--gris);font:inherit;
-    font-size:14px;line-height:1.1;padding:6px 12px;border-radius:15px;cursor:pointer;text-align:left}
+    font-size:13px;line-height:1.1;padding:6px 12px;border-radius:15px;cursor:pointer;text-align:left}
   #sellistas .lismas:hover,#sellistas .lismas:focus-visible{color:var(--blanco);background:rgba(255,255,255,.06)}
   #sellistas .lismas.lisx-no,#sellistas .lismas.lisx-unfollow{border-color:#3a1f1f;color:var(--rojo-apagado)}
   #sellistas .lismas.lisx-no:hover,#sellistas .lismas.lisx-unfollow:hover{color:var(--rojo)}
@@ -770,10 +772,10 @@
   }
   #lismodal .lisdet{display:flex;flex-direction:column;gap:6px}
   #lismodal .lisdetacc{color:var(--blanco);font-size:var(--texto-max);word-break:break-word}
-  #lismodal .lisdatos{color:var(--cian);font-size:14px;word-break:break-word}
+  #lismodal .lisdatos{color:var(--cian);font-size:13px;word-break:break-word}
   #lismodal .liscmd{margin:0;padding:6px 8px;border:1px solid var(--linea);border-radius:4px;background:#111;
-    color:var(--cian);font-size:14px;white-space:pre-wrap;word-break:break-all}
-  #lismodal .lisperfil{align-self:flex-start;color:var(--verde);font-size:14px;text-decoration:none}
+    color:var(--cian);font-size:13px;white-space:pre-wrap;word-break:break-all}
+  #lismodal .lisperfil{align-self:flex-start;color:var(--verde);font-size:13px;text-decoration:none}
   /* 1948 {cartita} (facundo, 2026-09-17): "cada persona de una lista es tocable y abre SU cartita completa, y toda
      persona tiene acciones". la fila se ve tocable (1808) y la cartita usa el molde de siempre: `.capa` + `.mcaja` +
      la `.selcaja` a pantalla completa de la 1874, la foto lo mas grande que entre con `object-fit:contain` (el cuadro
@@ -803,14 +805,14 @@
   #lisficha .ficinfo{flex:0 1 auto;min-height:0;max-height:55%;overflow-y:auto;-webkit-overflow-scrolling:touch;
     display:flex;flex-direction:column;gap:5px}
   #lisficha .ficchips{display:flex;flex-wrap:wrap;gap:5px}
-  #lisficha .ficchip{padding:1px 7px;border:1px solid var(--linea);border-radius:999px;color:var(--gris);font-size:14px}
-  #lisficha .lisdatos{color:var(--cian);font-size:14px;word-break:break-word}
-  #lisficha .ficlista{color:var(--blanco);font-size:14px;word-break:break-word}
-  #lisficha .lispq,#lisficha .ficbio{color:var(--gris);font-size:14px;word-break:break-word}
-  #lisficha .ficdm{color:var(--verde);font-size:14px}
-  #lisficha .fictraza{color:var(--gris);font-size:14px;word-break:break-word}
+  #lisficha .ficchip{padding:1px 7px;border:1px solid var(--linea);border-radius:999px;color:var(--gris);font-size:13px}
+  #lisficha .lisdatos{color:var(--cian);font-size:13px;word-break:break-word}
+  #lisficha .ficlista{color:var(--blanco);font-size:13px;word-break:break-word}
+  #lisficha .lispq,#lisficha .ficbio{color:var(--gris);font-size:13px;word-break:break-word}
+  #lisficha .ficdm{color:var(--verde);font-size:13px}
+  #lisficha .fictraza{color:var(--gris);font-size:13px;word-break:break-word}
   #lisficha .fictrazatit{color:var(--cian)}
-  #lisficha .fichist{color:var(--gris);font-size:14px;opacity:.8;word-break:break-word}
+  #lisficha .fichist{color:var(--gris);font-size:13px;opacity:.8;word-break:break-word}
   #lisficha .ficacc{display:flex;flex-direction:column;gap:6px;margin-top:4px}
   #lisficha .ficacc .bcaja{width:100%;box-sizing:border-box;text-decoration:none;display:flex;align-items:center}
   #lisficha .ficacc .bcaja.toca{border-color:var(--amarillo,#d8b25a);color:var(--amarillo,#d8b25a)}
@@ -847,15 +849,15 @@
   #stvisor .stfoto video.stvid{width:100%;height:100%;object-fit:contain;display:block;background:#111}
   #stvisor .stfoto.stconvideo img{display:none}
   #stvisor .stfoto video.oculta{display:none}
-  #stvisor .stmudo{color:var(--amarillo,#f9ce34);font-size:14px}
+  #stvisor .stmudo{color:var(--amarillo,#f9ce34);font-size:13px}
   #stvisor .stpie{flex:0 0 auto;max-height:35%;overflow-y:auto;display:flex;flex-direction:column;gap:4px}
-  #stvisor .sttexto{color:var(--blanco);font-size:14px;word-break:break-word}
-  #stvisor .stvideo{color:var(--cian);font-size:14px}
-  #stvisor .stmsg{color:var(--gris);font-size:14px}
+  #stvisor .sttexto{color:var(--blanco);font-size:13px;word-break:break-word}
+  #stvisor .stvideo{color:var(--cian);font-size:13px}
+  #stvisor .stmsg{color:var(--gris);font-size:13px}
   #liscmd .lisdraft{margin:0;padding:6px 8px;border:1px solid var(--linea);border-radius:4px;background:#111;
-    color:var(--blanco);font-size:14px;white-space:pre-wrap;word-break:break-word}
+    color:var(--blanco);font-size:13px;white-space:pre-wrap;word-break:break-word}
   #liscmd .liscmd{margin:0;padding:6px 8px;border:1px solid var(--linea);border-radius:4px;background:#111;
-    color:var(--cian);font-size:14px;white-space:pre-wrap;word-break:break-all}
+    color:var(--cian);font-size:13px;white-space:pre-wrap;word-break:break-all}
   #liscmd .lisdet{display:flex;flex-direction:column;gap:6px}
   #liscmd .lisdetacc{color:var(--blanco);font-size:var(--texto-max);word-break:break-word}
   /* 1556 (facundo, desde el iphone): "abajo los botones no tienen borde. izquierda en rojo una X, en el medio en blanco
@@ -913,7 +915,7 @@
   .opciones .opc{
     position:relative;
     flex:1 1 180px;min-width:0;box-sizing:border-box;background:#000;border:1px solid;border-radius:4px;
-    padding:6px 8px;font:inherit;font-size:14px;line-height:1.35;text-align:left;cursor:pointer;
+    padding:6px 8px;font:inherit;font-size:13px;line-height:1.35;text-align:left;cursor:pointer;
     min-height:40px;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
     touch-action:pan-y;word-break:break-word;
   }
@@ -1095,7 +1097,7 @@
   #adjunto .adj-play{flex:0 0 auto}
   #adjunto .adj-x{
     flex:0 0 auto;background:#000;color:var(--rojo);border:1px solid transparent;border-radius:4px;
-    font:inherit;font-size:14px;line-height:1.3;padding:2px 5px;cursor:pointer;letter-spacing:0;
+    font:inherit;font-size:13px;line-height:1.3;padding:2px 5px;cursor:pointer;letter-spacing:0;
   }
   #adjunto .adj-x:hover{border-color:var(--rojo)}
   /* la fila de comandos rapidos se saco (facundo, 2026-09-11): esos comandos quedan en el widget `agent` */
@@ -1134,7 +1136,7 @@
   .cmdfila:active{opacity:.45}
   .cmdfila .cmdc{color:var(--cian);flex:0 0 auto;white-space:nowrap}
   .cmdfila .cmdq{color:#9a9a9a;flex:1 1 auto;line-height:1.3}
-  .cmdfila .cmdo{flex:0 0 auto;font-size:14px;color:#5f8a58;white-space:nowrap}
+  .cmdfila .cmdo{flex:0 0 auto;font-size:13px;color:#5f8a58;white-space:nowrap}
   .cmdfila .cmdo.local{color:var(--verde)}
   .cmdfila.nuevo .cmdq{color:var(--naranja)}
   #txt{
@@ -1178,7 +1180,7 @@
   #grabar:disabled{color:var(--gris)}
   @keyframes lat{50%{opacity:.55}}
   #grabinfo{
-    flex:0 0 auto;color:var(--rojo);font-size:14px;user-select:none;display:none;
+    flex:0 0 auto;color:var(--rojo);font-size:13px;user-select:none;display:none;
   }
   #grabinfo.viendo{display:block}
   /* el [▶] de texto: 2044 {audiotodas} ya no va en la cabecera de las respuestas (se fue el audio chiquito);
@@ -1291,7 +1293,7 @@
   #audpend .audcbarra{flex:1 1 auto;min-width:30px;height:4px;border-radius:2px;background:var(--linea);
     position:relative;overflow:hidden}
   #audpend .audcrell{position:absolute;left:0;top:0;height:4px;width:0;background:var(--verde)}
-  #audpend .audcdur{flex:0 0 auto;color:var(--gris);font-size:14px;font-variant-numeric:tabular-nums}
+  #audpend .audcdur{flex:0 0 auto;color:var(--gris);font-size:13px;font-variant-numeric:tabular-nums}
   /* alineacion estilo whatsapp (1963), en todas las pestañas solo en el celu (2044): el mensaje entero */
   #lista.modoaudio .msg.yo{margin-left:5%;text-align:right}
   #lista.modoaudio .msg.agente{margin-right:5%}
@@ -1323,7 +1325,7 @@
   #alfinal:active{background:#003300}
   #envoltorio{position:relative;flex:1 1 auto;min-height:0;display:flex}
   #login{padding:16px;display:none;flex-direction:column;gap:10px}
-  #login p{color:var(--gris);font-size:14px;margin:0;white-space:pre-wrap}
+  #login p{color:var(--gris);font-size:13px;margin:0;white-space:pre-wrap}
   #login input{
     background:#000;color:var(--verde);border:1px solid var(--linea);border-radius:4px;
     padding:9px;font:inherit;
@@ -1369,7 +1371,7 @@
   body.arrastrando-sep #hist,body.arrastrando-sep #panel-widgets{pointer-events:none}
   .caja{border:0;outline:0;background:var(--fondo-caja);border-radius:6px;padding:7px 9px 8px 9px;margin:0 0 8px 0}
   .caja > .tit{
-    color:var(--gris);font-size:14px;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--gris);font-size:13px;letter-spacing:.06em;text-transform:uppercase;
     margin:0 0 5px 0;display:flex;justify-content:space-between;gap:8px;align-items:center;
   }
   /* ---------- header de cada widget (facundo, 2026-09-12) ----------
@@ -1380,7 +1382,7 @@
   .caja a.arroba:hover{color:var(--verde)}
   .caja > .tit > .wesc{
     flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-    text-transform:none;letter-spacing:0;font-size:14px;
+    text-transform:none;letter-spacing:0;font-size:13px;
   }
   .caja > .tit > .wacc{flex:0 0 auto;display:flex;align-items:center;gap:4px}
   /* 2240 {widgets} paso 4: la hora del ultimo refresco de ESA caja, en 12 h am/pm. gris y chica: es un dato
@@ -1422,7 +1424,7 @@
   .wbtn.oc{font:inherit;font-size:inherit;line-height:inherit;color:inherit;letter-spacing:inherit;
            padding:0;margin:0;border:0;background:none;text-decoration:underline dotted;text-underline-offset:2px}
   .caja.plegada > .cuerpo{display:none}
-  .caja .cuerpo{white-space:pre-wrap;word-break:break-word;font-size:14px;line-height:1.5}
+  .caja .cuerpo{white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.5}
   .caja .cuerpo.tabla{white-space:pre;overflow-x:auto;-webkit-overflow-scrolling:touch}
   .caja .vacio{color:var(--gris)}
   .caja .cuerpo a{color:var(--cian);text-decoration:none;border-bottom:1px dotted #1f3a44;
@@ -1446,7 +1448,7 @@
   .usage .rep .por{flex:1 1 100%;opacity:.8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .usage .bloque + .bloque{margin-top:9px;padding-top:8px;border-top:1px solid var(--linea)}
   .ub{display:flex;align-items:center;gap:6px;margin:0 0 5px 0}
-  .ub-n{flex:0 0 50px;min-width:50px;white-space:nowrap;color:var(--gris);font-size:14px;letter-spacing:.04em}
+  .ub-n{flex:0 0 50px;min-width:50px;white-space:nowrap;color:var(--gris);font-size:13px;letter-spacing:.04em}
   /* 2100 {prioritaria}: el punto verde pegado al nombre de la cuenta que renueva antes (la prioritaria del reparto) */
   .ub-n.pri::after{content:"\25CF";color:var(--verde,#7ee787);font-size:9px;margin-left:3px;vertical-align:middle;line-height:1}
   .ub-pista{
@@ -1465,7 +1467,7 @@
     box-shadow:0 0 0 1px rgba(0,0,0,.75);
   }
   .ub-p{flex:0 0 43px;text-align:right;font-weight:600;color:var(--gris)}
-  .ub-r{flex:0 0 58px;text-align:right;color:var(--gris);font-size:14px}
+  .ub-r{flex:0 0 58px;text-align:right;color:var(--gris);font-size:13px}
   .ub.n-ok .ub-lleno{background:var(--verde)}
   .ub.n-ok .ub-p{color:var(--verde)}
   .ub.n-cerca .ub-lleno{background:var(--amarillo)}
@@ -1482,14 +1484,14 @@
      tres barras a la misma altura, mismo alto y mismo ancho. un numero por barra, nada mas. */
   .usage .uproy{margin:0 0 7px 0;padding-bottom:6px;border-bottom:1px solid var(--linea)}
   .usage .uproy .ub{margin-bottom:3px}
-  .usage .uproy .lect{display:block;font-size:14px;color:var(--gris);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .usage .umod{display:flex;align-items:center;gap:6px;font-size:14px;margin:0 0 5px 0;white-space:nowrap;overflow:hidden}   /* 2080: el nombre a la altura del porcentaje */
+  .usage .uproy .lect{display:block;font-size:13px;color:var(--gris);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .usage .umod{display:flex;align-items:center;gap:6px;font-size:13px;margin:0 0 5px 0;white-space:nowrap;overflow:hidden}   /* 2080: el nombre a la altura del porcentaje */
   .usage .umod .nom{color:var(--cian);font-weight:600}
   .usage .umod .por{color:var(--gris);overflow:hidden;text-overflow:ellipsis;min-width:0}
   .usage .ucols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   .usage .ucol{min-width:0}
   .usage .ucol .cta{height:20px;margin:0 0 4px 0;white-space:nowrap;overflow:hidden}
-  .usage .ucol .cta .pj{font-size:14px;color:var(--gris)}
+  .usage .ucol .cta .pj{font-size:13px;color:var(--gris)}
   .usage .ucol.elegida .cta .nom{text-decoration:underline;text-underline-offset:3px}
   /* 1938: con la letra 2 px mas grande `fable` y `100%` ya no entraban en 28/30 px y se partian en dos lineas,
      lo que desalineaba la tercera barra de una columna contra la otra: mas ancho y `nowrap`, nunca menos letra */
@@ -1506,7 +1508,7 @@
   .usage .ucol .cta[data-cta]:hover{background:#0d1410}
   /* 1861 {claude}: el tiempo hasta el reset va A LA DERECHA del nombre, en UNA linea y con el texto entero que
      manda el server (`renueva_txt`: `6d 19h 10m to renew`); las dos lineas `week`/`fable` de abajo se fueron */
-  .usage .ucol .cta .ren{flex:1 1 auto;min-width:0;font-size:14px;color:var(--gris);text-align:right;
+  .usage .ucol .cta .ren{flex:1 1 auto;min-width:0;font-size:13px;color:var(--gris);text-align:right;
                          white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   /* 1806/1861: cuenta agotada (excluida por el tope): 100% en week y fable, la 5h invisible, el rojo COMPLETO
      (1861: se fue el `--rojo-apagado`) y la tarjeta entera a opacidad .8 MENOS el tiempo de renew, que tiene que
@@ -1526,7 +1528,7 @@
   .cmod .cmod-b{margin:8px 0 0 0;white-space:normal}
   .cmod .cmod-b .ub-n{flex:0 0 50px}
   .cmod .cmod-r{margin:4px 0 0 0;white-space:normal}
-  .cmod .cmod-r > span{display:block;font-size:14px;line-height:1.4}
+  .cmod .cmod-r > span{display:block;font-size:13px;line-height:1.4}
   /* 1808: cuenta sin limite que cuente: gris apagado, sin hover y sin cursor de tocable */
   .usage .ucol.sinlim .cta .nom{color:var(--gris);opacity:.7}
   .usage .ucol.sinlim .cta{cursor:default}
@@ -1572,7 +1574,7 @@
   .usage.cadenas .gpartes{display:block;margin-top:9px;padding-top:7px;border-top:1px solid var(--linea)}
   .usage.cadenas .gparte{display:flex;align-items:center;column-gap:7px;margin:0 0 6px 0;min-height:28px}
   .usage.cadenas .gparte-n{flex:0 0 74px;min-width:74px;color:var(--cian);letter-spacing:.04em}
-  .usage.cadenas .gparte-sel,.usage.cadenas .gparte-fijo{flex:0 0 96px;min-width:96px;font:inherit;font-size:14px;
+  .usage.cadenas .gparte-sel,.usage.cadenas .gparte-fijo{flex:0 0 96px;min-width:96px;font:inherit;font-size:13px;
                               color:var(--texto,#ddd);background:var(--fondo-hundido);border:1px solid var(--linea);
                               border-radius:3px;padding:3px 4px;min-height:28px;box-sizing:border-box}
   .usage.cadenas .gparte-fijo{display:inline-flex;align-items:center;color:var(--gris)}
@@ -1609,7 +1611,7 @@
   .usage.gasto .gtot{display:flex;align-items:center;justify-content:space-between;gap:6px;
                      margin-top:5px;padding-top:5px;border-top:1px solid var(--linea)}
   .usage.gasto .gtot .gtot-e{font-size:13px;color:var(--gris);letter-spacing:.04em}
-  .usage.gasto .gtot .gtot-v{font-size:14px;color:var(--blanco);white-space:nowrap}
+  .usage.gasto .gtot .gtot-v{font-size:13px;color:var(--blanco);white-space:nowrap}
   /* 1806: el nombre lo pinta el ESTADO de la cuenta (ok verde clarito, warn amarillo, mal/agotada rojo); el
      color de la PLATA va en la barra y en el numero (`n-ok`/`n-cerca`/`n-mal`), que es otra cosa */
   .usage.gasto .ub.grow .ub-n.e-ok{color:#a6f5a0}
@@ -1701,8 +1703,8 @@
   /* 1929 {colaig}: la tabla de la cola de instagram del widget `igcola`: cinco columnas (que, quien, pedido,
      sale, estado) con las mismas reglas que `.qtab` (el ancho lo pone `B.gridFr`, `qué` y `quién` son las unicas
      que se achican con `…`, las horas no se parten); en 390 px entra sin scroll horizontal */
-  .igtab{display:grid;width:100%;column-gap:4px;row-gap:1px;white-space:nowrap;font-size:14px;line-height:1.6;max-width:100%}
-  .igtab .qth{color:var(--gris);font-size:14px;letter-spacing:.3px;opacity:.75}
+  .igtab{display:grid;width:100%;column-gap:4px;row-gap:1px;white-space:nowrap;font-size:13px;line-height:1.6;max-width:100%}
+  .igtab .qth{color:var(--gris);font-size:13px;letter-spacing:.3px;opacity:.75}
   .igtab .qnom,.igtab .ignom{min-width:0;overflow:hidden;text-overflow:ellipsis}
   .igtab .qcel{text-align:right;font-variant-numeric:tabular-nums}
   .igtab .igest{text-align:right}
@@ -1745,16 +1747,16 @@
   .stusugtxt{margin:0;font:inherit;font-size:var(--texto-max);line-height:1.35;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--texto)}
   .stusugpie{display:flex;gap:8px;flex-wrap:wrap}
   @media (pointer:coarse){ .stumand,.stunuevo,.stuusar,.studejar{padding:3px 12px;min-height:35px} }
-  @media (max-width:430px){ .igtab{font-size:14px;column-gap:3px} }
+  @media (max-width:430px){ .igtab{font-size:13px;column-gap:3px} }
   /* 1832: la escalera de modelos del widget `models`: grid de 7 columnas, entra en el celu sin scroll horizontal */
   .esctab{display:grid;grid-template-columns:minmax(0,8fr) 3fr 12fr 3fr 3fr 6fr 8fr;width:100%;column-gap:6px;row-gap:1px;
           font-variant-numeric:tabular-nums;max-width:100%;overflow:hidden;white-space:nowrap}   /* 1843: `fr`, ver .qtab */
-  .esctab .eth{color:var(--gris);font-size:14px;letter-spacing:.3px;opacity:.75}
+  .esctab .eth{color:var(--gris);font-size:13px;letter-spacing:.3px;opacity:.75}
   /* 1946: con la fuente +2 px las siete columnas se pasaban del ancho de la caja y el nombre de la tarea quedaba
      en 0 px: ahora TODA celda achica y corta con `…`, asi el reparto `fr` manda y la tabla entra siempre */
   .esctab .enom,.esctab .eth,.esctab .ecel{min-width:0;overflow:hidden;text-overflow:ellipsis}
   .esctab .ecel{text-align:right}
-  @media (max-width:480px){ .esctab{column-gap:2px;font-size:14px} }   /* 1938: 12px (1946: +2) y el gap a 2px: asi las 7 columnas siguen entrando en 390px */
+  @media (max-width:480px){ .esctab{column-gap:2px;font-size:13px} }   /* 1938: 12px (1946: +2) y el gap a 2px: asi las 7 columnas siguen entrando en 390px */
   /* 2176 {models}: la segunda grilla del widget `models`, una fila por MODELO (plata, error, cuota, lat,
      tok/s y frescura). misma fuente y mismo gap que `.esctab` (una tabla que no entra se arregla con el gap,
      1946), solo se despega de la tabla de arriba con un margen.
@@ -1791,7 +1793,7 @@
   .b{font-weight:500}
   .btn{
     background:#000;color:var(--cian);border:1px solid var(--linea);border-radius:12px;
-    padding:2px 9px;font:inherit;font-size:14px;cursor:pointer;margin:2px 4px 2px 0;
+    padding:2px 9px;font:inherit;font-size:13px;cursor:pointer;margin:2px 4px 2px 0;
   }
   .btn:active{background:#111}
   .btn.voto{color:var(--verde);border-color:#1f3a14}
@@ -1806,7 +1808,7 @@
   #nodos{display:flex;align-items:center;gap:18px;flex:1 1 auto;min-width:0;overflow-x:auto;scrollbar-width:none}
   #nodos::-webkit-scrollbar{display:none}
   #nodos .nodo{display:inline-flex;align-items:center;gap:3px;flex:0 0 auto;background:none;border:0;
-    padding:0;margin:0;color:var(--blanco);font-size:14px;line-height:14px;cursor:pointer;white-space:nowrap;
+    padding:0;margin:0;color:var(--blanco);font-size:13px;line-height:14px;cursor:pointer;white-space:nowrap;
     text-transform:lowercase;user-select:none;-webkit-user-select:none}
   #nodos .luz{width:7px;height:7px;border-radius:50%;background:var(--gris);flex:0 0 auto;opacity:.9}
   #nodos .nodo.main .luz{opacity:1}
@@ -1922,32 +1924,32 @@
     overflow-y:auto;background:#000;border:1px solid transparent;border-radius:5px;padding:4px;
     display:flex;flex-direction:column;gap:1px;box-shadow:var(--modal-sombra);
     -webkit-overflow-scrolling:touch;overscroll-behavior:contain}
-  #nlista .ntit{color:var(--gris);font-size:14px;text-transform:uppercase;letter-spacing:.06em;padding:3px 6px 4px 6px;
+  #nlista .ntit{color:var(--gris);font-size:13px;text-transform:uppercase;letter-spacing:.06em;padding:3px 6px 4px 6px;
     border-bottom:1px solid var(--linea);margin-bottom:2px}
   #nlista .nfila{display:flex;align-items:center;min-height:30px;border-radius:3px}
   #nlista .nfila:hover{background:#0d1410}
   #nlista .nabrir{flex:1 1 auto;min-width:0;align-self:stretch;display:flex;align-items:center;gap:6px;background:none;border:0;
-    padding:0 0 0 6px;margin:0;color:var(--blanco);font:inherit;font-size:14px;text-align:left;cursor:pointer;
+    padding:0 0 0 6px;margin:0;color:var(--blanco);font:inherit;font-size:13px;text-align:left;cursor:pointer;
     white-space:nowrap;-webkit-tap-highlight-color:transparent}
   #nlista .luz{width:7px;height:7px;border-radius:50%;background:var(--gris);flex:0 0 auto}
   #nlista .nh{color:var(--gris);flex:0 0 auto}
   #nlista .nt{overflow:hidden;text-overflow:ellipsis;min-width:0}
-  #nlista .nacc{flex:0 0 auto;background:none;border:0;color:var(--gris);font:inherit;font-size:14px;padding:0 6px;
+  #nlista .nacc{flex:0 0 auto;background:none;border:0;color:var(--gris);font:inherit;font-size:13px;padding:0 6px;
     height:30px;cursor:pointer;-webkit-tap-highlight-color:transparent}
   #nlista .nacc.nx{font-size:var(--icono-max);width:30px;padding:0}
   #nlista .nacc:hover,#nlista .nacc:active{color:var(--blanco)}
   #nlista .ntodas{background:none;border:0;border-top:1px solid var(--linea);margin-top:2px;color:var(--cian);font:inherit;
-    font-size:14px;padding:6px;text-align:left;cursor:pointer}
-  #nlista .nvacio{color:var(--gris);padding:8px 6px;font-size:14px}
+    font-size:13px;padding:6px;text-align:left;cursor:pointer}
+  #nlista .nvacio{color:var(--gris);padding:8px 6px;font-size:13px}
   /* 2022 {campana}: las dos solapas del panel (`para vos` y `todo`), con el molde de `#tabs .tab`: la puesta en
      verde, la otra gris, y a la derecha el titulo que antes era `.ntit`. sin badge en `todo`. */
   #nlista .nsol{display:flex;align-items:center;gap:2px;padding:1px 4px 4px 4px;
     border-bottom:1px solid var(--linea);margin-bottom:2px}
   #nlista .nsolb{background:#000;color:var(--gris);border:0;border-radius:4px;padding:4px 9px;font:inherit;
-    font-size:14px;cursor:pointer;white-space:nowrap;-webkit-tap-highlight-color:transparent}
+    font-size:13px;cursor:pointer;white-space:nowrap;-webkit-tap-highlight-color:transparent}
   #nlista .nsolb.on{color:var(--verde);background:var(--fondo-caja)}
   #nlista .nsolb:hover{color:var(--blanco)}
-  #nlista .nsoltit{margin-left:auto;color:var(--gris);font-size:14px;text-transform:uppercase;letter-spacing:.06em;
+  #nlista .nsoltit{margin-left:auto;color:var(--gris);font-size:13px;text-transform:uppercase;letter-spacing:.06em;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   #nlista .nn{color:var(--cian);flex:0 0 auto}   /* el `· N` de un grupo de familia */
   /* 1829 (facundo, 2026-09-17): el grupo de iconos (fueguito, campana, tipito, en ese orden) contra el borde
@@ -2017,11 +2019,11 @@
     display:flex;flex-direction:column;gap:8px;width:100%;max-width:760px;margin:0 auto}
   #homevista .homefila{display:flex;align-items:center;gap:8px;min-height:52px;flex-wrap:wrap}
   #homevista .hometit{flex:0 0 auto;color:var(--blanco)}
-  #homevista .homelin{flex:1 1 auto;min-width:0;color:var(--gris);font-size:14px}
+  #homevista .homelin{flex:1 1 auto;min-width:0;color:var(--gris);font-size:13px}
   #homevista .homen{flex:0 0 auto;color:var(--verde)}
   #homevista .est-mal .homelin{color:var(--rojo)}
   #homevista .est-espera .homelin{color:var(--amarillo,#d8b25a)}
-  #homevista .homevacio{color:var(--gris);font-size:14px}
+  #homevista .homevacio{color:var(--gris);font-size:13px}
   /* 2026-10-06 (harness2 {cajas}): los borradores del home (`homedraft`) se fueron: la orden es una caja `orden` */
   #vista-podcast{display:none}
   body.v-podcast #vista-podcast{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;
@@ -2032,16 +2034,16 @@
   #podvista{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
     display:flex;flex-direction:column;gap:6px;width:100%;max-width:760px;margin:0 auto}
   #podvista .podnom{flex:1 1 auto;min-width:0;color:var(--blanco);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  #podvista .poddet{flex:0 0 auto;color:var(--gris);font-size:14px}
-  #podvista .podpausa{color:var(--amarillo,#d8b25a);font-size:14px}
-  #podvista .podvacio{color:var(--gris);font-size:14px}
-  #podvista .podweb{align-self:flex-start;color:var(--verde);font-size:14px;text-decoration:none;margin-top:2px}
+  #podvista .poddet{flex:0 0 auto;color:var(--gris);font-size:13px}
+  #podvista .podpausa{color:var(--amarillo,#d8b25a);font-size:13px}
+  #podvista .podvacio{color:var(--gris);font-size:13px}
+  #podvista .podweb{align-self:flex-start;color:var(--verde);font-size:13px;text-decoration:none;margin-top:2px}
   /* una fila por voz: el `[\25b6]` de texto de la 1650, el nombre, la duracion y el link. nada de controles nativos */
   #podvista .podvoz{display:flex;align-items:center;gap:8px;min-height:38px;
     border:1px solid var(--linea);border-radius:4px;padding:6px 8px}
   #podvista .podvoz .podnom{flex:0 0 auto}
-  #podvista .podvoz .dur{flex:1 1 auto;min-width:0;color:var(--gris);font-size:14px}
-  #podvista .podbajar{flex:0 0 auto;color:var(--verde);font-size:14px;text-decoration:none}
+  #podvista .podvoz .dur{flex:1 1 auto;min-width:0;color:var(--gris);font-size:13px}
+  #podvista .podbajar{flex:0 0 auto;color:var(--verde);font-size:13px;text-decoration:none}
   /* 1939 {vistapodcast} (facundo, 2026-09-17): el `home` es una tarjeta CUADRADA por episodio que ocupa todo el
      alto en el celu (390 px sin scroll horizontal). la grilla es `grid` y no `flex` a proposito: el `aspect-ratio`
      de un item flex no lo dibuja bien el safari del iphone (1655), el de un item de grilla si. */
@@ -2053,36 +2055,36 @@
   #podvista .podprog{box-sizing:border-box;border:1px dashed var(--linea);border-radius:4px;color:var(--gris)}
   #podvista .podtapa{display:flex;flex-direction:column;justify-content:space-between;gap:6px;width:100%;min-width:0}
   #podvista .podtapa .podnom{flex:0 0 auto;white-space:normal;overflow:hidden;font-size:var(--texto-max)}
-  #podvista .podmarca{color:var(--verde);font-size:14px}
+  #podvista .podmarca{color:var(--verde);font-size:13px}
   /* el texto entero del guion, que es lo que se puede anotar: tocar un parrafo (o una palabra seleccionada) deja
      una nota anclada ahi. una nota de pronunciacion queda `pendiente` hasta que facundo la confirma. */
   #podvista .podguion{display:flex;flex-direction:column;gap:6px;margin-top:4px}
   #podvista .podcap{margin:8px 0 0 0;color:var(--verde);font-size:var(--texto-max);font-weight:bold}
-  #podvista .podp{margin:0;color:var(--blanco);font-size:14px;line-height:1.55;cursor:pointer;
+  #podvista .podp{margin:0;color:var(--blanco);font-size:13px;line-height:1.55;cursor:pointer;
     touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   #podvista .podp:active{opacity:.6}
-  #podvista .podnota{border-left:2px solid var(--verde);padding:2px 0 2px 8px;color:var(--gris);font-size:14px}
+  #podvista .podnota{border-left:2px solid var(--verde);padding:2px 0 2px 8px;color:var(--gris);font-size:13px}
   #podvista .podnota.pendiente{border-left-color:var(--amarillo)}
   /* el hilo del episodio: lo que dejo facundo y lo que contesto flaudio, en el tema del episodio y no en el chat */
   #podvista .podhilo{display:flex;flex-direction:column;gap:6px;margin-top:6px}
   #podvista .podmsg{display:flex;flex-direction:column;gap:3px;border:1px solid var(--linea);border-radius:4px;padding:6px 8px}
   #podvista .podmsg.de-flaudio{border-color:var(--verde)}
-  #podvista .podquien{color:var(--gris);font-size:14px}
-  #podvista .podtexto{color:var(--blanco);font-size:14px;white-space:pre-wrap}
-  #podvista .podprox{color:var(--cian);font-size:14px}
-  #podvista .podaccion{color:var(--amarillo);font-size:14px}
-  #podvista .podespera{color:var(--gris);font-size:14px}
+  #podvista .podquien{color:var(--gris);font-size:13px}
+  #podvista .podtexto{color:var(--blanco);font-size:13px;white-space:pre-wrap}
+  #podvista .podprox{color:var(--cian);font-size:13px}
+  #podvista .podaccion{color:var(--amarillo);font-size:13px}
+  #podvista .podespera{color:var(--gris);font-size:13px}
   #podvista .podaudio{display:inline-flex;align-items:center;gap:6px}
   /* dejar varios audios, borrables uno por uno como en un chat de whatsapp: recien al tocar `enviar` salen */
   #podvista .podresp{display:flex;flex-direction:column;gap:6px;margin-top:8px;padding-top:6px;border-top:1px solid var(--linea)}
   #podvista .podpend{display:flex;flex-wrap:wrap;gap:6px}
   #podvista .podaud{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--linea);border-radius:4px;padding:2px 4px}
-  #podvista .podaud .dur{color:var(--gris);font-size:14px}
+  #podvista .podaud .dur{color:var(--gris);font-size:13px}
   #podvista .podaud .podx{min-height:26px;padding:0 6px;color:var(--gris)}
   #podvista #podtxt{width:100%;box-sizing:border-box;min-height:44px;background:none;border:1px solid var(--linea);
     border-radius:4px;color:var(--blanco);font:inherit;font-size:var(--texto-max);padding:6px 8px;resize:vertical}
   #podvista .podpie{display:flex;align-items:center;gap:8px}
-  #podvista .podpie .mestado{flex:1 1 auto;min-width:0;color:var(--gris);font-size:14px}
+  #podvista .podpie .mestado{flex:1 1 auto;min-width:0;color:var(--gris);font-size:13px}
   #podvista #podgrab.grabando{color:var(--rojo)}
   /* el toggle `es de pronunciacion` vive en el modal de la nota, fuera de `#podvista` */
   .podpron.on{border-color:var(--verde);color:var(--verde)}
@@ -2113,28 +2115,28 @@
   body.v-claves #ver-claves{display:none}
   body.v-claves #cuerpo,body.v-claves #panel-chat,body.v-claves #panel-widgets,body.v-claves #sep{display:none}
   #clavesvista{flex:1 1 auto;min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:6px;width:100%}
-  #clavesvista .cvaviso{color:var(--amarillo,#d8b25a);font-size:14px}
+  #clavesvista .cvaviso{color:var(--amarillo,#d8b25a);font-size:13px}
   #clavesvista .cvq{width:100%;box-sizing:border-box;min-height:40px;background:none;border:1px solid var(--linea);
-    border-radius:4px;color:var(--blanco);font:inherit;font-size:14px;padding:6px 8px}
+    border-radius:4px;color:var(--blanco);font:inherit;font-size:13px;padding:6px 8px}
   #clavesvista .cvlista{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
     display:flex;flex-direction:column;gap:2px;width:100%}
-  #clavesvista .cvvacio{color:var(--gris);font-size:14px;padding:8px 2px}
+  #clavesvista .cvvacio{color:var(--gris);font-size:13px;padding:8px 2px}
   #clavesvista .cvfila{border-bottom:1px solid var(--linea);padding:2px 0}
   #clavesvista .cvfila.abierta{background:var(--fondo-caja);border-radius:4px}
   #clavesvista .cvcab{display:flex;align-items:center;gap:8px;width:100%;min-height:40px;background:none;
-    border:0;color:var(--blanco);font:inherit;font-size:14px;text-align:left;cursor:pointer;padding:6px 6px;
+    border:0;color:var(--blanco);font:inherit;font-size:13px;text-align:left;cursor:pointer;padding:6px 6px;
     -webkit-tap-highlight-color:transparent}
   #clavesvista .cvcab:hover .cvque{color:var(--verde)}
   #clavesvista .cvque{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  #clavesvista .cvmeta{flex:0 0 auto;color:var(--gris);font-size:14px;white-space:nowrap}
+  #clavesvista .cvmeta{flex:0 0 auto;color:var(--gris);font-size:13px;white-space:nowrap}
   #clavesvista .cvvalor{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:0 6px 6px 6px}
   #clavesvista .cvcode{flex:1 1 auto;min-width:0;color:var(--cian);background:#0d1410;border-radius:4px;
-    padding:6px 8px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;
+    padding:6px 8px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;
     word-break:break-all;-webkit-user-select:text;user-select:text}
   #clavesvista .cvcopiar{flex:0 0 auto;background:#000;color:var(--gris);border:1px solid var(--linea);
-    border-radius:4px;font:inherit;font-size:14px;min-height:36px;padding:4px 12px;cursor:pointer}
+    border-radius:4px;font:inherit;font-size:13px;min-height:36px;padding:4px 12px;cursor:pointer}
   #clavesvista .cvcopiar.ok{color:var(--verde);border-color:var(--verde)}
-  #clavesvista .cvpie{color:var(--gris);font-size:14px;padding:0 6px 6px 6px}
+  #clavesvista .cvpie{color:var(--gris);font-size:13px;padding:0 6px 6px 6px}
   /* 1691 {vista} (facundo, 2026-09-22): "deberia ocuparse mejor el ancho en desktop". en desktop el indice es un
      panel fijo a la izquierda y el informe ocupa TODO el ancho que sobra, cada uno con su propio scroll; sin
      informe abierto el indice se queda con la pantalla entera. el celu queda igual que siempre (una columna, el
@@ -2150,36 +2152,36 @@
   /* el titulo de un informe puede ser largo: en el celu se corta con puntos suspensivos y la cabecera no crece */
   body.v-docs #vista-docs #docstitulo{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   body.v-docs #vista-docs #docscuenta{flex:0 0 auto;white-space:nowrap}
-  #docsvista .dvaviso{color:var(--amarillo,#d8b25a);font-size:14px}
+  #docsvista .dvaviso{color:var(--amarillo,#d8b25a);font-size:13px}
   #docsvista .dvsol{display:flex;align-items:center;gap:2px;padding:1px 0 4px 0;border-bottom:1px solid var(--linea)}
   #docsvista .dvsolb{background:#000;color:var(--gris);border:0;border-radius:4px;padding:4px 9px;font:inherit;
-    font-size:14px;cursor:pointer;white-space:nowrap;-webkit-tap-highlight-color:transparent}
+    font-size:13px;cursor:pointer;white-space:nowrap;-webkit-tap-highlight-color:transparent}
   #docsvista .dvsolb.on{color:var(--verde);background:var(--fondo-caja)}
   #docsvista .dvq{width:100%;box-sizing:border-box;min-height:40px;background:none;border:1px solid var(--linea);
     border-radius:4px;color:var(--blanco);font:inherit;font-size:var(--texto-max);padding:6px 8px}
   /* 1691: `agrupar por tema` si/no y el orden `fecha` | `titulo`, con el molde de las solapas */
   #docsvista .dvctl{display:flex;align-items:center;flex-wrap:wrap;gap:4px}
   #docsvista .dvctlb{background:#000;color:var(--gris);border:1px solid var(--linea);border-radius:4px;
-    padding:4px 9px;font:inherit;font-size:14px;cursor:pointer;white-space:nowrap;min-height:30px;
+    padding:4px 9px;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap;min-height:30px;
     -webkit-tap-highlight-color:transparent}
   #docsvista .dvctlb.on{color:var(--verde);border-color:var(--verde);background:var(--fondo-caja)}
   #docsvista .dvctlo{display:inline-flex;align-items:center;gap:4px}
-  #docsvista .dvctlr{color:var(--gris);font-size:14px;margin-right:2px}
-  #docsvista .dvtag{flex:0 0 auto;color:var(--magenta);font-size:14px;text-transform:uppercase;letter-spacing:.06em}
+  #docsvista .dvctlr{color:var(--gris);font-size:13px;margin-right:2px}
+  #docsvista .dvtag{flex:0 0 auto;color:var(--magenta);font-size:13px;text-transform:uppercase;letter-spacing:.06em}
   #docsvista .dvlista{display:flex;flex-direction:column;gap:6px}
-  #docsvista .dvtema{display:flex;align-items:center;gap:6px;color:var(--magenta);font-size:14px;
+  #docsvista .dvtema{display:flex;align-items:center;gap:6px;color:var(--magenta);font-size:13px;
     text-transform:uppercase;letter-spacing:.06em;margin-top:6px}
   #docsvista .dvteman{color:var(--gris)}
   #docsvista .dvfila{display:flex;align-items:center;gap:8px;min-height:52px;flex-wrap:wrap}
   #docsvista .dvtit{flex:1 1 auto;min-width:0;color:var(--blanco)}
-  #docsvista .dvfecha{flex:0 0 auto;color:var(--gris);font-size:14px}
-  #docsvista .dvtildes{flex:0 0 auto;color:var(--verde);font-size:14px}
-  #docsvista .dvnotasn{flex:0 0 auto;color:var(--cian);font-size:14px}
-  #docsvista .dvvacio{color:var(--gris);font-size:14px}
+  #docsvista .dvfecha{flex:0 0 auto;color:var(--gris);font-size:13px}
+  #docsvista .dvtildes{flex:0 0 auto;color:var(--verde);font-size:13px}
+  #docsvista .dvnotasn{flex:0 0 auto;color:var(--cian);font-size:13px}
+  #docsvista .dvvacio{color:var(--gris);font-size:13px}
   #docsvista .dvbarra{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  #docsvista .dvmeta{flex:1 1 auto;min-width:0;color:var(--gris);font-size:14px;overflow-wrap:anywhere}
+  #docsvista .dvmeta{flex:1 1 auto;min-width:0;color:var(--gris);font-size:13px;overflow-wrap:anywhere}
   /* el informe: el html que rindio el server */
-  #docsvista .dvmd{display:flex;flex-direction:column;gap:6px;color:var(--blanco);font-size:14px;line-height:1.5}
+  #docsvista .dvmd{display:flex;flex-direction:column;gap:6px;color:var(--blanco);font-size:13px;line-height:1.5}
   #docsvista .dvmd .dvh{margin:8px 0 0 0;color:var(--verde);font-size:var(--texto-max);font-weight:bold}
   #docsvista .dvmd .dvh1{color:var(--magenta)}
   #docsvista .dvmd .dvp{margin:0}
@@ -2187,12 +2189,12 @@
   #docsvista .dvmd .dvcita{margin:0;border-left:2px solid var(--verde);padding:2px 0 2px 8px;color:var(--gris)}
   #docsvista .dvmd .dvsep{border-top:1px solid var(--linea);opacity:.45;height:0;margin:4px 0}
   #docsvista .dvmd .dvcod{margin:0;background:#0b0b0b;border:1px solid var(--linea);border-radius:4px;padding:6px 8px;
-    overflow-x:auto;-webkit-overflow-scrolling:touch;font-size:14px}
+    overflow-x:auto;-webkit-overflow-scrolling:touch;font-size:13px}
   #docsvista .dvmd code{color:var(--cian);background:#0b0b0b;border-radius:3px;padding:0 3px}
   #docsvista .dvmd a{color:var(--cian);text-decoration:none;border-bottom:1px dotted #1f3a44;overflow-wrap:anywhere}
   /* la tabla: el molde de `.tmd` (1400), mas la columna del tilde y la de la nota */
   #docsvista .dvtab{display:block;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;margin:2px 0}
-  #docsvista .dvtab table{border-collapse:collapse;white-space:normal;font-size:14px;line-height:1.45}
+  #docsvista .dvtab table{border-collapse:collapse;white-space:normal;font-size:13px;line-height:1.45}
   #docsvista .dvtab th,#docsvista .dvtab td{border:1px solid var(--linea-clara);padding:3px 8px;text-align:left;
     vertical-align:top;white-space:normal;overflow-wrap:break-word;min-width:5ch}
   #docsvista .dvtab .tcab th{color:var(--magenta);font-weight:600}
@@ -2204,7 +2206,7 @@
     -webkit-tap-highlight-color:transparent;-webkit-text-fill-color:currentColor;appearance:none}
   #docsvista .dvtilde.puesto{border-color:var(--verde);background:var(--fondo-caja)}
   #docsvista .dvnota{min-height:30px;background:none;border:1px dashed var(--linea-clara);border-radius:4px;
-    color:var(--gris);font:inherit;font-size:14px;padding:1px 6px;cursor:pointer;max-width:220px;
+    color:var(--gris);font:inherit;font-size:13px;padding:1px 6px;cursor:pointer;max-width:220px;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;-webkit-tap-highlight-color:transparent}
   #docsvista .dvnota.tiene{color:var(--cian);border-style:solid}
   body.sinlogin #vista-podcast,body.sinlogin #vista-home,body.sinlogin #vista-docs{display:none!important}
@@ -2257,9 +2259,9 @@
     .ib svg{width:20px;height:20px}
     .ib .badge{top:4px;right:0}   /* afuera del icono de 16px, que no lo tape (1342) */
     #nlista .nfila{min-height:40px}
-    #nlista .nabrir{font-size:14px}
-    #nlista .nacc{height:40px;min-width:40px;font-size:14px}
-    #nlista .ntodas{min-height:40px;font-size:14px}
+    #nlista .nabrir{font-size:13px}
+    #nlista .nacc{height:40px;min-width:40px;font-size:13px}
+    #nlista .ntodas{min-height:40px;font-size:13px}
     #nlista .nsolb{min-height:40px}   /* 2022: dedo, igual que las filas */
     #ctx button{min-height:40px}
     /* dedo: los botones del header de cada widget con area tactil de 40px (facundo, 2026-09-12) */
@@ -2309,7 +2311,7 @@
      centrado vertical con el flex del propio boton (punto 3), nunca con un `line-height` a mano. */
   #tabs .tab{
     flex:0 0 auto;min-width:60px;background:#000;color:var(--gris);border:0;
-    border-radius:4px 4px 0 0;padding:16px 9px;font:inherit;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:14px;cursor:pointer;
+    border-radius:4px 4px 0 0;padding:16px 9px;font:inherit;font-size:12px;cursor:pointer;
     white-space:nowrap;display:inline-flex;align-items:center;
     letter-spacing:normal;font-weight:100;
   }
@@ -2351,7 +2353,7 @@
      alto mientras se edita (el `padding` de `.tab` sigue mandando). */
   #tabs .tab .tabnom{
     background:transparent;border:0;border-bottom:1px solid var(--verde-tenue);
-    color:inherit;font:inherit;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:14px;padding:0;margin:0;min-width:5em;max-width:14em;
+    color:inherit;font:inherit;font-size:12px;padding:0;margin:0;min-width:5em;max-width:14em;
     outline:0;caret-color:var(--verde);letter-spacing:inherit;font-weight:100;
   }
   #tabs .tab .mas{
@@ -2360,7 +2362,7 @@
   }
   #tabs .tab .x{
     display:inline-flex;align-items:center;justify-content:center;
-    width:22px;height:22px;color:#555;margin-left:5px;margin-right:-3px;font-size:calc(var(--icono-max) + 4px);line-height:1;font-weight:normal;
+    width:22px;height:22px;color:#555;margin-left:5px;margin-right:-3px;font-size:calc(var(--icono-max) + 9px);line-height:1;font-weight:normal;
   }
   #tabs .tab .mas + .x{margin-left:1px}
   #tabs .tab.activo .mas,#tabs .tab.activo .x{color:var(--gris)}
@@ -2427,7 +2429,7 @@
     content:"soltar la imagen acá";position:absolute;inset:6px;z-index:55;pointer-events:none;
     display:flex;align-items:center;justify-content:center;
     border:1px dashed var(--verde);border-radius:6px;background:rgba(0,255,120,.10);
-    color:var(--verde);font-size:14px;letter-spacing:.04em;
+    color:var(--verde);font-size:13px;letter-spacing:.04em;
   }
   /* dropdown: pestaña nueva y la pregunta de "esto parece de otro tema" */
   #ddfondo{position:fixed;inset:0;z-index:19;background:rgba(0,0,0,.45)}
@@ -2437,10 +2439,10 @@
     max-width:460px;margin:0 auto;background:#000;border:1px solid transparent;border-radius:6px;box-shadow:var(--modal-sombra);
     padding:6px;display:flex;flex-direction:column;gap:4px;max-height:60dvh;overflow-y:auto;
   }
-  #dd .ddtit{color:var(--gris);font-size:14px;text-transform:uppercase;letter-spacing:.06em;padding:2px 4px}
+  #dd .ddtit{color:var(--gris);font-size:13px;text-transform:uppercase;letter-spacing:.06em;padding:2px 4px}
   #dd .ddop{
     background:#000;color:var(--cian);border:1px solid var(--linea);border-radius:4px;
-    padding:8px 10px;font:inherit;font-size:14px;cursor:pointer;text-align:left;letter-spacing:4px;
+    padding:8px 10px;font:inherit;font-size:13px;cursor:pointer;text-align:left;letter-spacing:4px;
   }
   #dd .ddop:active{background:#111}
   #dd .ddgrupo{display:flex;flex-direction:row;align-items:center;gap:4px;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;white-space:nowrap;max-width:100%;flex:0 0 auto}
@@ -2448,7 +2450,7 @@
   #dd .ddpadre-btn{flex:0 0 auto;min-width:0;white-space:nowrap;letter-spacing:4px}
   #dd .ddtoggle{
     background:#000;color:var(--gris);border:1px solid var(--linea);border-radius:4px;
-    padding:0 8px;height:32px;font:inherit;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;
+    padding:0 8px;height:32px;font:inherit;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;
   }
   #dd .ddtoggle:hover{color:var(--verde);border-color:var(--linea-clara)}
   #dd .ddtoggle:active{background:#111}
@@ -2470,14 +2472,14 @@
   .qv{position:relative;display:inline-block;width:100%;vertical-align:top;overflow:hidden;border-radius:4px;touch-action:pan-y}
   .qv .qvin{position:relative;display:block;background:var(--fondo-caja);will-change:transform}
   .qv.suelta .qvin{transition:transform .18s ease-out}
-  .qv .qvf{position:absolute;inset:0;display:none;align-items:center;padding:0 10px;font-size:14px;color:#000;font-weight:700}
+  .qv .qvf{position:absolute;inset:0;display:none;align-items:center;padding:0 10px;font-size:13px;color:#000;font-weight:700}
   .qv .qvf.qvv{background:var(--verde);justify-content:flex-start}
   .qv .qvf.qvn{background:var(--rojo);justify-content:flex-end}
   .qv.der .qvf.qvv,.qv.izq .qvf.qvn{display:flex}
   .qv.listo .qvf{filter:brightness(1.15)}
   .qv.chau{transition:max-height .2s ease-in .16s,opacity .2s ease-in .16s;max-height:0 !important;opacity:0}
   .qv .qvb{display:none;position:absolute;top:0;right:0;gap:4px;background:var(--fondo-caja);padding:0 0 2px 6px}
-  .qv .qvb button{border:0;outline:0;background:#000;color:var(--gris);font:inherit;font-size:14px;padding:1px 6px;border-radius:3px;cursor:pointer}
+  .qv .qvb button{border:0;outline:0;background:#000;color:var(--gris);font:inherit;font-size:13px;padding:1px 6px;border-radius:3px;cursor:pointer}
   .qv .qvb button[data-qvacc="visto"]:hover{color:var(--verde)}
   .qv .qvb button[data-qvacc="no"]:hover{color:var(--rojo)}
   @media (hover:hover) and (pointer:fine){ .qv:hover .qvb{display:flex} }
@@ -2492,14 +2494,14 @@
   #modal .mtit{
     position:sticky;top:0;background:#000;display:flex;justify-content:space-between;gap:8px;
     align-items:center;border-bottom:1px solid var(--linea);padding:7px 9px;
-    color:var(--verde);font-size:14px;text-transform:uppercase;letter-spacing:.06em;
+    color:var(--verde);font-size:13px;text-transform:uppercase;letter-spacing:.06em;
   }
   #modal .mx{
     background:#000;color:var(--gris);border:1px solid var(--linea);border-radius:4px;
-    padding:2px 7px;font:inherit;font-size:14px;cursor:pointer;flex:0 0 auto;
+    padding:2px 7px;font:inherit;font-size:13px;cursor:pointer;flex:0 0 auto;
   }
   #modal .mcuerpo{
-    padding:9px;font-size:14px;line-height:1.55;color:var(--blanco);
+    padding:9px;font-size:13px;line-height:1.55;color:var(--blanco);
     white-space:pre-wrap;word-break:break-word;
   }
   #modal .macc{display:flex;flex-direction:column;gap:5px;padding:0 9px 10px 9px}
@@ -2513,7 +2515,7 @@
   #notimodal.oculta{display:none}
   #notimodal .nmtit{
     position:relative;flex:0 0 auto;display:flex;align-items:center;justify-content:center;box-sizing:border-box;
-    padding:0 44px;border-bottom:1px solid var(--linea);color:var(--verde);font-size:14px;
+    padding:0 44px;border-bottom:1px solid var(--linea);color:var(--verde);font-size:13px;
   }
   #nmtitulo{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
   #notimodal .nmx{
@@ -2521,25 +2523,25 @@
     border:1px solid var(--linea);border-radius:4px;padding:0 8px;font:inherit;font-size:var(--texto-max);line-height:18px;cursor:pointer;
   }
   #notimodal .nmcuerpo{
-    flex:1 1 auto;overflow-y:auto;padding:10px;font-size:14px;line-height:1.55;color:var(--blanco);
+    flex:1 1 auto;overflow-y:auto;padding:10px;font-size:13px;line-height:1.55;color:var(--blanco);
     -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
   }
   #notimodal .nmtexto{white-space:pre-wrap;word-break:break-word}
   #notimodal .nmopc{display:flex;flex-direction:column;gap:5px;margin-top:10px}
   #notimodal .nmop.sel{color:#000;background:var(--verde);border-color:var(--verde)}
   #notimodal .nmop.sel .let{color:#000}
-  #notimodal .nmmeta{margin-top:10px;font-size:14px}
+  #notimodal .nmmeta{margin-top:10px;font-size:13px}
   #notimodal .nmpie{
     flex:0 0 auto;display:flex;flex-direction:column;gap:5px;border-top:1px solid var(--linea);
     padding:6px 8px calc(6px + env(safe-area-inset-bottom)) 8px;
   }
   #notimodal .nmfila{display:flex;align-items:center;gap:6px;min-height:18px}
-  #nmoir{display:flex;align-items:center;gap:4px;color:var(--gris);font-size:14px}
-  #nmoir .nmhabla{background:none;border:0;color:var(--cian);font:inherit;font-size:14px;padding:0;cursor:pointer}
-  #nmestado{color:var(--gris);font-size:14px;margin-left:auto}
+  #nmoir{display:flex;align-items:center;gap:4px;color:var(--gris);font-size:13px}
+  #nmoir .nmhabla{background:none;border:0;color:var(--cian);font:inherit;font-size:13px;padding:0;cursor:pointer}
+  #nmestado{color:var(--gris);font-size:13px;margin-left:auto}
   #nmtxt{
     flex:1 1 auto;min-width:0;background:#000;color:var(--blanco);border:1px solid var(--linea);border-radius:4px;
-    font:inherit;font-size:14px;padding:6px;resize:none;
+    font:inherit;font-size:13px;padding:6px;resize:none;
   }
   #nmgrabar{color:var(--magenta);touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
   #nmmandar{color:var(--verde)}
@@ -2557,13 +2559,13 @@
     box-shadow:var(--modal-sombra);
   }
   #ctx .ctit{
-    color:var(--gris);font-size:14px;text-transform:uppercase;letter-spacing:.06em;padding:3px 6px 4px 6px;
+    color:var(--gris);font-size:13px;text-transform:uppercase;letter-spacing:.06em;padding:3px 6px 4px 6px;
     border-bottom:1px solid var(--linea);margin-bottom:2px;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   }
   #ctx button{
     background:#000;color:var(--cian);border:1px solid transparent;border-radius:4px;
-    padding:8px 9px;font:inherit;font-size:14px;cursor:pointer;text-align:left;
+    padding:8px 9px;font:inherit;font-size:13px;cursor:pointer;text-align:left;
   }
   #ctx button:hover{border-color:var(--linea);background:#0d1410}
   #ctx button:active{background:#111}

@@ -498,11 +498,12 @@
     },
     "board": {
       "motor": "agy",
-      "modelo": "agy"
+      "modelo": "gemini-3.8-flash",
+      "effort": "medium"
     },
     "flos": {
-      "motor": "agy",
-      "modelo": "agy"
+      "motor": "claude",
+      "modelo": "sonnet"
     },
     "juegos": {
       "motor": "agy",

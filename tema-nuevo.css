@@ -23,10 +23,10 @@
   --linea: #1e2533;
   --linea-clara: #2c3547;
 
-  /* fuentes respetadas: tope 14px de --texto-max, chat a 14px, iconos a 18px */
-  --texto-max: 14px;
+  /* fuentes respetadas: tope 13px de --texto-max, chat a 13px, iconos a 18px */
+  --texto-max: 13px;
   --icono-max: 18px;
-  --texto-chat: 14px;
+  --texto-chat: 13px;
 
   /* fondos y tonos refinados de consola (obsidian / midnight slate) */
   --tono-base: #0a0d12;
@@ -79,8 +79,7 @@ html, body {
   border-radius: 6px 6px 0 0;
   padding: 6px 12px;
   color: var(--gris);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  font-size: 14px;
+  font-size: 12px;
   letter-spacing: normal;
   font-weight: 100;
   transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
@@ -88,8 +87,7 @@ html, body {
 #tabs .tab {
   flex: 0 0 auto;
   min-width: 60px;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  font-size: 14px;
+  font-size: 12px;
   letter-spacing: normal;
   font-weight: 100;
 }
@@ -97,8 +95,7 @@ html, body {
   #tabs .tab { flex: 0 1 auto; }
 }
 #tabs .tab .tabnom {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  font-size: 14px;
+  font-size: 12px;
   letter-spacing: inherit;
   font-weight: 100;
 }
@@ -124,7 +121,7 @@ html, body {
   margin-left: 5px;
   margin-right: -3px;
   font-weight: normal;
-  font-size: 22px;
+  font-size: 27px;
   line-height: 1;
 }
 #tabs .tab .mas + .x {
@@ -207,7 +204,7 @@ html, body {
   padding: 0 8px;
   height: 32px;
   font: inherit;
-  font-size: 14px;
+  font-size: 13px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
