@@ -747,8 +747,7 @@
     },
     "modelos": {
       "motor": "agy",
-      "modelo": "gemini-3.8-flash",
-      "effort": "low"
+      "modelo": "agy"
     },
     "personal": {
       "motor": "claude",
