@@ -204,8 +204,9 @@
       "effort": "low"
     },
     "personal": {
-      "motor": "agy",
-      "modelo": "gemini-3.8-flash"
+      "motor": "cadena",
+      "modelo": "cadena",
+      "effort": "low"
     },
     "board": {
       "motor": "cadena",
@@ -599,21 +600,56 @@
       "pestana": "personal",
       "tema": null,
       "fila": null,
-      "motor": "agy",
-      "modelo": "gemini-3.8-flash",
-      "effort": "medium",
+      "motor": "cadena",
+      "modelo": "cadena",
+      "effort": "low",
       "origen_motor": "del_modelo",
       "origen_modelo": "selector_exacto",
-      "origen_effort": "default_global",
+      "origen_effort": "selector_exacto",
       "flags": [
-        "--model",
-        "gemini-3.8-flash",
         "--effort",
-        "medium"
+        "low"
       ],
       "flags_effort": [
         "--effort",
-        "medium"
+        "low"
+      ],
+      "cadena": [
+        {
+          "motor": "agy",
+          "modelo": "gemini-3.8-flash",
+          "effort": "low"
+        },
+        {
+          "motor": "claude",
+          "modelo": "sonnet",
+          "effort": "low"
+        },
+        {
+          "motor": "claude",
+          "modelo": "sonnet",
+          "effort": "medium"
+        },
+        {
+          "motor": "claude",
+          "modelo": "opus",
+          "effort": "medium"
+        },
+        {
+          "motor": "claude",
+          "modelo": "fable",
+          "effort": "low"
+        },
+        {
+          "motor": "groq",
+          "modelo": "groq",
+          "effort": "low"
+        },
+        {
+          "motor": "gemini",
+          "modelo": "gemini",
+          "effort": "low"
+        }
       ]
     },
     "plata": {
@@ -724,8 +760,9 @@
       "modelo": "opus"
     },
     "board": {
-      "motor": "claude",
-      "modelo": "sonnet"
+      "motor": "agy",
+      "modelo": "gemini-3.8-flash",
+      "effort": "low"
     },
     "flos": {
       "motor": "claude",
@@ -748,8 +785,9 @@
       "modelo": "sonnet"
     },
     "personal": {
-      "motor": "claude",
-      "modelo": "sin modelo"
+      "motor": "agy",
+      "modelo": "gemini-3.8-flash",
+      "effort": "low"
     },
     "plata": {
       "motor": "claude",

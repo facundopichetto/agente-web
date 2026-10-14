@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.579">
-<link rel="manifest" href="manifest.json?v=4.579">
+<meta name="agente-web-version" content="4.580">
+<link rel="manifest" href="manifest.json?v=4.580">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.579">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.580">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.559">
 <style id="css-listas-drag">
 #sellistas, #sellistas * {
@@ -2620,7 +2620,6 @@ var horas = parseFloat(qs.get("h")) || 3;
 var ultimoIso = null;   // created_at del comentario mas nuevo cargado (el poll pide desde ahi)
 var etagCom = null, etagIssue = null, etagWid = null;
 var widUlt = 0, widDatos = null;
-var widTs = 0;               // `ts` (ms) del widgets.json que se ve: la edad del header la recalcula un reloj de 1 s
 var enPausa = false;
 var timer = null;
 
@@ -12646,40 +12645,14 @@ function haceSeg(s){
   if(s < 86400) return Math.round(s / 3600) + "h";
   return Math.round(s / 86400) + "d";
 }
-// la edad del widgets.json en el header de cada caja (facundo, 2026-09-13): con menos de 5 min no se
-// muestra nada (el daemon publica cada 60 s, un `hace 40s` es ruido); pasados los 5 min `hace N min` en
-// ambar, y pasados los 30 en rojo: el dato esta viejo, algo pasa. el reloj de 1 s (`refrescarEdad`)
-// solo reescribe los `.wedad`, sin repintar las cajas.
-// 2240 {widgets} paso 4 (panel `widgets`, 5 de 5): la hora es de CADA caja, no del json entero. el server
-// manda `_frescura[clave] = {ts, h12, ms}` con la hora en la que armo ESE pedazo (`widgets_json.datos`), asi
-// una caja que sale de un cache de 6 h no se lee igual de fresca que una que se acaba de armar. la hora va
-// siempre, en 12 h am/pm y en gris; el `hace N` en ambar/rojo sigue apareciendo solo cuando el dato quedo viejo.
-function frescuraWid(clave){
-  var f = ((widDatos || {})._frescura || {})[clave];
-  if(!f || !f.ts) return null;
-  var t = Date.parse(String(f.ts).replace(" ", "T"));
-  return {ms: t || widTs, h12: f.h12 || ""};
-}
+// 2240 {widgets} paso 4: la hora es de CADA caja, no del json entero. el server manda
+// `_frescura[clave] = {ts, h12, ms}` con la hora en la que armo ESE pedazo (`widgets_json.datos`); la hora va
+// siempre, en 12 h am/pm y en gris. el `hace N min` del header se saco (facundo, 2026-10-14, {limpieza}).
 function edadWid(clave){
-  var f = clave ? frescuraWid(clave) : null;
-  var t = f ? f.ms : widTs;
-  if(!t) return "";
-  var hora = f && f.h12 ? '<span class="wfre">' + esc(f.h12) + "</span>" : "";
-  var min = Math.floor((Date.now() - t) / 60000);
-  if(min < 5) return hora;
-  var txt = min < 120 ? min + " min" : haceSeg(min * 60);
-  return hora + '<span class="wage ' + (min >= 30 ? "wage-muy" : "wage-vieja") + '">hace ' + esc(txt) + "</span>";
+  var f = ((widDatos || {})._frescura || {})[clave];
+  if(!f || !f.ts || !f.h12) return "";
+  return '<span class="wfre">' + esc(f.h12) + "</span>";
 }
-function refrescarEdad(){
-  var cajas = document.querySelectorAll("#widgets .caja");
-  for(var i = 0; i < cajas.length; i++){
-    var el = cajas[i].querySelector(".wedad");
-    if(!el) continue;
-    var h = edadWid(cajas[i].getAttribute("data-w"));
-    if(el.innerHTML !== h) el.innerHTML = h;
-  }
-}
-setInterval(refrescarEdad, 1000);
 // 2132 {dia}: el board queda abierto de noche. al cruzar la medianoche de facundo, lo que era `hoy` pasa a
 // `ayer`: se repinta el hilo una vez (el reloj es el mismo de 1 s, la comparacion es un string).
 var diaVisto = hoyBA();
@@ -14368,7 +14341,6 @@ function pintarWidgets(d, err){
   itemsW = {}; itemN = 0;            // los items del repintado anterior ya no existen
   var t0 = fecha(d.ts);
   var edad = t0 ? haceSeg((Date.now() - t0) / 1000) : "?";
-  widTs = t0 || 0;                   // el header de cada caja lo lee `edadWid()` (si el json trae `ts`)
   // cada caja con su clave: el orden lo pone `orden_widgets` (arrastrando el header) y las que
   // tengan la setting `oculto` no se pintan, pero se pueden volver a mostrar desde el pie.
   var partes = [
@@ -17373,7 +17345,7 @@ window.__agente = {
   },
   subirBuzon: subirBuzon, cargarComentarios: cargarComentarios, cargarWidgets: cargarWidgets, bajarBlob: bajarBlob,
   normTema: normTema, padreTema: padreTema,
-  resaltar: resaltar, pintarWidgets: pintarWidgets, refrescarEdad: refrescarEdad,
+  resaltar: resaltar, pintarWidgets: pintarWidgets,
   // modal de items de widget: `recetas/prueba_web_tabs` lo abre y lee lo que quedo pintado
   abrirModal: abrirModal, cerrarModal: cerrarModal, modalDe: modalDe,
   // la caja verde `dale` de una accion (1762/1862): `prueba_web_acciones` la arma y la toca
