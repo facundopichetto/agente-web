@@ -737,9 +737,8 @@
       "modelo": "agy"
     },
     "juegos": {
-      "motor": "agy",
-      "modelo": "gemini-3.8-flash",
-      "effort": "low"
+      "motor": "claude",
+      "modelo": "sonnet"
     },
     "juegos#2": {
       "motor": "claude",

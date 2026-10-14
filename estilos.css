@@ -1674,7 +1674,7 @@
   .qfallo, .qtipo-chat.qfallo, .qtipo-fondo.qfallo, .qtipo-proceso.qfallo{color:var(--rojo)}
   .qfallo .qh, .qtipo-chat.qfallo .qh, .qtipo-fondo.qfallo .qh{color:#ff8585;opacity:.85}
   /* 1792 (facundo, 2026-09-16): la cola es una tabla, dibujada con css. cinco columnas: nombre (lo unico
-     que se achica y se corta con `…`), pedida, iniciada, delta (1845; antes transcurrido/tardo) y termino. las horas no se
+     que se achica y se corta con `…`), pedida, iniciada, tiempo (3635, antes delta; 1845; antes transcurrido/tardo) y termino. las horas no se
      parten nunca (`max-content` + `nowrap`), asi que no hay scroll horizontal: lo que falta lo cede el nombre. */
   /* 1807: el nombre era `1fr` y en el ipad se comia todo el ancho sobrante: los nombres pegados a la izquierda
      y las cinco horas apretadas contra el borde derecho, con medio widget en negro en el medio. `max-content`
@@ -1690,7 +1690,7 @@
         column-gap:4px;row-gap:1px;white-space:nowrap;font-size:12px;line-height:1.6;max-width:100%}
   .qtab .it{display:contents}
   .qtab .qth{color:var(--gris);font-size:12px;letter-spacing:.3px;opacity:.75}
-  /* 1843: la cabecera de la duracion se partia en dos lineas para no aplastar el nombre; desde la 1845 dice `delta`
+  /* 1843: la cabecera de la duracion se partia en dos lineas para no aplastar el nombre; desde la 1845 dice `tiempo`
      (5 letras, mas angosta que `0:04:12`) asi que ya no se parte, la regla queda por si vuelve a crecer */
   .qtab .qth.qtiempo{white-space:normal;line-height:1.15;align-self:end;padding-bottom:2px}
   .qtab .qnom{min-width:0;overflow:hidden;text-overflow:ellipsis}
