@@ -737,8 +737,8 @@
       "modelo": "agy"
     },
     "juegos": {
-      "motor": "claude",
-      "modelo": "sonnet"
+      "motor": "agy",
+      "modelo": "agy"
     },
     "juegos#2": {
       "motor": "claude",
