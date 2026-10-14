@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.581">
-<link rel="manifest" href="manifest.json?v=4.581">
+<meta name="agente-web-version" content="4.582">
+<link rel="manifest" href="manifest.json?v=4.582">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.581">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.582">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.559">
 <style id="css-listas-drag">
 #sellistas, #sellistas * {
@@ -3570,10 +3570,13 @@ function opcionesDe(texto){
     if(mm && !vistas[mm[1].toUpperCase()]){
       vistas[mm[1].toUpperCase()] = 1;
       var raw = mm[2].replace(/\*\*$/, "").trim();
+      var escupir = /^\[escupir(?:\s+[0-9a-f]{8})?\]\s*/i.test(raw) || /\s*\[escupir(?:\s+[0-9a-f]{8})?\]$/i.test(raw);
+      if(escupir) raw = raw.replace(/^\[escupir(?:\s+[0-9a-f]{8})?\]\s*/i, "").replace(/\s*\[escupir(?:\s+[0-9a-f]{8})?\]$/i, "").trim();
       var slug = "";
       var ms = /^\{([a-z0-9][a-z0-9-]{0,39})\}\s*(.*)$/i.exec(raw) || /^\[(?:titulo|nombre|slug):\s*([a-z0-9][a-z0-9-]{0,39})\]\s*(.*)$/i.exec(raw);
       if(ms){ slug = ms[1].toLowerCase(); raw = ms[2].trim(); }
       var item = {letra: mm[1].toUpperCase(), texto: raw};
+      if(escupir) item.escupir = true;
       if(slug) item.slug = slug;
       lista.push(item);
     }else fuera.push(l);
@@ -3697,9 +3700,14 @@ function nodoAcciones(m, lista_){
 function cajasDe(m){
   var o = opcionesDe(m.texto);
   if(m.opciones && m.opciones.length){
-    // 2026-10-06 (harness2 {cajas}): `orden` lo pone el server (la caja que DISPARA una orden), la web no lo adivina
+    // 2026-10-06 (harness2 {cajas}): `orden` lo pone el server (la caja que DISPARA una orden), la web no lo adivina; 3685: `escupir` pasa al comandante
     o.lista = m.opciones.filter(function(x){ return x && /^[A-P]$/i.test(x.letra || ""); })
-      .map(function(x){ return {letra: String(x.letra).toUpperCase(), texto: String(x.texto || ""), orden: x.orden === true, slug: x.slug || ""}; });
+      .map(function(x){
+        var tx = String(x.texto || "");
+        var esc = x.escupir === true || x.tipo === "escupir" || /^\[escupir(?:\s+[0-9a-f]{8})?\]\s*/i.test(tx) || /\s*\[escupir(?:\s+[0-9a-f]{8})?\]$/i.test(tx);
+        if(esc) tx = tx.replace(/^\[escupir(?:\s+[0-9a-f]{8})?\]\s*/i, "").replace(/\s*\[escupir(?:\s+[0-9a-f]{8})?\]$/i, "").trim();
+        return {letra: String(x.letra).toUpperCase(), texto: tx, orden: x.orden === true, escupir: esc, slug: x.slug || ""};
+      });
   }
   // 1658 {cajas}: una oportunidad se ofrece como cajas grandes con el texto de cada opcion adentro (nunca
   // mas los chips `op N X`). el toque sigue mandando el `op N X` crudo, que el daemon resuelve sin modelo.
@@ -4165,13 +4173,21 @@ function puntajeSubir(){
 // cruce con el color de la caja (y el fondo negro obvio) [...] arriba chiquito centrado (dentro del borde) [...]
 // --------orden--------"; eligio A: el borde es el complementario del color de la caja). la caja que es solo una
 // pregunta para seguir charlando queda como siempre. el rotulo va adentro del boton, arriba y centrado.
-var ROTULO_ORDEN = "\u2500\u2500\u2500\u2500 orden \u2500\u2500\u2500\u2500";
+var ROTULO_ORDEN = "orden";
+var ROTULO_ESCUPIR = "escupir";
 function marcaOrden(b){
   b.classList.add("orden");
   var r = document.createElement("span");
   r.className = "ord"; r.setAttribute("aria-hidden", "true"); r.textContent = ROTULO_ORDEN;
   b.insertBefore(r, b.firstChild);
   b.setAttribute("aria-label", "orden: " + (b.title || ""));
+}
+function marcaEscupir(b){
+  b.classList.add("orden", "escupir");
+  var r = document.createElement("span");
+  r.className = "ord"; r.setAttribute("aria-hidden", "true"); r.textContent = ROTULO_ESCUPIR;
+  b.insertBefore(r, b.firstChild);
+  b.setAttribute("aria-label", "escupir: " + (b.title || ""));
 }
 function nodoCajas(m, lista_){
   var k = claveCajas(m), caja = document.createElement("div");
@@ -4194,6 +4210,7 @@ function nodoCajas(m, lista_){
     if(o.slug) b.dataset.slug = o.slug;
     b.title = (o.slug ? "{" + o.slug + "} " : "") + (o.cmd || (o.letra + ": " + o.texto));
     if(o.orden) marcaOrden(b);   // 2026-10-06 (harness2 {cajas}): esta caja dispara una orden: borde y rotulo
+    else if(o.escupir) marcaEscupir(b);   // 2026-10-14 (orden 3685): caja escupir pasa al comandante
     if(ent && puntuable(o.texto)) b.appendChild(puntajeFila(m.tema || temaActivo(), o.letra, o.texto));
     var ini = null;
     b.addEventListener("pointerdown", function(e){ ini = {x: e.clientX, y: e.clientY, mov: false}; });
@@ -11084,8 +11101,9 @@ function pintarNotiPush(){
       b.dataset.letra = op.letra;
       // 2026-10-06 (harness2 {cajas}): la caja `orden` se ve igual que en el chat y manda el codigo de la caja
       // (`#k7f2D`), asi el daemon la encola sin modelo, como el toque desde el hilo
-      var cod = op.orden && c.m ? cajaCod(c.m, op.letra) : null;
+      var cod = (op.orden || op.escupir) && c.m ? cajaCod(c.m, op.letra) : null;
       if(op.orden) marcaOrden(b);
+      else if(op.escupir) marcaEscupir(b);
       b.addEventListener("click", function(){
         if(b.classList.contains("sel")) return;
         if(responderNotiPush(cod || op.cmd || (op.letra + ": " + op.texto), !!(cod || op.cmd))) b.classList.add("sel");

@@ -155,9 +155,9 @@
   },
   "elegidos": {
     "flos": {
-      "modelo": "cadena",
-      "effort": "low",
-      "motor": "cadena"
+      "modelo": "gemini-4-argon",
+      "effort": "high",
+      "motor": "agy"
     },
     "modelos": {
       "motor": "cadena",
@@ -166,8 +166,8 @@
     },
     "tinder": {
       "motor": "agy",
-      "modelo": "gemini-3.8-flash",
-      "effort": "low"
+      "modelo": "gemini-4-argon",
+      "effort": "high"
     },
     "juegos": {
       "motor": "cadena",
@@ -390,56 +390,21 @@
       "pestana": "flos",
       "tema": null,
       "fila": "flos",
-      "motor": "cadena",
-      "modelo": "cadena",
-      "effort": "low",
+      "motor": "agy",
+      "modelo": "gemini-4-argon",
+      "effort": "high",
       "origen_motor": "del_modelo",
       "origen_modelo": "selector_exacto",
       "origen_effort": "selector_exacto",
       "flags": [
+        "--model",
+        "gemini-4-argon",
         "--effort",
-        "low"
+        "high"
       ],
       "flags_effort": [
         "--effort",
-        "low"
-      ],
-      "cadena": [
-        {
-          "motor": "agy",
-          "modelo": "gemini-3.8-flash",
-          "effort": "low"
-        },
-        {
-          "motor": "claude",
-          "modelo": "sonnet",
-          "effort": "low"
-        },
-        {
-          "motor": "claude",
-          "modelo": "sonnet",
-          "effort": "medium"
-        },
-        {
-          "motor": "claude",
-          "modelo": "opus",
-          "effort": "medium"
-        },
-        {
-          "motor": "claude",
-          "modelo": "fable",
-          "effort": "low"
-        },
-        {
-          "motor": "groq",
-          "modelo": "groq",
-          "effort": "low"
-        },
-        {
-          "motor": "gemini",
-          "modelo": "gemini",
-          "effort": "low"
-        }
+        "high"
       ]
     },
     "flos#2": {
@@ -720,20 +685,20 @@
       "tema": null,
       "fila": null,
       "motor": "agy",
-      "modelo": "gemini-3.8-flash",
-      "effort": "low",
+      "modelo": "gemini-4-argon",
+      "effort": "high",
       "origen_motor": "del_modelo",
       "origen_modelo": "selector_exacto",
       "origen_effort": "selector_exacto",
       "flags": [
         "--model",
-        "gemini-3.8-flash",
+        "gemini-4-argon",
         "--effort",
-        "low"
+        "high"
       ],
       "flags_effort": [
         "--effort",
-        "low"
+        "high"
       ]
     }
   },
@@ -764,24 +729,26 @@
       "modelo": "sonnet"
     },
     "flos": {
-      "motor": "claude",
-      "modelo": "sonnet"
+      "motor": "gemini-4-argon",
+      "modelo": "gemini-4-argon"
     },
     "flos#2": {
       "motor": "agy",
       "modelo": "agy"
     },
     "juegos": {
-      "motor": "claude",
-      "modelo": "sonnet"
+      "motor": "agy",
+      "modelo": "gemini-3.8-flash",
+      "effort": "low"
     },
     "juegos#2": {
       "motor": "claude",
       "modelo": "sin modelo"
     },
     "modelos": {
-      "motor": "claude",
-      "modelo": "sonnet"
+      "motor": "agy",
+      "modelo": "gemini-3.8-flash",
+      "effort": "low"
     },
     "personal": {
       "motor": "claude",
@@ -801,8 +768,8 @@
     },
     "tinder": {
       "motor": "agy",
-      "modelo": "gemini-3.8-flash",
-      "effort": "low"
+      "modelo": "gemini-4-argon",
+      "effort": "high"
     }
   },
   "modelos_agy": {

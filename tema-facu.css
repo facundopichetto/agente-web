@@ -968,12 +968,9 @@
     display:inline-block;border:1px solid;border-radius:3px;padding:1px 8px;margin-right:8px;font-weight:600;
   }
   @media (max-width:380px){ .opciones{flex-direction:column} }
-  /* 2026-10-06 (harness2 {cajas}) (facundo: "si dispara una orden, ponele un borde grueso de algun color que cruce con
-     el color de la caja (y el fondo negro obvio) [...] arriba chiquito centrado (dentro del borde) --------orden--------";
-     eligio A, el complementario): la caja que DISPARA una orden (`orden: true` del server) lleva borde de 3 px del
-     color opuesto al suyo, fondo negro y el rotulo `──── orden ────`.
-     2026-10-09 (orden 3459 {encolar}, opcion A): la etiqueta pise el borde superior (corta la linea con su fondo negro
-     y queda centrada sobre el borde) y las cajas fluyan en fila con flex-wrap. */
+  /* 2026-10-06 (harness2 {cajas}) y 2026-10-14 (orden 3685): la caja que DISPARA una orden (`orden: true`) o pasa al
+     comandante (`escupir: true`) lleva borde de 3 px del color complementario, fondo negro y el rótulo `orden` o `escupir`
+     sin guiones pisando el borde superior (corta la línea con su fondo negro y deja el borde normal a los costados). */
   .orden{--comp:#da14ff}
   .orden[data-letra="B"],.orden[data-letra="E"],.orden[data-letra="H"],.orden[data-letra="K"],.orden[data-letra="N"]{--comp:#ee3d22}
   .orden[data-letra="C"],.orden[data-letra="F"],.orden[data-letra="I"],.orden[data-letra="L"],.orden[data-letra="O"]{--comp:#4fff76}
