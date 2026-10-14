@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.583">
-<link rel="manifest" href="manifest.json?v=4.583">
+<meta name="agente-web-version" content="4.584">
+<link rel="manifest" href="manifest.json?v=4.584">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.583">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.584">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.559">
 <style id="css-listas-drag">
 #sellistas, #sellistas * {
@@ -8092,8 +8092,24 @@ function selSubirYa(){   // cerrar la pagina o irse a background no espera a los
   clearTimeout(selJuntar); selJuntar = null;
   selSubir();
 }
-window.addEventListener("pagehide", selSubirYa);
-document.addEventListener("visibilitychange", function(){ if(document.hidden) selSubirYa(); });
+// {destrabar-flush} (facundo, 2026-10-14: "las ultimas 2 o 3 votaciones se pierden al cerrar"): los ultimos
+// TJ_VENTANA votos del votador continuo viven solo en `sel.tjHistorial` (memoria). cerrar la pestaña o mandar la app a
+// background no pasaba por `selX`/`selCerrar`, asi que esos votos nunca llegaban a `pend` y se perdian. ahora al irse
+// (`pagehide`, pagina oculta) pasan por `tjEnviarVoto` (quedan en `pend`, localStorage, y en `sel.tjEnviados` para que
+// el `←` al volver mande el `deshacer`) y la subida sale ya, con `keepalive`.
+function tjFlushOculto(){
+  var e = sel.actual, n = 0;
+  if(!e || !e.continua) return 0;
+  tjHist(e).slice().forEach(function(h){
+    sel.tjHistorial = (sel.tjHistorial || []).filter(function(x){ return x !== h; });
+    tjEnviarVoto(e, h); n++;
+  });
+  if(n) selSubir();
+  return n;
+}
+function selIrse(){ tjFlushOculto(); selSubirYa(); }
+window.addEventListener("pagehide", selIrse);
+document.addEventListener("visibilitychange", function(){ if(document.hidden) selIrse(); });
 // sube lo pendiente, una coleccion por POST a la lan (o al buzon si no hay); lo que el server rechaza (400/404) se descarta
 function selSubir(){
   if(selJuntar){ clearTimeout(selJuntar); selJuntar = null; }   // 1666: lo que junto sale en esta misma subida
@@ -8114,7 +8130,7 @@ function selSubir(){
         // estado de la fila y el board lo adopta: sin la lista volvia el pie del PROCESO (3 botones) y en
         // `super candidatas` el cuarto grande (`follow`) desaparecia hasta el poll siguiente.
         var liPost = lisPost[col] || null;
-        var viaLan = !base ? Promise.reject(new Error("sin lan")) : lanFetch(selUrl(base, col) + (liPost ? "?lista=" + encodeURIComponent(liPost) : ""), {method: "POST", cache: "no-store",
+        var viaLan = !base ? Promise.reject(new Error("sin lan")) : lanFetch(selUrl(base, col) + (liPost ? "?lista=" + encodeURIComponent(liPost) : ""), {method: "POST", cache: "no-store", keepalive: true,
           headers: {"authorization": "Bearer " + token, "content-type": "application/json"},
           body: JSON.stringify({registros: regs, lista: liPost})
         }).then(function(r){
@@ -16631,6 +16647,7 @@ window.__agente = {
   tjFila: function(){ return ((sel.actual || {}).candidatas || []).map(function(c){ return c.id; }); },   // 2073 {back}
   tjFotos: function(){ var c = tjActual(); return c ? (c.fotos || []).slice() : null; },   // caso #29: las fotos vivas de la tarjeta
   tjHistorial: function(){ return (sel.tjHistorial || []).map(function(h){ return h.col + ":" + h.c.id + ":" + h.q; }); },   // 1640: el back
+  tjFlushOculto: function(){ return tjFlushOculto(); },   // {destrabar-flush}
   tjVentana: function(n){ TJ_VENTANA = n; }, tjEnviados: function(){ return (sel.tjEnviados || []).map(function(h){ return h.col + ":" + h.c.id + ":" + h.q; }); },   // {enviar}
   filaFaltan: filaFaltan, filaSumar: filaSumar, tjToqueMs: function(ms){ TJ_TOQUE_MS = ms; TJ_BACK_MS = ms ? Math.min(ms, 120) : 0; },   // 1567: fila continua; 2002: el back tiene su propia ventana
   tjBackMs: function(ms){ if(ms !== undefined) TJ_BACK_MS = ms; return TJ_BACK_MS; },   // 2002 {back}

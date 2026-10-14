@@ -166,8 +166,8 @@
     },
     "tinder": {
       "motor": "agy",
-      "modelo": "gemini-4-argon",
-      "effort": "high"
+      "modelo": "gemini-3.8-flash",
+      "effort": "low"
     },
     "juegos": {
       "motor": "cadena",
@@ -685,20 +685,20 @@
       "tema": null,
       "fila": null,
       "motor": "agy",
-      "modelo": "gemini-4-argon",
-      "effort": "high",
+      "modelo": "gemini-3.8-flash",
+      "effort": "low",
       "origen_motor": "del_modelo",
       "origen_modelo": "selector_exacto",
       "origen_effort": "selector_exacto",
       "flags": [
         "--model",
-        "gemini-4-argon",
+        "gemini-3.8-flash",
         "--effort",
-        "high"
+        "low"
       ],
       "flags_effort": [
         "--effort",
-        "high"
+        "low"
       ]
     }
   },
@@ -738,8 +738,7 @@
     },
     "juegos": {
       "motor": "agy",
-      "modelo": "gemini-3.8-flash",
-      "effort": "low"
+      "modelo": "agy"
     },
     "juegos#2": {
       "motor": "claude",
@@ -768,8 +767,8 @@
     },
     "tinder": {
       "motor": "agy",
-      "modelo": "gemini-4-argon",
-      "effort": "high"
+      "modelo": "gemini-3.8-flash",
+      "effort": "low"
     }
   },
   "modelos_agy": {
