@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.580">
-<link rel="manifest" href="manifest.json?v=4.580">
+<meta name="agente-web-version" content="4.581">
+<link rel="manifest" href="manifest.json?v=4.581">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.580">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.581">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.559">
 <style id="css-listas-drag">
 #sellistas, #sellistas * {
@@ -12645,14 +12645,8 @@ function haceSeg(s){
   if(s < 86400) return Math.round(s / 3600) + "h";
   return Math.round(s / 86400) + "d";
 }
-// 2240 {widgets} paso 4: la hora es de CADA caja, no del json entero. el server manda
-// `_frescura[clave] = {ts, h12, ms}` con la hora en la que armo ESE pedazo (`widgets_json.datos`); la hora va
-// siempre, en 12 h am/pm y en gris. el `hace N min` del header se saco (facundo, 2026-10-14, {limpieza}).
-function edadWid(clave){
-  var f = ((widDatos || {})._frescura || {})[clave];
-  if(!f || !f.ts || !f.h12) return "";
-  return '<span class="wfre">' + esc(f.h12) + "</span>";
-}
+// 3674 (facundo, 2026-10-14: "saca eso de 2:43pm de TODOS LOS WIDGETS"): el header de una caja no lleva hora ni
+// `hace N min`; el server sigue mandando `_frescura` pero el board no la pinta.
 // 2132 {dia}: el board queda abierto de noche. al cruzar la medianoche de facundo, lo que era `hoy` pasa a
 // `ayer`: se repinta el hilo una vez (el reloj es el mismo de 1 s, la comparacion es un string).
 var diaVisto = hoyBA();
@@ -12681,7 +12675,7 @@ function caja(tit, extra, cuerpo, tabla, clave){
          '<div class="tit"><span class="wtit" data-fold="' + esc(clave) + '" title="' +
          (pleg ? "desplegar" : "plegar") + '">' + esc(tit) + "</span>" +
          '<span class="wesc">' + (extra || "") + "</span>" +
-         '<span class="wacc"><span class="wedad">' + edadWid(clave) + "</span>" +
+         '<span class="wacc">' +
          '<button class="wbtn" type="button" data-esc="' + esc(clave) + '" title="escribir sobre este widget"><span class="wglf">✎</span></button>' +
          '<button class="wbtn" type="button" data-ref="' + esc(clave) + '" title="actualizar"><span class="wglf">\u21bb</span></button>' +
          '<button class="wbtn" type="button" data-set="' + esc(clave) + '" title="settings"><span class="wglf">\u2699</span></button>' +

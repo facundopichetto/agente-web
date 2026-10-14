@@ -43,11 +43,11 @@
   function cajaSeguidores(p){
     p = p || {};
     if(p.error) return caja("IG FOLLOW", "", vacio(p.error), false, "seguidores");
-    var fechaHora = p.dato_hora || p.foto_hora || (p.fecha ? p.fecha.slice(5) : "");
+    // 3653 {limpiar-feed-ig} (facundo, 2026-10-14: "saca eso de - 14/10 12:18pm del titulo"): el titulo es solo
+    // `seguidores / seguidos`, sin fecha ni hora; el puntito ambar sale nada mas cuando el numero esta viejo
     var extra = '<span class="b">' + (p.seguidores || 0) + '</span> ' +
                 '<span class="g">/</span> ' +
                 '<span class="b">' + (p.seguidos || 0) + '</span>' +
-                (fechaHora ? ' <span class="g">- ' + esc(fechaHora) + "</span>" : "") +
                 (p.contador_viejo ? ' <span class="a">·</span>' : "");
     var filas = [], quien = function(u){
       // {votador} (facundo, 2026-10-11): el arroba abre el votador de SU lista (`B.abrirCuenta`, handler de abajo)
@@ -59,11 +59,7 @@
                  quien(u) + ' <span class="g">' + esc((u.fecha || "").slice(5)) + "</span>");
     });
     if(!filas.length) filas.push(vacio("sin bajas ni altas en " + (p.dias || 7) + " días"));
-    var pie = "no te siguen <b>" + (p.no_me_siguen === null || p.no_me_siguen === undefined ? "?" : p.no_me_siguen) + "</b>";
-    if((p.dejaste || []).length || (p.seguiste || []).length)
-      pie += ' <span class="g">· vos: -' + (p.dejaste || []).length + " +" + (p.seguiste || []).length + "</span>";
-    if(p.foto_hora || p.fecha) pie += ' <span class="g">· foto ' + esc(p.foto_hora || p.fecha.slice(5)) + "</span>";   // 2161: la fecha de la foto de las listas
-    filas.push(pie);
+    // 3653: sin la linea de `no te siguen` (con su `vos: -N +N` y la hora de la foto): "saca toda la linea"
     if(p.freno) filas.push('<span class="a">' + esc(p.freno) + "</span>");   // 2161: "instagram frena la lectura desde ..."
     if(p.problema) filas.push('<span class="a">' + esc(p.problema) + "</span>");
     return caja("IG FOLLOW", extra, B.limFilas("seguidores", filas).join("\n"), false, "seguidores");
