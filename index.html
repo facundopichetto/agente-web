@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.572">
-<link rel="manifest" href="manifest.json?v=4.572">
+<meta name="agente-web-version" content="4.573">
+<link rel="manifest" href="manifest.json?v=4.573">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.572">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.573">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.559">
 <style id="css-listas-drag">
 #sellistas, #sellistas * {
@@ -1812,31 +1812,31 @@ function filaDeTab(tAct){
   var esPlata = (base === "plata");
   var agyFallback = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.1-pro", "claude-opus-5-5", "claude-sonnet-5-5", "gpt-oss-120b", "geminiflash", "geminipro"];
   if(esFlos) return {
-    modelos: ["claude", "opus", "sonnet", "fable"].concat(agyFallback),
+    modelos: ["claude", "opus", "sonnet", "fable"].concat(agyFallback).concat(["cadena"]),
     modelo_default: "claude",
     efforts: ["ultracode", "max", "xhigh", "high", "medium", "low"],
     effort_default: "ultracode"
   };
   if(esAwt) return {
-    modelos: ["sonnet", "opus", "claude"].concat(agyFallback),
+    modelos: ["sonnet", "opus", "claude"].concat(agyFallback).concat(["cadena"]),
     modelo_default: "sonnet",
     efforts: ["max", "xhigh", "high", "medium", "low"],
     effort_default: "medium"
   };
   if(esJuegos || esPlata) return {
-    modelos: ["sonnet", "opus", "claude", "fable"].concat(agyFallback),
+    modelos: ["sonnet", "opus", "claude", "fable"].concat(agyFallback).concat(["cadena"]),
     modelo_default: "sonnet",
     efforts: ["max", "xhigh", "high", "medium", "low"],
     effort_default: "medium"
   };
   if(esServer) return {
-    modelos: ["sonnet", "opus", "claude"].concat(agyFallback),
+    modelos: ["sonnet", "opus", "claude"].concat(agyFallback).concat(["cadena"]),
     modelo_default: "sonnet",
     efforts: ["ultracode", "max", "xhigh", "high", "medium", "low"],
     effort_default: "high"
   };
   return {
-    modelos: ["sonnet", "opus", "claude"].concat(agyFallback),
+    modelos: ["sonnet", "opus", "claude"].concat(agyFallback).concat(["cadena"]),
     modelo_default: "sonnet",
     efforts: ["ultracode", "max", "xhigh", "high", "medium", "low"],
     effort_default: "medium"
@@ -1912,17 +1912,18 @@ function pintarFilaMotor(){
   var fil = filaDeTab(tAct);
   var el = elegidoDeTab(tAct);
 
-  // Nivel 1: Motor
+  // Nivel 1: Motor (3617 {opcion-cadena}: incluye 'cadena')
   var selMot = document.createElement("select");
   selMot.className = "sel-motor";
   selMot.title = "motor de " + tAct;
-  var motores = ["claude", "agy"];
+  var motores = ["claude", "agy", "cadena"];
 
   // 3341: lo guardado en el server manda; lo que recuerda el navegador es solo para cuando el server no llego
   var motGuardado = (el && el.motor) || null;
   if(!motGuardado && !cfgMotor && typeof localStorage !== "undefined") motGuardado = localStorage.getItem("flos_motor_motor_" + tAct);
   if(!motGuardado && el && el.modelo){
-    if(el.modelo === "agy" || el.modelo.indexOf("gemini") >= 0) motGuardado = "agy";
+    if(el.modelo === "cadena") motGuardado = "cadena";
+    else if(el.modelo === "agy" || el.modelo.indexOf("gemini") >= 0) motGuardado = "agy";
     else motGuardado = "claude";
   }
   if(!motGuardado) motGuardado = "claude";
@@ -1948,6 +1949,7 @@ function pintarFilaMotor(){
   controles.appendChild(selEff);
 
   function modelosDisponibles(mot){
+    if(mot === "cadena") return ["cadena"];
     var permitidos = (fil && fil.modelos) ? fil.modelos.slice() : [];
     if(mot === "agy"){
       var listaAgy = [];
@@ -1956,32 +1958,35 @@ function pintarFilaMotor(){
       }
       if(!listaAgy.length){
         listaAgy = permitidos.filter(function(x){
-          return x !== "agy" && x !== "claude" && x !== "sonnet" && x !== "opus" && x !== "fable";
+          return x !== "agy" && x !== "claude" && x !== "sonnet" && x !== "opus" && x !== "fable" && x !== "cadena";
         });
       }
       if(!listaAgy.length){
         listaAgy = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.1-pro", "claude-opus-5-5", "claude-sonnet-5-5", "gpt-oss-120b"];
       }
       // 3382 {dinamica}: excluir el alias generico 'agy' como opcion de modelo
-      listaAgy = listaAgy.filter(function(x){ return x !== "agy"; });
+      listaAgy = listaAgy.filter(function(x){ return x !== "agy" && x !== "cadena"; });
       // Si la pestaña tenia elegido geminiflash/geminipro guardado de antes, mantenerlo en las opciones
       var guardado = (el && el.modelo) || "";
       if(guardado && (guardado === "geminiflash" || guardado === "geminipro") && listaAgy.indexOf(guardado) < 0){
         listaAgy.unshift(guardado);
       }
+      if(listaAgy.indexOf("cadena") < 0) listaAgy.push("cadena");
       return listaAgy;
     }
     var modsClaude = permitidos.filter(function(x){
-      if(x === "agy" || x === "geminiflash" || x === "geminipro") return false;
+      if(x === "agy" || x === "geminiflash" || x === "geminipro" || x === "cadena") return false;
       if(cfgMotor && cfgMotor.modelos_agy && cfgMotor.modelos_agy[x]) return false;
       if(x.indexOf("gemini-") === 0 || x.indexOf("gpt-oss-") === 0 || x.indexOf("claude-") === 0) return false;
       return true;
     });
     if(!modsClaude.length) modsClaude = ["sonnet", "opus", "claude"];
+    if(modsClaude.indexOf("cadena") < 0) modsClaude.push("cadena");
     return modsClaude;
   }
 
   function defaultModeloDe(mot){
+    if(mot === "cadena") return "cadena";
     var disp = modelosDisponibles(mot);
     if(mot === "agy"){
       if(fil && fil.modelo_default && disp.indexOf(fil.modelo_default) >= 0) return fil.modelo_default;
@@ -1995,6 +2000,7 @@ function pintarFilaMotor(){
   }
 
   function effortsDisponibles(mot){
+    if(mot === "cadena") return ["low", "medium", "high"];
     var permitidos = (fil && fil.efforts) ? fil.efforts.slice() : ["max", "xhigh", "high", "medium", "low"];
     permitidos = permitidos.filter(function(e){ return e !== "standard"; });
     if(mot === "agy"){
@@ -2012,6 +2018,7 @@ function pintarFilaMotor(){
   }
 
   function defaultEffortDe(mot){
+    if(mot === "cadena") return "low";
     var disp = effortsDisponibles(mot);
     if(mot === "agy") return (disp.indexOf("medium") >= 0) ? "medium" : disp[0];
     if(fil && fil.effort_default && fil.effort_default !== "standard" && disp.indexOf(fil.effort_default) >= 0) return fil.effort_default;
@@ -2025,7 +2032,8 @@ function pintarFilaMotor(){
     var defMod = defaultModeloDe(mot);
     var modGuardado = (el && el.modelo) || null;
     if(!modGuardado && !cfgMotor && typeof localStorage !== "undefined") modGuardado = localStorage.getItem("flos_motor_modelo_" + tAct);
-    if(!modGuardado || modGuardado === "agy" || listaMods.indexOf(modGuardado) < 0) modGuardado = defMod;
+    if(mot === "cadena") modGuardado = "cadena";
+    else if(!modGuardado || modGuardado === "agy" || modGuardado === "cadena" || listaMods.indexOf(modGuardado) < 0) modGuardado = defMod;
     selMod.innerHTML = "";
     listaMods.forEach(function(mod){
       var opt = document.createElement("option");
@@ -2076,12 +2084,17 @@ function pintarFilaMotor(){
   };
 
   selMod.onchange = function(){
+    if(selMod.value === "cadena" && selMot.value !== "cadena"){
+      selMot.value = "cadena";
+      if(typeof localStorage !== "undefined") localStorage.setItem("flos_motor_motor_" + tAct, "cadena");
+      refrescarModelos();
+    }
     if(typeof localStorage !== "undefined") localStorage.setItem("flos_motor_modelo_" + tAct, selMod.value);
     refrescarEfforts();
     mandarAparte = true;
     try{
       mandar("motor " + tAct + " " + selMod.value, tAct, false);
-      if(selMot.value === "agy"){
+      if(selMot.value === "agy" || selMot.value === "cadena"){
         mandar("effort " + tAct + " " + selEff.value, tAct, false);
       }
     }finally{ mandarAparte = false; }

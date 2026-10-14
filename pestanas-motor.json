@@ -8,11 +8,15 @@
         "fable",
         "geminiflash",
         "geminipro",
-        "gemini-4-argon",
+        "cadena",
         "gemini-3.8-flash",
+        "gemini-3.7-flash",
+        "gemini-3.6-flash",
+        "gemini-3.1-pro",
         "claude-opus-5-5",
         "claude-sonnet-5-5",
-        "gpt-oss-120b"
+        "gpt-oss-120b",
+        "gemini-4-argon"
       ],
       "modelo_default": "claude",
       "efforts": [
@@ -31,11 +35,15 @@
         "opus",
         "claude",
         "geminiflash",
-        "gemini-4-argon",
+        "cadena",
         "gemini-3.8-flash",
+        "gemini-3.7-flash",
+        "gemini-3.6-flash",
+        "gemini-3.1-pro",
         "claude-opus-5-5",
         "claude-sonnet-5-5",
-        "gpt-oss-120b"
+        "gpt-oss-120b",
+        "gemini-4-argon"
       ],
       "modelo_default": "sonnet",
       "efforts": [
@@ -54,11 +62,15 @@
         "opus",
         "claude",
         "geminiflash",
-        "gemini-4-argon",
+        "cadena",
         "gemini-3.8-flash",
+        "gemini-3.7-flash",
+        "gemini-3.6-flash",
+        "gemini-3.1-pro",
         "claude-opus-5-5",
         "claude-sonnet-5-5",
-        "gpt-oss-120b"
+        "gpt-oss-120b",
+        "gemini-4-argon"
       ],
       "modelo_default": "sonnet",
       "efforts": [
@@ -78,11 +90,15 @@
         "claude",
         "fable",
         "geminiflash",
-        "gemini-4-argon",
+        "cadena",
         "gemini-3.8-flash",
+        "gemini-3.7-flash",
+        "gemini-3.6-flash",
+        "gemini-3.1-pro",
         "claude-opus-5-5",
         "claude-sonnet-5-5",
-        "gpt-oss-120b"
+        "gpt-oss-120b",
+        "gemini-4-argon"
       ],
       "modelo_default": "sonnet",
       "efforts": [
@@ -102,11 +118,15 @@
         "claude",
         "fable",
         "geminiflash",
-        "gemini-4-argon",
+        "cadena",
         "gemini-3.8-flash",
+        "gemini-3.7-flash",
+        "gemini-3.6-flash",
+        "gemini-3.1-pro",
         "claude-opus-5-5",
         "claude-sonnet-5-5",
-        "gpt-oss-120b"
+        "gpt-oss-120b",
+        "gemini-4-argon"
       ],
       "modelo_default": "sonnet",
       "efforts": [
@@ -181,6 +201,16 @@
     "board": {
       "motor": "agy",
       "modelo": "gemini-3.8-flash"
+    },
+    "flos#2": {
+      "motor": "agy",
+      "modelo": "gemini-3.8-flash",
+      "effort": "low"
+    },
+    "juegos#2": {
+      "motor": "agy",
+      "modelo": "gemini-3.8-flash",
+      "effort": "low"
     }
   },
   "resueltos": {
@@ -331,6 +361,27 @@
         "high"
       ]
     },
+    "flos#2": {
+      "pestana": "flos#2",
+      "tema": null,
+      "fila": "flos",
+      "motor": "agy",
+      "modelo": "gemini-3.8-flash",
+      "effort": "low",
+      "origen_motor": "del_modelo",
+      "origen_modelo": "selector_exacto",
+      "origen_effort": "selector_exacto",
+      "flags": [
+        "--model",
+        "gemini-3.8-flash",
+        "--effort",
+        "low"
+      ],
+      "flags_effort": [
+        "--effort",
+        "low"
+      ]
+    },
     "juegos": {
       "pestana": "juegos",
       "tema": null,
@@ -350,6 +401,27 @@
       "flags_effort": [
         "--effort",
         "medium"
+      ]
+    },
+    "juegos#2": {
+      "pestana": "juegos#2",
+      "tema": null,
+      "fila": "juegos",
+      "motor": "agy",
+      "modelo": "gemini-3.8-flash",
+      "effort": "low",
+      "origen_motor": "del_modelo",
+      "origen_modelo": "selector_exacto",
+      "origen_effort": "selector_exacto",
+      "flags": [
+        "--model",
+        "gemini-3.8-flash",
+        "--effort",
+        "low"
+      ],
+      "flags_effort": [
+        "--effort",
+        "low"
       ]
     },
     "modelos": {
@@ -503,15 +575,24 @@
     },
     "board": {
       "motor": "agy",
-      "modelo": "agy"
+      "modelo": "gemini-3.8-flash",
+      "effort": "medium"
     },
     "flos": {
       "motor": "claude",
       "modelo": "fable"
     },
+    "flos#2": {
+      "motor": "gemini-3.8-flash",
+      "modelo": "gemini-3.8-flash"
+    },
     "juegos": {
       "motor": "agy",
       "modelo": "agy"
+    },
+    "juegos#2": {
+      "motor": "claude",
+      "modelo": "sin modelo"
     },
     "modelos": {
       "motor": "agy",
@@ -540,14 +621,23 @@
     }
   },
   "modelos_agy": {
-    "gemini-4-argon": [
+    "gemini-3.8-flash": [
       "high",
       "medium",
       "low"
     ],
-    "gemini-3.8-flash": [
+    "gemini-3.7-flash": [
       "high",
       "medium",
+      "low"
+    ],
+    "gemini-3.6-flash": [
+      "high",
+      "medium",
+      "low"
+    ],
+    "gemini-3.1-pro": [
+      "high",
       "low"
     ],
     "claude-opus-5-5": [
@@ -562,6 +652,48 @@
     ],
     "gpt-oss-120b": [
       "medium"
+    ],
+    "gemini-4-argon": [
+      "high",
+      "medium",
+      "low"
     ]
-  }
+  },
+  "cadena_chat": [
+    {
+      "motor": "agy",
+      "modelo": "gemini-3.8-flash",
+      "effort": "low"
+    },
+    {
+      "motor": "claude",
+      "modelo": "sonnet",
+      "effort": "low"
+    },
+    {
+      "motor": "claude",
+      "modelo": "sonnet",
+      "effort": "medium"
+    },
+    {
+      "motor": "claude",
+      "modelo": "opus",
+      "effort": "medium"
+    },
+    {
+      "motor": "claude",
+      "modelo": "fable",
+      "effort": "low"
+    },
+    {
+      "motor": "groq",
+      "modelo": "groq",
+      "effort": "low"
+    },
+    {
+      "motor": "gemini",
+      "modelo": "gemini",
+      "effort": "low"
+    }
+  ]
 }
