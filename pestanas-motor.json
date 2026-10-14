@@ -704,7 +704,7 @@
   "ultimos": {
     "awtomic": {
       "motor": "claude",
-      "modelo": "opus"
+      "modelo": "sonnet"
     },
     "awtomic#14": {
       "motor": "claude",
@@ -724,9 +724,8 @@
       "modelo": "opus"
     },
     "board": {
-      "motor": "agy",
-      "modelo": "gemini-3.8-flash",
-      "effort": "low"
+      "motor": "claude",
+      "modelo": "sonnet"
     },
     "flos": {
       "motor": "claude",
@@ -745,8 +744,8 @@
       "modelo": "sin modelo"
     },
     "modelos": {
-      "motor": "agy",
-      "modelo": "agy"
+      "motor": "claude",
+      "modelo": "sonnet"
     },
     "personal": {
       "motor": "claude",
@@ -766,7 +765,8 @@
     },
     "tinder": {
       "motor": "agy",
-      "modelo": "agy"
+      "modelo": "gemini-3.8-flash",
+      "effort": "low"
     }
   },
   "modelos_agy": {

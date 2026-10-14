@@ -9,8 +9,36 @@
 (function(){
   var B = (typeof window !== "undefined" ? window : self).__board;
   var esc = B.esc, caja = B.caja, vacio = B.vacio;
-  var POLL_MS = 30000, ESPERA_MAX = 300000;
+  var POLL_MS = 30000, ESPERA_MAX = 300000, TOPE_MOVIMIENTOS = 15;
   var vivo = {d: null, etag: null, pidiendo: false, espera: 0, hasta: 0, recibidos: 0, repintados: 0};
+
+  function ordenarMovimientos(p){
+    var tope = (p && p.tope > 0) ? Math.min(p.tope, TOPE_MOVIMIENTOS) : TOPE_MOVIMIENTOS;
+    var lista = [];
+    if(Array.isArray(p.movimientos)){
+      p.movimientos.forEach(function(u, i){
+        lista.push({usuario: u.usuario, nombre: u.nombre, fecha: u.fecha, hora: u.hora, ts: u.ts,
+                    tipo: u.tipo, signo: u.signo || (u.tipo === "dejo_de_seguirte" ? "-" : "+"), _i: i});
+      });
+    } else {
+      (p.dejaron || []).forEach(function(u, i){
+        lista.push({usuario: u.usuario, nombre: u.nombre, fecha: u.fecha, hora: u.hora, ts: u.ts,
+                    tipo: "dejo_de_seguirte", signo: "-", _i: i});
+      });
+      (p.nuevos || []).forEach(function(u, i){
+        lista.push({usuario: u.usuario, nombre: u.nombre, fecha: u.fecha, hora: u.hora, ts: u.ts,
+                    tipo: "te_empezo_a_seguir", signo: "+", _i: i});
+      });
+    }
+    lista.sort(function(a, b){
+      var ta = typeof a.ts === "number" ? a.ts : 0, tb = typeof b.ts === "number" ? b.ts : 0;
+      if(ta !== tb) return tb - ta;
+      var fa = (a.fecha || "") + " " + (a.hora || ""), fb = (b.fecha || "") + " " + (b.hora || "");
+      if(fa !== fb) return fb < fa ? -1 : 1;
+      return a._i - b._i;
+    });
+    return lista.slice(0, tope);
+  }
 
   function cajaSeguidores(p){
     p = p || {};
@@ -25,8 +53,11 @@
       // {votador} (facundo, 2026-10-11): el arroba abre el votador de SU lista (`B.abrirCuenta`, handler de abajo)
       return '<a class="arroba" href="#" data-cuenta="' + esc(u.usuario) + '">@' + esc(u.usuario) + "</a>" + (u.nombre ? ' <span class="g">' + esc(u.nombre) + "</span>" : "");
     };
-    (p.dejaron || []).forEach(function(u){ filas.push('<span class="r">-</span> ' + quien(u) + ' <span class="g">' + esc(u.fecha.slice(5)) + "</span>"); });
-    (p.nuevos || []).forEach(function(u){ filas.push('<span class="v">+</span> ' + quien(u) + ' <span class="g">' + esc(u.fecha.slice(5)) + "</span>"); });
+    ordenarMovimientos(p).forEach(function(u){
+      var esBaja = u.signo === "-" || u.tipo === "dejo_de_seguirte";
+      filas.push('<span class="' + (esBaja ? "r" : "v") + '">' + (esBaja ? "-" : "+") + "</span> " +
+                 quien(u) + ' <span class="g">' + esc((u.fecha || "").slice(5)) + "</span>");
+    });
     if(!filas.length) filas.push(vacio("sin bajas ni altas en " + (p.dias || 7) + " días"));
     var pie = "no te siguen <b>" + (p.no_me_siguen === null || p.no_me_siguen === undefined ? "?" : p.no_me_siguen) + "</b>";
     if((p.dejaste || []).length || (p.seguiste || []).length)
