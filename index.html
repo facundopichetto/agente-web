@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.574">
-<link rel="manifest" href="manifest.json?v=4.574">
+<meta name="agente-web-version" content="4.575">
+<link rel="manifest" href="manifest.json?v=4.575">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.574">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.575">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.559">
 <style id="css-listas-drag">
 #sellistas, #sellistas * {
@@ -2917,6 +2917,18 @@ function imgHueco(src){
            : '<span class="cargando">bajando imagen...</span>';
 }
 var imgUrls = {};        // src -> object url (una sola bajada por imagen)
+var IMG_CACHE = "claudio-ig-fotos-v1";
+function imgCacheOk(){ return typeof caches !== "undefined" && /^https?:/i.test(location.protocol || ""); }
+function imgCacheUrl(repo){ return location.origin + "/__imgcache__/" + String(repo || "").split("?")[0].replace(/^\/+/, ""); }
+function imgCacheLeer(repo){
+  if(!imgCacheOk() || String(repo || "").indexOf("?") >= 0) return Promise.resolve(null);
+  return caches.open(IMG_CACHE).then(function(c){ return c.match(imgCacheUrl(repo)); })
+    .then(function(r){ return r && r.ok ? r.blob() : null; }).catch(function(){ return null; });
+}
+function imgCacheGuardar(repo, b){
+  if(!imgCacheOk() || !b) return;
+  caches.open(IMG_CACHE).then(function(c){ c.put(imgCacheUrl(repo), new Response(b)); }).catch(function(){});
+}
 function srcBuzon(src){  // ruta local vieja del server (`/home/.../tmp/img/x.png`) -> `img/x.png` del buzon
   var limpio = (src || "").split("?")[0];
   var qs = (src || "").indexOf("?") >= 0 ? src.substring(src.indexOf("?")) : "";
@@ -2924,16 +2936,19 @@ function srcBuzon(src){  // ruta local vieja del server (`/home/.../tmp/img/x.pn
 }
 function bajarImagen(src){
   if(/^(https?:|data:)/i.test(src)) return Promise.resolve(src);
-  var repo = srcBuzon(src);
+  var repo = srcBuzon(src), repoLimpio = repo.split("?")[0];
   if(imgUrls[src]) return Promise.resolve(imgUrls[src]);
   if(imgUrls[repo]) return Promise.resolve(imgUrls[src] = imgUrls[repo]);
   var local = !/^(img|audio)\//.test(src);
-  return (/^(img|audio)\//.test(repo) ? bajarBlob(repo) : Promise.reject(new Error("local")))
-    .catch(function(e){ if(!local) throw e; return bajarLocal(src); })
-    .then(function(b){
-      imgUrls[repo] = imgUrls[src] = URL.createObjectURL(b);
-      return imgUrls[src];
-    });
+  return imgCacheLeer(repo).then(function(bCache){
+    if(bCache) return bCache;
+    return (/^(img|audio)\//.test(repo) ? bajarBlob(repo) : Promise.reject(new Error("local")))
+      .catch(function(e){ if(!local) throw e; return bajarLocal(src); })
+      .then(function(b){ imgCacheGuardar(repoLimpio, b); return b; });
+  }).then(function(b){
+    imgUrls[repoLimpio] = imgUrls[repo] = imgUrls[src] = URL.createObjectURL(b);
+    return imgUrls[src];
+  });
 }
 // 3022 {recibe}: una ruta del server (`/home/...`, `~/...`, `qa/...` del tema) se la pido al server, no 404
 function bajarLocal(src){
@@ -6316,20 +6331,38 @@ function gracDeshacer(id){
   if(lis.sub === "listas") lisPintar(); else if(lis.sub === "una") lisUnaPintar();
   return true;
 }
+var FILA_CACHE_TOPE = 150;
 function cacheClave(col, lista){ return (lista || "") + "|" + col; }
 function cacheGuardar(e, lista){
   if(!e || !e.continua) return false;
-  filaCache[cacheClave(e.coleccion, lista === undefined ? sel.filtro : lista)] = (e.candidatas || []).slice();
+  var k = cacheClave(e.coleccion, lista === undefined ? sel.filtro : lista);
+  var cs = (e.candidatas || []).slice();
+  filaCache[k] = cs;
+  var m = selLeer("cache", {});
+  m[k] = cs.slice(0, FILA_CACHE_TOPE);
+  selEscribir("cache", m);
   return true;
 }
-function cacheTraer(col, lista){ return (filaCache[cacheClave(col, lista)] || []).slice(); }
+function cacheTraer(col, lista){
+  var k = cacheClave(col, lista);
+  if(!filaCache[k]){
+    var m = selLeer("cache", {});
+    if(Array.isArray(m[k])) filaCache[k] = m[k];
+  }
+  return (filaCache[k] || []).slice();
+}
 function cacheTiene(col, lista){ return cacheTraer(col, lista).length > 0; }
 // 2143 {cache} (facundo, 2026-09-19: "vote las 38 de super candidatas y veo la lista de `interesan` igual que
 // antes"): la cache (esta, la de `listas.json` en el equipo y la fila que dejo el poll) PINTA el primer frame,
 // pero nunca decide lo que facundo termina viendo. abrir CUALQUIER lista dispara siempre el pedido fresco al
 // server y repinta con lo que vuelve; si ese pedido falla, queda lo cacheado y se avisa, nunca una lista en
 // blanco. vale igual despues de un reinicio del daemon, que es lo que disparo el sintoma.
-function cacheOlvidar(col, lista){ delete filaCache[cacheClave(col, lista === undefined ? sel.filtro : lista)]; }
+function cacheOlvidar(col, lista){
+  var k = cacheClave(col, lista === undefined ? sel.filtro : lista);
+  delete filaCache[k];
+  var m = selLeer("cache", {});
+  if(k in m){ delete m[k]; selEscribir("cache", m); }
+}
 function filaMarcar(col, id){
   var f = selLeer("fila", {}), ahora = Date.now(), m = f[col] = f[col] || {};
   m[id] = ahora;
@@ -6373,7 +6406,13 @@ function filaSumar(e, soloSacar){
       if(!tjSirve(c) || !tjEnFiltro(c)) return;   // 2277 {foto}
       ya[c.id] = true; nuevas.push(c);
     });
-    a.candidatas = a.candidatas.concat(tjOrdenSuper(nuevas));   // 2134: la virtual apendea por puntaje
+    if(tjEsSuper() && nuevas.length){
+      var cab = a.candidatas.slice(0, sel.tj + 1);
+      var cola = tjOrdenSuper(a.candidatas.slice(sel.tj + 1).concat(nuevas));
+      a.candidatas = cab.concat(cola);
+    } else {
+      a.candidatas = a.candidatas.concat(tjOrdenSuper(nuevas));   // 2134: la virtual apendea por puntaje
+    }
     a.pendientes = e.pendientes;
     a.mas = typeof e.pendientes === "number" && e.pendientes > (e.candidatas || []).length;
     if(typeof e.agotada === "boolean") a.agotada = e.agotada;   // 1794: lo dice el server, nunca se infiere
@@ -6471,7 +6510,7 @@ function selPedir(col, arranque){
 }
 function filaAplicar(col, j){
   if(!j || j.coleccion !== col) return false;
-  sel.filaDe[col] = sel.filtro || null;   // 2325 {votador}: esta fila es la de ESTA lista, no la del proceso
+  if(!sel.filtro || selMismaLista(j)) sel.filaDe[col] = (j && j.lista) || sel.filtro || null;   // 2325 {votador}: esta fila es la de ESTA lista, no la del proceso
   // 2026 {vista}: contesto, pero no con una fila de tarjetas: ese server no tiene esta coleccion (ver `selSinFila`)
   if(j.continua) delete selSinFilas[col]; else selSinFilas[col] = Date.now();
   var i = -1;
@@ -6496,7 +6535,8 @@ function filaAplicar(col, j){
     });
   }
   if(cambio && tjPantalla()) tjPintar();   // el pie cambio: se repinta ya, no en el voto siguiente
-  var ok = sel.actual && sel.actual.coleccion === col && sel.actual.continua ? filaSumar(j, false) : false;
+  var soloSacar = !!(tjEsSuper() && j.lista && !selMismaLista(j));
+  var ok = sel.actual && sel.actual.coleccion === col && sel.actual.continua ? filaSumar(j, soloSacar) : false;
   selBoton();
   return ok;
 }
@@ -6529,11 +6569,18 @@ function filaFresca(col, lista, j){
   if(!a || a.coleccion !== col || !a.continua || (sel.filtro || null) !== (lista || null)) return false;
   var votando = (sel.tjHistorial || []).some(function(h){ return h.col === col; }) || sel.tj > 0;
   if(votando) return false;   // `filaAplicar` ya apendeo lo que faltaba (2137)
+  var prevPorId = {};
+  (a.candidatas || []).forEach(function(x){ if(x && x.id) prevPorId[x.id] = x; });
   var v = j.circular === false || !a.circular ? filaVotadas(col) : {};
   var fuera = salioSet(col, lista), fall = sel.tjFallidas || [], ya = {}, cs = [];
   (j.candidatas || []).forEach(function(c){
     if(ya[c.id] || v[c.id] || fuera[c.id] || fall.indexOf(c.id) >= 0) return;
     if(!tjSirve(c) || !tjEnFiltro(c)) return;   // 2277 {foto}
+    var ant = prevPorId[c.id];
+    if(ant && ant.__hdSolicitada){
+      c.__hdSolicitada = true;
+      if(ant.fotos && ant.fotos.length && (!c.fotos || !c.fotos.length || /\?t=/.test(ant.fotos[0]))) c.fotos = ant.fotos;
+    }
     ya[c.id] = true; cs.push(c);
   });
   if(!cs.length) return false;   // el server no tiene nada que mostrar: queda lo cacheado (punto 3)
@@ -6542,7 +6589,7 @@ function filaFresca(col, lista, j){
   cacheOlvidar(col, lista);      // lo viejo de esa lista no vuelve a colarse por la cache
   a.candidatas = tjOrdenSuper(cs);
   a.pendientes = j.pendientes;
-  a.mas = typeof j.pendientes === "number" && j.pendientes > (j.candidatas || []).length;
+  a.mas = typeof j.pendientes === "number" && j.pendientes > (a.candidatas || []).length;
   if(typeof j.agotada === "boolean") a.agotada = j.agotada;
   if(typeof j.circular === "boolean") a.circular = j.circular;
   if(j.destinos) a.destinos = j.destinos;
@@ -6550,7 +6597,8 @@ function filaFresca(col, lista, j){
   if("vacia" in j) a.vacia = j.vacia || null;   // caso 40
   sel.tj = 0;
   cacheGuardar(a, lista);
-  if(!(cur && tjIr(cur.id))) tjPintar();   // la tarjeta que estaba a la vista sigue siendo la primera si esta
+  var mantenerCur = cur && (!tjEsSuper() || cur._inyectada);
+  if(!(mantenerCur && tjIr(cur.id))) tjPintar();   // la tarjeta que estaba a la vista sigue siendo la primera si esta
   return true;
 }
 // sin tarjeta a la vista y sin `agotada`: pide el lote cada SEL_PEDIR_MS hasta que entre o el server diga que no hay mas
