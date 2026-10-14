@@ -155,8 +155,8 @@
   },
   "elegidos": {
     "flos": {
-      "modelo": "gemini-4-argon",
-      "effort": "high",
+      "modelo": "gemini-3.8-flash",
+      "effort": "low",
       "motor": "agy"
     },
     "modelos": {
@@ -391,20 +391,20 @@
       "tema": null,
       "fila": "flos",
       "motor": "agy",
-      "modelo": "gemini-4-argon",
-      "effort": "high",
+      "modelo": "gemini-3.8-flash",
+      "effort": "low",
       "origen_motor": "del_modelo",
       "origen_modelo": "selector_exacto",
       "origen_effort": "selector_exacto",
       "flags": [
         "--model",
-        "gemini-4-argon",
+        "gemini-3.8-flash",
         "--effort",
-        "high"
+        "low"
       ],
       "flags_effort": [
         "--effort",
-        "high"
+        "low"
       ]
     },
     "flos#2": {
@@ -729,8 +729,8 @@
       "modelo": "sonnet"
     },
     "flos": {
-      "motor": "gemini-4-argon",
-      "modelo": "gemini-4-argon"
+      "motor": "gemini-3.8-flash",
+      "modelo": "gemini-3.8-flash"
     },
     "flos#2": {
       "motor": "agy",

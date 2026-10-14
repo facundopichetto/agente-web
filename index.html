@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.582">
-<link rel="manifest" href="manifest.json?v=4.582">
+<meta name="agente-web-version" content="4.583">
+<link rel="manifest" href="manifest.json?v=4.583">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.582">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.583">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.559">
 <style id="css-listas-drag">
 #sellistas, #sellistas * {
@@ -4318,7 +4318,7 @@ function mandarCaja(m, caja, lista_, marcar, decir){
   // respuesta es). sin el (una caja vieja ya pintada, o el celu con el html de antes), el formato de siempre.
   var cod = cajaCod(m, decir, false);
   if(cod) return siSalio((accMandarFn || mandar)(cod, tema, false));
-  var txt = decir.split("").join(" y ") + ": " + ops.map(function(o){ return o.texto; }).join(" / ");
+  var txt = decir.split("").join(" y ") + ": " + ops.map(function(o){ return o.texto + (o.escupir && !/\[\s*escupir\b/i.test(o.texto || "") ? " [escupir]" : ""); }).join(" / ");
   // 2080: el mismo enganche de `accMandar` que las cajas `dale`, para que la prueba mire lo que saldria
   return siSalio((accMandarFn || mandar)((vieja ? citaCaja(m) : "") + txt, tema, false));
 }
