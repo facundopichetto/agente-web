@@ -725,8 +725,9 @@
       "modelo": "opus"
     },
     "board": {
-      "motor": "claude",
-      "modelo": "sonnet"
+      "motor": "agy",
+      "modelo": "gemini-3.8-flash",
+      "effort": "low"
     },
     "flos": {
       "motor": "gemini-3.8-flash",
@@ -737,8 +738,8 @@
       "modelo": "agy"
     },
     "juegos": {
-      "motor": "agy",
-      "modelo": "agy"
+      "motor": "claude",
+      "modelo": "sonnet"
     },
     "juegos#2": {
       "motor": "claude",
@@ -766,9 +767,8 @@
       "modelo": "fable"
     },
     "tinder": {
-      "motor": "agy",
-      "modelo": "gemini-3.8-flash",
-      "effort": "low"
+      "motor": "claude",
+      "modelo": "sonnet"
     }
   },
   "modelos_agy": {

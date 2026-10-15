@@ -30,9 +30,15 @@
   // y, solo si no es la activa, un boton verde que manda `cuenta <nombre>` (el daemon lo atiende sin modelo).
   // {sinpie}: lo que llega armado del server con un monto adentro (`free tier, $0`, `Pro $14.99/mes`) se
   // pinta sin el monto. es la unica transformacion de texto que hace la web sobre lo del server.
+  // {pulida-mobile} (facundo, 2026-10-14: "textos en espanglish como to renew"): el server arma `Nd Nh Nm to renew`
+  // y la web lo pinta en español corto (`renueva en Nd Nh Nm`). es la misma clase de retoque que `sinPlata`: solo
+  // cambia la palabra, el tiempo sigue siendo el que armo el server.
+  function renEs(t){
+    return String(t).replace(/((?:\d+[dhms]\s*)+?)\s*to\s+renew\b/g, function(_, tm){ return "renueva en " + tm.trim(); });
+  }
   function sinPlata(t){
-    return String(t === null || t === undefined ? "" : t)
-      .replace(/\s*[,·]?\s*(usd\s*)?\$\s?[\d.,]+[kKmM]?(\s*\/\s*(mes|dia|semana))?/g, "").trim();
+    return renEs(String(t === null || t === undefined ? "" : t)
+      .replace(/\s*[,·]?\s*(usd\s*)?\$\s?[\d.,]+[kKmM]?(\s*\/\s*(mes|dia|semana))?/g, "").trim());
   }
   var cuModal = null, cuUltimo = null, cuAbierta = null;
   function cuEstado(){ return {ultimo: cuUltimo, abierta: cuAbierta}; }
@@ -41,7 +47,7 @@
   // titulo, ahi pone `xd xh xm to renew`". una sola linea, al lado del nombre de la cuenta, con el texto ENTERO
   // como vino del server (`renueva_txt`, de `widgets_json.w_usage`): la web no arma ni recorta ningun tiempo.
   function renuevaHtml(cu){
-    return cu.renueva_txt ? '<span class="ren">' + esc(cu.renueva_txt) + "</span>" : "";
+    return cu.renueva_txt ? '<span class="ren">' + esc(renEs(cu.renueva_txt)) + "</span>" : "";
   }
   function barraHtml(b){
     var h = B.barraUso(b);

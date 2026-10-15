@@ -2609,3 +2609,34 @@
 #modal .viva .vivatx{color:var(--blanco);margin-top:6px}
 #modal .viva .vivacmd{margin-top:1px}
 #modal .viva .vivafin{color:var(--verde)}
+
+/* ---------- {pulida-mobile} (facundo, 2026-10-14, captura del iphone): cola, modelos y tickets cx ----------
+   1) cola: las palabras (`pedida`, `tiempo`) y las horas no se parten nunca: la causa era `word-break:break-word`
+      que hereda de `.caja .cuerpo` mas el `white-space:normal` de `.qcel`. el boton `forzar` no baja de su ancho.
+      en el celu se esconden `delay` (3a columna) y `tiempo` (5a) y quedan nombre, pedida, iniciada y terminó:
+      el grid inline de `B.gridFr` es de seis columnas, por eso el override lleva `!important`. */
+.qtab .qth,.qtab .qth.qtiempo,.qtab .qcel{white-space:nowrap;word-break:normal;overflow-wrap:normal;
+                                          min-width:0;overflow:hidden;text-overflow:ellipsis}
+.qtab .qcel.a{white-space:normal;word-break:normal;overflow-wrap:normal}
+.qtab .qforz{white-space:nowrap;word-break:normal;min-width:62px;writing-mode:horizontal-tb;text-align:center}
+@media (max-width:430px){
+  .qtab{grid-template-columns:minmax(0,1fr) auto auto auto !important;column-gap:10px}
+  .qtab > .qth:nth-child(3),.qtab > .qth:nth-child(5),
+  .qtab .it > :nth-child(3),.qtab .it > :nth-child(5){display:none}
+  .qtab .qcel.a{white-space:nowrap;max-width:12ch;text-overflow:ellipsis}
+}
+/* 2) modelos: aire entre el texto y las barras (el renglon `gsec` iba pegado con margen -1px) */
+.usage.gasto .ub.grow{margin-bottom:9px;column-gap:8px;row-gap:2px}
+.usage.gasto .ub.grow .ren{box-sizing:border-box;padding-left:6px}
+.usage.gasto .ub.grow .gsec{margin-top:3px;padding-left:6px;box-sizing:border-box}
+.usage .ucol .cta .ren{padding-left:8px}
+/* 3) tickets cx: una fila = renglon de datos (clave, estado como chip chico y atenuado, hace, gente) y debajo
+      el titulo en peso normal, con aire entre fila y fila */
+.ticfila{display:block;white-space:normal;word-break:normal;overflow-wrap:break-word;padding:6px 0 7px;
+         border-bottom:1px solid #141414;line-height:1.4}
+.it:last-child > .ticfila{border-bottom:0}
+.ticfila .tichead{display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;font-size:12px}
+.ticfila .ticchip{font-size:11px;line-height:1.5;padding:0 7px;border:1px solid currentColor;border-radius:9px;
+                  opacity:.7;white-space:nowrap}
+.ticfila .ticgente{color:var(--gris)}
+.ticfila .tictit{display:block;margin-top:3px;font-weight:400;color:var(--texto)}

@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.584">
-<link rel="manifest" href="manifest.json?v=4.584">
+<meta name="agente-web-version" content="4.585">
+<link rel="manifest" href="manifest.json?v=4.585">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.584">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.585">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.559">
 <style id="css-listas-drag">
 #sellistas, #sellistas * {
@@ -12949,10 +12949,13 @@ function ticGente(x){
 // el resto de la fila sigue abriendo la ficha de siempre, que además tiene la acción de saltar.
 function ticFila(x, gente){
   return it({tipo: "ticket", tema: "awtomic", d: x},
+    // {pulida-mobile}: renglon de datos (clave, estado como chip, hace, gente) y debajo el titulo en peso normal
+    '<span class="ticfila"><span class="tichead">' +
     '<span class="c b" data-ticket="' + esc(x.key) + '" title="abrir la pestaña ' +
-    esc(ticketNorm(x.key) || x.key) + '">' + esc(x.key) + '</span> <span class="' + (x.cerrado ? "v" : "a") + '">' +
+    esc(ticketNorm(x.key) || x.key) + '">' + esc(x.key) + '</span> <span class="ticchip ' + (x.cerrado ? "v" : "a") + '">' +
     esc(x.estado) + '</span> <span class="g">' + haceSeg(x.hace_s) + "</span>" +
-    (gente ? ticGente(x) : "") + " " + esc(x.titulo));
+    (gente ? '<span class="ticgente">' + ticGente(x) + "</span>" : "") + "</span>" +
+    '<span class="tictit">' + esc(x.titulo) + "</span></span>");
 }
 // `abiertos` (el default de MVP y QA) esconde los cerrados; `todos` los muestra; un estado filtra por ese estado.
 function ticFiltrar(clave, filas){
@@ -12974,7 +12977,7 @@ function cajaTic(clave, d){
             (f && f !== "abiertos" ? " \u00b7 " + esc(f) : "") + "</span>" +
             (d.cache_s > 1800 ? ' <span class="g">cache ' + haceSeg(d.cache_s) + "</span>" : "") +
             (ticAviso ? ' <span class="a" title="' + esc(ticAviso) + '">cache</span>' : "");
-  return caja(tit, ese, filas.join("\n"), false, clave);
+  return caja(tit, ese, filas.join(""), false, clave);   // {pulida-mobile}: cada fila es un bloque, sin `\n` entre medio
 }
 function cajaTicCX(d){ return cajaTic("tickets_cx", d); }
 function cajaTicMVP(d){ return cajaTic("tickets_mvp", d); }
