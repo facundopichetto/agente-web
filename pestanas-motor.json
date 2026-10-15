@@ -222,6 +222,11 @@
       "motor": "agy",
       "modelo": "gemini-3.8-flash",
       "effort": "low"
+    },
+    "awtomic#100": {
+      "motor": "cadena",
+      "modelo": "cadena",
+      "effort": "low"
     }
   },
   "resueltos": {
@@ -244,6 +249,62 @@
       "flags_effort": [
         "--effort",
         "high"
+      ]
+    },
+    "awtomic#100": {
+      "pestana": "awtomic#100",
+      "tema": null,
+      "fila": "awtomic",
+      "motor": "cadena",
+      "modelo": "cadena",
+      "effort": "low",
+      "origen_motor": "del_modelo",
+      "origen_modelo": "selector_exacto",
+      "origen_effort": "selector_exacto",
+      "flags": [
+        "--effort",
+        "low"
+      ],
+      "flags_effort": [
+        "--effort",
+        "low"
+      ],
+      "cadena": [
+        {
+          "motor": "agy",
+          "modelo": "gemini-3.8-flash",
+          "effort": "low"
+        },
+        {
+          "motor": "claude",
+          "modelo": "sonnet",
+          "effort": "low"
+        },
+        {
+          "motor": "claude",
+          "modelo": "sonnet",
+          "effort": "medium"
+        },
+        {
+          "motor": "claude",
+          "modelo": "opus",
+          "effort": "medium"
+        },
+        {
+          "motor": "claude",
+          "modelo": "fable",
+          "effort": "low"
+        },
+        {
+          "motor": "groq",
+          "modelo": "groq",
+          "effort": "low"
+        },
+        {
+          "motor": "gemini",
+          "modelo": "gemini",
+          "effort": "low"
+        }
       ]
     },
     "awtomic#14": {
@@ -707,6 +768,11 @@
       "motor": "claude",
       "modelo": "sonnet"
     },
+    "awtomic#100": {
+      "motor": "agy",
+      "modelo": "gemini-3.8-flash",
+      "effort": "low"
+    },
     "awtomic#14": {
       "motor": "claude",
       "modelo": "sonnet"
@@ -738,8 +804,9 @@
       "modelo": "agy"
     },
     "juegos": {
-      "motor": "claude",
-      "modelo": "sonnet"
+      "motor": "agy",
+      "modelo": "gemini-3.8-flash",
+      "effort": "low"
     },
     "juegos#2": {
       "motor": "claude",
@@ -767,8 +834,9 @@
       "modelo": "fable"
     },
     "tinder": {
-      "motor": "claude",
-      "modelo": "sonnet"
+      "motor": "agy",
+      "modelo": "gemini-4-argon",
+      "effort": "high"
     }
   },
   "modelos_agy": {

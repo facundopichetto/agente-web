@@ -988,24 +988,22 @@
     display:inline-block;border:1px solid;border-radius:3px;padding:1px 8px;margin-right:8px;font-weight:600;
   }
   @media (max-width:380px){ .opciones{flex-direction:column} }
-  /* 2026-10-06 (harness2 {cajas}) y 2026-10-14 (orden 3685): la caja que DISPARA una orden (`orden: true`) o pasa al
-     comandante (`escupir: true`) lleva borde de 3 px del color complementario, fondo negro y el rótulo `orden` o `escupir`
-     sin guiones pisando el borde superior (corta la línea con su fondo negro y deja el borde normal a los costados). */
-  .orden{--comp:#da14ff}
-  .orden[data-letra="B"],.orden[data-letra="E"],.orden[data-letra="H"],.orden[data-letra="K"],.orden[data-letra="N"]{--comp:#ee3d22}
-  .orden[data-letra="C"],.orden[data-letra="F"],.orden[data-letra="I"],.orden[data-letra="L"],.orden[data-letra="O"]{--comp:#4fff76}
-  .opciones .opc.orden,#notimodal .nmop.orden{
-    position:relative;border:3px solid var(--comp);background:#000;padding:12px 8px 6px 8px;
+  /* 2026-10-06 (harness2 {cajas}), 2026-10-14 (orden 3685) y 2026-10-15 (orden 3715 {cajas-dos-tonos}):
+     la caja que DISPARA una orden (`orden: true`) o pasa al comandante (`escupir: true`) va en dos tonos limpios:
+     borde de 3 px y rótulo en el tono propio de la caja (la verde en verde y negro, sin borde fucsia ni color contraste;
+     la de escupir en su tono directo sobrio), fondo negro y el rótulo `orden` o `escupir` sin guiones pisando el borde superior. */
+  .opciones .opc.orden,.opciones .opc.escupir,#notimodal .nmop.orden,#notimodal .nmop.escupir{
+    position:relative;border:3px solid currentColor;background:#000;padding:12px 8px 6px 8px;
   }
-  .opciones .opc.orden.selec{border-width:4px;padding:11px 7px 5px 7px;box-shadow:none}
+  .opciones .opc.orden.selec,.opciones .opc.escupir.selec{border-width:4px;padding:11px 7px 5px 7px;box-shadow:none}
   .ord{display:none}
-  .orden > .ord{
+  .orden > .ord,.escupir > .ord{
     display:block;position:absolute;top:-7px;left:0;right:0;margin:0 auto;width:fit-content;max-width:calc(100% - 16px);
     padding:0 6px;background:#000;text-align:center;font-size:10px;line-height:12px;
-    font-weight:600;letter-spacing:.04em;color:var(--comp);white-space:nowrap;overflow:hidden;pointer-events:none;
+    font-weight:600;letter-spacing:.04em;color:currentColor;white-space:nowrap;overflow:hidden;pointer-events:none;
   }
-  .opciones .opc.orden.sel > .ord{background:inherit;color:#000}
-  @media (pointer:coarse){ .orden > .ord{font-size:11px;line-height:13px;top:-8px} .opciones .opc.orden{padding-top:13px} }
+  .opciones .opc.orden.sel > .ord,.opciones .opc.escupir.sel > .ord{background:inherit;color:#000}
+  @media (pointer:coarse){ .orden > .ord,.escupir > .ord{font-size:11px;line-height:13px;top:-8px} .opciones .opc.orden,.opciones .opc.escupir{padding-top:13px} }
   .sistema .cuerpo{color:var(--gris)}
   /* los mensajes se muestran siempre enteros: no hay plegado (facundo, 2026-09-10) */
   .cuerpo .ok{color:var(--verde)}
