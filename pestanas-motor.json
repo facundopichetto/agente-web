@@ -227,6 +227,11 @@
       "motor": "cadena",
       "modelo": "cadena",
       "effort": "low"
+    },
+    "plata#2": {
+      "motor": "cadena",
+      "modelo": "cadena",
+      "effort": "low"
     }
   },
   "resueltos": {
@@ -699,6 +704,62 @@
         "medium"
       ]
     },
+    "plata#2": {
+      "pestana": "plata#2",
+      "tema": null,
+      "fila": "plata",
+      "motor": "cadena",
+      "modelo": "cadena",
+      "effort": "low",
+      "origen_motor": "del_modelo",
+      "origen_modelo": "selector_exacto",
+      "origen_effort": "selector_exacto",
+      "flags": [
+        "--effort",
+        "low"
+      ],
+      "flags_effort": [
+        "--effort",
+        "low"
+      ],
+      "cadena": [
+        {
+          "motor": "agy",
+          "modelo": "gemini-3.8-flash",
+          "effort": "low"
+        },
+        {
+          "motor": "claude",
+          "modelo": "sonnet",
+          "effort": "low"
+        },
+        {
+          "motor": "claude",
+          "modelo": "sonnet",
+          "effort": "medium"
+        },
+        {
+          "motor": "claude",
+          "modelo": "opus",
+          "effort": "medium"
+        },
+        {
+          "motor": "claude",
+          "modelo": "fable",
+          "effort": "low"
+        },
+        {
+          "motor": "groq",
+          "modelo": "groq",
+          "effort": "low"
+        },
+        {
+          "motor": "gemini",
+          "modelo": "gemini",
+          "effort": "low"
+        }
+      ]
+    },
     "podcast": {
       "pestana": "podcast",
       "tema": null,
@@ -769,9 +830,8 @@
       "modelo": "sonnet"
     },
     "awtomic#100": {
-      "motor": "agy",
-      "modelo": "gemini-3.8-flash",
-      "effort": "low"
+      "motor": "claude",
+      "modelo": "sonnet"
     },
     "awtomic#14": {
       "motor": "claude",
@@ -792,11 +852,12 @@
     },
     "board": {
       "motor": "agy",
-      "modelo": "agy"
+      "modelo": "gemini-3.8-flash",
+      "effort": "low"
     },
     "flos": {
-      "motor": "gemini-3.8-flash",
-      "modelo": "gemini-3.8-flash"
+      "motor": "agy",
+      "modelo": "agy"
     },
     "flos#2": {
       "motor": "agy",
@@ -804,8 +865,7 @@
     },
     "juegos": {
       "motor": "agy",
-      "modelo": "gemini-3.8-flash",
-      "effort": "low"
+      "modelo": "agy"
     },
     "juegos#2": {
       "motor": "claude",
@@ -821,8 +881,12 @@
       "modelo": "sin modelo"
     },
     "plata": {
-      "motor": "claude",
-      "modelo": "sin modelo"
+      "motor": "agy",
+      "modelo": "agy"
+    },
+    "plata#2": {
+      "motor": "agy",
+      "modelo": "agy"
     },
     "podcast": {
       "motor": "agy",
@@ -834,7 +898,8 @@
     },
     "tinder": {
       "motor": "agy",
-      "modelo": "agy"
+      "modelo": "gemini-4-argon",
+      "effort": "high"
     }
   },
   "modelos_agy": {

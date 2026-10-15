@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.588">
-<link rel="manifest" href="manifest.json?v=4.588">
+<meta name="agente-web-version" content="4.589">
+<link rel="manifest" href="manifest.json?v=4.589">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.588">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.589">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.559">
 <style id="css-listas-drag">
 #sellistas, #sellistas * {
@@ -3411,8 +3411,9 @@ function nodoMsg(m){
   var acc = m.clase === "agente" ? accionesDe(m.texto) : null;
   var textoSinAcc = acc && acc.cuerpo !== null ? acc.cuerpo : m.texto;
   var ops = m.clase === "agente" ? cajasDe({texto: textoSinAcc, opciones: m.opciones}) : null;
-  var dr = draftsDe(ops && ops.cuerpo !== null ? ops.cuerpo : textoSinAcc);
-  var cuerpoTxt = m.clase === "agente" && dr.bloques.length ? dr.cuerpo : (ops && ops.cuerpo !== null ? ops.cuerpo : (m.clase === "yo" ? sinMarcaMal(sinDictado(m.texto)) : textoSinAcc));
+  var cuerpoOps = ops && ops.cuerpo !== null ? (ops.despues ? ops.antes : ops.cuerpo) : null;   // 3752: sin la prosa de abajo
+  var dr = draftsDe(cuerpoOps !== null ? cuerpoOps : textoSinAcc);
+  var cuerpoTxt = m.clase === "agente" && dr.bloques.length ? dr.cuerpo : (cuerpoOps !== null ? cuerpoOps : (m.clase === "yo" ? sinMarcaMal(sinDictado(m.texto)) : textoSinAcc));
   var finalCuerpo = cuerpoTxt || m.texto || "";
   var hilo = null;
   if(m.clase === "agente" && m.tramos && m.tramos.length){
@@ -3461,21 +3462,30 @@ function nodoMsg(m){
   var b = document.createElement("div");
   b.className = "cuerpo";
   b.innerHTML = resaltar(auds.length ? sinMarcaAudio(cuerpoTxt) : cuerpoTxt);
-  // 2336 {cambios} (facundo, 2026-09-23: "el mensaje deberia estar antes de las cajas de decision. las cajas de
-  // decision siempre lo ultimo. incluso despues del audio. que el audio se inyecte antes, cuando este listo"):
-  // el orden de un mensaje es SIEMPRE texto -> drafts -> audio -> cajas. el audio llega en un poll posterior al
-  // texto, asi que al repintarse el mensaje se mete en el medio y las cajas bajan solas: nunca quedan arriba.
+  // 2336 {cambios} + 3767 {audio} (facundo, 2026-10-15: "el audio al final de todo", "mover el audio después de las
+  // cajas y la comparación, y actualizar la regla 2336 y sus pruebas"): el orden de un mensaje es SIEMPRE
+  // texto -> cajas (`nodoAcciones` + `nodoCajas`) -> comparación (`despues-cajas`) -> tardes -> drafts -> audio.
+  // el audio llega en un poll posterior al texto, asi que al repintarse el mensaje se ubica abajo de las cajas y la
+  // comparacion, cerrando el mensaje al final de todo.
   div.appendChild(cab); if(hilo) div.appendChild(hilo); div.appendChild(b);
   // 2561 {hacerlo}: el pie `lo entendiste mal` (2417) ya no se pinta, y desde la 2566 tampoco la caja `ninguna,
   // entendieron mal`: el voto es el puntaje 0-5, y escribir cierra la ronda sin voto. `nodoAccMsg` queda para el revert.
-  // el reproductor completo, uno por audio (2044: en todas las pestañas), abajo del texto y ARRIBA de toda
-  // caja de decision (2336). los drafts copiables siguen abajo de las cajas, como los dejo la 1240.
-  auds.forEach(function(sa){ div.appendChild(playerAudio(sa, "escuchar")); });
-  if(!auds.length && audioEnCamino(m)) div.appendChild(playerEnCamino());
   if(acc && acc.lista.length) div.appendChild(nodoAcciones(m, acc.lista));
   if(ops && ops.lista.length) div.appendChild(nodoCajas(m, ops.lista));
+  var dpcTxt = ops && ops.lista.length && ops.despues ? (auds.length ? sinMarcaAudio(ops.despues) : ops.despues) : "";
+  if(dpcTxt){   // 3752: la comparacion entre opciones, DESPUES de las cajas
+    var dpc = document.createElement("div");
+    dpc.className = "cuerpo despues-cajas";
+    dpc.innerHTML = resaltar(dpcTxt);
+    div.appendChild(dpc);
+    if(m.clase === "agente") ponerCopiar(dpc);
+  }
   if(m.clase === "agente" && m.tardes && m.tardes.length) div.appendChild(nodoTardes(m.tardes));
   if(m.clase === "agente" && dr.bloques.length) div.appendChild(nodoDrafts(dr.bloques));
+  // el reproductor completo, uno por audio (2044: en todas las pestañas), al FINAL DE TODO: despues de las cajas,
+  // de la comparacion (`despues-cajas`) y de los drafts (2336 + 3767).
+  auds.forEach(function(sa){ div.appendChild(playerAudio(sa, "escuchar")); });
+  if(!auds.length && audioEnCamino(m)) div.appendChild(playerEnCamino());
   div.__msg = m;          // el menu contextual (delegado) lee el mensaje del nodo
   if(m.clase === "agente") ponerCopiar(b);   // 1214: `copiar` de un toque en links, claves y code
   cargarImagenes(b);
@@ -3563,7 +3573,7 @@ function purgarOpc(ahora){
 // cuerpo y lo pinta abajo de las cajas como bloque copiable (`draftsDe`).
 var RE_CERCO = /^\s*(```|~~~)/;
 function opcionesDe(texto){
-  var lista = [], fuera = [], vistas = {}, dentro = false;
+  var lista = [], fuera = [], vistas = {}, dentro = false, ultOpc = -1;
   String(texto || "").split("\n").forEach(function(l){
     if(RE_CERCO.test(l)){ dentro = !dentro; fuera.push(l); return; }
     var mm = dentro ? null : RE_OPCION.exec(l);
@@ -3579,10 +3589,26 @@ function opcionesDe(texto){
       if(escupir) item.escupir = true;
       if(slug) item.slug = slug;
       lista.push(item);
+      ultOpc = fuera.length;
     }else fuera.push(l);
   });
   lista.sort(function(a, b){ return a.letra < b.letra ? -1 : 1; });
-  return {lista: lista, cuerpo: lista.length ? fuera.join("\n").replace(/\s+$/, "") : null};
+  // 2026-10-15 (orden 3752 {cajas-redisenio-integral}) (facundo: "la explicacion de la diferencia este despues de las
+  // cajas"): la prosa que queda DEBAJO de la ultima caja (hasta el primer bloque ```, que sigue siendo draft) sale en
+  // `despues` y se pinta abajo de las cajas; `antes` es el cuerpo sin ella. `cuerpo` queda como siempre (todo junto)
+  // para las citas y las comparaciones que lo leen.
+  var antes = null, despues = "";
+  if(lista.length && ultOpc >= 0){
+    var cola = fuera.slice(ultOpc), f = cola.findIndex(function(l){ return RE_CERCO.test(l); });
+    var crudo = (f < 0 ? cola : cola.slice(0, f)).join("\n");
+    var prosa = (typeof RE_AUD !== "undefined" && RE_AUD ? sinMarcaAudio(crudo) : crudo).replace(/^\s+|\s+$/g, "");
+    if(prosa){
+      despues = prosa;
+      antes = fuera.slice(0, ultOpc).concat(f < 0 ? [] : cola.slice(f)).join("\n").replace(/\s+$/, "");
+    }
+  }
+  return {lista: lista, cuerpo: lista.length ? fuera.join("\n").replace(/\s+$/, "") : null,
+          antes: antes, despues: despues};
 }
 function draftsDe(texto){
   var fuera = [], bloques = [], cur = null;
@@ -4175,19 +4201,61 @@ function puntajeSubir(){
 // pregunta para seguir charlando queda como siempre. el rotulo va adentro del boton, arriba y centrado.
 var ROTULO_ORDEN = "orden";
 var ROTULO_ESCUPIR = "escupir";
+// 2026-10-15 (orden 3752 {cajas-redisenio-integral}) (facundo: "si hay una opcion unica dice `escupir` u `orden` y si
+// hay mas `escupir A`, `escupir B`, etc."): el rotulo de arriba al centro lleva la LETRA de la caja cuando hay mas de
+// una (`b.dataset.varias`, lo pone `nodoCajas`), y las cajas comunes llevan solo la letra. la letra y la cantidad se
+// leen del boton para que `marcaOrden(b)` / `marcaEscupir(b)` sigan teniendo la misma firma de siempre.
+function rotuloCaja(base, b){
+  var l = String(b.dataset.letra || "");
+  return base && l && b.dataset.varias ? base + " " + l : (base || l);
+}
+function ponerRotulo(b, txt){
+  var r = document.createElement("span");
+  r.className = "ord"; r.setAttribute("aria-hidden", "true"); r.textContent = txt;
+  b.insertBefore(r, b.firstChild);
+}
 function marcaOrden(b){
   b.classList.add("orden");
-  var r = document.createElement("span");
-  r.className = "ord"; r.setAttribute("aria-hidden", "true"); r.textContent = ROTULO_ORDEN;
-  b.insertBefore(r, b.firstChild);
+  ponerRotulo(b, rotuloCaja(ROTULO_ORDEN, b));
   b.setAttribute("aria-label", "orden: " + (b.title || ""));
 }
 function marcaEscupir(b){
   b.classList.add("orden", "escupir");
-  var r = document.createElement("span");
-  r.className = "ord"; r.setAttribute("aria-hidden", "true"); r.textContent = ROTULO_ESCUPIR;
-  b.insertBefore(r, b.firstChild);
+  ponerRotulo(b, rotuloCaja(ROTULO_ESCUPIR, b));
   b.setAttribute("aria-label", "escupir: " + (b.title || ""));
+}
+function marcaLetra(b){   // la caja comun: solo la letra, arriba al centro (la `.l` de adentro ya no se ve)
+  if(b.dataset.letra) ponerRotulo(b, rotuloCaja("", b));
+}
+// 2026-10-15 (orden 3752): lo que facundo lee adentro de la caja. los tags que lee la cola (`[modelo: ...]`,
+// `[toca: ...]`, `[paralelo]`, `[depende de ...]`, `[contexto ...]`, `[hilo ...]`) siguen en `o.texto` y en el
+// `title` (es lo que sale al tocarla), pero no se pintan: el modelo sale en palabras en una linea chica aparte.
+var RE_TAG_MODELO = /\[\s*modelo:\s*([^\]\s]+)(?:\s+effort:\s*([a-z]+))?\s*\]/i;
+var RE_TAGS_COLA = /\[\s*(?:toca:[^\]]*|paralelo|serie|depende de[^\]]*|contexto[^\]]*|hilo[^\]]*)\]/ig;
+function modeloLegible(id){
+  var p = String(id || "").trim().split("/"), marca = p.length > 1 ? p.shift().toLowerCase() : "";
+  var t = (marca && marca !== "agy" && marca !== "opencode" ? [marca] : []).concat(p.join(" ").split(/[-_\s]+/)).filter(Boolean);
+  var out = [];
+  t.forEach(function(w){
+    var ult = out.length - 1;
+    if(/^\d+$/.test(w) && ult >= 0 && /^\d+$/.test(out[ult])) out[ult] += "." + w;   // `5-5` es `5.5`
+    else out.push(/^\d/.test(w) ? w : w.charAt(0).toUpperCase() + w.slice(1));
+  });
+  return out.join(" ");
+}
+function cajaVista(texto){
+  var raw = String(texto || ""), meta = [];
+  var mm = RE_TAG_MODELO.exec(raw);
+  if(mm){
+    meta.push("modelo " + (modeloLegible(mm[1]) || mm[1]));
+    if(mm[2]) meta.push("esfuerzo " + ({low: "bajo", medium: "medio", high: "alto"}[mm[2].toLowerCase()] || mm[2]));
+  }
+  var dep = /\[\s*depende de\s*\{?([^\]}]*)\}?\s*\]/i.exec(raw);
+  if(/\[\s*paralelo\s*\]/i.test(raw)) meta.push("corre en paralelo");
+  else if(dep) meta.push("espera a " + dep[1].trim());
+  var limpio = raw.replace(RE_TAG_MODELO, "").replace(RE_TAGS_COLA, "").replace(/[ \t]{2,}/g, " ").trim()
+    .replace(/^\{[a-z0-9][a-z0-9-]{0,39}\}\s*/i, "");   // el `{slug}` del principio es de la cola, no de facundo
+  return {texto: limpio || raw, meta: meta.join(" · ")};
 }
 function nodoCajas(m, lista_){
   var k = claveCajas(m), caja = document.createElement("div");
@@ -4202,15 +4270,19 @@ function nodoCajas(m, lista_){
   lista_.forEach(function(o){
     var b = document.createElement("button");
     b.type = "button"; b.className = "opc " + o.letra; b.dataset.letra = o.letra;
-    b.innerHTML = '<span class="l"></span><span class="t"></span><span class="hh"></span>' +
+    b.innerHTML = '<span class="l"></span><span class="t"></span><span class="mod"></span><span class="hh"></span>' +
                   '<span class="cf"><span class="q"></span><span class="si">sí</span><span class="no">no</span></span>' +
                   '<span class="chkenv" aria-hidden="true">\u2713</span>';   // 2080: `enviada`, lo pinta `.sel`
     b.querySelector(".l").textContent = o.letra;
-    b.querySelector(".t").textContent = o.texto;
+    var vista = cajaVista(o.texto);   // 2026-10-15 (orden 3752): sin tags a la vista, el modelo en palabras
+    b.querySelector(".t").textContent = vista.texto;
+    b.querySelector(".mod").textContent = vista.meta;
+    if(lista_.length > 1) b.dataset.varias = "1";
     if(o.slug) b.dataset.slug = o.slug;
     b.title = (o.slug ? "{" + o.slug + "} " : "") + (o.cmd || (o.letra + ": " + o.texto));
     if(o.orden) marcaOrden(b);   // 2026-10-06 (harness2 {cajas}): esta caja dispara una orden: borde y rotulo
     else if(o.escupir) marcaEscupir(b);   // 2026-10-14 (orden 3685): caja escupir pasa al comandante
+    else marcaLetra(b);                   // 2026-10-15 (orden 3752): la comun, con su letra arriba al centro
     if(ent && puntuable(o.texto)) b.appendChild(puntajeFila(m.tema || temaActivo(), o.letra, o.texto));
     var ini = null;
     b.addEventListener("pointerdown", function(e){ ini = {x: e.clientX, y: e.clientY, mov: false}; });
@@ -10059,6 +10131,7 @@ function nodoTramo(t){
     b.innerHTML = '<span class="l"></span><span class="t"></span>';
     b.querySelector(".l").textContent = String(t.letra || "");
     b.querySelector(".t").textContent = String(t.texto || "");
+    b.dataset.letra = String(t.letra || ""); marcaLetra(b);   // 2026-10-15 (orden 3752): misma letra arriba al centro
     b.title = "llegando las demas: se toca cuando termine la ronda";
     if(puntuable(t.texto)) b.appendChild(puntajeFila(t.tema || (vuelo && vuelo.tema) || temaActivo(), String(t.letra || ""), String(t.texto || "")));
     d.appendChild(b);
@@ -11177,7 +11250,7 @@ function pintarNotiPush(){
   $("nmtitulo").textContent = unaLinea(p.titulo || (c.noti ? tituloNoti(c.noti) : "") ||
                                        (c.m ? "flaudio · " + c.tema : "aviso"), 90);
   var o = c.m ? cajasDe(c.m) : opcionesDe(c.texto);
-  var dr = draftsDe(o.lista.length && o.cuerpo !== null ? o.cuerpo : c.texto);
+  var dr = draftsDe(o.lista.length && o.cuerpo !== null ? (o.despues ? o.antes : o.cuerpo) : c.texto);
   var cu = $("nmcuerpo");
   cu.innerHTML = "";
   var tx = document.createElement("div");
@@ -11191,6 +11264,7 @@ function pintarNotiPush(){
     o.lista.forEach(function(op){
       var b = moldeBoton({tipo: "term", letra: op.letra, txt: op.texto, clase: "nmop"});
       b.dataset.letra = op.letra;
+      if(o.lista.length > 1) b.dataset.varias = "1";   // 2026-10-15 (orden 3752): `orden A`, `orden B`
       // 2026-10-06 (harness2 {cajas}): la caja `orden` se ve igual que en el chat y manda el codigo de la caja
       // (`#k7f2D`), asi el daemon la encola sin modelo, como el toque desde el hilo
       var cod = (op.orden || op.escupir) && c.m ? cajaCod(c.m, op.letra) : null;
@@ -11203,6 +11277,12 @@ function pintarNotiPush(){
       w.appendChild(b);
     });
     cu.appendChild(w);
+    if(o.despues){   // 3752: la comparacion, abajo de las cajas tambien en el modal
+      var dpm = document.createElement("div");
+      dpm.className = "nmtexto";
+      dpm.innerHTML = resaltar(o.despues);
+      cu.appendChild(dpm);
+    }
   }
   var meta = document.createElement("div");
   meta.className = "nmmeta";
@@ -16913,7 +16993,7 @@ window.__agente = {
                 var cs = getComputedStyle(b);
                 var th = b.querySelector(".hh");
                 return {letra: b.dataset.letra, sel: b.classList.contains("sel"), conf: b.classList.contains("conf"),
-                        texto: b.querySelector(".t").textContent, bg: cs.backgroundColor, color: cs.color,
+                        texto: b.querySelector(".t").textContent, bg: cs.backgroundColor, color: cs.color, borde: cs.borderTopColor,
                         hora: th ? th.textContent : null,
                         horaVisible: !!(th && th.textContent && getComputedStyle(th).display !== "none"),
                         top: Math.round(b.getBoundingClientRect().top)};

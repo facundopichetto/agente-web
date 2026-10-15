@@ -146,44 +146,90 @@
     t = Math.max(0, Math.min(100, t));
     return '<span class="ub-tick" style="left:' + t + '%"></span>';
   }
-  // {fila} (facundo, 2026-09-22): la fila de `awtomic` lleva DOS barritas apiladas: arriba la de la ventana de
-  // 5 h de claude (session limit) y abajo la de `week`, que queda exactamente como estaba. es la unica cuenta
-  // con esa ventana a la vista, asi que es el server quien decide (manda `cinco` solo en esa fila): la web no
-  // pregunta por el nombre de la cuenta ni abre otra fila. la barrita de arriba usa clases propias (`g5-*`)
-  // a proposito: si reusara `.ub-p` / `.ub-lleno`, el `%` y el ancho de la fila pasarian a ser los de 5 h.
-  // el `5h` chiquito en gris al lado del `%` es lo que las distingue; la de abajo va sin etiqueta. el tick de
-  // ritmo si es el mismo (`tickHtml`, `.ub-tick`): el server lo manda ya medido contra la ventana de 5 h.
-  function cincoHtml(l){
-    var c = l.cinco;
-    if(!c) return "";
-    var pct = (c.pct === null || c.pct === undefined) ? 0 : Math.max(0, Math.min(100, c.pct));
-    return '<span class="g5 n-' + esc(c.nivel || "sin") + '">' +
-      '<span class="g5-h"></span>' +
-      '<span class="g5-pista"><span class="g5-lleno" style="width:' + pct + '%"></span>' + tickHtml(c) + "</span>" +
-      '<span class="g5-p">' + esc(sinPlata(c.pct_txt || "?")) + "</span>" +
-      '<span class="g5-et">' + esc(c.etiqueta || "5h") + "</span></span>";
+  // {modelos-barras-finas} (facundo, 2026-10-15: "que el widget de models muestre todos los limites de todo lo que
+  // hay, y todas las barritas pasan a ser tamano barrita chiquita; a la derecha solo cuanto falta para que
+  // renueve"): cada cuenta es el nombre a la izquierda y, al lado, UNA barrita fina (4 px) por limite que TENGA --
+  // en claude `5h`, `week` y `fable`; en gemini sus pozos; en groq el minuto y el dia --, todas del mismo
+  // tamano y con la misma gramatica `etiqueta | barra | tiempo`. el tiempo es lo unico que va a la derecha, en
+  // corto (`2h 15m`, `3d`), sin `to renew`, sin `%` y sin plata (el `%` queda en el tooltip). un limite que la
+  // cuenta no tiene (`awtomic` sin `fable`, una ventana sin dato) NO se pinta: ni barra vacia ni etiqueta.
+  // lo que llega armado del server sigue siendo la fuente: la web solo acorta el texto del tiempo (`falta_txt`,
+  // o el `reset` iso de un pozo de gemini, que es lo unico que no trae el `falta_txt`).
+  function cortoSeg(s){
+    if(s === null || s === undefined || !isFinite(s) || s < 0) return "";
+    var m = Math.floor(s / 60), d = Math.floor(m / 1440);
+    if(d >= 1) return d + "d";
+    var h = Math.floor(m / 60); m = m % 60;
+    return h >= 1 ? h + "h" + (m ? " " + m + "m" : "") : m + "m";
   }
-  function filaGasto(l){
-    var pct = (l.pct === null || l.pct === undefined) ? 0 : Math.max(0, Math.min(100, l.pct));
-    // {sinpie}: el tooltip ya no lleva la plata de la semana ni el `detalle` (que la trae adentro). el ritmo
-    // SI vuelve (1625 {tick}): `linea_txt` es `%` puro, no tiene un solo numero en usd.
-    var tit = l.nombre + ": " + sinPlata(l.consumo_txt || "?") + " · " + sinPlata(l.sec) +
-              (l.linea_txt ? "\n" + sinPlata(l.linea_txt) : "") +
-              (l.extra ? "\n" + sinPlata(l.extra) : "") +
-              (l.prioritaria_txt ? "\n" + sinPlata(l.prioritaria_txt) : "") +
-              (l.cinco ? "\n" + sinPlata(l.cinco.detalle) +
-                         (l.cinco.linea_txt ? "\n" + sinPlata(l.cinco.linea_txt) : "") : "");
-    return '<div class="ub grow n-' + esc(l.nivel || "sin") + (l.agotada ? " agotada" : "") +
+  function cortoTxt(t){   // `4d 21h 37m` -> segundos -> `4d`; sin numero no hay tiempo que mostrar
+    var q = /^\s*(?:(\d+)d)?\s*(?:(\d+)h)?\s*(?:(\d+)m)?\s*$/.exec(String(t || ""));
+    if(!q || (q[1] === undefined && q[2] === undefined && q[3] === undefined)) return "";
+    return cortoSeg((+q[1] || 0) * 86400 + (+q[2] || 0) * 3600 + (+q[3] || 0) * 60);
+  }
+  function cortoIso(iso){
+    var t = iso ? Date.parse(iso) : NaN;
+    return isFinite(t) ? cortoSeg((t - Date.now()) / 1000) : "";
+  }
+  function numPct(p){ return (p === null || p === undefined || !isFinite(p)) ? null : Math.max(0, Math.min(100, Number(p))); }
+  // un limite: {et, pct, nivel, linea, t}. `nivel` pinta el relleno (`n-ok`/`n-cerca`/`n-sobre`/`n-mal`/`n-agotada`)
+  function limiteHtml(q){
+    return '<span class="gq n-' + esc(q.nivel || "sin") + '" data-lim="' + esc(q.et) + '">' +
+      '<span class="gq-l">' + esc(q.et) + "</span>" +
+      '<span class="gq-pista"><span class="gq-lleno" style="width:' + q.pct + '%"></span>' + tickHtml(q) + "</span>" +
+      '<span class="gq-t">' + esc(q.t) + "</span></span>";
+  }
+  // los mismos cortes de `gasto_api.nivel_cuota` (verde, amarillo desde 70%, rojo desde 90%) para el pozo de gemini,
+  // que llega con su `%` pero sin nivel propio
+  function nivelPozo(p){ return p >= 90 ? "mal" : p >= 70 ? "cerca" : "ok"; }
+  // los limites de una fila, en orden y SOLO los que existen. claude: las tres barras de su cuenta (`c.barras`)
+  // menos la `oculta` (la 5h de una agotada); sin la cuenta, lo que traiga la fila (`cinco` y la week)
+  function limitesDe(l, c){
+    var out = [];
+    if(l.tipo === "claude"){
+      var bs = (c && c.barras) || [];
+      USAGE_BARRAS.forEach(function(k){
+        var b = bs.filter(function(x){ return x.clave === k[0] || x.nombre === k[1]; })[0];
+        if(!b || b.oculta || numPct(b.pct) === null) return;
+        out.push({et: k[1], pct: numPct(b.pct), nivel: b.nivel, linea: b.linea, t: b.falta_txt ? cortoTxt(b.falta_txt) : cortoSeg(b.falta_s)});
+      });
+      if(!bs.length){
+        if(l.cinco && numPct(l.cinco.pct) !== null)
+          out.push({et: l.cinco.etiqueta || "5h", pct: numPct(l.cinco.pct), nivel: l.cinco.nivel, linea: l.cinco.linea, t: cortoTxt(l.cinco.falta_txt)});
+        if(numPct(l.pct) !== null) out.push({et: "week", pct: numPct(l.pct), nivel: l.nivel, linea: l.linea, t: ""});
+      }
+      return out;
+    }
+    if(l.pozos){   // gemini: cada pozo con su propio reset
+      Object.keys(l.pozos).forEach(function(k){
+        var p = l.pozos[k] || {};
+        if(numPct(p.pct) !== null) out.push({et: k, pct: numPct(p.pct), nivel: nivelPozo(p.pct), linea: null, t: cortoIso(p.reset)});
+      });
+      return out;
+    }
+    if(l.cinco && numPct(l.cinco.pct) !== null)   // groq: el minuto
+      out.push({et: l.cinco.etiqueta || "min", pct: numPct(l.cinco.pct), nivel: l.cinco.nivel, linea: l.cinco.linea, t: ""});
+    if(numPct(l.pct) !== null)
+      out.push({et: l.rotada ? "dia" : (l.ventana || "uso"), pct: numPct(l.pct), nivel: l.nivel, linea: l.cinco ? null : l.linea, t: ""});
+    return out;
+  }
+  function filaGasto(l, c){
+    var lim = limitesDe(l, c);
+    // {sinpie}: el tooltip no lleva plata. el `%` de cada limite (que ya no se pinta suelto) vive aca, junto a su tiempo;
+    // el ritmo SI vuelve (1625 {tick}: `linea_txt` es `%` puro) y las apis dicen de donde sale su cuota (`sec`, `extra`)
+    var tit = l.nombre + lim.map(function(q){
+      return "\n" + q.et + " " + Math.round(q.pct) + "%" + (q.t ? " · renueva en " + q.t : "");
+    }).join("") + (l.linea_txt ? "\n" + sinPlata(l.linea_txt) : "") +
+      (l.cinco && l.cinco.linea_txt ? "\n" + sinPlata(l.cinco.linea_txt) : "") +
+      (l.tipo !== "claude" ? (l.sec ? "\n" + sinPlata(l.sec) : "") + (l.extra ? "\n" + sinPlata(l.extra) : "") : "") +
+      (l.prioritaria_txt ? "\n" + sinPlata(l.prioritaria_txt) : "");
+    return '<div class="gcu n-' + esc(l.nivel || "sin") + (l.agotada ? " agotada" : "") +
       (l.dormida ? " dormida" : "") + (l.sin_costo ? " sincosto" : "") + (l.tocable ? "" : " sinlim") + '" title="' + esc(tit) + '"' +
       (l.tocable ? ' data-cta="' + esc(l.nombre) + '" role="button" tabindex="0"' : "") + ">" +
-      cincoHtml(l) +
       // 2100 {prioritaria}: la prioritaria del reparto (la que renueva antes) lleva la clase `pri` (un punto verde
       // por css, fuera del texto) y el porque (cuanto le falta) en el tooltip; el server decide cual es, la web solo pinta
-      '<span class="ub-n nom' + (l.estado ? " e-" + esc(l.estado) : "") + (l.prioritaria ? " pri" : "") + '">' + esc(l.nombre) + "</span>" +
-      '<span class="ub-pista"><span class="ub-lleno" style="width:' + pct + '%"></span>' + tickHtml(l) + "</span>" +
-      '<span class="ub-p">' + esc(sinPlata(l.consumo_txt || "?")) + "</span>" +
-      '<span class="ren">' + esc(sinPlata(l.sec)) + "</span>" +
-      '<span class="gsec">' + esc(sinPlata(l.extra)) + "</span></div>";
+      '<span class="gcu-n nom' + (l.estado ? " e-" + esc(l.estado) : "") + (l.prioritaria ? " pri" : "") + '">' + esc(l.nombre) + "</span>" +
+      '<span class="gqs">' + lim.map(limiteHtml).join("") + "</span></div>";
   }
   // el modal de una cuenta de api: el plan, los tokens y de donde sale su consumo. sin boton: no hay nada que
   // cambiar desde aca (la cuenta de api no se elige, se usa cuando toca). {sinpie}: sin un solo monto -- se
@@ -234,16 +280,17 @@
     }
     // lo tocable: la de claude abre el modal de la cuenta (barras, motivo, boton verde), la de api el suyo
     cuentasVistas = {}; lineasVistas = {}; lineasClaude = {};
-    var porNombre = {};
+    var porNombre = {}, cuentasPorNombre = {};
     lineas.forEach(function(l){ porNombre[l.nombre] = l; if(l.tipo === "claude") lineasClaude[l.nombre] = l; });
     cuentas.forEach(function(c){
+      cuentasPorNombre[c.nombre] = c;
       var l = porNombre[c.nombre] || {};
       c.etiqueta = l.sin_costo ? (l.etiqueta || null) : null;
       if(!sinLimite(c)) cuentasVistas[c.nombre] = c;
     });
     lineas.forEach(function(l){ if(l.tipo !== "claude") lineasVistas[l.nombre] = l; });
     // {sinpie}: las filas y nada mas; se fueron el grafico de 7 dias y el total del mes de abajo
-    if(lineas.length) html += '<div class="glin">' + lineas.map(filaGasto).join("") + "</div>";
+    if(lineas.length) html += '<div class="glin">' + lineas.map(function(l){ return filaGasto(l, cuentasPorNombre[l.nombre]); }).join("") + "</div>";
     // {widget} (facundo, 2026-09-22): el titulo es `USAGE` y al lado no va nada (se fue la bateria)
     // {groq-cuentas} (2949): facundo lo llama `MODELS` (la caja A de la mesa, pendiente desde el 2026-10-04)
     return caja("MODELS", "", '<div class="usage gasto">' + (html || vacio("sin datos")) + "</div>",

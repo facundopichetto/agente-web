@@ -1523,42 +1523,34 @@
   .usage .ucol.sinlim .cta .nom{color:var(--gris);opacity:.7}
   .usage .ucol.sinlim .cta{cursor:default}
   .usage .ucol.sinlim .cta:hover{background:none}
-  /* 2175 {gasto}: UNA fila por cuenta, todas en usd. la fila reusa el molde `.ub` (mismo alto, mismos colores
-     por nivel) y agrega el dato secundario a la derecha: el `to renew` de una cuenta de claude o el cupo de
-     tokens de una de api. el nombre va sin negrita (1806) y todo centrado vertical (2080). */
+  /* {modelos-barras-finas} (facundo, 2026-10-15: "todas las barritas pasan a ser tamano barrita chiquita; a la derecha
+     solo cuanto falta para que renueve"): cada cuenta es una grilla de dos columnas, el nombre a la izquierda y a su
+     lado una barrita por limite que tenga (`.gq`: etiqueta | barra de 4 px | tiempo). TODAS las barras miden lo mismo
+     y arrancan y terminan en la misma x, en claude, gemini y groq. el `%` no se pinta (va en el tooltip) y la plata
+     tampoco. clases propias (`gcu`, `gq*`) y no `.ub.grow`: `tema-facu.css` tiene reglas viejas de ese molde. */
   .usage.gasto .glin{display:block}
-  .usage.gasto .ub.grow{gap:7px;margin:0 0 7px 0;align-items:center;border-radius:3px}
-  /* 2182 {ritmo}: la proyeccion NO entra como sexta columna. medido a 390 px y en el board de escritorio (la
-     fila mide 352 y 367 px): el nombre pide 69, el numero 60, el `to renew` de verdad (`3d 18h 59m to renew`,
-     1861) 156 y la barra no puede bajar de ~28, o sea que la fila ya esta llena. asi que la proyeccion baja a
-     su propio renglon, alineada a la derecha, y ahi entra la frase legible en vez de un `→$167` cortado. */
-  /* `row-gap:0`: los dos renglones de una fila van pegados, si no el de la proyeccion queda a la misma
-     distancia de su fila que de la de abajo y no se sabe de cual es */
-  .usage.gasto .ub.grow{column-gap:5px;row-gap:0;flex-wrap:wrap}
-  .usage.gasto .ub.grow .ub-n{flex:0 0 74px;min-width:74px;color:var(--cian);font-weight:400;letter-spacing:.04em;
-                              overflow:hidden;text-overflow:ellipsis}
-  .usage.gasto .ub.grow .ub-pista{flex:1 1 30px;min-width:28px}
-  /* el numero es de ancho fijo y nunca se parte ("$24.50" en 50 px se iba a dos renglones): asi todas las
-     barras arrancan y terminan en la misma x, que es lo que hace legible la columna */
-  .usage.gasto .ub.grow .ub-p{flex:0 0 60px;min-width:60px;white-space:nowrap;overflow:hidden}
-  /* el dato secundario cede antes que la barra: `min-width:0` (sin el, un flex nowrap no achica) y elipsis */
-  /* el dato secundario tambien es de ancho fijo: si cediera, cada barra arrancaria en otra x y la columna
-     dejaria de leerse de un vistazo. lo que no entra se corta con elipsis (el detalle esta en el modal) */
-  .usage.gasto .ub.grow .ren{flex:0 0 168px;min-width:0;font-size:13px;color:var(--gris);
-                             text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  /* 2249 {consumo}: el renglon de abajo de cada fila (antes era la proyeccion de la 2182, que se fue con la
-     plata): el `fable` y el `to renew` de una cuenta de claude, o de donde sale la cuota de una api. va en su
-     propio renglon, pegado a la derecha (`flex:1 1 100%` sobre el `flex-wrap` de arriba), gris como el resto
-     del dato secundario, y ahi entra la frase legible en vez de un texto cortado. */
-  .usage.gasto .ub.grow .gsec{flex:1 1 100%;min-width:0;font-size:13px;color:var(--gris);line-height:1.2;
-                              margin-top:-1px;
-                              text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  /* {fila} (facundo, 2026-09-22): la fila de `awtomic` lleva DOS barritas apiladas. esta es la de ARRIBA, la
-     ventana de 5 h: va en su propio renglon del mismo `flex-wrap` (`flex:1 1 100%`, primera en el dom, asi que
-     queda arriba y empuja al resto al renglon de siempre) y copia las columnas de la fila -- hueco de 74 px,
-     pista, numero de 60 px, etiqueta en el ancho del dato secundario -- para que las dos barras arranquen y
-     terminen en la MISMA x. clases propias (`g5-*`) y no `.ub-*`: anidar un `.ub` adentro de otro haria que el
-     color por nivel del padre pintara tambien esta barra. la de abajo (week) no se toco. */
+  .usage.gasto .gcu{display:grid;grid-template-columns:66px minmax(0,1fr);column-gap:6px;align-items:stretch;
+                    margin:0 0 7px 0;padding:1px 0;border-radius:3px;font-size:11px}
+  .usage.gasto .gcu-n{min-width:0;height:12px;color:var(--cian);font-weight:400;letter-spacing:.04em;font-size:12px;line-height:12px;
+                      white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* 2100 {prioritaria}: el punto verde pegado al nombre de la cuenta que renueva antes (la prioritaria del reparto) */
+  .usage.gasto .gcu-n.pri::after{content:"\25CF";color:var(--verde,#7ee787);font-size:9px;margin-left:3px;vertical-align:middle;line-height:1}
+  .usage.gasto .gqs{display:block;min-width:0}
+  .usage.gasto .gq{display:grid;grid-template-columns:62px minmax(0,1fr) 50px;column-gap:6px;align-items:center;
+                   height:12px;line-height:12px}
+  .usage.gasto .gq + .gq{margin-top:2px}
+  .usage.gasto .gq-l{min-width:0;font-size:11px;color:var(--gris);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .usage.gasto .gq-t{min-width:0;font-size:11px;color:var(--gris);text-align:right;white-space:nowrap;
+                     overflow:hidden;text-overflow:ellipsis}
+  .usage.gasto .gq-pista{position:relative;height:4px;background:var(--linea);border-radius:2px}
+  .usage.gasto .gq-lleno{position:absolute;left:0;top:0;bottom:0;background:#333;border-radius:2px}
+  /* el tick de ritmo (1625) sobresale 2 px arriba y abajo de la barrita para verse sobre una pista de 4 px */
+  .usage.gasto .gq-pista .ub-tick{top:-2px;bottom:-2px}
+  .usage.gasto .gq.n-ok .gq-lleno{background:var(--verde)}
+  .usage.gasto .gq.n-cerca .gq-lleno{background:var(--amarillo)}
+  .usage.gasto .gq.n-sobre .gq-lleno{background:var(--naranja)}
+  .usage.gasto .gq.n-mal .gq-lleno{background:var(--rojo);box-shadow:0 0 4px var(--rojo)}
+  .usage.gasto .gq.n-agotada .gq-lleno{background:var(--rojo)}
   /* 2569 {cadena}: una fila por parte del chat (chat, entendí, acciones, cola) abajo de las cuentas, con el
      nombre en la misma columna de 74 px que las cuentas, el desplegable del modelo y la cadena en gris. */
   .usage.cadenas .gpartes{display:block;margin-top:9px;padding-top:7px;border-top:1px solid var(--linea)}
@@ -1578,23 +1570,6 @@
   .usage.cadenas .gparte-p b{font-weight:normal;color:var(--texto,#ddd)}
   .usage.cadenas .gparte-p.primero{color:var(--verde)}
   .usage.cadenas .gparte-p.afuera{text-decoration:line-through;opacity:.7}
-  .usage.gasto .ub.grow .g5{flex:1 1 100%;display:flex;align-items:center;column-gap:5px;margin-bottom:3px}
-  .usage.gasto .ub.grow .g5-h{flex:0 0 74px;min-width:74px}
-  .usage.gasto .ub.grow .g5-pista{flex:1 1 30px;min-width:28px;position:relative;height:14px;
-                                  background:var(--fondo-hundido);border:1px solid var(--linea);
-                                  border-radius:2px;overflow:hidden}
-  .usage.gasto .ub.grow .g5-lleno{position:absolute;left:0;top:0;bottom:0;background:#333;border-radius:1px}
-  .usage.gasto .ub.grow .g5-p{flex:0 0 60px;min-width:60px;text-align:right;font-weight:600;color:var(--gris);
-                              white-space:nowrap;overflow:hidden}
-  /* el `5h` chiquito en gris al lado del numero: es lo unico que distingue esta barrita de la de abajo */
-  .usage.gasto .ub.grow .g5-et{flex:0 0 168px;min-width:0;font-size:13px;color:var(--gris);
-                               white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .usage.gasto .ub.grow .g5.n-ok .g5-lleno{background:var(--verde)}
-  .usage.gasto .ub.grow .g5.n-ok .g5-p{color:var(--verde)}
-  .usage.gasto .ub.grow .g5.n-cerca .g5-lleno{background:var(--amarillo)}
-  .usage.gasto .ub.grow .g5.n-cerca .g5-p{color:var(--amarillo)}
-  .usage.gasto .ub.grow .g5.n-mal .g5-lleno{background:var(--rojo);box-shadow:0 0 7px var(--rojo)}
-  .usage.gasto .ub.grow .g5.n-mal .g5-p{color:var(--rojo);font-weight:700}
   /* 2249 {consumo}: el UNICO renglon de plata del widget, al pie de la caja: el gasto real del mes de todas
      las cuentas. no es una fila mas (no tiene barra ni es tocable): es el total, con la etiqueta a la
      izquierda y el numero a la derecha, separado del resto por una linea finita arriba. */
@@ -1602,37 +1577,31 @@
                      margin-top:5px;padding-top:5px;border-top:1px solid var(--linea)}
   .usage.gasto .gtot .gtot-e{font-size:13px;color:var(--gris);letter-spacing:.04em}
   .usage.gasto .gtot .gtot-v{font-size:13px;color:var(--blanco);white-space:nowrap}
-  /* 1806: el nombre lo pinta el ESTADO de la cuenta (ok verde clarito, warn amarillo, mal/agotada rojo); el
-     color de la PLATA va en la barra y en el numero (`n-ok`/`n-cerca`/`n-mal`), que es otra cosa */
-  .usage.gasto .ub.grow .ub-n.e-ok{color:#a6f5a0}
-  .usage.gasto .ub.grow .ub-n.e-warn{color:var(--amarillo)}
-  .usage.gasto .ub.grow .ub-n.e-mal,
-  .usage.gasto .ub.grow .ub-n.e-agotada{color:var(--rojo)}
-  .usage.gasto .ub.grow[data-cta]{cursor:pointer}
-  .usage.gasto .ub.grow[data-cta]:hover{background:#0d1410}
-  /* la agotada y la dormida bajan a opacidad .8 MENOS el `to renew`, que se lee igual en todas (1861/1915) */
-  .usage.gasto .ub.grow.agotada > *:not(.ren),
-  .usage.gasto .ub.grow.dormida > *:not(.ren){opacity:.8}
+  /* {modelos-barras-finas} (facundo, 2026-10-15): el nombre lo pinta el ESTADO de la cuenta (ok verde clarito, warn
+     amarillo, mal/agotada rojo); el color del consumo va en el relleno de cada barrita (`n-ok`/`n-cerca`/`n-mal`) */
+  .usage.gasto .gcu-n.e-ok{color:#a6f5a0}
+  .usage.gasto .gcu-n.e-warn{color:var(--amarillo)}
+  .usage.gasto .gcu-n.e-mal,
+  .usage.gasto .gcu-n.e-agotada{color:var(--rojo)}
+  .usage.gasto .gcu[data-cta]{cursor:pointer}
+  .usage.gasto .gcu[data-cta]:hover{background:#0d1410}
+  /* la agotada y la dormida bajan a opacidad .8 (1861/1915); el tiempo que falta se lee igual en todas */
+  .usage.gasto .gcu.agotada .gcu-n,
+  .usage.gasto .gcu.dormida .gcu-n,
+  .usage.gasto .gcu.agotada .gq-pista,
+  .usage.gasto .gcu.dormida .gq-pista,
+  .usage.gasto .gcu.agotada .gq-l,
+  .usage.gasto .gcu.dormida .gq-l{opacity:.8}
   /* 1808: la cuenta sin limite que cuente (sin login, sin datos) va gris y no se toca */
-  .usage.gasto .ub.grow.sinlim .ub-n{color:var(--gris);opacity:.7}
-  .usage.gasto .ub.grow.sinlim{cursor:default}
-  .usage.gasto .ub.grow.sinlim:hover{background:none}
-  /* {groq-cuentas} (orden 2949, facundo 2026-10-04: "de paso achica todo un poco para que no sea un bardo"): el widget
-     `MODELS` compacto. las mismas columnas de siempre, todas mas angostas (nombre 70, numero 46, dato 140; letra 12 y 11 px) para que
-     las barras sigan arrancando en la misma x; la pista de abajo baja a 10 px y la barrita de arriba (la 5 h de
-     `awtomic`, el minuto de cada cuenta de groq) a 6 px, sin numero grande: se lee como la marca de la de abajo. */
-  .usage.gasto .ub.grow{margin:0 0 4px 0;column-gap:4px;font-size:12px}
-  .usage.gasto .ub.grow .ub-n{flex:0 0 70px;min-width:70px;font-size:12px}
-  .usage.gasto .ub.grow .ub-pista{height:10px}
-  .usage.gasto .ub.grow .ub-p{flex:0 0 46px;min-width:46px;font-size:12px}
-  .usage.gasto .ub.grow .ren{flex:0 0 140px;font-size:11px}
-  .usage.gasto .ub.grow .gsec{font-size:11px}
-  .usage.gasto .ub.grow .gsec:empty{display:none}
-  .usage.gasto .ub.grow .g5{column-gap:4px;margin-bottom:2px}
-  .usage.gasto .ub.grow .g5-h{flex:0 0 70px;min-width:70px}
-  .usage.gasto .ub.grow .g5-pista{height:6px}
-  .usage.gasto .ub.grow .g5-p{flex:0 0 46px;min-width:46px;font-size:11px;font-weight:400}
-  .usage.gasto .ub.grow .g5-et{flex:0 0 140px;font-size:11px}
+  .usage.gasto .gcu.sinlim .gcu-n{color:var(--gris);opacity:.7}
+  .usage.gasto .gcu.sinlim{cursor:default}
+  .usage.gasto .gcu.sinlim:hover{background:none}
+  /* celu: las mismas tres columnas un poco mas angostas para que NADA desborde a 390 px */
+  @media (max-width:430px){
+    .usage.gasto .gcu{grid-template-columns:62px minmax(0,1fr);column-gap:5px}
+    .usage.gasto .gcu-n{font-size:11px}
+    .usage.gasto .gq{grid-template-columns:60px minmax(0,1fr) 48px;column-gap:5px}
+  }
   .ubat{display:inline-block;vertical-align:middle;position:relative;width:20px;height:9px;margin:0 5px 0 2px;
         border:1px solid #555;border-radius:2px;padding:1px;box-sizing:border-box}
   .ubat::after{content:"";position:absolute;right:-3px;top:2px;width:2px;height:3px;background:#555;border-radius:0 1px 1px 0}
@@ -2613,6 +2582,9 @@
 .inv .invfila{display:contents}
 .inv .invcant{min-width:0;overflow:hidden;text-overflow:ellipsis}
 .inv .invval{text-align:right}
+/* 3731 {widget-total-anual}: rotulo gris de las filas `total` y `anual` (y de cada etf), y la linea tenue del cero del grafico */
+.inv .invnom{margin-right:6px}
+.inv .invcero{pointer-events:none}
 .inv .invspark{display:block;width:100%;height:36px;margin-top:2px;overflow:visible}
 /* 2204: la cartera es de verdad pero la ultima lectura de ibkr fallo. la linea va abajo de la sparkline,
    chica y sin grito: los numeros siguen siendo los buenos, solo estan sin refrescar. */

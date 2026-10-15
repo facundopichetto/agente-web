@@ -894,18 +894,17 @@
   .opciones .opc{
     position:relative;
     flex:1 1 180px;min-width:0;box-sizing:border-box;background:#000;border:1px solid;border-radius:4px;
-    padding:6px 8px;font:inherit;font-size:13px;line-height:1.35;text-align:left;cursor:pointer;
+    --bc:var(--verde);color:var(--blanco);border-color:var(--bc);
+    padding:12px 8px 6px 8px;font:inherit;font-size:13px;line-height:1.35;text-align:left;cursor:pointer;
     min-height:40px;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
     touch-action:pan-y;word-break:break-word;
+    display:flex;flex-direction:column;justify-content:flex-start;   /* 2026-10-15 (3755): un button centra su contenido en vertical; con cajas de distinto alto lado a lado el texto arranca arriba en todas */
   }
   /* 2080 {diseno} punto 5 (facundo, 2026-09-18: "solo un clic selecciona, dos clicks un checkmark"): el primer
      toque SELECCIONA la caja (solo se marca el borde, no sale nada) y el segundo toque sobre la misma manda.
      tocar otra mueve la seleccion. `.selec` es "elegida, todavia no salio"; el relleno de color (`.sel`) sigue
      siendo "ya salio", igual que siempre. */
-  .opciones .opc.selec{border-width:2px;padding:5px 7px}
-  .opciones .opc.A.selec{box-shadow:inset 0 0 0 1px var(--verde)}
-  .opciones .opc.B.selec{box-shadow:inset 0 0 0 1px var(--cian)}
-  .opciones .opc.C.selec{box-shadow:inset 0 0 0 1px var(--magenta)}
+  .opciones .opc.selec{border-width:2px;padding:11px 7px 5px 7px;box-shadow:inset 0 0 0 1px var(--bc)}
   .opciones.hecho .opc.selec{opacity:1}
   /* el cuadradito blanco con el checkmark: "enviada", nunca "seleccionada". abajo a la derecha de la caja
      tocada, muy chico, sin animacion, sin toast y sin mini notificacion. */
@@ -916,36 +915,36 @@
   }
   .opciones .opc.sel .chkenv{display:block}
   .opciones .opc.conf .chkenv{display:none}      /* mientras pregunta, la caja es solo la pregunta */
-  .opciones .opc .l{font-weight:600;margin-right:5px}
+  /* 2026-10-15 (orden 3752): la letra de la opcion ya no va pegada al texto: es el rotulo `.ord` de arriba al centro.
+     el `.l` sigue en el DOM (los lectores y las pruebas lo leen) pero no se ve. */
+  .opciones .opc .l{display:none}
   /* 1203: hora de envio del mensaje que salio al tocar esa caja (hh:mm de buenos aires). chiquita, a la
      derecha; cada letra lleva la suya (al sumar `A y C`, la A conserva la hora de su toque). */
   .opciones .opc .hh{margin-left:6px;font-size:12px;opacity:.75;font-variant-numeric:tabular-nums;white-space:nowrap}
   .opciones .opc .hh:empty{display:none}
   .opciones .opc.conf .hh{display:none}       /* mientras pregunta, la caja es solo la pregunta */
-  .opciones .opc.A{color:var(--verde);border-color:var(--verde)}
-  .opciones .opc.B{color:var(--cian);border-color:var(--cian)}
-  .opciones .opc.C{color:var(--magenta);border-color:var(--magenta)}
-  .opciones .opc.A.sel{background:var(--verde);color:#000}
-  .opciones .opc.B.sel{background:var(--cian);color:#000}
-  .opciones .opc.C.sel{background:var(--magenta);color:#000}
+  /* 2026-10-15 (orden 3752 {cajas-redisenio-integral}) (facundo: "no pasan a fondo blanco, pasan a COLOR DE TEXTO
+     blanco. asi pueden tener dinamica, colores y cosas como cualquier otro texto del chat"): el texto de toda caja
+     es blanco y SOLO el borde (y el rotulo que lo pisa) lleva el color de la opcion, en `--bc`. el relleno de
+     `.sel` ("ya salio") sigue siendo el color pleno con texto negro. */
+  .opciones .opc.A{--bc:var(--verde)}
+  .opciones .opc.B{--bc:var(--cian)}
+  .opciones .opc.C{--bc:var(--magenta)}
+  .opciones .opc:not(.sel){color:var(--blanco)}   /* gana por orden a `.opc.A{color:...}` de estilos.css (misma especificidad, esta hoja va despues) */
+  .opciones .opc.sel{background:var(--bc);color:#000}
   .opciones.hecho .opc:not(.sel){opacity:.45}
   /* 2557 {votacion}: de la D a la P (una caja por modelo) los colores rotan verde / cian / magenta como A/B/C;
      con mas de 3 van de a dos por fila (una en el celu angosto), y las que llegan en vuelo se ven apagadas. */
-  .opciones .opc.D,.opciones .opc.G,.opciones .opc.J,.opciones .opc.M,.opciones .opc.P{color:var(--verde);border-color:var(--verde)}
-  .opciones .opc.D.sel,.opciones .opc.G.sel,.opciones .opc.J.sel,.opciones .opc.M.sel,.opciones .opc.P.sel{background:var(--verde);color:#000}
-  .opciones .opc.D.selec,.opciones .opc.G.selec,.opciones .opc.J.selec,.opciones .opc.M.selec,.opciones .opc.P.selec{box-shadow:inset 0 0 0 1px var(--verde)}
-  .opciones .opc.E,.opciones .opc.H,.opciones .opc.K,.opciones .opc.N{color:var(--cian);border-color:var(--cian)}
-  .opciones .opc.E.sel,.opciones .opc.H.sel,.opciones .opc.K.sel,.opciones .opc.N.sel{background:var(--cian);color:#000}
-  .opciones .opc.E.selec,.opciones .opc.H.selec,.opciones .opc.K.selec,.opciones .opc.N.selec{box-shadow:inset 0 0 0 1px var(--cian)}
-  .opciones .opc.F,.opciones .opc.I,.opciones .opc.L,.opciones .opc.O{color:var(--magenta);border-color:var(--magenta)}
-  .opciones .opc.F.sel,.opciones .opc.I.sel,.opciones .opc.L.sel,.opciones .opc.O.sel{background:var(--magenta);color:#000}
-  .opciones .opc.F.selec,.opciones .opc.I.selec,.opciones .opc.L.selec,.opciones .opc.O.selec{box-shadow:inset 0 0 0 1px var(--magenta)}
+  .opciones .opc.D,.opciones .opc.G,.opciones .opc.J,.opciones .opc.M,.opciones .opc.P{--bc:var(--verde)}
+  .opciones .opc.E,.opciones .opc.H,.opciones .opc.K,.opciones .opc.N{--bc:var(--cian)}
+  .opciones .opc.F,.opciones .opc.I,.opciones .opc.L,.opciones .opc.O{--bc:var(--magenta)}
   .opciones.muchas .opc{flex:1 1 calc(50% - 6px)}
   @media (max-width:520px){ .opciones.muchas .opc{flex:1 1 100%} }
   .tramo.caja.opciones{margin:4px 0 0 0}
   /* 2565 {bajar}: el puntaje 0 a 5 de una caja `entendí`, adentro de la caja y desde que aparece en el vuelo. se
      vota con un toque y solo se pinta esa fila; la caja del vuelo va apagada pero su puntaje va entero. */
-  .opciones .opc .puntaje{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
+  .opciones .opc .puntaje{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap;color:var(--bc)}
+  .opciones .opc.sel .puntaje{color:#000}
   .opciones .opc .puntaje .pt{
     min-width:26px;height:26px;box-sizing:border-box;border:1px solid currentColor;border-radius:4px;
     display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;
@@ -972,18 +971,31 @@
      la caja que DISPARA una orden (`orden: true`) o pasa al comandante (`escupir: true`) va en dos tonos limpios:
      borde de 3 px y rótulo en el tono propio de la caja (la verde en verde y negro, sin borde fucsia ni color contraste;
      la de escupir en su tono directo sobrio), fondo negro y el rótulo `orden` o `escupir` sin guiones pisando el borde superior. */
+  /* 2026-10-15 (orden 3752 {cajas-redisenio-integral}): el borde de 3 px de orden/escupir sale de `--bc` (el color de la
+     opcion), no del color del texto, que ahora es blanco en todas. TODA caja lleva rotulo arriba al centro, pisando el
+     borde: la letra (`A`) en una comun, `orden` / `escupir` si es unica y `orden A` / `escupir B` si hay varias. */
   .opciones .opc.orden,.opciones .opc.escupir,#notimodal .nmop.orden,#notimodal .nmop.escupir{
-    position:relative;border:3px solid currentColor;background:#000;padding:12px 8px 6px 8px;
+    position:relative;border:3px solid var(--bc,currentColor);background:#000;padding:12px 8px 6px 8px;
   }
   .opciones .opc.orden.selec,.opciones .opc.escupir.selec{border-width:4px;padding:11px 7px 5px 7px;box-shadow:none}
   .ord{display:none}
-  .orden > .ord,.escupir > .ord{
+  .opc > .ord,.orden > .ord,.escupir > .ord{
     display:block;position:absolute;top:-7px;left:0;right:0;margin:0 auto;width:fit-content;max-width:calc(100% - 16px);
     padding:0 6px;background:#000;text-align:center;font-size:10px;line-height:12px;
-    font-weight:600;letter-spacing:.04em;color:currentColor;white-space:nowrap;overflow:hidden;pointer-events:none;
+    font-weight:600;letter-spacing:.04em;color:var(--bc,currentColor);white-space:nowrap;overflow:hidden;pointer-events:none;
   }
-  .opciones .opc.orden.sel > .ord,.opciones .opc.escupir.sel > .ord{background:inherit;color:#000}
-  @media (pointer:coarse){ .orden > .ord,.escupir > .ord{font-size:11px;line-height:13px;top:-8px} .opciones .opc.orden,.opciones .opc.escupir{padding-top:13px} }
+  .opciones .opc.sel > .ord{background:inherit;color:#000}
+  @media (pointer:coarse){ .opc > .ord,.orden > .ord,.escupir > .ord{font-size:11px;line-height:13px;top:-8px} .opciones .opc{padding-top:13px} }
+  /* 2026-10-15 (orden 3752): la linea chica de la caja con el modelo en palabras (`Claude Sonnet 5.5 · esfuerzo
+     alto · en paralelo`): legible, no gris apagado. mientras la caja pregunta `sí` / `no`, no se ve. */
+  .opciones .opc .mod{display:block;margin-top:5px;font-size:12px;line-height:1.3;opacity:.75}
+  .opciones .opc .mod:empty,.opciones .opc.conf .mod{display:none}
+  /* la comparacion entre opciones va DESPUES de las cajas (facundo, 2026-10-15) */
+  .cuerpo.despues-cajas{margin-top:8px}
+  /* el modal de la noti: mismo molde, texto blanco y borde del color de la letra */
+  #notimodal .nmop{color:var(--blanco);--bc:var(--verde);border-color:var(--bc)}
+  #notimodal .nmop[data-letra="B"]{--bc:var(--cian)}
+  #notimodal .nmop[data-letra="C"]{--bc:var(--magenta)}
   .sistema .cuerpo{color:var(--gris)}
   /* los mensajes se muestran siempre enteros: no hay plegado (facundo, 2026-09-10) */
   .cuerpo .ok{color:var(--verde)}
@@ -2582,6 +2594,9 @@
 .inv .invfila{display:contents}
 .inv .invcant{min-width:0;overflow:hidden;text-overflow:ellipsis}
 .inv .invval{text-align:right}
+/* 3731 {widget-total-anual}: rotulo gris de las filas `total` y `anual` (y de cada etf), y la linea tenue del cero del grafico */
+.inv .invnom{margin-right:6px}
+.inv .invcero{pointer-events:none}
 .inv .invspark{display:block;width:100%;height:36px;margin-top:2px;overflow:visible}
 /* 2204: la cartera es de verdad pero la ultima lectura de ibkr fallo. la linea va abajo de la sparkline,
    chica y sin grito: los numeros siguen siendo los buenos, solo estan sin refrescar. */
