@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.586">
-<link rel="manifest" href="manifest.json?v=4.586">
+<meta name="agente-web-version" content="4.587">
+<link rel="manifest" href="manifest.json?v=4.587">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.586">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.587">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.559">
 <style id="css-listas-drag">
 #sellistas, #sellistas * {
@@ -6118,11 +6118,26 @@ var filaCache = {};
 var salidos = {};
 function salioClave(col, lista){ return (lista || "") + "|" + col; }
 function salioSet(col, lista){ var k = salioClave(col, lista); return (salidos[k] = salidos[k] || {}); }
+var LISTAS_NO_CIRC = ["candidata", "etiquetar_genero", "super", "super_candidatas", "candidatais"];
+function tjListaCircular(lista){
+  var l = String(lista || "");
+  return !!l && LISTAS_NO_CIRC.indexOf(l) < 0;
+}
+function tjEsCircular(e, filtro){
+  if(!e) return false;
+  var l = filtro === undefined ? sel.filtro : filtro;
+  if(l && String(e.lista || "") === String(l) && typeof e.circular === "boolean") return e.circular;
+  if(typeof e.circular !== "boolean") return false;
+  if(l && !e.lista) return tjListaCircular(l);
+  return !!e.circular;
+}
 // el voto `q` deja a la persona en la lista que se esta votando? `destinos` lo manda el server (`seleccion.destinos_col`)
 function tjSigueEnLista(e, q){
-  if(!e || !sel.filtro || !e.circular) return true;
+  if(!e || !sel.filtro || !tjEsCircular(e, sel.filtro)) return true;
+  if(q === "igual") return true;
   var d = (e.destinos || {})[q];
-  return !d || String(d) === String(sel.filtro);
+  if(!d) return q !== "bajar" && q !== "cortar" && q !== "ignorar" && q !== "subir";
+  return String(d) === String(sel.filtro);
 }
 // ---------- {gracia} (facundo, 2026-09-20): la capa local de movimientos, encima de `listas.json` ----------
 // facundo, textual: "las listas no se actualizan luego de votar en el instatinder. se tiene que poder hacer en el
@@ -6367,7 +6382,13 @@ function cacheTraer(col, lista){
   }
   return (filaCache[k] || []).slice();
 }
-function cacheTiene(col, lista){ return cacheTraer(col, lista).length > 0; }
+function cacheTiene(col, lista){
+  var cs = cacheTraer(col, lista);
+  if(!cs.length) return false;
+  var e = (sel.abiertas || []).filter(function(a){ return a.coleccion === col; })[0] ||
+          {coleccion: col, continua: true, circular: tjListaCircular(lista), lista: lista || null, candidatas: cs};
+  return tjFilaFiltrada(e, lista).length > 0;
+}
 // 2143 {cache} (facundo, 2026-09-19: "vote las 38 de super candidatas y veo la lista de `interesan` igual que
 // antes"): la cache (esta, la de `listas.json` en el equipo y la fila que dejo el poll) PINTA el primer frame,
 // pero nunca decide lo que facundo termina viendo. abrir CUALQUIER lista dispara siempre el pedido fresco al
@@ -6408,7 +6429,8 @@ function filaFaltan(e){
 function filaSumar(e, soloSacar){
   var a = sel.actual;
   if(!a || !a.continua) return false;
-  var v = a.circular ? {} : filaVotadas(a.coleccion), fall = sel.tjFallidas || [], cur = tjActual(), antesAg = a.agotada;
+  var circ = tjEsCircular(e, sel.filtro) || tjEsCircular(a, sel.filtro);
+  var v = circ ? {} : filaVotadas(a.coleccion), fall = sel.tjFallidas || [], cur = tjActual(), antesAg = a.agotada;
   var antesVacia = tjVaciaClave(a);   // caso 40: si cambio el motivo de la fila vacia, se repinta
   var fuera = salioSet(a.coleccion, sel.filtro);   // 2140: lo que saco un voto de esta carga no vuelve por un refresco
   var ya = {};
@@ -6432,7 +6454,8 @@ function filaSumar(e, soloSacar){
     a.pendientes = e.pendientes;
     a.mas = typeof e.pendientes === "number" && e.pendientes > (e.candidatas || []).length;
     if(typeof e.agotada === "boolean") a.agotada = e.agotada;   // 1794: lo dice el server, nunca se infiere
-    if(typeof e.circular === "boolean") a.circular = e.circular;   // 2140
+    if(typeof e.circular === "boolean" && (!sel.filtro || selMismaLista(e))) a.circular = e.circular;   // 2140
+    else if(circ) a.circular = true;
     if(e.destinos) a.destinos = e.destinos;
     if(e.resumen) a.resumen = e.resumen;
     // caso 40: el server dice POR QUE la fila vino vacia (`{estado, motivo}`); una respuesta con tarjetas lo borra
@@ -6514,10 +6537,20 @@ function selPedir(col, arranque){
     var qs = (arranque ? "?arranque=1" : "") + (sel.filtro ? (arranque ? "&" : "?") + "lista=" + encodeURIComponent(sel.filtro) : "");
     // 2137 {votolocal}: las de la tirada que ya voto y todavia no mando van como `saltear`, si no el server sirve
     // siempre las mismas 30 primeras (ningun voto llego todavia) y el votador se queda sin tarjetas
-    var sal = (sel.tjHistorial || []).filter(function(h){ return h.col === col; }).map(function(h){ return h.c.id; });
-    // 2137 correccion 11:55: tampoco se vuelve a pedir lo que ya esta bajado (la fila de ahora y la cache de la lista)
-    cacheTraer(col, sel.filtro).concat((sel.actual && sel.actual.coleccion === col && sel.actual.candidatas) || [])
-      .forEach(function(c){ if(c && sal.indexOf(c.id) < 0) sal.push(c.id); });
+    var enCol = !!(sel.actual && sel.actual.coleccion === col && (!sel.filtro || String(sel.actual.lista || "") === String(sel.filtro)));
+    var circ = tjListaCircular(sel.filtro);
+    var sal = [];
+    if(!arranque){
+      (sel.tjHistorial || []).forEach(function(h){
+        if(h.col === col && h.c && (!circ || !tjSigueEnLista(sel.actual || {circular: true, destinos: {}}, h.q)) && sal.indexOf(h.c.id) < 0)
+          sal.push(h.c.id);
+      });
+      if(enCol){
+        // 2137 correccion 11:55: tampoco se vuelve a pedir lo que ya esta bajado (la fila de ahora y la cache de la lista)
+        cacheTraer(col, sel.filtro).concat(sel.actual.candidatas || [])
+          .forEach(function(c){ if(c && sal.indexOf(c.id) < 0) sal.push(c.id); });
+      }
+    }
     if(sal.length) qs += (qs ? "&" : "?") + "saltear=" + encodeURIComponent(sal.slice(-400).join(","));
     return lanFetch(selUrl(base, col) + qs, {method: "GET", cache: "no-store", headers: {"authorization": "Bearer " + token}})
       .then(function(r){ if(!r || !r.ok) throw new Error("http " + (r && r.status)); return r.json(); })
@@ -6531,8 +6564,13 @@ function filaAplicar(col, j){
   if(j.continua) delete selSinFilas[col]; else selSinFilas[col] = Date.now();
   var i = -1;
   sel.abiertas.forEach(function(a, k){ if(a.coleccion === col) i = k; });
-  if(j.abierta){ if(i >= 0) sel.abiertas[i] = j; else sel.abiertas.push(j); }
-  else if(i >= 0) sel.abiertas.splice(i, 1);
+  var vaciaSaltear = !!(j.vacia && j.vacia.estado === "sin_enviar");
+  if(j.abierta){
+    if(i >= 0){
+      if((j.candidatas && j.candidatas.length) || !(sel.abiertas[i].candidatas && sel.abiertas[i].candidatas.length))
+        sel.abiertas[i] = j;
+    } else sel.abiertas.push(j);
+  } else if(i >= 0 && !j.lista && !vaciaSaltear) sel.abiertas.splice(i, 1);
   // 2051 {votador}: el pie, el renglon chico y el cuadro de mudanza son de la LISTA abierta, no del proceso. el
   // pedido sale con `?lista=` (`selPedir`, `selFresco`), asi que lo que vuelve es el pie de ESA lista: si el
   // votador ya esta abierto en esta coleccion, su `sel.actual` lo adopta. sin esto se quedaba con el pie del poll
@@ -6587,7 +6625,8 @@ function filaFresca(col, lista, j){
   if(votando) return false;   // `filaAplicar` ya apendeo lo que faltaba (2137)
   var prevPorId = {};
   (a.candidatas || []).forEach(function(x){ if(x && x.id) prevPorId[x.id] = x; });
-  var v = j.circular === false || !a.circular ? filaVotadas(col) : {};
+  var circ = tjEsCircular(j, lista) || tjEsCircular(a, lista);
+  var v = circ ? {} : filaVotadas(col);
   var fuera = salioSet(col, lista), fall = sel.tjFallidas || [], ya = {}, cs = [];
   (j.candidatas || []).forEach(function(c){
     if(ya[c.id] || v[c.id] || fuera[c.id] || fall.indexOf(c.id) >= 0) return;
@@ -6607,7 +6646,7 @@ function filaFresca(col, lista, j){
   a.pendientes = j.pendientes;
   a.mas = typeof j.pendientes === "number" && j.pendientes > (a.candidatas || []).length;
   if(typeof j.agotada === "boolean") a.agotada = j.agotada;
-  if(typeof j.circular === "boolean") a.circular = j.circular;
+  a.circular = circ;
   if(j.destinos) a.destinos = j.destinos;
   if(j.resumen) a.resumen = j.resumen;
   if("vacia" in j) a.vacia = j.vacia || null;   // caso 40
@@ -7089,7 +7128,8 @@ function tjFilaFiltrada(e, filtro){
   var prev = sel.filtro, cs;
   sel.filtro = filtro || null;   // `tjEnFiltro`, `salioSet`, `cacheTraer` y `tjOrdenSuper` leen el filtro de `sel`
   try{
-    var v = e.continua && !e.circular ? filaVotadas(e.coleccion) : {};   // 1567: lo votado aca que el server no saco
+    var circ = tjEsCircular(e, sel.filtro);
+    var v = e.continua && !circ ? filaVotadas(e.coleccion) : {};   // 1567: lo votado aca que el server no saco
     var fuera = salioSet(e.coleccion, sel.filtro);
     var sirve = function(c){ return !v[c.id] && !fuera[c.id] && tjSirve(c) && tjEnFiltro(c); };
     // 2137 correccion 11:55: primero lo que ya estaba bajado de ESA lista (en su orden), despues lo que trae el server
@@ -7105,7 +7145,7 @@ function tjFilaFiltrada(e, filtro){
 }
 function tjAbrir(e){
   lisXVer(true);   // {home} paso 5: el votador siempre tiene su `✕` (2002 {back}: cierra sin enviar)
-  e = Object.assign({}, e, {candidatas: tjFilaFiltrada(e, sel.filtro)});
+  e = Object.assign({}, e, {circular: tjEsCircular(e, sel.filtro), candidatas: tjFilaFiltrada(e, sel.filtro)});
   // 2174 {cuentas} paso 1: si lo que se abre trae el pie de OTRA lista (o el del proceso entero, que es lo que
   // deja el poll en `sel.abiertas`), se usa el que esa lista ya mostro. asi `super candidatas` abre siempre con
   // sus cuatro grandes, tambien cuando la fila salio de la cache y todavia no volvio ningun pedido con `?lista=`.
@@ -7115,6 +7155,7 @@ function tjAbrir(e){
     else { delete e.botones; delete e.extras; delete e.mover; }
   }
   if(!e.candidatas.length) return false;
+  if(sel.actual && sel.actual.continua) tjSubirLocales(sel.actual);
   if(e.continua) e.mas = typeof e.pendientes === "number" && e.pendientes > e.candidatas.length;
   sel.tjUlt = 0; sel.tjAtrasUlt = 0;   // 1567: el freno del doble toque es de esta apertura (si no, se come el primer toque de la siguiente)
   sel.actual = e; sel.tj = 0; sel.tjVotos = 0; sel.tjFallidas = []; sel.esperaDesde = 0;   // 1524: decisiones reales de esta apertura (caso 40: y el reloj de espera)
@@ -7729,7 +7770,7 @@ var TJ_VENTANA = 2;
 function tjEnviarVoto(e, h){
   var r = {id: lidNuevo(), tipo: "tarjeta", ts: h.ts || Date.now(), candidata_id: h.c.id, cuenta: h.c.cuenta || "",
            decision: h.q, texto: h.txt || "", sesion: sel.sesion || ""};
-  var pend = selLeer("pend", []); pend.push({col: e.coleccion, r: r}); selEscribir("pend", pend);
+  var pend = selLeer("pend", []); pend.push({col: e.coleccion, lista: selListaDe(e.coleccion), r: r}); selEscribir("pend", pend);
   filaMarcar(e.coleccion, h.c.id);   // ya votada: no vuelve a la fila
   (sel.sesionVotos = sel.sesionVotos || []).push(h.c.id);
   var en = sel.tjEnviados = sel.tjEnviados || [];
@@ -7758,7 +7799,7 @@ function tjDeshacerEnviado(e){
   var accion = (e.colas || {})[h.q] || "";
   var salio = accion && (Date.now() - h.ts) > Math.max(0, e.gracia_ms || 0);
   var rd = {id: lidNuevo(), tipo: "deshacer", ts: Date.now(), candidata_id: c.id, cuenta: c.cuenta || "", texto: "", sesion: sel.sesion || ""};
-  var pd = selLeer("pend", []); pd.push({col: e.coleccion, r: rd}); selEscribir("pend", pd);
+  var pd = selLeer("pend", []); pd.push({col: e.coleccion, lista: selListaDe(e.coleccion), r: rd}); selEscribir("pend", pd);
   var f = selLeer("fila", {}); if(f[e.coleccion]){ delete f[e.coleccion][c.id]; selEscribir("fila", f); }
   sel.sesionVotos = (sel.sesionVotos || []).filter(function(x){ return x !== c.id; });
   delete salioSet(e.coleccion, sel.filtro)[c.id];
@@ -7788,8 +7829,8 @@ function tjSubirLocales(e){
   if(!e || !e.continua) return 0;   // la tanda vieja de tarjetas sube cada voto al toque, no tiene tirada
   var regs = tjRegistros(e);
   if(!regs.length) return 0;
-  var pend = selLeer("pend", []);
-  regs.forEach(function(r){ pend.push({col: e.coleccion, r: r}); });
+  var pend = selLeer("pend", []), li = selListaDe(e.coleccion);
+  regs.forEach(function(r){ pend.push({col: e.coleccion, lista: li, r: r}); });
   selEscribir("pend", pend);
   if(e.continua) tjHist(e).forEach(function(h){ filaMarcar(e.coleccion, h.c.id); });   // ya votada: no vuelve a la fila
   sel.tjHistorial = (sel.tjHistorial || []).filter(function(h){ return h.col !== e.coleccion; });
@@ -8121,7 +8162,10 @@ function selSubir(){
   // 2174 {cuentas} paso 1: la lista de cada coleccion se mira AHORA. el `enviar` cierra el votador antes de que la
   // respuesta vuelva, asi que preguntarla despues daba `null` y la respuesta volvia con el pie del proceso.
   var lisPost = {};
-  cols.forEach(function(c){ lisPost[c] = selListaDe(c); });
+  cols.forEach(function(c){
+    var pl = pend.filter(function(p){ return p.col === c && p.lista; }).slice(-1)[0];
+    lisPost[c] = selListaDe(c) || (pl && pl.lista) || null;
+  });
   sel.subiendo = votLan().then(function(base){
     return cols.reduce(function(pr, col){
       return pr.then(function(){
@@ -9023,7 +9067,7 @@ function tjInyectarPersona(col, p, f){
   if(listaClave) delete salioSet(col, listaClave)[c.id];
   e.candidatas = e.candidatas || [];
   e.candidatas.unshift(c);
-  cacheGuardar(col, listaClave, e.candidatas);
+  cacheGuardar(e, listaClave);
   return c;
 }
 // `desde` (2113): `"home"` si el votador lo abrio el toque en la tarjeta de la lista, `"una"` (el default) si lo
@@ -9039,6 +9083,9 @@ function lisVotar(f, p, desde){
   if(!col) return p ? lisCartita(p) : false;
   // si el votador no puede abrirse en ella, el toque no deja un origen colgado: nunca abre la ficha vieja
   var carta = function(){ lis.origen = null; return lisEntrar(f); };
+  // 3713: guardar los botones de la lista tambien al tocar el cuadrado de la lista (`p == null`), para que el
+  // primer frame de cache tenga siempre los 4 botones de `following` antes de que vuelva el pedido fresco
+  if(col && f && f.botones && f.botones.length) pieGuardar(col, f.clave, f);
   // 3528 {forzar-votador}: tocar cualquier chip individual inyecta a la persona al frente de la fila y
   // abre el votador de su lista con los botones correspondientes a ese grupo, destrabando la votacion
   if(p && col) tjInyectarPersona(col, p, f);
@@ -9086,8 +9133,9 @@ function filaDeLista(col, lista){
 // el server sirve igual a quien la esta esperando, asi que el toque nunca cae a la cartita vieja por eso)
 function lisEnFila(col, id){
   var e = (sel.abiertas || []).filter(function(a){ return a.coleccion === col; })[0];
-  if(!e || !e.candidatas) return false;
-  return e.candidatas.some(function(c){ return String(c.id) === String(id); });
+  var cands = (e && e.candidatas) || [];
+  if(cands.some(function(c){ return String(c.id) === String(id); })) return true;
+  return cacheTraer(col, sel.filtro).some(function(c){ return String(c.id) === String(id); });
 }
 // el modal de la accion: el molde de siempre (`modalMolde` + `moldeBoton`), nunca un diseño nuevo. lo de lectura
 // sale directo; lo que toca afuera (instagram) muestra el comando exacto y UNA caja verde `dale`, sin caja `no`
@@ -9551,17 +9599,7 @@ function tinderAbrirCol(col, desde, falla, lista, titulo){
   // nadie de `follow request sent`, aunque el server sirva las dos en la misma coleccion.
   sel.filtro = lista || null;
   sel.filtroTitulo = lista ? (titulo || lista) : null;
-  // 1975 {arranque}: en `dejar de seguir` la primera tarjeta tiene que ser la de menos seguidores de la lista
-  // ENTERA, asi que la fila se pide de nuevo antes de pintar nada; sin lan se abre con lo que ya hay
-  // 2137 correccion 11:55: con lo de esa lista ya bajado, reabrirla NO vuelve a pedir el primer lote: se abre con
-  // la cache (el `arranque` de la 1975 es para armar la fila la primera vez, no para volver a bajar lo mismo)
-  // 2325 {votador} (facundo, 2026-09-24: "toco en las listas y no puedo votar [...] es mas creo que ninguna lista
-  // vota"): la fila que deja el poll es la del PROCESO, no la de la lista, y varias listas comparten proceso. si
-  // esa fila no trae ni una tarjeta de la lista tocada (el poll de `ig-arrepentir` servia `follow request sent`,
-  // no `following`), abrir con lo que hay es abrir cero tarjetas: el votador no abria y el toque caia al plan B.
-  // ahora, cuando la fila cargada no sirve para ESA lista, se le pide al server la suya (`?lista=<clave>`, que ya
-  // sabe servirla) antes de decidir nada. lo que ya esta bajado sigue abriendo igual de rapido y sin pedir nada.
-  if(!cacheTiene(col, sel.filtro) && (selArranca(col) || !filaDeLista(col, sel.filtro))){
+  var pedirFila = function(){
     selPedir(col, selArranca(col)).then(function(){
       // la fila recien pedida puede no traer a la persona tocada (la 1960 exige `seguidores`, la 1495 foto): ahi no
       // se abre el votador en otra persona, se cae al plan B del toque (su cartita)
@@ -9575,6 +9613,19 @@ function tinderAbrirCol(col, desde, falla, lista, titulo){
       else tjIr(desde);
     });
     return true;
+  };
+  // 1975 {arranque}: en `dejar de seguir` la primera tarjeta tiene que ser la de menos seguidores de la lista
+  // ENTERA, asi que la fila se pide de nuevo antes de pintar nada; sin lan se abre con lo que ya hay
+  // 2137 correccion 11:55: con lo de esa lista ya bajado, reabrirla NO vuelve a pedir el primer lote: se abre con
+  // la cache (el `arranque` de la 1975 es para armar la fila la primera vez, no para volver a bajar lo mismo)
+  // 2325 {votador} (facundo, 2026-09-24: "toco en las listas y no puedo votar [...] es mas creo que ninguna lista
+  // vota"): la fila que deja el poll es la del PROCESO, no la de la lista, y varias listas comparten proceso. si
+  // esa fila no trae ni una tarjeta de la lista tocada (el poll de `ig-arrepentir` servia `follow request sent`,
+  // no `following`), abrir con lo que hay es abrir cero tarjetas: el votador no abria y el toque caia al plan B.
+  // ahora, cuando la fila cargada no sirve para ESA lista, se le pide al server la suya (`?lista=<clave>`, que ya
+  // sabe servirla) antes de decidir nada. lo que ya esta bajado sigue abriendo igual de rapido y sin pedir nada.
+  if(!cacheTiene(col, sel.filtro) && (selArranca(col) || !filaDeLista(col, sel.filtro))){
+    return pedirFila();
   }
   // 1933 {instatinder}: lo que no es instagram (animaciones, una tanda de checkboxes) no vive en esta vista:
   // se abre en la vista `votar`, la del icono fucsia, y la pone `votAbrir` / `selAbrir`
@@ -9582,6 +9633,10 @@ function tinderAbrirCol(col, desde, falla, lista, titulo){
     ok = votAbrirPendiente();
   } else {
     ok = selAbrirCol(col);
+    if(!ok && sel.filtro){
+      cacheOlvidar(col, sel.filtro);
+      return pedirFila();
+    }
   }
   // 2095 paso 5: si la fila de esa lista no tiene a nadie cargado todavia, se vuelve a la LISTA (de donde salio el
   // toque), nunca a otro proceso (eso era el bug) ni a la home. 2113: si el toque trajo su plan B, ese manda
@@ -9605,6 +9660,8 @@ function tinderSalir(){
   if(sel.actual && !$("selmodal").classList.contains("pantalla")){
     lis.sub = "listas"; return;
   }
+  // 3713: igual que `selCerrar`, salir de `tinder` por la barra de iconos manda los ultimos `TJ_VENTANA` votos
+  if(sel.actual && tjPantalla() && sel.actual.continua) tjSubirLocales(sel.actual);
   if(sel.actual) sel.ignorada[sel.actual.coleccion] = sel.actual.abrir_ts;
   sel.actual = null;
   selModoLista(true);
@@ -9634,6 +9691,17 @@ function selVotar(){
 // plan B (la lista, la cartita), nunca con gente que no pidio.
 function selAbrirCol(col){
   var e = sel.abiertas.filter(function(a){ return a.coleccion === col; })[0];
+  if(!e && sel.filtro){
+    var cac = cacheTraer(col, sel.filtro);
+    if(cac.length){
+      var pie = pieTraer(col, sel.filtro) || {};
+      e = {coleccion: col, titulo: sel.filtroTitulo || col, modo: "tarjetas", continua: true,
+           circular: tjListaCircular(sel.filtro), lista: sel.filtro, abierta: true,
+           candidatas: cac.slice(), pendientes: cac.length,
+           botones: pie.botones || null, extras: pie.extras || [], mover: pie.mover || null};
+      sel.abiertas.push(e);
+    }
+  }
   if(!e) return false;
   try{ delete sel.ignorada[col]; }catch(x){}
   var ok = selAbrir(e);
