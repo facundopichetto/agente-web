@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.587">
-<link rel="manifest" href="manifest.json?v=4.587">
+<meta name="agente-web-version" content="4.588">
+<link rel="manifest" href="manifest.json?v=4.588">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.587">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.588">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.559">
 <style id="css-listas-drag">
 #sellistas, #sellistas * {
@@ -6646,7 +6646,8 @@ function filaFresca(col, lista, j){
   a.pendientes = j.pendientes;
   a.mas = typeof j.pendientes === "number" && j.pendientes > (a.candidatas || []).length;
   if(typeof j.agotada === "boolean") a.agotada = j.agotada;
-  a.circular = circ;
+  if(typeof j.circular === "boolean" && (!lista || selMismaLista(j))) a.circular = j.circular;
+  else if(circ) a.circular = true;
   if(j.destinos) a.destinos = j.destinos;
   if(j.resumen) a.resumen = j.resumen;
   if("vacia" in j) a.vacia = j.vacia || null;   // caso 40
@@ -7145,7 +7146,9 @@ function tjFilaFiltrada(e, filtro){
 }
 function tjAbrir(e){
   lisXVer(true);   // {home} paso 5: el votador siempre tiene su `✕` (2002 {back}: cierra sin enviar)
-  e = Object.assign({}, e, {circular: tjEsCircular(e, sel.filtro), candidatas: tjFilaFiltrada(e, sel.filtro)});
+  var circ = tjEsCircular(e, sel.filtro);
+  e = Object.assign({}, e, {candidatas: tjFilaFiltrada(e, sel.filtro)});
+  if(circ) e.circular = true;
   // 2174 {cuentas} paso 1: si lo que se abre trae el pie de OTRA lista (o el del proceso entero, que es lo que
   // deja el poll en `sel.abiertas`), se usa el que esa lista ya mostro. asi `super candidatas` abre siempre con
   // sus cuatro grandes, tambien cuando la fila salio de la cache y todavia no volvio ningun pedido con `?lista=`.
@@ -9127,7 +9130,12 @@ function filaDeLista(col, lista){
   var de = sel.filaDe[col] || null;
   if(de && de !== lista) return false;   // esa fila se bajo para OTRA lista del mismo proceso: no es la de esta
   var e = (sel.abiertas || []).filter(function(a){ return a.coleccion === col; })[0];
-  return !!e && tjFilaFiltrada(e, lista).length > 0;
+  if(!e) return false;
+  // 3713: la fila del proceso (`e.circular === false, !e.lista`) excluye a quienes ya se votaron (`igual`), asi que
+  // para una lista circular (`following`) puede traer solo 1 de las 6 o ninguna: si no se bajo todavia para esa
+  // lista (`!de && !e.lista`), se le pide al server `?lista=<clave>` para traer la lista circular completa
+  if(lista && !de && !e.lista && e.circular === false && tjListaCircular(lista)) return false;
+  return tjFilaFiltrada(e, lista).length > 0;
 }
 // esta esa persona en la fila que el server tiene abierta para ese proceso? (2277 {foto}: la foto ya no cuenta,
 // el server sirve igual a quien la esta esperando, asi que el toque nunca cae a la cartita vieja por eso)
