@@ -268,8 +268,16 @@
   }
   function viejoTxt(){ return "sin sync · hace " + haceTxt(edadViva()); }
   var VIEJO_TIT = "la cola no se esta actualizando: lo que ves puede no ser lo real (se reintenta solo)";
+  // 3816 {foto-409-sync-cola}: sin lan la cola sale de `widgets.json` en el buzon, y el buzon solo es tan fresco como lo
+  // ultimo que el server logro publicar (el 16/10 estuvo 38 min sin publicar por el tope de escrituras por hora): el
+  // cartel lo dice, para que no parezca un fallo de esta pagina
+  function viejoTit(){
+    return B.lan() ? VIEJO_TIT
+      : "sin conexion directa con el server: la cola viene del buzon de github y el server no publico una cola nueva hace " +
+        haceTxt(edadViva()) + " (se vuelve a probar la conexion directa cada 15 s)";
+  }
   function viejoHtml(){
-    return esViejo() ? ' <span class="qviejo" style="color:var(--naranja)" title="' + esc(VIEJO_TIT) + '">' + esc(viejoTxt()) + "</span>" : "";
+    return esViejo() ? ' <span class="qviejo" style="color:var(--naranja)" title="' + esc(viejoTit()) + '">' + esc(viejoTxt()) + "</span>" : "";
   }
   // el cartel sobre la caja ya pintada (la caja se repinta solo si cambia el hash): idempotente, corre cada 1 s
   function marcarViejo(){
@@ -280,9 +288,9 @@
     var m = esc_.querySelector(".qviejo");
     if(!esViejo()){ if(m) m.parentNode.removeChild(m); return; }
     var t = viejoTxt();
-    if(m){ if(m.textContent !== t) m.textContent = t; return; }
+    if(m){ if(m.textContent !== t) m.textContent = t; m.title = viejoTit(); return; }
     m = document.createElement("span");
-    m.className = "qviejo"; m.style.color = "var(--naranja)"; m.title = VIEJO_TIT; m.textContent = t;
+    m.className = "qviejo"; m.style.color = "var(--naranja)"; m.title = viejoTit(); m.textContent = t;
     esc_.appendChild(document.createTextNode(" ")); esc_.appendChild(m);
   }
   // volver a la pestaña (o tocar el `[↻]`): se olvida la espera acumulada (hasta 60 s de backoff) y el etag, y se

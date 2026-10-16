@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.595">
-<link rel="manifest" href="manifest.json?v=4.595">
+<meta name="agente-web-version" content="4.596">
+<link rel="manifest" href="manifest.json?v=4.596">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.595">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.596">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.559">
 <style id="css-listas-drag">
 #sellistas, #sellistas * {
@@ -4858,6 +4858,10 @@ function frenar(seg, motivo, callado){   // callado: el que llama avisa (el envi
 // subida de fotos y audios y la bajada de imagenes. si una llamada falla, cae al buzon de github en el acto.
 // el http de la lan no se prueba desde github pages: es mixed content y el navegador lo bloquea igual.
 var LAN_PUERTO = 8781, LAN_PROBE_MS = 1000, LAN_CADA = 60000, LAN_FETCH_MS = 20000;
+// 3816 {foto-409-sync-cola}: con la cola marcada `sin sync` (el buzon dejo de publicar) la lan se vuelve a probar cada 15 s
+// en vez de cada 60: es el camino que la trae fresca, y esperar un minuto entero para enterarse de que volvio es lo que
+// dejaba la caja congelada de mas
+var LAN_CADA_VIEJA = 15000;
 // nube (orden 1668, facundo 2026-09-15): por internet el board habla con claudio-nube (caddy -> tailscale -> el
 // mismo endpoint del server) antes que con el buzon de github. se prueba despues de la lan/tailscale, con 3 s de
 // tope (`ms`); si no contesta, el buzon como siempre. el cartel `#via` del header dice por donde va.
@@ -4913,6 +4917,9 @@ function lanPoner(x){
   // del `MAS` y `sanearLayout` ven las pestañas que se crearon desde el celu o desde otra maquina.
   // 2038 {sinlan}: y lo que quedo encolado sin server sale ahora, antes de repedir la lista
   if(lan.base && antes !== lan.base) clonPendFlush().then(clonesPedir, clonesPedir);
+  // 3816 {foto-409-sync-cola}: apenas hay endpoint la cola se pide ya (el modulo olvida su backoff de hasta 60 s):
+  // sin esto, con la lan de vuelta la caja seguia en `sin sync` hasta agotar la espera de un corte viejo
+  if(lan.base && antes !== lan.base){ try{ colaReanudar(); }catch(x){} }
 }
 function probarLan(){
   if(!token && !lanStub) return Promise.resolve(null);
@@ -5438,7 +5445,7 @@ function chatDeTab(tema){
 }
 
 function tick(){
-  if(Date.now() - lan.ult > LAN_CADA) probarLan();   // lan primero: cada 60 s se vuelve a probar el endpoint
+  if(Date.now() - lan.ult > (colaVieja() ? LAN_CADA_VIEJA : LAN_CADA)) probarLan();   // lan primero: cada 60 s se vuelve a probar el endpoint (15 s con la cola sin sync, 3816)
   vaciarSalida();   // lo que github freno sale solo apenas levanta el freno
   cargarIssue(false);   // cada 5 min: si el daemon rotó el issue del buzón, el próximo tick ya va al nuevo
   Promise.all([cargarEstado(), cargarComentarios(false)])
@@ -11065,13 +11072,53 @@ function subirBuzon(ruta, b64, mensaje, bytes){
       .then(function(r){ if(!r.ok) throw new Error("http " + r.status); return ruta; })
       .catch(function(){ lanPoner(null); return subirBuzon(ruta, b64, mensaje); });
   }
+  return ghEscribir(function(){ return ghPutArchivo(ruta, b64, mensaje, 0, null); });
+}
+// 3816 {foto-409-sync-cola} (facundo, 2026-10-16: "no pude subir la foto: http 409 is at 8288580... but expected 3c91"):
+// el 409 de la contents api NO es un sha del archivo (una foto nueva no lleva sha): es github diciendo que el branch
+// del buzon se movio entre que se armo el commit y que se aplico, porque el daemon (`recetas/buzon.py`, 3131
+// {x-buzon-409}), las pestañas (`ponerTabs`) y esta misma subida escriben sobre el mismo branch a la vez, aunque sean
+// archivos distintos. el daemon ya lo resolvia (una escritura por vez, estado releido justo antes de cada PUT, reintento);
+// la web no: tiraba el error en la cara al primer intento. ahora (1) las escrituras de esta pagina van de a una
+// (`ghEscribir`), y (2) ante un 409 se relee el archivo (`ghLeerSha`) y se reintenta con espera creciente y sin
+// mostrar nada: solo falla despues de GH_PUT_REINTENTOS. si al releer resulta que el archivo ya esta (`img/` y
+// `audio/` se nombran por el hash de su contenido: ya esta = es el mismo archivo), no se vuelve a escribir.
+var GH_PUT_REINTENTOS = 5, GH_PUT_ESPERA_MS = 500;
+var ghSerie = Promise.resolve();       // la cola de escrituras a github de esta pagina (nunca rechaza)
+function ghEscribir(fn){
+  var p = ghSerie.then(fn);
+  ghSerie = p.then(function(){}, function(){});
+  return p;
+}
+function ghPausa(ms){ return new Promise(function(res){ setTimeout(res, ms); }); }
+// espera creciente con un poco de azar: dos escritores que chocaron no vuelven a chocar al mismo instante
+function ghEspera(intento){ return GH_PUT_ESPERA_MS * Math.pow(2, intento) + Math.floor(Math.random() * GH_PUT_ESPERA_MS / 2); }
+// el estado actual del archivo en el buzon: {existe, sha}; `existe: null` = no se pudo leer (se reintenta igual)
+function ghLeerSha(ruta){
+  return fetch(API + "/repos/" + REPO + "/contents/" + ruta, {
+    cache: "no-store", headers: {"authorization": "Bearer " + token, "accept": "application/vnd.github+json"}
+  }).then(function(r){
+    if(r.status === 404) return {existe: false, sha: null};
+    if(!r.ok) return {existe: null, sha: null};
+    return r.json().then(function(j){ return {existe: true, sha: (j && j.sha) || null}; });
+  }, function(){ return {existe: null, sha: null}; });
+}
+function ghPutArchivo(ruta, b64, mensaje, intento, sha){
+  var cuerpo = {message: mensaje + " " + DISPOSITIVO, content: b64};
+  if(sha) cuerpo.sha = sha;
   return fetch(API + "/repos/" + REPO + "/contents/" + ruta, {
     method: "PUT", cache: "no-store",
     headers: {"authorization": "Bearer " + token, "accept": "application/vnd.github+json",
               "content-type": "application/json"},
-    body: JSON.stringify({message: mensaje + " " + DISPOSITIVO, content: b64})
+    body: JSON.stringify(cuerpo)
   }).then(function(r){
     if(r.ok || r.status === 422) return ruta;     // 422 = ya existe con ese hash: es el mismo archivo
+    if(r.status === 409 && intento < GH_PUT_REINTENTOS){
+      return ghPausa(ghEspera(intento)).then(function(){ return ghLeerSha(ruta); }).then(function(est){
+        if(est.existe && /^(img|audio)\//.test(ruta)) return ruta;   // ya subida (por mi PUT que si entro o por otro): mismo hash
+        return ghPutArchivo(ruta, b64, mensaje, intento + 1, est.existe ? est.sha : null);
+      });
+    }
     return r.text().then(function(t){ throw new Error("http " + r.status + " " + t.slice(0, 80)); });
   });
 }
@@ -14491,6 +14538,10 @@ function colaReanudar(){
   var m = mods.agent;
   if(m && m.reanudar){ try{ m.reanudar(); }catch(x){} }
 }
+// 3816 {foto-409-sync-cola}: ¿la caja de la cola esta marcada `sin sync`? (la lee `tick` para sondear la lan mas seguido)
+function colaVieja(){
+  try{ var m = mods && mods.agent; return !!(m && m.vivo && m.vivo().viejo); }catch(x){ return false; }
+}
 
 function modUrl(clave, v){ return "widgets/" + clave + ".js?v=" + encodeURIComponent(v || verWebCorta()); }
 function verWebCorta(){ return (verWeb || verEmbebida || "0").split("/")[0]; }
@@ -17333,6 +17384,11 @@ window.__agente = {
     b.click(); return true;
   },
   stubFoto: function(f){ fotoStub = f || null; },
+  // 3816 {foto-409-sync-cola}: `prueba_web_subida409` acorta la espera del reintento, lee `colaVieja()` y enchufa un
+  // modulo de cola falso
+  ghEspera: function(ms){ if(ms !== undefined) GH_PUT_ESPERA_MS = ms; return {espera: GH_PUT_ESPERA_MS, reintentos: GH_PUT_REINTENTOS}; },
+  colaVieja: colaVieja, lanCadas: function(){ return {vieja: LAN_CADA_VIEJA, normal: LAN_CADA}; },
+  modPoner: function(clave, m){ if(m) mods[clave] = m; else delete mods[clave]; },
   esEstadoTransitorio: esEstadoTransitorio,   // 1658: lo mira la prueba contra la pagina publicada
   sistema: function(t, c){ sistema(t, c); },
   tocarCamara: function(){ $("camara").click(); },
