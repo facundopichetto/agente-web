@@ -1818,12 +1818,11 @@
     },
     "board": {
       "motor": "agy",
-      "modelo": "gemini-3.8-flash",
-      "effort": "low"
+      "modelo": "agy"
     },
     "flos": {
-      "motor": "agy",
-      "modelo": "agy"
+      "motor": "gemini-3.8-flash",
+      "modelo": "gemini-3.8-flash"
     },
     "flos#2": {
       "motor": "agy",
@@ -1865,8 +1864,7 @@
     },
     "tinder": {
       "motor": "agy",
-      "modelo": "gemini-4-argon",
-      "effort": "high"
+      "modelo": "agy"
     }
   },
   "modelos_agy": {

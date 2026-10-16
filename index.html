@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.592">
-<link rel="manifest" href="manifest.json?v=4.592">
+<meta name="agente-web-version" content="4.594">
+<link rel="manifest" href="manifest.json?v=4.594">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.592">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.594">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.559">
 <style id="css-listas-drag">
 #sellistas, #sellistas * {
@@ -6287,7 +6287,7 @@ function movDe(id){ return movLeer()[String(id)] || null; }
 function movPoner(e, c, q){
   var destino = (e.destinos || {})[q], accion = (e.colas || {})[q] || "";
   var desde = c.lista || sel.filtro || "";
-  if(!destino || String(destino) === String(desde)) return null;   // `igual`: no se mueve de lista, no hay nada que pintar
+  if(!destino || (String(destino) === String(desde) && !accion)) return null;   // `igual`: no se mueve de lista ni dispara accion, no hay nada que pintar
   var gracia = accion ? Math.max(0, e.gracia_ms || 0) : 0;   // {gracia}: solo lo que toca instagram tiene ventana
   var m = {id: String(c.id), cuenta: c.cuenta || "", nombre: c.nombre || c.cuenta || "", foto: (c.fotos || [])[0] || "",
            col: e.coleccion, q: q, desde: String(desde || ""), destino: String(destino), accion: accion,
@@ -6337,8 +6337,9 @@ function movPodar(d){
     (f.gente || []).forEach(function(p){ (enDestino[String(p.id)] = enDestino[String(p.id)] || {})[f.clave] = true; });
   });
   Object.keys(m).forEach(function(k){
-    var x = m[k];
-    if((enDestino[k] || {})[x.destino] || (x.enviado && ts && ts > x.enviado)){ delete m[k]; n++; }
+    var x = m[k], ed = enDestino[k] || {};
+    var confirmado = x.desde !== x.destino ? !!ed[x.destino] : (x.accion === "unfollow" && !ed.following && !ed.following_not_followers);
+    if(confirmado || (x.enviado && ts && ts > x.enviado)){ delete m[k]; n++; }
   });
   if(n){ movGuardar(); gracPintar(); }
   return n;
@@ -6369,25 +6370,29 @@ function movVista(d){
 // de `following not followers` a toda persona votada en los ultimos 7 dias (los `movs` viven ese tiempo), o sea
 // justo la gente que facundo acababa de mirar: con 200 votos encima la lista de 566 quedaba pelada.
 function virtRanking(f){ return !!(f && f.virtual) && VIRT_CONJ.indexOf(String((f || {}).clave || "")) < 0; }
+// 3794 {compara-seguidos}: un voto que dispara `unfollow` SI saca a la cuenta de `following_not_followers`
+function movSacaDeConj(f, m){
+  return !!(f && m && m.accion === "unfollow" && VIRT_CONJ.indexOf(String((f || {}).clave || "")) >= 0);
+}
 // cuanto cambia el numero de una lista por lo que facundo acaba de votar
 function movDelta(f){
   var n = 0, tiene = {};
   (f.gente || []).forEach(function(p){ tiene[String(p.id)] = true; });
   movTodos().forEach(function(m){
-    if(m.destino === f.clave){ if(!tiene[m.id]) n += 1; return; }
-    if(m.desde === f.clave){ n -= 1; return; }
+    if(m.destino === f.clave && m.desde !== f.clave){ if(!tiene[m.id]) n += 1; return; }
+    if(m.desde === f.clave && m.destino !== f.clave){ n -= 1; return; }
     // 2134 {supervirtual}: una lista virtual de RANKING no es un destino de nadie, pero su gente sale del
     // embudo: la que se movio de lista ya no esta ahi. solo se descuenta si de verdad venia en el json
-    // 2026 {vista}: en una virtual de CONJUNTO no (`virtRanking`): ahi la `ignorada` que facundo sigue es miembro
-    if(virtRanking(f) && tiene[m.id]) n -= 1;
+    // 2026 {vista}: en una virtual de CONJUNTO no (`virtRanking`), salvo que el voto dispare unfollow (3794)
+    if((virtRanking(f) || movSacaDeConj(f, m)) && tiene[m.id]) n -= 1;
   });
   return n;
 }
 function movGente(f, gente){
   var fuera = {}, dentro = [];
   movTodos().forEach(function(m){
-    if(m.destino === f.clave) dentro.push(m);
-    else if(m.desde === f.clave || virtRanking(f)) fuera[m.id] = true;   // 2026 {vista}: la de conjunto, no
+    if(m.destino === f.clave && m.desde !== f.clave) dentro.push(m);
+    else if((m.desde === f.clave && m.destino !== f.clave) || virtRanking(f) || movSacaDeConj(f, m)) fuera[m.id] = true;   // 2026/3794
   });
   var g = gente.filter(function(p){ return !fuera[String(p.id)]; });
   dentro.forEach(function(m){
@@ -6483,8 +6488,9 @@ var FILA_CACHE_TOPE = 150;
 function cacheClave(col, lista){ return (lista || "") + "|" + col; }
 function cacheGuardar(e, lista){
   if(!e || !e.continua) return false;
-  var k = cacheClave(e.coleccion, lista === undefined ? sel.filtro : lista);
-  var cs = (e.candidatas || []).slice();
+  var l = lista === undefined ? sel.filtro : lista;
+  var k = cacheClave(e.coleccion, l), fuera = salioSet(e.coleccion, l);
+  var cs = (e.candidatas || []).filter(function(c){ return c && !fuera[c.id]; });
   filaCache[k] = cs;
   var m = selLeer("cache", {});
   m[k] = cs.slice(0, FILA_CACHE_TOPE);
@@ -6590,7 +6596,13 @@ function tjVaciaClave(a){ return a && a.vacia ? (a.vacia.estado || "") + "|" + (
 // chat). con el texto del server se usa ese (sin el `[tema]`); si no, lo que se voto en esta pagina.
 function tjResumen(e){
   if(e && e.resumen) return String(e.resumen).replace(/^\[[^\]]*\]\s*/, "");
-  var c = {ignorar: 0, maybe: 0, queda: 0}, hs = tjHist(e);
+  var c = {ignorar: 0, maybe: 0, queda: 0}, hs = [], vistos = {};
+  var todos = (e ? (sel.tjEnviados || []).filter(function(h){ return h.col === e.coleccion && (!sel.sesion || h.ses === sel.sesion); }) : []).concat(tjHist(e));
+  todos.forEach(function(h){
+    var id = h && h.c && h.c.id;
+    if(id && vistos[id] !== undefined) hs[vistos[id]] = h;
+    else { if(id) vistos[id] = hs.length; hs.push(h); }
+  });
   hs.forEach(function(h){ if(c.hasOwnProperty(h.q)) c[h.q]++; });
   // 2405 {tarjeta} paso 3: en el instatinder tambien esta frase va en ingles (la de verdad la redacta el server,
   // `e.resumen`; esta es la red de abajo de cuando no la manda)
@@ -7218,6 +7230,8 @@ var VIRT_CONJ = ["following_not_followers"];
 function tjEsConj(){ return VIRT_CONJ.indexOf(String(sel.filtro || "")) >= 0; }
 function tjEnFiltro(c){
   if(!sel.filtro) return true;
+  var m = c && c.id ? movDe(c.id) : null;
+  if(m && m.accion === "unfollow" && (sel.filtro === "following" || sel.filtro === "follow_request_sent" || tjEsConj())) return false;
   if(tjEsSuper()) return !!(c && c.sup);
   if(tjEsConj()){
     if(!c) return false;
@@ -16850,7 +16864,7 @@ window.__agente = {
   gracPend: gracPend, gracPintar: gracPintar, gracDeshacer: gracDeshacer,
   tjFila: function(){ return ((sel.actual || {}).candidatas || []).map(function(c){ return c.id; }); },   // 2073 {back}
   tjFotos: function(){ var c = tjActual(); return c ? (c.fotos || []).slice() : null; },   // caso #29: las fotos vivas de la tarjeta
-  tjHistorial: function(){ return (sel.tjHistorial || []).map(function(h){ return h.col + ":" + h.c.id + ":" + h.q; }); },   // 1640: el back
+  tjHistorial: function(){ return ((sel.tjEnviados || []).filter(function(h){ return !sel.sesion || h.ses === sel.sesion; }).concat(sel.tjHistorial || [])).map(function(h){ return h.col + ":" + h.c.id + ":" + h.q; }); },   // 1640: el back
   tjFlushOculto: function(){ return tjFlushOculto(); },   // {destrabar-flush}
   tjVentana: function(n){ TJ_VENTANA = n; }, tjEnviados: function(){ return (sel.tjEnviados || []).map(function(h){ return h.col + ":" + h.c.id + ":" + h.q; }); },   // {enviar}
   filaFaltan: filaFaltan, filaSumar: filaSumar, tjToqueMs: function(ms){ TJ_TOQUE_MS = ms; TJ_BACK_MS = ms ? Math.min(ms, 120) : 0; },   // 1567: fila continua; 2002: el back tiene su propia ventana
@@ -16980,7 +16994,7 @@ window.__agente = {
                                  n: sel.actual ? (sel.actual.candidatas || []).length : 0,   // 2325 {votador}: cuantas tarjetas quedaron en la fila abierta
                                  marcadas: selMarcadas(), abiertas: sel.abiertas.map(function(a){ return a.coleccion; })}; },
   selFlushMin: function(){ return SEL_FLUSH_MIN; },   // 1836
-  selReset: function(){ sel.actual = null; sel.sesion = null; sel.abiertas = []; sel.ignorada = {}; sel.filaDe = {}; sel.tjHistorial = []; selTs = 0; sel.agotadas = []; sel.totales = {}; filaCache = {}; salidos = {}; tjVotandoYa = {};
+  selReset: function(){ sel.actual = null; sel.sesion = null; sel.abiertas = []; sel.ignorada = {}; sel.filaDe = {}; sel.tjHistorial = []; sel.tjEnviados = []; selTs = 0; sel.agotadas = []; sel.totales = {}; filaCache = {}; salidos = {}; tjVotandoYa = {};
                         var _st = $("seltarjeta"); if(_st){ _st.removeAttribute("data-candidata"); _st.removeAttribute("data-coleccion"); _st.removeAttribute("data-sesion"); _st.textContent = ""; }
                         ["pend", "hechas", "fila", "cache"].forEach(function(s){ try{ localStorage.removeItem("agente_sel_" + s); }catch(x){} });
                         movs = {}; try{ localStorage.removeItem(MOV_LS); }catch(x){} },
