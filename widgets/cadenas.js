@@ -49,10 +49,12 @@
                            : vacio(d && d.error ? "no pude leer las cadenas: " + d.error : "sin cadenas");
     return caja("CADENAS", "", cuerpo, false, "cadenas");
   }
+  // 3801 {chat-cadena-fija}: el widget `cadenas` queda retirado de la web (devuelve vacio al pintar).
   B.registrar("cadenas", {
-    html: function(d){ return cajaCadenas(d || {}); },
-    pintar: function(d, nodo){ return B.reemplazar(nodo, cajaCadenas(d || {})); },
+    html: function(){ return ""; },
+    pintar: function(d, nodo){ return B.reemplazar(nodo, ""); },
     destruir: function(){ document.removeEventListener("change", alCambiarParte, true); parteUltimo = null; },
-    parteEstado: function(){ return parteUltimo; }
+    parteEstado: function(){ return parteUltimo; },
+    cajaLegada: cajaCadenas
   });
 })();

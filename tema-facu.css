@@ -1549,9 +1549,9 @@
      pista, numero de 60 px, etiqueta en el ancho del dato secundario -- para que las dos barras arranquen y
      terminen en la MISMA x. clases propias (`g5-*`) y no `.ub-*`: anidar un `.ub` adentro de otro haria que el
      color por nivel del padre pintara tambien esta barra. la de abajo (week) no se toco. */
-  /* 2569 {cadena}: una fila por parte del chat (chat, entendí, acciones, cola) abajo de las cuentas, con el
-     nombre en la misma columna de 74 px que las cuentas, el desplegable del modelo y la cadena en gris. */
-  .usage.cadenas .gpartes{display:block;margin-top:9px;padding-top:7px;border-top:1px solid var(--linea)}
+  /* 2569 {cadena} / 3801 {chat-cadena-fija}: widget `cadenas` retirado de la web */
+  #widgets [data-w="cadenas"],.usage.cadenas{display:none!important}
+  .usage.cadenas .gpartes{display:none;margin-top:9px;padding-top:7px;border-top:1px solid var(--linea)}
   .usage.cadenas .gparte{display:flex;align-items:center;column-gap:7px;margin:0 0 6px 0;min-height:28px}
   .usage.cadenas .gparte-n{flex:0 0 74px;min-width:74px;color:var(--cian);letter-spacing:.04em}
   .usage.cadenas .gparte-sel,.usage.cadenas .gparte-fijo{flex:0 0 96px;min-width:96px;font:inherit;font-size:13px;
@@ -2369,13 +2369,10 @@
   #tabs .barrabtn:active{background:transparent}
   /* + de pestaña nueva sin borde (facundo, 2026-09-15, orden 1557): el 1px vuelve al padding, mismo alto */
   #tabs .relleno{flex:1 1 auto;min-width:8px}
-  /* Selector de modelo y effort por pestaña en segunda linea (PLAN-pestanas.md P12) */
-  .tab-motor-fila{
-    flex:0 0 auto;display:flex;flex-direction:column;gap:3px;padding:3px 9px 4px 9px;
-    background:#000;
+  /* 3801 {chat-cadena-fija}: se quitan el selector superior y el pie inferior de cada pestaña */
+  #tab-motor-fila,.tab-motor-fila,.tab-motor-fila.oculta,.tab-motor-controles,.tab-motor-ultimo{
+    display:none!important;
   }
-  .tab-motor-fila.oculta{display:none}
-  .tab-motor-controles{display:flex;align-items:center;gap:6px}
   .tab-motor-fila select{
     appearance:none;-webkit-appearance:none;
     background-color:#000;color:var(--cian);border:1px solid var(--cian);border-radius:4px;
@@ -2388,9 +2385,6 @@
   .tab-motor-fila select:hover{
     border-color:var(--verde);color:var(--verde);
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath stroke='%2339ff14' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' fill='none' d='m1 1 3 3 3-3'/%3E%3C/svg%3E");
-  }
-  .tab-motor-ultimo{
-    font-size:10px;color:var(--gris);letter-spacing:0.3px;padding:0 2px;user-select:none;
   }
   /* ---------- notificaciones: NO se pintan en el chat (facundo, 2026-09-19, orden 2151 {tira}) ----------
      la tira `#notis` de la 1162 (el ultimo aviso sin leer, primero entre las pestañas y el chat, despues abajo

@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.591">
-<link rel="manifest" href="manifest.json?v=4.591">
+<meta name="agente-web-version" content="4.592">
+<link rel="manifest" href="manifest.json?v=4.592">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.591">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.592">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.559">
 <style id="css-listas-drag">
 #sellistas, #sellistas * {
@@ -127,7 +127,7 @@ body.arrastrando-liscaja #sellistas {
 <div id="cuerpo">
 <div id="panel-chat">
 <div id="tabs"></div>
-<div id="tab-motor-fila" class="tab-motor-fila oculta"></div>
+<div id="tab-motor-fila" class="tab-motor-fila oculta" hidden aria-hidden="true" style="display:none"></div>
 <div id="sync" class="oculta">sincronizando…</div>
 <div id="envoltorio">
   <div id="hist"><div id="lista"></div></div>
@@ -1003,13 +1003,13 @@ var WSETS = {
                 {k: "falta_login", et: "avisar que fuente falta", tipo: "bool", def: true}],
   igcola:      [{k: "hechas", et: "mostrar las que ya salieron", tipo: "bool", def: true}],
   madrugada:   [{k: "filas", et: "cu\u00e1ntas filas", tipo: "opciones", def: 0, ops: [0, 3, 5, 10]}],
-  inversiones: [], standup: [], cadenas: [],
+  inversiones: [], standup: [],
   verificaciones: [], sombra: []
 };
-// 2144 {oportunidades}: widgets retirados del board. la clave puede seguir en el `tabs.json` del buzon
-// (o en el cache de localStorage) de cuando existian: se filtra al leer y al publicar, asi la config
-// guardada queda limpia sola en la primera pasada y nada la vuelve a resucitar.
-var WIDGETS_FUERA = {oportunidades: 1, decided: 1, tickets: 1};   // `tickets` se partio en tres (1932 {jira})
+// 2144 {oportunidades} / 3801 {chat-cadena-fija}: widgets retirados del board (`cadenas` retirado en 3801).
+// la clave puede seguir en el `tabs.json` del buzon (o en el cache de localStorage) de cuando existian:
+// se filtra al leer y al publicar, asi la config guardada queda limpia sola en la primera pasada.
+var WIDGETS_FUERA = {oportunidades: 1, decided: 1, tickets: 1, cadenas: 1};   // `tickets` se partio en tres (1932 {jira}); `cadenas` retirado (3801)
 function widgetFuera(c){ return !!WIDGETS_FUERA[c]; }
 // 2175 {gasto}: el widget `usage` pasa a llamarse `gasto` (ya no es solo claude). la clave vieja puede
 // seguir viva en el `tabs.json` del buzon o en el cache de localStorage: se traduce al leer, asi la
@@ -1899,14 +1899,18 @@ function pintarFilaMotor(){
   var tAct = temaActivo();
   if(!tAct){
     filaMotor.classList.add("oculta");
+    filaMotor.style.display = "none";
     return;
   }
-  filaMotor.classList.remove("oculta");
+  // 3801 {chat-cadena-fija}: se quitan de la vista el selector superior y el pie inferior de cada pestaña
   filaMotor.innerHTML = "";
-  filaMotor.className = "tab-motor-fila";
+  filaMotor.className = "tab-motor-fila oculta";
+  filaMotor.style.display = "none";
+  filaMotor.setAttribute("aria-hidden", "true");
 
   var controles = document.createElement("div");
   controles.className = "tab-motor-controles";
+  controles.style.display = "none";
   filaMotor.appendChild(controles);
 
   var fil = filaDeTab(tAct);
@@ -2064,6 +2068,7 @@ function pintarFilaMotor(){
 
   var ultimoDiv = document.createElement("div");
   ultimoDiv.className = "tab-motor-ultimo";
+  ultimoDiv.style.display = "none";
   ultimoDiv.title = "lo que corrio en la ultima respuesta";
   ultimoDiv.textContent = textoCorrido(ultimoCorridoDeTab(tAct));
   filaMotor.appendChild(ultimoDiv);
@@ -14589,7 +14594,7 @@ function pintarWidgets(d, err){
     ["seguidores", d.seguidores ? modHtml("seguidores") : ""],
     ["igcola", d.igcola ? modHtml("igcola") : ""],
     ["madrugada", d.madrugada ? modHtml("madrugada") : ""],
-    ["cadenas", d.cadenas ? modHtml("cadenas") : ""],   // {limpiar}: las cadenas de modelos, separadas de `USAGE`
+    ["cadenas", ""],   // 3801 {chat-cadena-fija}: widget `cadenas` retirado (ex modHtml("cadenas"))
     ["inversiones", d.inversiones ? modHtml("inversiones") : ""],   // 2078: la cartera de ibkr, modulo
     ["standup", d.standup ? modHtml("standup") : ""],   // 2267 {standup}: el draft de la proxima standup, modulo
     ["reglas", d.reglas ? cajaReglas(d.reglas) : ""]

@@ -249,41 +249,44 @@
       "pestana": "awtomic",
       "tema": null,
       "fila": "awtomic",
-      "motor": "claude",
-      "modelo": "sonnet",
-      "effort": "high",
-      "origen_motor": "del_modelo",
-      "origen_modelo": "selector_exacto",
-      "origen_effort": "selector_exacto",
-      "flags": [
-        "--model",
-        "sonnet",
-        "--effort",
-        "high"
-      ],
-      "flags_effort": [
-        "--effort",
-        "high"
-      ]
-    },
-    "awtomic#100": {
-      "pestana": "awtomic#100",
-      "tema": null,
-      "fila": "awtomic",
       "motor": "cadena",
       "modelo": "cadena",
       "effort": "low",
-      "origen_motor": "del_modelo",
-      "origen_modelo": "selector_exacto",
-      "origen_effort": "selector_exacto",
+      "cuenta": "awtomic",
+      "origen_motor": "cadena_fija",
+      "origen_modelo": "cadena_fija",
+      "origen_effort": "cadena_fija",
       "flags": [
         "--effort",
         "low"
       ],
       "flags_effort": [
         "--effort",
-        "low"
+        "high"
       ],
+      "primer_eslabon": {
+        "motor": "agy",
+        "modelo": "gemini-3.8-flash",
+        "effort": "low",
+        "flags": [
+          "--model",
+          "gemini-3.8-flash-low",
+          "--effort",
+          "low"
+        ]
+      },
+      "segundo_eslabon": {
+        "motor": "claude",
+        "modelo": "sonnet",
+        "effort": "high",
+        "cuenta": "awtomic",
+        "flags": [
+          "--model",
+          "sonnet",
+          "--effort",
+          "high"
+        ]
+      },
       "cadena": [
         {
           "motor": "agy",
@@ -293,7 +296,89 @@
         {
           "motor": "claude",
           "modelo": "sonnet",
+          "effort": "high",
+          "cuenta": "awtomic"
+        },
+        {
+          "motor": "claude",
+          "modelo": "sonnet",
+          "effort": "medium"
+        },
+        {
+          "motor": "claude",
+          "modelo": "opus",
+          "effort": "medium"
+        },
+        {
+          "motor": "claude",
+          "modelo": "fable",
           "effort": "low"
+        },
+        {
+          "motor": "groq",
+          "modelo": "groq",
+          "effort": "low"
+        },
+        {
+          "motor": "gemini",
+          "modelo": "gemini",
+          "effort": "low"
+        }
+      ]
+    },
+    "awtomic#100": {
+      "pestana": "awtomic#100",
+      "tema": null,
+      "fila": "awtomic",
+      "motor": "cadena",
+      "modelo": "cadena",
+      "effort": "low",
+      "cuenta": "awtomic",
+      "origen_motor": "cadena_fija",
+      "origen_modelo": "cadena_fija",
+      "origen_effort": "cadena_fija",
+      "flags": [
+        "--effort",
+        "low"
+      ],
+      "flags_effort": [
+        "--effort",
+        "high"
+      ],
+      "primer_eslabon": {
+        "motor": "agy",
+        "modelo": "gemini-3.8-flash",
+        "effort": "low",
+        "flags": [
+          "--model",
+          "gemini-3.8-flash-low",
+          "--effort",
+          "low"
+        ]
+      },
+      "segundo_eslabon": {
+        "motor": "claude",
+        "modelo": "sonnet",
+        "effort": "high",
+        "cuenta": "awtomic",
+        "flags": [
+          "--model",
+          "sonnet",
+          "--effort",
+          "high"
+        ]
+      },
+      "cadena": [
+        {
+          "motor": "agy",
+          "modelo": "gemini-3.8-flash",
+          "effort": "low"
+        },
+        {
+          "motor": "claude",
+          "modelo": "sonnet",
+          "effort": "high",
+          "cuenta": "awtomic"
         },
         {
           "motor": "claude",
@@ -329,17 +414,41 @@
       "motor": "cadena",
       "modelo": "cadena",
       "effort": "low",
-      "origen_motor": "del_modelo",
-      "origen_modelo": "selector_exacto",
-      "origen_effort": "selector_exacto",
+      "cuenta": "awtomic",
+      "origen_motor": "cadena_fija",
+      "origen_modelo": "cadena_fija",
+      "origen_effort": "cadena_fija",
       "flags": [
         "--effort",
         "low"
       ],
       "flags_effort": [
         "--effort",
-        "low"
+        "high"
       ],
+      "primer_eslabon": {
+        "motor": "agy",
+        "modelo": "gemini-3.8-flash",
+        "effort": "low",
+        "flags": [
+          "--model",
+          "gemini-3.8-flash-low",
+          "--effort",
+          "low"
+        ]
+      },
+      "segundo_eslabon": {
+        "motor": "claude",
+        "modelo": "sonnet",
+        "effort": "high",
+        "cuenta": "awtomic",
+        "flags": [
+          "--model",
+          "sonnet",
+          "--effort",
+          "high"
+        ]
+      },
       "cadena": [
         {
           "motor": "agy",
@@ -349,7 +458,8 @@
         {
           "motor": "claude",
           "modelo": "sonnet",
-          "effort": "low"
+          "effort": "high",
+          "cuenta": "awtomic"
         },
         {
           "motor": "claude",
@@ -382,104 +492,44 @@
       "pestana": "awtomic#14",
       "tema": null,
       "fila": "awtomic",
-      "motor": "claude",
-      "modelo": "sonnet",
-      "effort": "low",
-      "origen_motor": "del_modelo",
-      "origen_modelo": "selector_exacto",
-      "origen_effort": "selector_exacto",
-      "flags": [
-        "--model",
-        "sonnet",
-        "--effort",
-        "low"
-      ],
-      "flags_effort": [
-        "--effort",
-        "low"
-      ]
-    },
-    "awtomic#88": {
-      "pestana": "awtomic#88",
-      "tema": null,
-      "fila": "awtomic",
-      "motor": "claude",
-      "modelo": "sonnet",
-      "effort": "high",
-      "origen_motor": "del_modelo",
-      "origen_modelo": "selector_exacto",
-      "origen_effort": "selector_madre",
-      "flags": [
-        "--model",
-        "sonnet",
-        "--effort",
-        "high"
-      ],
-      "flags_effort": [
-        "--effort",
-        "high"
-      ]
-    },
-    "awtomic#90": {
-      "pestana": "awtomic#90",
-      "tema": null,
-      "fila": "awtomic",
-      "motor": "claude",
-      "modelo": "sonnet",
-      "effort": "medium",
-      "origen_motor": "del_modelo",
-      "origen_modelo": "selector_exacto",
-      "origen_effort": "selector_exacto",
-      "flags": [
-        "--model",
-        "sonnet",
-        "--effort",
-        "medium"
-      ],
-      "flags_effort": [
-        "--effort",
-        "medium"
-      ]
-    },
-    "awtomic#91": {
-      "pestana": "awtomic#91",
-      "tema": null,
-      "fila": "awtomic",
-      "motor": "claude",
-      "modelo": "sonnet",
-      "effort": "low",
-      "origen_motor": "del_modelo",
-      "origen_modelo": "selector_exacto",
-      "origen_effort": "selector_exacto",
-      "flags": [
-        "--model",
-        "sonnet",
-        "--effort",
-        "low"
-      ],
-      "flags_effort": [
-        "--effort",
-        "low"
-      ]
-    },
-    "board": {
-      "pestana": "board",
-      "tema": null,
-      "fila": null,
       "motor": "cadena",
       "modelo": "cadena",
       "effort": "low",
-      "origen_motor": "del_modelo",
-      "origen_modelo": "selector_exacto",
-      "origen_effort": "selector_exacto",
+      "cuenta": "awtomic",
+      "origen_motor": "cadena_fija",
+      "origen_modelo": "cadena_fija",
+      "origen_effort": "cadena_fija",
       "flags": [
         "--effort",
         "low"
       ],
       "flags_effort": [
         "--effort",
-        "low"
+        "high"
       ],
+      "primer_eslabon": {
+        "motor": "agy",
+        "modelo": "gemini-3.8-flash",
+        "effort": "low",
+        "flags": [
+          "--model",
+          "gemini-3.8-flash-low",
+          "--effort",
+          "low"
+        ]
+      },
+      "segundo_eslabon": {
+        "motor": "claude",
+        "modelo": "sonnet",
+        "effort": "high",
+        "cuenta": "awtomic",
+        "flags": [
+          "--model",
+          "sonnet",
+          "--effort",
+          "high"
+        ]
+      },
       "cadena": [
         {
           "motor": "agy",
@@ -489,7 +539,332 @@
         {
           "motor": "claude",
           "modelo": "sonnet",
+          "effort": "high",
+          "cuenta": "awtomic"
+        },
+        {
+          "motor": "claude",
+          "modelo": "sonnet",
+          "effort": "medium"
+        },
+        {
+          "motor": "claude",
+          "modelo": "opus",
+          "effort": "medium"
+        },
+        {
+          "motor": "claude",
+          "modelo": "fable",
           "effort": "low"
+        },
+        {
+          "motor": "groq",
+          "modelo": "groq",
+          "effort": "low"
+        },
+        {
+          "motor": "gemini",
+          "modelo": "gemini",
+          "effort": "low"
+        }
+      ]
+    },
+    "awtomic#88": {
+      "pestana": "awtomic#88",
+      "tema": null,
+      "fila": "awtomic",
+      "motor": "cadena",
+      "modelo": "cadena",
+      "effort": "low",
+      "cuenta": "awtomic",
+      "origen_motor": "cadena_fija",
+      "origen_modelo": "cadena_fija",
+      "origen_effort": "cadena_fija",
+      "flags": [
+        "--effort",
+        "low"
+      ],
+      "flags_effort": [
+        "--effort",
+        "high"
+      ],
+      "primer_eslabon": {
+        "motor": "agy",
+        "modelo": "gemini-3.8-flash",
+        "effort": "low",
+        "flags": [
+          "--model",
+          "gemini-3.8-flash-low",
+          "--effort",
+          "low"
+        ]
+      },
+      "segundo_eslabon": {
+        "motor": "claude",
+        "modelo": "sonnet",
+        "effort": "high",
+        "cuenta": "awtomic",
+        "flags": [
+          "--model",
+          "sonnet",
+          "--effort",
+          "high"
+        ]
+      },
+      "cadena": [
+        {
+          "motor": "agy",
+          "modelo": "gemini-3.8-flash",
+          "effort": "low"
+        },
+        {
+          "motor": "claude",
+          "modelo": "sonnet",
+          "effort": "high",
+          "cuenta": "awtomic"
+        },
+        {
+          "motor": "claude",
+          "modelo": "sonnet",
+          "effort": "medium"
+        },
+        {
+          "motor": "claude",
+          "modelo": "opus",
+          "effort": "medium"
+        },
+        {
+          "motor": "claude",
+          "modelo": "fable",
+          "effort": "low"
+        },
+        {
+          "motor": "groq",
+          "modelo": "groq",
+          "effort": "low"
+        },
+        {
+          "motor": "gemini",
+          "modelo": "gemini",
+          "effort": "low"
+        }
+      ]
+    },
+    "awtomic#90": {
+      "pestana": "awtomic#90",
+      "tema": null,
+      "fila": "awtomic",
+      "motor": "cadena",
+      "modelo": "cadena",
+      "effort": "low",
+      "cuenta": "awtomic",
+      "origen_motor": "cadena_fija",
+      "origen_modelo": "cadena_fija",
+      "origen_effort": "cadena_fija",
+      "flags": [
+        "--effort",
+        "low"
+      ],
+      "flags_effort": [
+        "--effort",
+        "high"
+      ],
+      "primer_eslabon": {
+        "motor": "agy",
+        "modelo": "gemini-3.8-flash",
+        "effort": "low",
+        "flags": [
+          "--model",
+          "gemini-3.8-flash-low",
+          "--effort",
+          "low"
+        ]
+      },
+      "segundo_eslabon": {
+        "motor": "claude",
+        "modelo": "sonnet",
+        "effort": "high",
+        "cuenta": "awtomic",
+        "flags": [
+          "--model",
+          "sonnet",
+          "--effort",
+          "high"
+        ]
+      },
+      "cadena": [
+        {
+          "motor": "agy",
+          "modelo": "gemini-3.8-flash",
+          "effort": "low"
+        },
+        {
+          "motor": "claude",
+          "modelo": "sonnet",
+          "effort": "high",
+          "cuenta": "awtomic"
+        },
+        {
+          "motor": "claude",
+          "modelo": "sonnet",
+          "effort": "medium"
+        },
+        {
+          "motor": "claude",
+          "modelo": "opus",
+          "effort": "medium"
+        },
+        {
+          "motor": "claude",
+          "modelo": "fable",
+          "effort": "low"
+        },
+        {
+          "motor": "groq",
+          "modelo": "groq",
+          "effort": "low"
+        },
+        {
+          "motor": "gemini",
+          "modelo": "gemini",
+          "effort": "low"
+        }
+      ]
+    },
+    "awtomic#91": {
+      "pestana": "awtomic#91",
+      "tema": null,
+      "fila": "awtomic",
+      "motor": "cadena",
+      "modelo": "cadena",
+      "effort": "low",
+      "cuenta": "awtomic",
+      "origen_motor": "cadena_fija",
+      "origen_modelo": "cadena_fija",
+      "origen_effort": "cadena_fija",
+      "flags": [
+        "--effort",
+        "low"
+      ],
+      "flags_effort": [
+        "--effort",
+        "high"
+      ],
+      "primer_eslabon": {
+        "motor": "agy",
+        "modelo": "gemini-3.8-flash",
+        "effort": "low",
+        "flags": [
+          "--model",
+          "gemini-3.8-flash-low",
+          "--effort",
+          "low"
+        ]
+      },
+      "segundo_eslabon": {
+        "motor": "claude",
+        "modelo": "sonnet",
+        "effort": "high",
+        "cuenta": "awtomic",
+        "flags": [
+          "--model",
+          "sonnet",
+          "--effort",
+          "high"
+        ]
+      },
+      "cadena": [
+        {
+          "motor": "agy",
+          "modelo": "gemini-3.8-flash",
+          "effort": "low"
+        },
+        {
+          "motor": "claude",
+          "modelo": "sonnet",
+          "effort": "high",
+          "cuenta": "awtomic"
+        },
+        {
+          "motor": "claude",
+          "modelo": "sonnet",
+          "effort": "medium"
+        },
+        {
+          "motor": "claude",
+          "modelo": "opus",
+          "effort": "medium"
+        },
+        {
+          "motor": "claude",
+          "modelo": "fable",
+          "effort": "low"
+        },
+        {
+          "motor": "groq",
+          "modelo": "groq",
+          "effort": "low"
+        },
+        {
+          "motor": "gemini",
+          "modelo": "gemini",
+          "effort": "low"
+        }
+      ]
+    },
+    "board": {
+      "pestana": "board",
+      "tema": null,
+      "fila": null,
+      "motor": "cadena",
+      "modelo": "cadena",
+      "effort": "low",
+      "cuenta": "personal",
+      "origen_motor": "cadena_fija",
+      "origen_modelo": "cadena_fija",
+      "origen_effort": "cadena_fija",
+      "flags": [
+        "--effort",
+        "low"
+      ],
+      "flags_effort": [
+        "--effort",
+        "high"
+      ],
+      "primer_eslabon": {
+        "motor": "agy",
+        "modelo": "gemini-3.8-flash",
+        "effort": "low",
+        "flags": [
+          "--model",
+          "gemini-3.8-flash-low",
+          "--effort",
+          "low"
+        ]
+      },
+      "segundo_eslabon": {
+        "motor": "claude",
+        "modelo": "sonnet",
+        "effort": "high",
+        "cuenta": "personal",
+        "flags": [
+          "--model",
+          "sonnet",
+          "--effort",
+          "high"
+        ]
+      },
+      "cadena": [
+        {
+          "motor": "agy",
+          "modelo": "gemini-3.8-flash",
+          "effort": "low"
+        },
+        {
+          "motor": "claude",
+          "modelo": "sonnet",
+          "effort": "high",
+          "cuenta": "personal"
         },
         {
           "motor": "claude",
@@ -522,62 +897,44 @@
       "pestana": "flos",
       "tema": null,
       "fila": "flos",
-      "motor": "agy",
-      "modelo": "gemini-3.8-flash",
-      "effort": "low",
-      "origen_motor": "del_modelo",
-      "origen_modelo": "selector_exacto",
-      "origen_effort": "selector_exacto",
-      "flags": [
-        "--model",
-        "gemini-3.8-flash",
-        "--effort",
-        "low"
-      ],
-      "flags_effort": [
-        "--effort",
-        "low"
-      ]
-    },
-    "flos#2": {
-      "pestana": "flos#2",
-      "tema": null,
-      "fila": "flos",
-      "motor": "agy",
-      "modelo": "gemini-3.8-flash",
-      "effort": "low",
-      "origen_motor": "del_modelo",
-      "origen_modelo": "selector_exacto",
-      "origen_effort": "selector_exacto",
-      "flags": [
-        "--model",
-        "gemini-3.8-flash",
-        "--effort",
-        "low"
-      ],
-      "flags_effort": [
-        "--effort",
-        "low"
-      ]
-    },
-    "juegos": {
-      "pestana": "juegos",
-      "tema": null,
-      "fila": "juegos",
       "motor": "cadena",
       "modelo": "cadena",
       "effort": "low",
-      "origen_motor": "del_modelo",
-      "origen_modelo": "selector_exacto",
-      "origen_effort": "selector_exacto",
+      "cuenta": "personal",
+      "origen_motor": "cadena_fija",
+      "origen_modelo": "cadena_fija",
+      "origen_effort": "cadena_fija",
       "flags": [
         "--effort",
         "low"
       ],
       "flags_effort": [
         "--effort",
-        "low"
+        "high"
       ],
+      "primer_eslabon": {
+        "motor": "agy",
+        "modelo": "gemini-3.8-flash",
+        "effort": "low",
+        "flags": [
+          "--model",
+          "gemini-3.8-flash-low",
+          "--effort",
+          "low"
+        ]
+      },
+      "segundo_eslabon": {
+        "motor": "claude",
+        "modelo": "sonnet",
+        "effort": "high",
+        "cuenta": "personal",
+        "flags": [
+          "--model",
+          "sonnet",
+          "--effort",
+          "high"
+        ]
+      },
       "cadena": [
         {
           "motor": "agy",
@@ -587,7 +944,170 @@
         {
           "motor": "claude",
           "modelo": "sonnet",
+          "effort": "high",
+          "cuenta": "personal"
+        },
+        {
+          "motor": "claude",
+          "modelo": "sonnet",
+          "effort": "medium"
+        },
+        {
+          "motor": "claude",
+          "modelo": "opus",
+          "effort": "medium"
+        },
+        {
+          "motor": "claude",
+          "modelo": "fable",
           "effort": "low"
+        },
+        {
+          "motor": "groq",
+          "modelo": "groq",
+          "effort": "low"
+        },
+        {
+          "motor": "gemini",
+          "modelo": "gemini",
+          "effort": "low"
+        }
+      ]
+    },
+    "flos#2": {
+      "pestana": "flos#2",
+      "tema": null,
+      "fila": "flos",
+      "motor": "cadena",
+      "modelo": "cadena",
+      "effort": "low",
+      "cuenta": "personal",
+      "origen_motor": "cadena_fija",
+      "origen_modelo": "cadena_fija",
+      "origen_effort": "cadena_fija",
+      "flags": [
+        "--effort",
+        "low"
+      ],
+      "flags_effort": [
+        "--effort",
+        "high"
+      ],
+      "primer_eslabon": {
+        "motor": "agy",
+        "modelo": "gemini-3.8-flash",
+        "effort": "low",
+        "flags": [
+          "--model",
+          "gemini-3.8-flash-low",
+          "--effort",
+          "low"
+        ]
+      },
+      "segundo_eslabon": {
+        "motor": "claude",
+        "modelo": "sonnet",
+        "effort": "high",
+        "cuenta": "personal",
+        "flags": [
+          "--model",
+          "sonnet",
+          "--effort",
+          "high"
+        ]
+      },
+      "cadena": [
+        {
+          "motor": "agy",
+          "modelo": "gemini-3.8-flash",
+          "effort": "low"
+        },
+        {
+          "motor": "claude",
+          "modelo": "sonnet",
+          "effort": "high",
+          "cuenta": "personal"
+        },
+        {
+          "motor": "claude",
+          "modelo": "sonnet",
+          "effort": "medium"
+        },
+        {
+          "motor": "claude",
+          "modelo": "opus",
+          "effort": "medium"
+        },
+        {
+          "motor": "claude",
+          "modelo": "fable",
+          "effort": "low"
+        },
+        {
+          "motor": "groq",
+          "modelo": "groq",
+          "effort": "low"
+        },
+        {
+          "motor": "gemini",
+          "modelo": "gemini",
+          "effort": "low"
+        }
+      ]
+    },
+    "juegos": {
+      "pestana": "juegos",
+      "tema": null,
+      "fila": "juegos",
+      "motor": "cadena",
+      "modelo": "cadena",
+      "effort": "low",
+      "cuenta": "personal",
+      "origen_motor": "cadena_fija",
+      "origen_modelo": "cadena_fija",
+      "origen_effort": "cadena_fija",
+      "flags": [
+        "--effort",
+        "low"
+      ],
+      "flags_effort": [
+        "--effort",
+        "high"
+      ],
+      "primer_eslabon": {
+        "motor": "agy",
+        "modelo": "gemini-3.8-flash",
+        "effort": "low",
+        "flags": [
+          "--model",
+          "gemini-3.8-flash-low",
+          "--effort",
+          "low"
+        ]
+      },
+      "segundo_eslabon": {
+        "motor": "claude",
+        "modelo": "sonnet",
+        "effort": "high",
+        "cuenta": "personal",
+        "flags": [
+          "--model",
+          "sonnet",
+          "--effort",
+          "high"
+        ]
+      },
+      "cadena": [
+        {
+          "motor": "agy",
+          "modelo": "gemini-3.8-flash",
+          "effort": "low"
+        },
+        {
+          "motor": "claude",
+          "modelo": "sonnet",
+          "effort": "high",
+          "cuenta": "personal"
         },
         {
           "motor": "claude",
@@ -620,41 +1140,44 @@
       "pestana": "juegos#2",
       "tema": null,
       "fila": "juegos",
-      "motor": "agy",
-      "modelo": "gemini-3.8-flash",
-      "effort": "low",
-      "origen_motor": "del_modelo",
-      "origen_modelo": "selector_exacto",
-      "origen_effort": "selector_exacto",
-      "flags": [
-        "--model",
-        "gemini-3.8-flash",
-        "--effort",
-        "low"
-      ],
-      "flags_effort": [
-        "--effort",
-        "low"
-      ]
-    },
-    "modelos": {
-      "pestana": "modelos",
-      "tema": null,
-      "fila": null,
       "motor": "cadena",
       "modelo": "cadena",
       "effort": "low",
-      "origen_motor": "del_modelo",
-      "origen_modelo": "selector_exacto",
-      "origen_effort": "selector_exacto",
+      "cuenta": "personal",
+      "origen_motor": "cadena_fija",
+      "origen_modelo": "cadena_fija",
+      "origen_effort": "cadena_fija",
       "flags": [
         "--effort",
         "low"
       ],
       "flags_effort": [
         "--effort",
-        "low"
+        "high"
       ],
+      "primer_eslabon": {
+        "motor": "agy",
+        "modelo": "gemini-3.8-flash",
+        "effort": "low",
+        "flags": [
+          "--model",
+          "gemini-3.8-flash-low",
+          "--effort",
+          "low"
+        ]
+      },
+      "segundo_eslabon": {
+        "motor": "claude",
+        "modelo": "sonnet",
+        "effort": "high",
+        "cuenta": "personal",
+        "flags": [
+          "--model",
+          "sonnet",
+          "--effort",
+          "high"
+        ]
+      },
       "cadena": [
         {
           "motor": "agy",
@@ -664,7 +1187,89 @@
         {
           "motor": "claude",
           "modelo": "sonnet",
+          "effort": "high",
+          "cuenta": "personal"
+        },
+        {
+          "motor": "claude",
+          "modelo": "sonnet",
+          "effort": "medium"
+        },
+        {
+          "motor": "claude",
+          "modelo": "opus",
+          "effort": "medium"
+        },
+        {
+          "motor": "claude",
+          "modelo": "fable",
           "effort": "low"
+        },
+        {
+          "motor": "groq",
+          "modelo": "groq",
+          "effort": "low"
+        },
+        {
+          "motor": "gemini",
+          "modelo": "gemini",
+          "effort": "low"
+        }
+      ]
+    },
+    "modelos": {
+      "pestana": "modelos",
+      "tema": null,
+      "fila": null,
+      "motor": "cadena",
+      "modelo": "cadena",
+      "effort": "low",
+      "cuenta": "personal",
+      "origen_motor": "cadena_fija",
+      "origen_modelo": "cadena_fija",
+      "origen_effort": "cadena_fija",
+      "flags": [
+        "--effort",
+        "low"
+      ],
+      "flags_effort": [
+        "--effort",
+        "high"
+      ],
+      "primer_eslabon": {
+        "motor": "agy",
+        "modelo": "gemini-3.8-flash",
+        "effort": "low",
+        "flags": [
+          "--model",
+          "gemini-3.8-flash-low",
+          "--effort",
+          "low"
+        ]
+      },
+      "segundo_eslabon": {
+        "motor": "claude",
+        "modelo": "sonnet",
+        "effort": "high",
+        "cuenta": "personal",
+        "flags": [
+          "--model",
+          "sonnet",
+          "--effort",
+          "high"
+        ]
+      },
+      "cadena": [
+        {
+          "motor": "agy",
+          "modelo": "gemini-3.8-flash",
+          "effort": "low"
+        },
+        {
+          "motor": "claude",
+          "modelo": "sonnet",
+          "effort": "high",
+          "cuenta": "personal"
         },
         {
           "motor": "claude",
@@ -700,17 +1305,41 @@
       "motor": "cadena",
       "modelo": "cadena",
       "effort": "low",
-      "origen_motor": "del_modelo",
-      "origen_modelo": "selector_exacto",
-      "origen_effort": "selector_exacto",
+      "cuenta": "personal",
+      "origen_motor": "cadena_fija",
+      "origen_modelo": "cadena_fija",
+      "origen_effort": "cadena_fija",
       "flags": [
         "--effort",
         "low"
       ],
       "flags_effort": [
         "--effort",
-        "low"
+        "high"
       ],
+      "primer_eslabon": {
+        "motor": "agy",
+        "modelo": "gemini-3.8-flash",
+        "effort": "low",
+        "flags": [
+          "--model",
+          "gemini-3.8-flash-low",
+          "--effort",
+          "low"
+        ]
+      },
+      "segundo_eslabon": {
+        "motor": "claude",
+        "modelo": "sonnet",
+        "effort": "high",
+        "cuenta": "personal",
+        "flags": [
+          "--model",
+          "sonnet",
+          "--effort",
+          "high"
+        ]
+      },
       "cadena": [
         {
           "motor": "agy",
@@ -720,7 +1349,8 @@
         {
           "motor": "claude",
           "modelo": "sonnet",
-          "effort": "low"
+          "effort": "high",
+          "cuenta": "personal"
         },
         {
           "motor": "claude",
@@ -756,17 +1386,41 @@
       "motor": "cadena",
       "modelo": "cadena",
       "effort": "low",
-      "origen_motor": "del_modelo",
-      "origen_modelo": "selector_exacto",
-      "origen_effort": "selector_exacto",
+      "cuenta": "personal",
+      "origen_motor": "cadena_fija",
+      "origen_modelo": "cadena_fija",
+      "origen_effort": "cadena_fija",
       "flags": [
         "--effort",
         "low"
       ],
       "flags_effort": [
         "--effort",
-        "low"
+        "high"
       ],
+      "primer_eslabon": {
+        "motor": "agy",
+        "modelo": "gemini-3.8-flash",
+        "effort": "low",
+        "flags": [
+          "--model",
+          "gemini-3.8-flash-low",
+          "--effort",
+          "low"
+        ]
+      },
+      "segundo_eslabon": {
+        "motor": "claude",
+        "modelo": "sonnet",
+        "effort": "high",
+        "cuenta": "personal",
+        "flags": [
+          "--model",
+          "sonnet",
+          "--effort",
+          "high"
+        ]
+      },
       "cadena": [
         {
           "motor": "agy",
@@ -776,7 +1430,8 @@
         {
           "motor": "claude",
           "modelo": "sonnet",
-          "effort": "low"
+          "effort": "high",
+          "cuenta": "personal"
         },
         {
           "motor": "claude",
@@ -812,17 +1467,41 @@
       "motor": "cadena",
       "modelo": "cadena",
       "effort": "low",
-      "origen_motor": "del_modelo",
-      "origen_modelo": "selector_exacto",
-      "origen_effort": "selector_exacto",
+      "cuenta": "personal",
+      "origen_motor": "cadena_fija",
+      "origen_modelo": "cadena_fija",
+      "origen_effort": "cadena_fija",
       "flags": [
         "--effort",
         "low"
       ],
       "flags_effort": [
         "--effort",
-        "low"
+        "high"
       ],
+      "primer_eslabon": {
+        "motor": "agy",
+        "modelo": "gemini-3.8-flash",
+        "effort": "low",
+        "flags": [
+          "--model",
+          "gemini-3.8-flash-low",
+          "--effort",
+          "low"
+        ]
+      },
+      "segundo_eslabon": {
+        "motor": "claude",
+        "modelo": "sonnet",
+        "effort": "high",
+        "cuenta": "personal",
+        "flags": [
+          "--model",
+          "sonnet",
+          "--effort",
+          "high"
+        ]
+      },
       "cadena": [
         {
           "motor": "agy",
@@ -832,7 +1511,8 @@
         {
           "motor": "claude",
           "modelo": "sonnet",
-          "effort": "low"
+          "effort": "high",
+          "cuenta": "personal"
         },
         {
           "motor": "claude",
@@ -865,63 +1545,243 @@
       "pestana": "podcast",
       "tema": null,
       "fila": null,
-      "motor": "agy",
-      "modelo": "gemini-3.8-flash",
-      "effort": "high",
-      "origen_motor": "del_modelo",
-      "origen_modelo": "selector_exacto",
-      "origen_effort": "selector_exacto",
+      "motor": "cadena",
+      "modelo": "cadena",
+      "effort": "low",
+      "cuenta": "personal",
+      "origen_motor": "cadena_fija",
+      "origen_modelo": "cadena_fija",
+      "origen_effort": "cadena_fija",
       "flags": [
-        "--model",
-        "gemini-3.8-flash",
         "--effort",
-        "high"
+        "low"
       ],
       "flags_effort": [
         "--effort",
         "high"
+      ],
+      "primer_eslabon": {
+        "motor": "agy",
+        "modelo": "gemini-3.8-flash",
+        "effort": "low",
+        "flags": [
+          "--model",
+          "gemini-3.8-flash-low",
+          "--effort",
+          "low"
+        ]
+      },
+      "segundo_eslabon": {
+        "motor": "claude",
+        "modelo": "sonnet",
+        "effort": "high",
+        "cuenta": "personal",
+        "flags": [
+          "--model",
+          "sonnet",
+          "--effort",
+          "high"
+        ]
+      },
+      "cadena": [
+        {
+          "motor": "agy",
+          "modelo": "gemini-3.8-flash",
+          "effort": "low"
+        },
+        {
+          "motor": "claude",
+          "modelo": "sonnet",
+          "effort": "high",
+          "cuenta": "personal"
+        },
+        {
+          "motor": "claude",
+          "modelo": "sonnet",
+          "effort": "medium"
+        },
+        {
+          "motor": "claude",
+          "modelo": "opus",
+          "effort": "medium"
+        },
+        {
+          "motor": "claude",
+          "modelo": "fable",
+          "effort": "low"
+        },
+        {
+          "motor": "groq",
+          "modelo": "groq",
+          "effort": "low"
+        },
+        {
+          "motor": "gemini",
+          "modelo": "gemini",
+          "effort": "low"
+        }
       ]
     },
     "server": {
       "pestana": "server",
       "tema": null,
       "fila": "server",
-      "motor": "claude",
-      "modelo": "sonnet",
-      "effort": "high",
-      "origen_motor": "del_modelo",
-      "origen_modelo": "default_fila",
-      "origen_effort": "default_fila",
+      "motor": "cadena",
+      "modelo": "cadena",
+      "effort": "low",
+      "cuenta": "personal",
+      "origen_motor": "cadena_fija",
+      "origen_modelo": "cadena_fija",
+      "origen_effort": "cadena_fija",
       "flags": [
-        "--model",
-        "sonnet",
         "--effort",
-        "high"
+        "low"
       ],
       "flags_effort": [
         "--effort",
         "high"
+      ],
+      "primer_eslabon": {
+        "motor": "agy",
+        "modelo": "gemini-3.8-flash",
+        "effort": "low",
+        "flags": [
+          "--model",
+          "gemini-3.8-flash-low",
+          "--effort",
+          "low"
+        ]
+      },
+      "segundo_eslabon": {
+        "motor": "claude",
+        "modelo": "sonnet",
+        "effort": "high",
+        "cuenta": "personal",
+        "flags": [
+          "--model",
+          "sonnet",
+          "--effort",
+          "high"
+        ]
+      },
+      "cadena": [
+        {
+          "motor": "agy",
+          "modelo": "gemini-3.8-flash",
+          "effort": "low"
+        },
+        {
+          "motor": "claude",
+          "modelo": "sonnet",
+          "effort": "high",
+          "cuenta": "personal"
+        },
+        {
+          "motor": "claude",
+          "modelo": "sonnet",
+          "effort": "medium"
+        },
+        {
+          "motor": "claude",
+          "modelo": "opus",
+          "effort": "medium"
+        },
+        {
+          "motor": "claude",
+          "modelo": "fable",
+          "effort": "low"
+        },
+        {
+          "motor": "groq",
+          "modelo": "groq",
+          "effort": "low"
+        },
+        {
+          "motor": "gemini",
+          "modelo": "gemini",
+          "effort": "low"
+        }
       ]
     },
     "tinder": {
       "pestana": "tinder",
       "tema": null,
       "fila": null,
-      "motor": "agy",
-      "modelo": "gemini-3.8-flash",
+      "motor": "cadena",
+      "modelo": "cadena",
       "effort": "low",
-      "origen_motor": "del_modelo",
-      "origen_modelo": "selector_exacto",
-      "origen_effort": "selector_exacto",
+      "cuenta": "personal",
+      "origen_motor": "cadena_fija",
+      "origen_modelo": "cadena_fija",
+      "origen_effort": "cadena_fija",
       "flags": [
-        "--model",
-        "gemini-3.8-flash",
         "--effort",
         "low"
       ],
       "flags_effort": [
         "--effort",
-        "low"
+        "high"
+      ],
+      "primer_eslabon": {
+        "motor": "agy",
+        "modelo": "gemini-3.8-flash",
+        "effort": "low",
+        "flags": [
+          "--model",
+          "gemini-3.8-flash-low",
+          "--effort",
+          "low"
+        ]
+      },
+      "segundo_eslabon": {
+        "motor": "claude",
+        "modelo": "sonnet",
+        "effort": "high",
+        "cuenta": "personal",
+        "flags": [
+          "--model",
+          "sonnet",
+          "--effort",
+          "high"
+        ]
+      },
+      "cadena": [
+        {
+          "motor": "agy",
+          "modelo": "gemini-3.8-flash",
+          "effort": "low"
+        },
+        {
+          "motor": "claude",
+          "modelo": "sonnet",
+          "effort": "high",
+          "cuenta": "personal"
+        },
+        {
+          "motor": "claude",
+          "modelo": "sonnet",
+          "effort": "medium"
+        },
+        {
+          "motor": "claude",
+          "modelo": "opus",
+          "effort": "medium"
+        },
+        {
+          "motor": "claude",
+          "modelo": "fable",
+          "effort": "low"
+        },
+        {
+          "motor": "groq",
+          "modelo": "groq",
+          "effort": "low"
+        },
+        {
+          "motor": "gemini",
+          "modelo": "gemini",
+          "effort": "low"
+        }
       ]
     }
   },
@@ -935,8 +1795,9 @@
       "modelo": "sonnet"
     },
     "awtomic#102": {
-      "motor": "claude",
-      "modelo": "sonnet"
+      "motor": "agy",
+      "modelo": "gemini-3.8-flash",
+      "effort": "low"
     },
     "awtomic#14": {
       "motor": "claude",
@@ -961,16 +1822,17 @@
       "effort": "low"
     },
     "flos": {
-      "motor": "gemini-3.8-flash",
-      "modelo": "gemini-3.8-flash"
+      "motor": "agy",
+      "modelo": "agy"
     },
     "flos#2": {
       "motor": "agy",
       "modelo": "agy"
     },
     "juegos": {
-      "motor": "claude",
-      "modelo": "sonnet"
+      "motor": "agy",
+      "modelo": "gemini-3.8-flash",
+      "effort": "low"
     },
     "juegos#2": {
       "motor": "claude",
@@ -1003,7 +1865,8 @@
     },
     "tinder": {
       "motor": "agy",
-      "modelo": "agy"
+      "modelo": "gemini-4-argon",
+      "effort": "high"
     }
   },
   "modelos_agy": {
@@ -1054,7 +1917,7 @@
     {
       "motor": "claude",
       "modelo": "sonnet",
-      "effort": "low"
+      "effort": "high"
     },
     {
       "motor": "claude",
@@ -1081,5 +1944,6 @@
       "modelo": "gemini",
       "effort": "low"
     }
-  ]
+  ],
+  "cadena_fija": true
 }
