@@ -1525,9 +1525,13 @@
   .usage .ucol.sinlim .cta:hover{background:none}
   /* {modelos-barras-finas} (facundo, 2026-10-15: "todas las barritas pasan a ser tamano barrita chiquita; a la derecha
      solo cuanto falta para que renueve"): cada cuenta es una grilla de dos columnas, el nombre a la izquierda y a su
-     lado una barrita por limite que tenga (`.gq`: etiqueta | barra de 4 px | tiempo). TODAS las barras miden lo mismo
+     lado una barrita por limite que tenga (`.gq`: barra de 4 px | etiqueta | tiempo). TODAS las barras miden lo mismo
      y arrancan y terminan en la misma x, en claude, gemini y groq. el `%` no se pinta (va en el tooltip) y la plata
-     tampoco. clases propias (`gcu`, `gq*`) y no `.ub.grow`: `tema-facu.css` tiene reglas viejas de ese molde. */
+     tampoco. clases propias (`gcu`, `gq*`) y no `.ub.grow`: `tema-facu.css` tiene reglas viejas de ese molde.
+     {color-awtomic} (facundo, 2026-10-15: "pone los indicadores de 5h week y eso a la derecha, junto con cuando
+     renuevan"): la etiqueta (`5h`, `week`, `fable`, los pozos de gemini, `min`/`dia` de groq) salio de la izquierda
+     de la barra y va a la derecha, en su columna fija pegada a la del tiempo. 58 px: `terceros`, la mas larga,
+     mide 55 (con 54 salia `tercer…`). */
   .usage.gasto .glin{display:block}
   .usage.gasto .gcu{display:grid;grid-template-columns:66px minmax(0,1fr);column-gap:6px;align-items:stretch;
                     margin:0 0 7px 0;padding:1px 0;border-radius:3px;font-size:11px}
@@ -1536,7 +1540,7 @@
   /* 2100 {prioritaria}: el punto verde pegado al nombre de la cuenta que renueva antes (la prioritaria del reparto) */
   .usage.gasto .gcu-n.pri::after{content:"\25CF";color:var(--verde,#7ee787);font-size:9px;margin-left:3px;vertical-align:middle;line-height:1}
   .usage.gasto .gqs{display:block;min-width:0}
-  .usage.gasto .gq{display:grid;grid-template-columns:62px minmax(0,1fr) 50px;column-gap:6px;align-items:center;
+  .usage.gasto .gq{display:grid;grid-template-columns:minmax(0,1fr) 58px 50px;column-gap:6px;align-items:center;
                    height:12px;line-height:12px}
   .usage.gasto .gq + .gq{margin-top:2px}
   .usage.gasto .gq-l{min-width:0;font-size:11px;color:var(--gris);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1600,7 +1604,7 @@
   @media (max-width:430px){
     .usage.gasto .gcu{grid-template-columns:62px minmax(0,1fr);column-gap:5px}
     .usage.gasto .gcu-n{font-size:11px}
-    .usage.gasto .gq{grid-template-columns:60px minmax(0,1fr) 48px;column-gap:5px}
+    .usage.gasto .gq{grid-template-columns:minmax(0,1fr) 58px 48px;column-gap:5px}
   }
   .ubat{display:inline-block;vertical-align:middle;position:relative;width:20px;height:9px;margin:0 5px 0 2px;
         border:1px solid #555;border-radius:2px;padding:1px;box-sizing:border-box}

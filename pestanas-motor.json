@@ -232,6 +232,16 @@
       "motor": "cadena",
       "modelo": "cadena",
       "effort": "low"
+    },
+    "awtomic#102": {
+      "motor": "cadena",
+      "modelo": "cadena",
+      "effort": "low"
+    },
+    "plata": {
+      "motor": "cadena",
+      "modelo": "cadena",
+      "effort": "low"
     }
   },
   "resueltos": {
@@ -258,6 +268,62 @@
     },
     "awtomic#100": {
       "pestana": "awtomic#100",
+      "tema": null,
+      "fila": "awtomic",
+      "motor": "cadena",
+      "modelo": "cadena",
+      "effort": "low",
+      "origen_motor": "del_modelo",
+      "origen_modelo": "selector_exacto",
+      "origen_effort": "selector_exacto",
+      "flags": [
+        "--effort",
+        "low"
+      ],
+      "flags_effort": [
+        "--effort",
+        "low"
+      ],
+      "cadena": [
+        {
+          "motor": "agy",
+          "modelo": "gemini-3.8-flash",
+          "effort": "low"
+        },
+        {
+          "motor": "claude",
+          "modelo": "sonnet",
+          "effort": "low"
+        },
+        {
+          "motor": "claude",
+          "modelo": "sonnet",
+          "effort": "medium"
+        },
+        {
+          "motor": "claude",
+          "modelo": "opus",
+          "effort": "medium"
+        },
+        {
+          "motor": "claude",
+          "modelo": "fable",
+          "effort": "low"
+        },
+        {
+          "motor": "groq",
+          "modelo": "groq",
+          "effort": "low"
+        },
+        {
+          "motor": "gemini",
+          "modelo": "gemini",
+          "effort": "low"
+        }
+      ]
+    },
+    "awtomic#102": {
+      "pestana": "awtomic#102",
       "tema": null,
       "fila": "awtomic",
       "motor": "cadena",
@@ -687,21 +753,56 @@
       "pestana": "plata",
       "tema": null,
       "fila": "plata",
-      "motor": "claude",
-      "modelo": "sonnet",
-      "effort": "medium",
+      "motor": "cadena",
+      "modelo": "cadena",
+      "effort": "low",
       "origen_motor": "del_modelo",
-      "origen_modelo": "default_fila",
-      "origen_effort": "default_fila",
+      "origen_modelo": "selector_exacto",
+      "origen_effort": "selector_exacto",
       "flags": [
-        "--model",
-        "sonnet",
         "--effort",
-        "medium"
+        "low"
       ],
       "flags_effort": [
         "--effort",
-        "medium"
+        "low"
+      ],
+      "cadena": [
+        {
+          "motor": "agy",
+          "modelo": "gemini-3.8-flash",
+          "effort": "low"
+        },
+        {
+          "motor": "claude",
+          "modelo": "sonnet",
+          "effort": "low"
+        },
+        {
+          "motor": "claude",
+          "modelo": "sonnet",
+          "effort": "medium"
+        },
+        {
+          "motor": "claude",
+          "modelo": "opus",
+          "effort": "medium"
+        },
+        {
+          "motor": "claude",
+          "modelo": "fable",
+          "effort": "low"
+        },
+        {
+          "motor": "groq",
+          "modelo": "groq",
+          "effort": "low"
+        },
+        {
+          "motor": "gemini",
+          "modelo": "gemini",
+          "effort": "low"
+        }
       ]
     },
     "plata#2": {
@@ -833,6 +934,10 @@
       "motor": "claude",
       "modelo": "sonnet"
     },
+    "awtomic#102": {
+      "motor": "claude",
+      "modelo": "sonnet"
+    },
     "awtomic#14": {
       "motor": "claude",
       "modelo": "sonnet"
@@ -852,8 +957,7 @@
     },
     "board": {
       "motor": "agy",
-      "modelo": "gemini-3.8-flash",
-      "effort": "low"
+      "modelo": "agy"
     },
     "flos": {
       "motor": "agy",
@@ -864,8 +968,8 @@
       "modelo": "agy"
     },
     "juegos": {
-      "motor": "agy",
-      "modelo": "agy"
+      "motor": "claude",
+      "modelo": "sonnet"
     },
     "juegos#2": {
       "motor": "claude",
@@ -873,8 +977,7 @@
     },
     "modelos": {
       "motor": "agy",
-      "modelo": "gemini-3.8-flash",
-      "effort": "low"
+      "modelo": "agy"
     },
     "personal": {
       "motor": "claude",
@@ -882,7 +985,8 @@
     },
     "plata": {
       "motor": "agy",
-      "modelo": "agy"
+      "modelo": "gemini-3.8-flash",
+      "effort": "low"
     },
     "plata#2": {
       "motor": "agy",
@@ -898,8 +1002,7 @@
     },
     "tinder": {
       "motor": "agy",
-      "modelo": "gemini-4-argon",
-      "effort": "high"
+      "modelo": "agy"
     }
   },
   "modelos_agy": {

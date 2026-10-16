@@ -72,7 +72,9 @@
       (cu.etiqueta ? '\n<span class="g">' + esc(cu.etiqueta) + "</span>" : "") +
       // {pestanafija} (facundo, 2026-09-22): una cuenta puede no TENER fable (`awtomic`). la barra vacia no
       // lo dice, asi que lo dice la ficha: es el porque de que una pestaña fijada a fable salga con opus.
-      (cu.sin_fable ? '\n<span class="r">sin fable en esta cuenta: sale con opus</span>' : "") +
+      // {color-awtomic} (facundo, 2026-10-15: "si es porque no tiene fable ya lo se, sacale el rojo"): en gris, no
+      // en rojo: no tener fable es la cuenta, no una falla.
+      (cu.sin_fable ? '\n<span class="g">sin fable en esta cuenta: sale con opus</span>' : "") +
       '<div class="cmod-b">' + USAGE_BARRAS.map(function(k){
         var b = bs.filter(function(x){ return x.clave === k[0] || x.nombre === k[1]; })[0];
         return barraHtml(b || {nombre: k[1], pct: null, linea: null, nivel: "sin"});
@@ -150,19 +152,23 @@
   // hay, y todas las barritas pasan a ser tamano barrita chiquita; a la derecha solo cuanto falta para que
   // renueve"): cada cuenta es el nombre a la izquierda y, al lado, UNA barrita fina (4 px) por limite que TENGA --
   // en claude `5h`, `week` y `fable`; en gemini sus pozos; en groq el minuto y el dia --, todas del mismo
-  // tamano y con la misma gramatica `etiqueta | barra | tiempo`. el tiempo es lo unico que va a la derecha, en
-  // corto (`2h 15m`, `3d`), sin `to renew`, sin `%` y sin plata (el `%` queda en el tooltip). un limite que la
-  // cuenta no tiene (`awtomic` sin `fable`, una ventana sin dato) NO se pinta: ni barra vacia ni etiqueta.
+  // tamano. el tiempo va a la derecha, en corto (`2h 15m`, `4d 14h`), sin `to renew`, sin `%` y sin plata (el `%`
+  // queda en el tooltip). un limite que la cuenta no tiene (`awtomic` sin `fable`, una ventana sin dato) NO se
+  // pinta: ni barra vacia ni etiqueta.
+  // {color-awtomic} (facundo, 2026-10-15: "pone los indicadores de 5h week y eso a la derecha, junto con cuando
+  // renuevan" y "a los dias poneles horas en la renovacion"): la gramatica pasa a `barra | etiqueta | tiempo`, la
+  // barra arranca pegada al nombre y la etiqueta va a la derecha, al lado del tiempo; y un tiempo de dias lleva
+  // sus horas (`4d 14h`, antes `4d`).
   // lo que llega armado del server sigue siendo la fuente: la web solo acorta el texto del tiempo (`falta_txt`,
   // o el `reset` iso de un pozo de gemini, que es lo unico que no trae el `falta_txt`).
   function cortoSeg(s){
     if(s === null || s === undefined || !isFinite(s) || s < 0) return "";
-    var m = Math.floor(s / 60), d = Math.floor(m / 1440);
-    if(d >= 1) return d + "d";
-    var h = Math.floor(m / 60); m = m % 60;
+    var m = Math.floor(s / 60), d = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60);
+    if(d >= 1) return d + "d" + (h ? " " + h + "h" : "");
+    m = m % 60;
     return h >= 1 ? h + "h" + (m ? " " + m + "m" : "") : m + "m";
   }
-  function cortoTxt(t){   // `4d 21h 37m` -> segundos -> `4d`; sin numero no hay tiempo que mostrar
+  function cortoTxt(t){   // `4d 21h 37m` -> segundos -> `4d 21h`; sin numero no hay tiempo que mostrar
     var q = /^\s*(?:(\d+)d)?\s*(?:(\d+)h)?\s*(?:(\d+)m)?\s*$/.exec(String(t || ""));
     if(!q || (q[1] === undefined && q[2] === undefined && q[3] === undefined)) return "";
     return cortoSeg((+q[1] || 0) * 86400 + (+q[2] || 0) * 3600 + (+q[3] || 0) * 60);
@@ -175,8 +181,8 @@
   // un limite: {et, pct, nivel, linea, t}. `nivel` pinta el relleno (`n-ok`/`n-cerca`/`n-sobre`/`n-mal`/`n-agotada`)
   function limiteHtml(q){
     return '<span class="gq n-' + esc(q.nivel || "sin") + '" data-lim="' + esc(q.et) + '">' +
-      '<span class="gq-l">' + esc(q.et) + "</span>" +
       '<span class="gq-pista"><span class="gq-lleno" style="width:' + q.pct + '%"></span>' + tickHtml(q) + "</span>" +
+      '<span class="gq-l">' + esc(q.et) + "</span>" +
       '<span class="gq-t">' + esc(q.t) + "</span></span>";
   }
   // los mismos cortes de `gasto_api.nivel_cuota` (verde, amarillo desde 70%, rojo desde 90%) para el pozo de gemini,

@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.589">
-<link rel="manifest" href="manifest.json?v=4.589">
+<meta name="agente-web-version" content="4.590">
+<link rel="manifest" href="manifest.json?v=4.590">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.589">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.590">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.559">
 <style id="css-listas-drag">
 #sellistas, #sellistas * {
@@ -3356,6 +3356,34 @@ function nodoAccMsg(m){
   w.appendChild(b);
   return w;
 }
+// 3779 {audio-cabecera} (facundo, 2026-10-15): el reproductor de las respuestas de flaudio arranca OCULTO y se
+// despliega con un `▶` en la cabecera del mensaje (`.audtog`); el de los mensajes de facundo sigue visible. `AUD_ABIERTOS`
+// guarda cual desplegó (por mensaje, no por nodo) para que un repintado del hilo no lo vuelva a cerrar.
+var AUD_ABIERTOS = {};
+function audClaveMsg(m){ return String(m.id || m.iso || String(m.texto || "").slice(0, 40)); }
+function audOcultoPorDefecto(m){ return !!m && m.clase === "agente"; }
+function botonAudioCabecera(m, player){
+  var clave = audClaveMsg(m);
+  function pintar(b, abierto){
+    player.style.display = abierto ? "" : "none";
+    b.textContent = abierto ? "▼" : "▶";
+    b.classList.toggle("abierto", abierto);
+    b.setAttribute("aria-expanded", abierto ? "true" : "false");
+    b.setAttribute("aria-label", abierto ? "ocultar el audio" : "mostrar el audio");
+    b.title = abierto ? "ocultar el audio" : "escuchar";
+  }
+  var b = moldeBoton({tipo: "term", txt: "▶", clase: "audtog"});
+  // chico, pegado al `mini` de la cabecera: el `.bterm` de 8x10 de padding es para las cajas, no para una linea de 13 px
+  b.style.cssText = "padding:0 6px;margin-left:8px;font-size:12px;line-height:18px;min-width:0;vertical-align:baseline";
+  pintar(b, !!AUD_ABIERTOS[clave]);
+  b.addEventListener("click", function(e){
+    e.stopPropagation();
+    var abrir = player.style.display === "none";
+    if(abrir) AUD_ABIERTOS[clave] = true; else delete AUD_ABIERTOS[clave];
+    pintar(b, abrir);
+  });
+  return b;
+}
 function nodoMsg(m){
   var div = document.createElement("div");
   div.className = "msg " + m.clase + (m.enviando ? " enviando" : "");
@@ -3388,7 +3416,8 @@ function nodoMsg(m){
   }
   // 2044 {audiotodas}: el `[▶]` chico de daniela en la cabecera se fue ("saca tambien el audio chiquito que
   // hay ahora"); el audio de la respuesta (campo `audio` de la fila, que llega en el poll siguiente al texto)
-  // se pinta abajo del mensaje, entero, con `playerAudio`.
+  // se pinta abajo del mensaje, entero, con `playerAudio`. 3779 {audio-cabecera}: en las respuestas de flaudio ese
+  // reproductor sale oculto y la cabecera lleva un `▶` NUEVO (`.audtog`, no el `.play` viejo) que lo despliega.
   // 1776: el hilo que facundo ya vio mientras contestaba (entendi, textos intermedios), del jsonl (`tramos`) o
   // adoptado del bloque en vuelo; arriba del cuerpo, mismo orden, nunca editado. 1850: el comando crudo y su salida
   // (`salida` de un daemon viejo) no se pintan nunca. 1868 (facundo, 2026-09-17: "cuando ya me respondiste, esta
@@ -3483,9 +3512,20 @@ function nodoMsg(m){
   if(m.clase === "agente" && m.tardes && m.tardes.length) div.appendChild(nodoTardes(m.tardes));
   if(m.clase === "agente" && dr.bloques.length) div.appendChild(nodoDrafts(dr.bloques));
   // el reproductor completo, uno por audio (2044: en todas las pestañas), al FINAL DE TODO: despues de las cajas,
-  // de la comparacion (`despues-cajas`) y de los drafts (2336 + 3767).
-  auds.forEach(function(sa){ div.appendChild(playerAudio(sa, "escuchar")); });
-  if(!auds.length && audioEnCamino(m)) div.appendChild(playerEnCamino());
+  // de la comparacion (`despues-cajas`) y de los drafts (2336 + 3767). 3779 {audio-cabecera}: en las respuestas de
+  // flaudio el reproductor va OCULTO (`display:none`) y lo despliega el `▶` de la cabecera (`.audtog`, junto al `mini`);
+  // en los mensajes de facundo sigue visible y automatico.
+  var plAgente = [];
+  auds.forEach(function(sa){ var p = playerAudio(sa, "escuchar"); div.appendChild(p); plAgente.push(p); });
+  if(!auds.length && audioEnCamino(m)){ var pc = playerEnCamino(); div.appendChild(pc); plAgente.push(pc); }
+  if(audOcultoPorDefecto(m) && plAgente.length){
+    // un solo boton por mensaje, aunque lleve varios audios: despliega/oculta todos juntos
+    var tog = botonAudioCabecera(m, plAgente[0]);
+    var pintarTodos = function(){ plAgente.forEach(function(p){ p.style.display = plAgente[0].style.display; }); };
+    tog.addEventListener("click", pintarTodos);
+    pintarTodos();
+    cab.appendChild(tog);
+  }
   div.__msg = m;          // el menu contextual (delegado) lee el mensaje del nodo
   if(m.clase === "agente") ponerCopiar(b);   // 1214: `copiar` de un toque en links, claves y code
   cargarImagenes(b);
