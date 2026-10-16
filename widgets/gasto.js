@@ -213,12 +213,18 @@
       });
       return out;
     }
+    // {proveedores-widget} (facundo, 2026-10-15: "falta info de cuando renueva groq"): groq tambien dice cuando reinicia
+    // cada tope. el server manda el instante (`cinco.reset` el del minuto, `dia_reset` la medianoche local donde arranca
+    // otro dia de cupo) y la web solo arma la cuenta regresiva, igual que con los pozos de gemini. el del minuto es siempre
+    // menos de 60 s: `<1m`, no un `0m` que parezca roto.
+    var cortoMin = function(iso){ var t = cortoIso(iso); return t === "0m" ? "<1m" : t; };
     if(l.cinco && numPct(l.cinco.pct) !== null)   // groq: el minuto
-      out.push({et: l.cinco.etiqueta || "min", pct: numPct(l.cinco.pct), nivel: l.cinco.nivel, linea: l.cinco.linea, t: ""});
+      out.push({et: l.cinco.etiqueta || "min", pct: numPct(l.cinco.pct), nivel: l.cinco.nivel, linea: l.cinco.linea, t: cortoMin(l.cinco.reset)});
     if(numPct(l.pct) !== null)
-      out.push({et: l.rotada ? "dia" : (l.ventana || "uso"), pct: numPct(l.pct), nivel: l.nivel, linea: l.cinco ? null : l.linea, t: ""});
+      out.push({et: l.rotada ? "dia" : (l.ventana || "uso"), pct: numPct(l.pct), nivel: l.nivel, linea: l.cinco ? null : l.linea, t: cortoIso(l.dia_reset)});
     return out;
   }
+
   function filaGasto(l, c){
     var lim = limitesDe(l, c);
     // {sinpie}: el tooltip no lleva plata. el `%` de cada limite (que ya no se pinta suelto) vive aca, junto a su tiempo;
@@ -251,8 +257,8 @@
     if(l.rotada){
       var rot = '<div class="cmod">' + f("cuenta", '<span class="c">' + esc(l.cuenta || "?") + "</span>") +
         "\n" + f("ahora", esc(sinPlata(l.sec))) +
-        (l.cinco ? "\n" + f("minuto", esc(l.cinco.pct_txt || "?") + ' <span class="g">' + esc(sinPlata(l.cinco.detalle)) + "</span>") : "") +
-        "\n" + f("dia", esc(l.consumo_txt || "?") + ' <span class="g">' + esc(sinPlata(l.dia_txt)) + "</span>") +
+        (l.cinco ? "\n" + f("minuto", esc(l.cinco.pct_txt || "?") + ' <span class="g">' + esc(sinPlata(l.cinco.detalle)) + (l.cinco.resetea ? " · reinicia " + esc(l.cinco.resetea) : "") + "</span>") : "") +
+        "\n" + f("dia", esc(l.consumo_txt || "?") + ' <span class="g">' + esc(sinPlata(l.dia_txt)) + (l.dia_resetea ? " · reinicia " + esc(l.dia_resetea) : "") + "</span>") +
         (l.motivo ? '\n<span class="r">' + esc(l.motivo) + "</span>" : "") + "</div>";
       cuAbierta = l.nombre;
       return cuModal.abrir({titulo: l.nombre + " · " + (l.cuenta || ""), cuenta: plan, html: rot, botones: []});

@@ -957,11 +957,12 @@
     },
     "board": {
       "motor": "agy",
-      "modelo": "agy"
+      "modelo": "gemini-3.8-flash",
+      "effort": "low"
     },
     "flos": {
-      "motor": "agy",
-      "modelo": "agy"
+      "motor": "gemini-3.8-flash",
+      "modelo": "gemini-3.8-flash"
     },
     "flos#2": {
       "motor": "agy",
@@ -976,8 +977,8 @@
       "modelo": "sin modelo"
     },
     "modelos": {
-      "motor": "agy",
-      "modelo": "agy"
+      "motor": "claude",
+      "modelo": "opus"
     },
     "personal": {
       "motor": "claude",
