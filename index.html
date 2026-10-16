@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.596">
-<link rel="manifest" href="manifest.json?v=4.596">
+<meta name="agente-web-version" content="4.597">
+<link rel="manifest" href="manifest.json?v=4.597">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.596">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.597">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.559">
 <style id="css-listas-drag">
 #sellistas, #sellistas * {
@@ -2163,16 +2163,72 @@ function clonPendProgramar(){
     clonPendFlush();
   }, CLON_PEND_CADA);
 }
+// 3818 {destraba-pestanas-lan} (facundo, 2026-10-16: "no puedo laburar ya que no puedo ni abrir una pestana"):
+// sin server el alta de una pestaña (`crear` o `ticket`) ya no deja la barra muerta. la pestaña se abre YA con un
+// id provisorio (el mismo que daria el server: el primer `<base>#N` libre desde el 2, `pestanas_clon.proximo`;
+// o el de la sub que `CLON_INFO` ya conoce para ese ticket) y el pedido sigue encolado. cuando el server
+// contesta, `clonProvReconciliar` cambia el provisorio por el id real si difirieron. borrar, archivar y
+// renombrar NO se adelantan: esos cambian algo que ya existe y no se pueden fingir.
+function clonProvisorio(cuerpo){
+  if(!cuerpo || (!cuerpo.ticket && !cuerpo.tema)) return null;
+  var base = cuerpo.ticket ? TEMA_TICKET : normTema(cuerpo.tema);
+  if(!clonable(base)) return null;
+  var tk = cuerpo.ticket ? ticketNorm(cuerpo.ticket) : null;
+  if(cuerpo.ticket && !tk) return null;
+  var usados = {}, mismo = null, pend = clonPendLeer();
+  function ver(id){
+    var m = RE_CLON.exec(normTema(id));
+    if(m && normTema(m[1]) === base) usados[parseInt(m[2], 10)] = true;
+  }
+  (CLONES || []).forEach(function(c){ ver(c && c.id ? c.id : c); });
+  Object.keys(CLON_INFO || {}).forEach(function(k){
+    ver(k);
+    var it = CLON_INFO[k];
+    if(tk && it && it.nombre === tk && normTema(k).split("#")[0] === base) mismo = normTema(k);
+  });
+  tabs.forEach(ver);
+  pend.forEach(function(it){
+    if(it && it.prov){
+      ver(it.prov);
+      if(tk && it.cuerpo && it.cuerpo.ticket && ticketNorm(it.cuerpo.ticket) === tk) mismo = it.prov;   // el mismo ticket dos veces: la misma pestaña
+    }
+  });
+  if(mismo) return mismo;
+  var n = 2;
+  while(usados[n]) n++;
+  return base + "#" + n;
+}
+// el id provisorio se abre como una pestaña mas: el visible de un ticket es el ticket (`a/cx5250`)
+function clonProvAbrir(cuerpo){
+  var prov = clonProvisorio(cuerpo);
+  if(!prov) return null;
+  if(cuerpo.ticket && !CLON_VIS[prov]) CLON_VIS[prov] = "a/" + ticketNorm(cuerpo.ticket);
+  abrirTab(prov);
+  return prov;
+}
+// el server dio el id real: si el provisorio era otro, la pestaña provisoria se cierra y queda la real
+function clonProvReconciliar(prov, real){
+  if(!prov || !real || prov === real) return;
+  var activa = activo === prov;
+  if(tabs.indexOf(prov) >= 0 && tabs.indexOf(real) >= 0){ cerrarTab(prov); }
+  else if(tabs.indexOf(prov) >= 0){ tabs[tabs.indexOf(prov)] = real; if(activa) activo = real; pintarTabs(); }
+  if(activa) abrirTab(real);
+  delete CLON_VIS[prov];
+}
 // el catch comun de las tres: encola, avisa QUE paso de verdad y que se reintenta solo
 function clonSinServer(e, cuerpo, que, dePend){
   if(dePend) return CLON_SIN;                  // ya esta en la cola: se reintenta en la proxima vuelta
   var l = clonPendLeer();
-  l.push({cuerpo: cuerpo, que: que, ts: Date.now()});
+  var prov = clonProvAbrir(cuerpo);            // 3818: la pestaña no espera al server
+  l.push({cuerpo: cuerpo, que: que, ts: Date.now(), prov: prov});
   clonPendGuardar(l);
   clonPendProgramar();
+  try{ probarLan(); }catch(x){}                // y el endpoint se vuelve a probar ya, sin esperar los 60 s
   var motivo = (e && e.message) || e || "?";
-  sistema("no llegué al server para " + que + " (" + motivo + "). quedó encolado acá y sale solo apenas " +
-          "vuelva la conexión; lo reintento cada " + Math.round(CLON_PEND_CADA / 1000) + " s.", "error");
+  sistema("no llegué al server para " + que + " (" + motivo + "). " +
+          (prov ? "la pestaña ya está abierta acá (" + visibleTab(prov) + ") y " : "") +
+          "quedó encolado acá y sale solo apenas " +
+          "vuelva la conexión; lo reintento cada " + Math.round(CLON_PEND_CADA / 1000) + " s.", prov ? "sistema" : "error");
   return CLON_SIN;
 }
 function clonAplicar(it){
@@ -2195,7 +2251,9 @@ function clonPendFlush(){
     if(!l.length) return Promise.resolve(hechas);
     return Promise.resolve(clonAplicar(l[0])).then(function(r){
       if(r === CLON_SIN) return hechas;        // sigue caido: la fila se queda donde esta
+      var it0 = l[0];
       clonPendGuardar(clonPendLeer().slice(1));
+      if(it0 && it0.prov && typeof r === "string") clonProvReconciliar(it0.prov, r);   // 3818: id real en vez del provisorio
       hechas++;
       return sig();
     });
