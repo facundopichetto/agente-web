@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.594">
-<link rel="manifest" href="manifest.json?v=4.594">
+<meta name="agente-web-version" content="4.595">
+<link rel="manifest" href="manifest.json?v=4.595">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.594">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.595">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.559">
 <style id="css-listas-drag">
 #sellistas, #sellistas * {
@@ -5521,6 +5521,7 @@ function sincronizar(primera){
 // volver al foco: sincroniza ya. con un piso corto para que alt-tab no dispare una bajada por segundo.
 function alVolver(){
   if(document.hidden || !token) return;
+  colaReanudar();   // 3814 {cola-sin-desfase}: la cola se confirma ya, sin esperar el golpe de 2 s ni un backoff viejo
   if(selTxViva()){ selTxSync = true; return; }   // 1622: volver al foco no le apaga la seleccion a facundo
   if(Date.now() - syncUlt < 1200) return;
   sincronizar(false).catch(function(e){ if(ruidoso(e)) sistema("error: " + e.message, "error"); });
@@ -14483,6 +14484,13 @@ var BOARD = {
   parar: function(id){ clearInterval(id); }
 };
 window.__board = BOARD;
+// 3814 {cola-sin-desfase} (facundo, 2026-10-16: "por que veo una cola vieja?"): al volver a la pestaña o tocar el `[↻]`
+// la caja `queue` se confirma contra el server en el acto (el modulo olvida su backoff y pide la cola entera, sin etag).
+// y si no logra confirmarse, la caja misma lo dice (`sin sync · hace N min`): nunca una cola pasada dibujada como viva.
+function colaReanudar(){
+  var m = mods.agent;
+  if(m && m.reanudar){ try{ m.reanudar(); }catch(x){} }
+}
 
 function modUrl(clave, v){ return "widgets/" + clave + ".js?v=" + encodeURIComponent(v || verWebCorta()); }
 function verWebCorta(){ return (verWeb || verEmbebida || "0").split("/")[0]; }
@@ -14648,6 +14656,7 @@ function refrescarWidgets(clave){
   var b = document.querySelector('#widgets [data-ref="' + (clave || "").replace(/"/g, "") + '"]');
   if(b) b.classList.add("girando");
   etagWid = null;
+  if(clave === "agent") colaReanudar();   // 3814: el `[↻]` de la cola tambien la pide fresca por la lan
   function listo(){
     refrescando = false;
     var n = document.querySelector('#widgets [data-ref="' + (clave || "").replace(/"/g, "") + '"]');

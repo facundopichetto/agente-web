@@ -133,7 +133,8 @@
               (a.pendientes ? ' <span class="qcola">+' + a.pendientes + "</span>" : "") +
               // 2368 {hora}: las programadas no son cola de ahora, asi que se cuentan aparte del `+N`
               (prog.length ? ' <span class="g">· ' + prog.length + " programada" + (prog.length === 1 ? "" : "s") +
-                             "</span>" : "");
+                             "</span>" : "") +
+               viejoHtml();   // 3814 {cola-sin-desfase}: si no se confirma contra el server, la caja lo dice
     return caja("queue", ese, cuerpo, false, "agent");
   }
 
@@ -147,7 +148,7 @@
   //     etag; si el `hash` de la cola cambio (orden nueva, arranco, cerro, borrada, reordenada) se repinta ESTA
   //     caja en el acto. sin lan no se pide nada: queda el `widgets.json` publicado de siempre.
   var vivo = {base: null, offset: null, hash: null, etag: null, pidiendo: false, t: 0, recibidos: 0, repintados: 0,
-              espera: 0, hasta: 0};
+              espera: 0, hasta: 0, ok: 0, offLan: null};
   var POLL_MS = 2000, RELOJ_MS = 1000;
   // el mismo texto de `hora.dur_col` (1915 {widgets}): sin ceros a la izquierda (`4:12`, `1:05:22`, `0:07`);
   // la columna se alinea por el `text-align:right` del css, no por el ancho del texto
@@ -191,6 +192,8 @@
   function contar(){
     var nodo = nodoCaja();
     if(!nodo || !vivo.base) return;
+    marcarViejo();
+    if(esViejo()) return;   // 3814 {cola-sin-desfase}: sobre datos sin confirmar el reloj no corre (parecerian vivos)
     (vivo.base.tabla || []).forEach(function(f){
       var corre = f.estado === "corriendo", pendv = f.estado === "cola" && f.delay_vivo;
       if(!corre && !pendv) return;
@@ -212,6 +215,7 @@
     if(!j || !j.agente) return false;
     vivo.recibidos++; vivo.t = Date.now();
     ofs(j.ahora_srv);
+    if(j.ahora_srv){ var cl = Date.now() / 1000 - j.ahora_srv; if(vivo.offLan === null || cl < vivo.offLan) vivo.offLan = cl; }
     var cambio = j.hash !== vivo.hash;
     vivo.hash = j.hash;
     var antes = vivo.base;
@@ -229,6 +233,7 @@
     vivo.pidiendo = true;
     B.bajar("cola.json", vivo.etag).then(function(r){
       vivo.pidiendo = false; vivo.espera = 0; vivo.hasta = 0;
+      vivo.ok = Date.now();   // 3814 {cola-sin-desfase}: un 304 tambien es el server confirmando que la cola sigue igual
       if(!r || r.status === 304) return;
       if(r.etag) vivo.etag = r.etag;
       recibir(r.json);
@@ -238,16 +243,65 @@
       vivo.hasta = Date.now() + vivo.espera;
     });
   }
+
+  // ---------- 3814 {cola-sin-desfase} (facundo, 2026-10-16: "por que veo una cola vieja?") ----------
+  // la cola no puede mentir: si dejo de confirmarse contra el server, el widget lo dice en vez de dibujar tareas
+  // pasadas como vivas, y el `tiempo` de las que "corren" deja de avanzar (un reloj andando sobre datos viejos
+  // parece una cola en vivo). dos relojes para saber cuan vieja es: `vivo.ok` (la ultima vez que el server
+  // contesto por la lan, 200 o 304: una cola quieta no cambia el hash pero sigue confirmada) y la `ahora` de la
+  // tabla (lo que trae el `widgets.json` publicado cuando no hay lan). la edad es la menor de las dos.
+  // con la lan confirmando cada 2 s, 20 s sin respuesta ya es corte; por el buzon se publica cada 60 s y la web lo
+  // baja cada 30, asi que ahi el corte es a los 150 s.
+  var VIEJA_LAN_S = 20, VIEJA_BUZON_S = 150;
+  function edadViva(){
+    if(!vivo.base) return 0;
+    // el offset de `ofs()` sale de la propia `ahora` de la tabla cuando no hay lan (daria edad 0 siempre): para medir
+    // la edad solo vale el que sale de `ahora_srv` (lo que el server dijo al CONTESTAR); sin ese, se confia en el reloj
+    var reloj = Date.now() / 1000 - (vivo.offLan === null ? 0 : vivo.offLan);
+    var porTabla = Math.max(0, reloj - (vivo.base.ahora || reloj));
+    return vivo.ok ? Math.min(porTabla, (Date.now() - vivo.ok) / 1000) : porTabla;
+  }
+  function esViejo(){ return edadViva() > (B.lan() && vivo.ok ? VIEJA_LAN_S : VIEJA_BUZON_S); }
+  function haceTxt(s){
+    s = Math.floor(s);
+    return s < 60 ? s + " s" : s < 3600 ? Math.floor(s / 60) + " min" : Math.floor(s / 3600) + " h";
+  }
+  function viejoTxt(){ return "sin sync · hace " + haceTxt(edadViva()); }
+  var VIEJO_TIT = "la cola no se esta actualizando: lo que ves puede no ser lo real (se reintenta solo)";
+  function viejoHtml(){
+    return esViejo() ? ' <span class="qviejo" style="color:var(--naranja)" title="' + esc(VIEJO_TIT) + '">' + esc(viejoTxt()) + "</span>" : "";
+  }
+  // el cartel sobre la caja ya pintada (la caja se repinta solo si cambia el hash): idempotente, corre cada 1 s
+  function marcarViejo(){
+    var nodo = nodoCaja();
+    if(!nodo) return;
+    var esc_ = nodo.querySelector(".tit .wesc");
+    if(!esc_) return;
+    var m = esc_.querySelector(".qviejo");
+    if(!esViejo()){ if(m) m.parentNode.removeChild(m); return; }
+    var t = viejoTxt();
+    if(m){ if(m.textContent !== t) m.textContent = t; return; }
+    m = document.createElement("span");
+    m.className = "qviejo"; m.style.color = "var(--naranja)"; m.title = VIEJO_TIT; m.textContent = t;
+    esc_.appendChild(document.createTextNode(" ")); esc_.appendChild(m);
+  }
+  // volver a la pestaña (o tocar el `[↻]`): se olvida la espera acumulada (hasta 60 s de backoff) y el etag, y se
+  // pide la cola entera ya, en vez de esperar al proximo golpe de 2 s o a que se agote un backoff de un corte viejo
+  function reanudar(){
+    vivo.espera = 0; vivo.hasta = 0; vivo.etag = null;
+    pedir();
+    marcarViejo();
+  }
   B.cada(RELOJ_MS, contar);
   B.cada(POLL_MS, pedir);
 
   B.registrar("agent", {
     html: function(d){ var a = adoptar(d || {}); setTimeout(contar, 0); return cajaAgente(a); },
     pintar: function(d, nodo){ var a = adoptar(d || {}); setTimeout(contar, 0); return B.reemplazar(nodo, cajaAgente(a)); },
-    destruir: function(){ vivo.base = null; vivo.hash = null; },   // los dos timers los apaga el shell (`B.cada`)
-    recibir: recibir, contar: contar, pedir: pedir, durCol: durCol,
+    destruir: function(){ vivo.base = null; vivo.hash = null; vivo.ok = 0; },   // los dos timers los apaga el shell (`B.cada`)
+    recibir: recibir, contar: contar, pedir: pedir, durCol: durCol, reanudar: reanudar,
     vivo: function(){ return {offset: vivo.offset, hash: vivo.hash, recibidos: vivo.recibidos, repintados: vivo.repintados,
-                              espera: vivo.espera,
+                              espera: vivo.espera, ok: vivo.ok, edad: edadViva(), viejo: esViejo(),
                               ahora: vivo.base ? vivo.base.ahora : null, filas: vivo.base ? (vivo.base.tabla || []).length : 0}; },
     nomTarea: nomTarea, qFila: qFila
   });
