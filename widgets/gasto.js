@@ -209,7 +209,10 @@
     if(l.pozos){   // gemini: cada pozo con su propio reset
       Object.keys(l.pozos).forEach(function(k){
         var p = l.pozos[k] || {};
-        if(numPct(p.pct) !== null) out.push({et: k, pct: numPct(p.pct), nivel: nivelPozo(p.pct), linea: null, t: cortoIso(p.reset)});
+        // {widget-models-agy} (facundo, 2026-10-17: "falta la linea de gemini para abajo"): el pozo `gemini` es la ventana de 5 h y el
+        // server ya manda su ritmo en `l.linea`; `terceros` renueva en dias y el server no dice de que largo es la ventana: sin tick, la
+        // web no inventa uno.
+        if(numPct(p.pct) !== null) out.push({et: k, pct: numPct(p.pct), nivel: nivelPozo(p.pct), linea: k === "gemini" ? l.linea : null, t: cortoIso(p.reset)});
       });
       return out;
     }
@@ -217,19 +220,25 @@
     // cada tope. el server manda el instante (`cinco.reset` el del minuto, `dia_reset` la medianoche local donde arranca
     // otro dia de cupo) y la web solo arma la cuenta regresiva, igual que con los pozos de gemini. el del minuto es siempre
     // menos de 60 s: `<1m`, no un `0m` que parezca roto.
-    var cortoMin = function(iso){ var t = cortoIso(iso); return t === "0m" ? "<1m" : t; };
+    var cortoMin = function(iso){ var t = cortoIso(iso); return (t === "0m" || (t === "" && isFinite(Date.parse(iso || "")))) ? "<1m" : t; };
+    // el tope del minuto es una ventana fija de 60 s: su ritmo es lo que ya paso hasta el `reset` que manda el server
+    var ritmoMin = function(iso){ var t = iso ? Date.parse(iso) : NaN; return isFinite(t) ? Math.max(0, Math.min(100, 100 - (t - Date.now()) / 600)) : null; };
     if(l.cinco && numPct(l.cinco.pct) !== null)   // groq: el minuto
-      out.push({et: l.cinco.etiqueta || "min", pct: numPct(l.cinco.pct), nivel: l.cinco.nivel, linea: l.cinco.linea, t: cortoMin(l.cinco.reset)});
+      out.push({et: l.cinco.etiqueta || "min", pct: numPct(l.cinco.pct), nivel: l.cinco.nivel, linea: l.cinco.linea !== null && l.cinco.linea !== undefined ? l.cinco.linea : ritmoMin(l.cinco.reset), t: cortoMin(l.cinco.reset)});
     if(numPct(l.pct) !== null)
-      out.push({et: l.rotada ? "dia" : (l.ventana || "uso"), pct: numPct(l.pct), nivel: l.nivel, linea: l.cinco ? null : l.linea, t: cortoIso(l.dia_reset)});
+      out.push({et: l.rotada ? "dia" : (l.ventana || "uso"), pct: numPct(l.pct), nivel: l.nivel, linea: l.linea, t: cortoIso(l.dia_reset)});
     return out;
   }
+
+  // {widget-models-agy} (facundo, 2026-10-17: "gemini ponele agy"): la fila de gemini es la cuota de la suscripcion que se usa por agy, y asi
+  // se lee en el widget. solo el rotulo: el nombre real (`gemini`) sigue siendo la clave de la fila, del tocable y de los pozos.
+  function nombreVisto(n){ return n === "gemini" ? "agy" : n; }
 
   function filaGasto(l, c){
     var lim = limitesDe(l, c);
     // {sinpie}: el tooltip no lleva plata. el `%` de cada limite (que ya no se pinta suelto) vive aca, junto a su tiempo;
     // el ritmo SI vuelve (1625 {tick}: `linea_txt` es `%` puro) y las apis dicen de donde sale su cuota (`sec`, `extra`)
-    var tit = l.nombre + lim.map(function(q){
+    var tit = nombreVisto(l.nombre) + lim.map(function(q){
       return "\n" + q.et + " " + Math.round(q.pct) + "%" + (q.t ? " · renueva en " + q.t : "");
     }).join("") + (l.linea_txt ? "\n" + sinPlata(l.linea_txt) : "") +
       (l.cinco && l.cinco.linea_txt ? "\n" + sinPlata(l.cinco.linea_txt) : "") +
@@ -240,7 +249,7 @@
       (l.tocable ? ' data-cta="' + esc(l.nombre) + '" role="button" tabindex="0"' : "") + ">" +
       // 2100 {prioritaria}: la prioritaria del reparto (la que renueva antes) lleva la clase `pri` (un punto verde
       // por css, fuera del texto) y el porque (cuanto le falta) en el tooltip; el server decide cual es, la web solo pinta
-      '<span class="gcu-n nom' + (l.estado ? " e-" + esc(l.estado) : "") + (l.prioritaria ? " pri" : "") + '">' + esc(l.nombre) + "</span>" +
+      '<span class="gcu-n nom' + (l.estado ? " e-" + esc(l.estado) : "") + (l.prioritaria ? " pri" : "") + '">' + esc(nombreVisto(l.nombre)) + "</span>" +
       '<span class="gqs">' + lim.map(limiteHtml).join("") + "</span></div>";
   }
   // el modal de una cuenta de api: el plan, los tokens y de donde sale su consumo. sin boton: no hay nada que

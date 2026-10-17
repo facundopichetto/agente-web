@@ -1830,25 +1830,24 @@
     },
     "juegos": {
       "motor": "agy",
-      "modelo": "gemini-3.8-flash",
-      "effort": "low"
+      "modelo": "agy"
     },
     "juegos#2": {
       "motor": "claude",
       "modelo": "sin modelo"
     },
     "modelos": {
-      "motor": "claude",
-      "modelo": "opus"
+      "motor": "agy",
+      "modelo": "gemini-3.8-flash",
+      "effort": "low"
     },
     "personal": {
       "motor": "claude",
       "modelo": "sin modelo"
     },
     "plata": {
-      "motor": "agy",
-      "modelo": "gemini-3.8-flash",
-      "effort": "low"
+      "motor": "claude",
+      "modelo": "sin modelo"
     },
     "plata#2": {
       "motor": "agy",
@@ -1863,8 +1862,8 @@
       "modelo": "fable"
     },
     "tinder": {
-      "motor": "agy",
-      "modelo": "agy"
+      "motor": "agy/gemini-3.8-flash-medium",
+      "modelo": "agy/gemini-3.8-flash-medium"
     }
   },
   "modelos_agy": {
