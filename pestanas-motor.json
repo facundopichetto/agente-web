@@ -1821,8 +1821,8 @@
       "modelo": "agy"
     },
     "flos": {
-      "motor": "claude",
-      "modelo": "sonnet"
+      "motor": "gemini-3.8-flash",
+      "modelo": "gemini-3.8-flash"
     },
     "flos#2": {
       "motor": "agy",
@@ -1838,12 +1838,13 @@
       "modelo": "sin modelo"
     },
     "modelos": {
-      "motor": "claude",
-      "modelo": "sonnet"
+      "motor": "agy",
+      "modelo": "agy"
     },
     "personal": {
-      "motor": "claude",
-      "modelo": "sin modelo"
+      "motor": "agy",
+      "modelo": "gemini-3.8-flash",
+      "effort": "low"
     },
     "plata": {
       "motor": "claude",

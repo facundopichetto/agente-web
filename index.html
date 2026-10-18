@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.600">
-<link rel="manifest" href="manifest.json?v=4.600">
+<meta name="agente-web-version" content="4.601">
+<link rel="manifest" href="manifest.json?v=4.601">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.600">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.601">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.559">
 <style id="css-listas-drag">
 #sellistas, #sellistas * {
@@ -3904,6 +3904,16 @@ function cajaCod(m, letras, arrepentir){
 var RE_ORDEN_CAJA = /^orden\s*:\s*(?:\[pestana\s+([\w\/#-]+)\]\s*)?tema\s+([\w\/#-]+)\s*:\s*(?:\{([a-z0-9][a-z0-9-]{0,39})\}\s*)?([\s\S]+)$/i;
 var RE_FRENAR_CAJA = /^(?:frenar|fren[aá]|cancelar|cancel[aá])\s+(?:la\s+)?`?\{([a-z0-9][a-z0-9-]{0,39})\}`?\s*$/i;
 function esCajaOrden(o){ return !!(o && o.orden && !o.escupir); }
+// 3896 {escupir-sin-burbuja}: tocar una caja `escupir` no ensucia la conversación con una burbuja de f
+var RE_MSG_ESCUPIR = /(?:^|\s)\[\s*escupir(?:\s+[0-9a-f]{8})?\]|\b(?:escupir|pasar)\s+al\s+comandante\b/i;
+function esCajaEscupir(o){ return !!(o && o.escupir); }
+function esMensajeEscupir(texto){
+  if(!texto) return false;
+  var pc = partirCita(texto), c = String(pc.cuerpo || "").trim();
+  if(RE_MSG_ESCUPIR.test(c)) return true;
+  if(/^[A-P](?:\s*(?:y|,)\s*[A-P])*\s*:\s*/i.test(c) && /\[\s*escupir\b/i.test(c)) return true;
+  return false;
+}
 function slugCajaOrden(m, o){
   var raw = String((o && o.slug) || "").replace(/^[`{\s]+|[`}\s]+$/g, "").toLowerCase()
     .replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
@@ -3969,7 +3979,7 @@ function ordenCajaMsg(texto){
   }
   return null;
 }
-function esMensajeCaja(texto){ return !!codigoCaja(texto) || !!ordenCajaMsg(texto); }
+function esMensajeCaja(texto){ return !!codigoCaja(texto) || !!ordenCajaMsg(texto) || !!esMensajeEscupir(texto); }
 function hhmmDe(m){ return hhmmBA(fecha(m && m.iso || "")); }   // 1553: la de buenos aires, como la cabecera
 // 1553 (facundo, 2026-09-15): cada respuesta de flaudio muestra la hora en que LLEGO y se dibujo en el cliente,
 // no la de inicio ni la de escritura en el daemon. el primer dispositivo que la dibuja fresca (hasta
@@ -10878,9 +10888,9 @@ function mandar(texto, tema, crudo, tsEnvio){
     return Promise.resolve({ok: true, via: "espera", motivo: "sin conexión"});
   }
   enviando++;
-  if(!aparte) subioAManoSoltar();   // 1645: mandar un mensaje apaga la marca de "subio a mano"
+  if(!aparte && !esMensajeEscupir(texto)) subioAManoSoltar();   // 1645: mandar un mensaje apaga la marca de "subio a mano"
   $("mandar").disabled = true;
-  if(!aparte){
+  if(!aparte && !esMensajeEscupir(texto)){
     if(txt.value.trim() === texto){ txt.value = ""; txt.style.height = ""; }   // la caja se vacia ya
     borrarBorrador(tema); if(caja && caja !== tema) borrarBorrador(caja);      // y su tumba se publica ya
   }
@@ -17287,6 +17297,7 @@ window.__agente = {
   // 3868 {orden-directa-cola}: el envio directo de una caja `orden` a la cola y su revertir con `frenar {<slug>}`
   esCajaOrden: esCajaOrden, slugCajaOrden: slugCajaOrden, ordenCajaLinea: ordenCajaLinea,
   frenarCajaLinea: frenarCajaLinea, ordenCajaMsg: ordenCajaMsg, esMensajeCaja: esMensajeCaja,
+  esCajaEscupir: esCajaEscupir, esMensajeEscupir: esMensajeEscupir,
   hhmmDe: hhmmDe, citaCaja: citaCaja, hhmmBA: hhmmBA,
   diaBA: diaBA, hoyBA: hoyBA, diaMas: diaMas, ddmm: ddmm, selloMsg: selloMsg, etiquetaDia: etiquetaDia, sepDias: sepDias,   // 2132 {dia}
   hora12: hora12, norm12: norm12, horaNoti: horaNoti,   // 1660: 12 h con am/pm en todo lo que ve facundo   // 1203: hora de envio de cada caja marcada
