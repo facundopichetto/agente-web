@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.599">
-<link rel="manifest" href="manifest.json?v=4.599">
+<meta name="agente-web-version" content="4.600">
+<link rel="manifest" href="manifest.json?v=4.600">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.599">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.600">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.559">
 <style id="css-listas-drag">
 #sellistas, #sellistas * {
@@ -3931,7 +3931,10 @@ function ordenCajaLinea(m, o, tema){
     .replace(/^\s*(?:\[pestana\s+[\w\/#-]+\]\s*)?tema\s+[\w\/#-]+\s*:\s*/i, "")
     .replace(/(?:^|\s+)\{[a-z0-9][a-z0-9-]{0,39}\}(?=\s|$)/i, " ")
     .replace(/\s{2,}/g, " ").trim();
-  return "orden: " + pref + (slug ? "{" + slug + "} " : "") + cuerpo;
+  var letra = String((o && o.letra) || "A").toUpperCase();
+  var firma = /facundo toc[oó] la caja/i.test(cuerpo) ? "" :
+    (" [facundo tocó la caja " + letra + " y ese es su texto literal: hacer SOLO eso, ninguna otra letra del menú autoriza nada; el contexto está en la charla previa de la pestaña]");
+  return "orden: " + pref + (slug ? "{" + slug + "} " : "") + cuerpo + firma;
 }
 function idFrenarCajaOrden(m, o){
   var slug = slugCajaOrden(m, o);
