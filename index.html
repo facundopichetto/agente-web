@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.598">
-<link rel="manifest" href="manifest.json?v=4.598">
+<meta name="agente-web-version" content="4.599">
+<link rel="manifest" href="manifest.json?v=4.599">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.598">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.599">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.559">
 <style id="css-listas-drag">
 #sellistas, #sellistas * {
@@ -3837,6 +3837,10 @@ function cajasDe(m){
         if(esc) tx = tx.replace(/^\[escupir(?:\s+[0-9a-f]{8})?\]\s*/i, "").replace(/\s*\[escupir(?:\s+[0-9a-f]{8})?\]$/i, "").trim();
         return {letra: String(x.letra).toUpperCase(), texto: tx, orden: x.orden === true, escupir: esc, slug: x.slug || ""};
       });
+  } else if(o.lista.length){
+    o.lista.forEach(function(x){
+      if(!x.escupir && (x.slug || RE_TAG_MODELO.test(x.texto) || /\[\s*(?:toca:|paralelo|serie|depende de)/i.test(x.texto))) x.orden = true;
+    });
   }
   // 1658 {cajas}: una oportunidad se ofrece como cajas grandes con el texto de cada opcion adentro (nunca
   // mas los chips `op N X`). el toque sigue mandando el `op N X` crudo, que el daemon resuelve sin modelo.
@@ -3894,6 +3898,75 @@ function esCodigoCaja(texto){ return !!codigoCaja(texto); }
 function cajaCod(m, letras, arrepentir){
   return m && m.opc_id ? "#" + m.opc_id + (arrepentir ? "-" : "") + letrasDe(letras).split("").join("+") : null;
 }
+// 2026-10-17 (orden 3868 {orden-directa-cola}): tocar una caja `orden` la manda directo a la cola (`orden: ...`)
+// sin publicar un mensaje de facundo en el chat ni activar al asistente (`#vuelo`), y `revertir` manda `frenar {<slug>}`
+// para cancelar la orden si sigue `[ ]` o matar su arbol de procesos si ya arranco (`[>]`).
+var RE_ORDEN_CAJA = /^orden\s*:\s*(?:\[pestana\s+([\w\/#-]+)\]\s*)?tema\s+([\w\/#-]+)\s*:\s*(?:\{([a-z0-9][a-z0-9-]{0,39})\}\s*)?([\s\S]+)$/i;
+var RE_FRENAR_CAJA = /^(?:frenar|fren[aá]|cancelar|cancel[aá])\s+(?:la\s+)?`?\{([a-z0-9][a-z0-9-]{0,39})\}`?\s*$/i;
+function esCajaOrden(o){ return !!(o && o.orden && !o.escupir); }
+function slugCajaOrden(m, o){
+  var raw = String((o && o.slug) || "").replace(/^[`{\s]+|[`}\s]+$/g, "").toLowerCase()
+    .replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
+  if(/^[a-z0-9][a-z0-9-]{0,39}$/.test(raw)) return raw;
+  var txt = String((o && o.texto) || "");
+  var ms = /(?:^|\s)\{([a-z0-9][a-z0-9-]{0,39})\}(?=\s|$)/i.exec(txt);
+  if(ms) return ms[1].toLowerCase();
+  var vis = cajaVista(txt).texto || txt;
+  try{ vis = vis.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); }catch(x){}
+  var vacias = {para:1, con:1, sin:1, por:1, una:1, uno:1, los:1, las:1, del:1, que:1, como:1, hace:1, hacer:1, cuando:1, sobre:1, entre:1, desde:1, hasta:1};
+  var ws = (vis.toLowerCase().match(/[a-z0-9]{3,}/g) || []).filter(function(w){ return !vacias[w]; }).slice(0, 3);
+  var oid = m && m.opc_id ? String(m.opc_id).toLowerCase().replace(/[^a-z0-9]+/g, "") : "";
+  var base = ws.join("-") + (oid ? (ws.length ? "-" : "") + oid : "");
+  base = base.replace(/^-+|-+$/g, "").slice(0, 40).replace(/-+$/g, "");
+  if(/^[a-z0-9][a-z0-9-]{0,39}$/.test(base)) return base;
+  return ("orden-" + (oid || "caja") + "-" + String((o && o.letra) || "a").toLowerCase()).slice(0, 40);
+}
+function ordenCajaLinea(m, o, tema){
+  var t = normTema(tema || (m && (m.tema || m.tag)) || temaActivo() || "flos");
+  if(!t || t === AUTO) t = "flos";
+  var pref = esClon(t) ? ("[pestana " + t + "] tema " + baseTema(t) + ": ") : ("tema " + t + ": ");
+  var slug = slugCajaOrden(m, o);
+  if(o && slug && !o.slug) o.slug = slug;
+  var cuerpo = String((o && o.texto) || "").trim()
+    .replace(/^\s*(?:\[pestana\s+[\w\/#-]+\]\s*)?tema\s+[\w\/#-]+\s*:\s*/i, "")
+    .replace(/(?:^|\s+)\{[a-z0-9][a-z0-9-]{0,39}\}(?=\s|$)/i, " ")
+    .replace(/\s{2,}/g, " ").trim();
+  return "orden: " + pref + (slug ? "{" + slug + "} " : "") + cuerpo;
+}
+function idFrenarCajaOrden(m, o){
+  var slug = slugCajaOrden(m, o);
+  var ag = (typeof widDatos !== "undefined" && widDatos && widDatos.agent) || null;
+  var filas = ag ? (ag.tabla || []).concat(ag.programadas || []) : [];
+  var frag = String((o && o.texto) || "").trim().slice(0, 60);
+  for(var i = 0; i < filas.length; i++){
+    var f = filas[i];
+    if(!f || (f.estado !== "corriendo" && f.estado !== "cola")) continue;
+    var nom = String(f.nombre || "").trim().toLowerCase();
+    if(nom && nom === slug && /^[a-z0-9][a-z0-9-]{0,39}$/.test(nom)) return nom;
+    var comp = String(f.completo || f.texto || "");
+    if(frag.length >= 16 && comp.indexOf(frag) >= 0 && /^[a-z0-9][a-z0-9-]{0,39}$/.test(nom)) return nom;
+  }
+  return slug;
+}
+function frenarCajaLinea(m, o){ return "frenar {" + idFrenarCajaOrden(m, o) + "}"; }
+function ordenCajaMsg(texto){
+  var pc = partirCita(texto), lineas = String(pc.cuerpo || "").trim().split("\n"), m;
+  var p0 = (lineas[0] || "").trim();
+  if((m = RE_ORDEN_CAJA.exec(p0))){
+    var slugs = [];
+    lineas.forEach(function(l){
+      var ml = RE_ORDEN_CAJA.exec(l.trim());
+      if(ml && ml[3]) slugs.push(ml[3].toLowerCase());
+    });
+    return {tipo: "encolar", tema: normTema(m[1] || m[2]), slug: (m[3] || "").toLowerCase(),
+            slugs: slugs, texto: (m[4] || "").trim()};
+  }
+  if((m = RE_FRENAR_CAJA.exec(p0))){
+    return {tipo: "frenar", slug: m[1].toLowerCase(), slugs: [m[1].toLowerCase()]};
+  }
+  return null;
+}
+function esMensajeCaja(texto){ return !!codigoCaja(texto) || !!ordenCajaMsg(texto); }
 function hhmmDe(m){ return hhmmBA(fecha(m && m.iso || "")); }   // 1553: la de buenos aires, como la cabecera
 // 1553 (facundo, 2026-09-15): cada respuesta de flaudio muestra la hora en que LLEGO y se dibujo en el cliente,
 // no la de inicio ni la de escritura en el daemon. el primer dispositivo que la dibuja fresca (hasta
@@ -4087,7 +4160,29 @@ function estadoDeducido(m){
   var tema = m.tema || temaActivo(), o = cajasDe(m);
   for(var j = i + 1; j < msgs.length; j++){
     var x = msgs[j];
-    if(x.clase !== "yo" || !deEstaTab(x.tema, tema)) continue;
+    if(x.clase !== "yo") continue;
+    var oc = ordenCajaMsg(x.texto);
+    if(oc){
+      var tsO = fecha(x.iso) || j;
+      var opsO = o.lista.filter(function(op){
+        if(!esCajaOrden(op)) return false;
+        var sl = slugCajaOrden(m, op);
+        if(sl && (oc.slug === sl || (oc.slugs && oc.slugs.indexOf(sl) >= 0))) return true;
+        return oc.tipo === "encolar" && oc.texto && op.texto && oc.texto.indexOf(op.texto.trim().slice(0, 60)) >= 0;
+      });
+      if(opsO.length){
+        if(oc.tipo === "frenar"){
+          var qO = est.l;
+          opsO.forEach(function(op){ qO = qO.replace(new RegExp("[" + op.letra + "]", "g"), ""); });
+          est = {l: qO, ts: tsO, h: conHoras(est, qO, tsO)};
+        } else {
+          var lO = letrasDe((est.l || "") + opsO.map(function(op){ return op.letra; }).join(""));
+          est = {l: lO, ts: tsO, h: conHoras(est, lO, tsO)};
+        }
+      }
+      continue;
+    }
+    if(!deEstaTab(x.tema, tema)) continue;
     var pc = partirCita(x.texto), ts = fecha(x.iso) || j, mm;
     // 2096 {codigocaja}: si el mensaje es un codigo, el id dice de que caja es y no se adivina nada
     var cc = codigoCaja(x.texto);
@@ -4304,13 +4399,15 @@ function puntajeSubir(){
 // pregunta para seguir charlando queda como siempre. el rotulo va adentro del boton, arriba y centrado.
 var ROTULO_ORDEN = "orden";
 var ROTULO_ESCUPIR = "escupir";
-// 2026-10-15 (orden 3752 {cajas-redisenio-integral}) (facundo: "si hay una opcion unica dice `escupir` u `orden` y si
-// hay mas `escupir A`, `escupir B`, etc."): el rotulo de arriba al centro lleva la LETRA de la caja cuando hay mas de
-// una (`b.dataset.varias`, lo pone `nodoCajas`), y las cajas comunes llevan solo la letra. la letra y la cantidad se
-// leen del boton para que `marcaOrden(b)` / `marcaEscupir(b)` sigan teniendo la misma firma de siempre.
+// 2026-10-15 (orden 3752 {cajas-redisenio-integral}) + 2026-10-17 (orden 3866 {caja-unica-sin-letra})
+// (facundo: "si hay una opcion unica dice `escupir` u `orden` y si hay mas `escupir A`, `escupir B`, etc.",
+// "no deberia decir A a menos que haya B. es decir si hay una orden unica, debe solo decir 'orden' ahi en lugar de A"):
+// el rotulo de arriba al centro lleva la LETRA de la caja solo cuando hay dos o mas alternativas (`b.dataset.varias`,
+// lo pone `nodoCajas`). cuando hay una sola caja, se rotula directamente `orden` o `escupir` sin letra.
 function rotuloCaja(base, b){
   var l = String(b.dataset.letra || "");
-  return base && l && b.dataset.varias ? base + " " + l : (base || l);
+  if(!b.dataset.varias) return base || ROTULO_ORDEN;
+  return base && l ? base + " " + l : (base || l);
 }
 function ponerRotulo(b, txt){
   var r = document.createElement("span");
@@ -4327,7 +4424,8 @@ function marcaEscupir(b){
   ponerRotulo(b, rotuloCaja(ROTULO_ESCUPIR, b));
   b.setAttribute("aria-label", "escupir: " + (b.title || ""));
 }
-function marcaLetra(b){   // la caja comun: solo la letra, arriba al centro (la `.l` de adentro ya no se ve)
+function marcaLetra(b){   // la caja comun: con varias lleva la letra; unica se rotula `orden` sin letra
+  if(!b.dataset.varias) return marcaOrden(b);
   if(b.dataset.letra) ponerRotulo(b, rotuloCaja("", b));
 }
 // 2026-10-15 (orden 3752): lo que facundo lee adentro de la caja. los tags que lee la cola (`[modelo: ...]`,
@@ -4376,13 +4474,13 @@ function nodoCajas(m, lista_){
     b.innerHTML = '<span class="l"></span><span class="t"></span><span class="mod"></span><span class="hh"></span>' +
                   '<span class="cf"><span class="q"></span><span class="si">sí</span><span class="no">no</span></span>' +
                   '<span class="chkenv" aria-hidden="true">\u2713</span>';   // 2080: `enviada`, lo pinta `.sel`
-    b.querySelector(".l").textContent = o.letra;
+    b.querySelector(".l").textContent = lista_.length > 1 ? o.letra : "";
     var vista = cajaVista(o.texto);   // 2026-10-15 (orden 3752): sin tags a la vista, el modelo en palabras
     b.querySelector(".t").textContent = vista.texto;
     b.querySelector(".mod").textContent = vista.meta;
     if(lista_.length > 1) b.dataset.varias = "1";
     if(o.slug) b.dataset.slug = o.slug;
-    b.title = (o.slug ? "{" + o.slug + "} " : "") + (o.cmd || (o.letra + ": " + o.texto));
+    b.title = (o.slug ? "{" + o.slug + "} " : "") + (o.cmd || (lista_.length > 1 ? o.letra + ": " + o.texto : o.texto));
     if(o.orden) marcaOrden(b);   // 2026-10-06 (harness2 {cajas}): esta caja dispara una orden: borde y rotulo
     else if(o.escupir) marcaEscupir(b);   // 2026-10-14 (orden 3685): caja escupir pasa al comandante
     else marcaLetra(b);                   // 2026-10-15 (orden 3752): la comun, con su letra arriba al centro
@@ -4443,9 +4541,9 @@ function tocarCaja(m, caja, o, lista_, target){
     limpiarConfirm(caja);                     // `sí` (o enter del teclado, sin target)
     if(c.tipo === "revertir") arrepentirse(m, caja, lista_, o.letra);
     else{
-      // `sumo esta tambien?`: sale un solo mensaje con las dos (`A y C: ...`). si son `op N X`, solo la nueva
+      // `sumo esta tambien?`: sale un solo mensaje con las dos (`A y C: ...`). si son `op N X` o cajas `orden`, solo la nueva
       var todas = letrasDe((estadoCaja(m).l || "") + o.letra);
-      mandarCaja(m, caja, lista_, todas, lista_.some(function(x){ return x.cmd; }) ? o.letra : todas);
+      mandarCaja(m, caja, lista_, todas, lista_.some(function(x){ return x.cmd || esCajaOrden(x); }) ? o.letra : todas);
     }
     return;
   }
@@ -4489,6 +4587,11 @@ function mandarCaja(m, caja, lista_, marcar, decir){
   if(ops.some(function(o){ return o.cmd; })){          // `op N X`: crudo, uno por linea (el daemon los corre todos)
     return siSalio((accMandarFn || mandar)(ops.map(function(o){ return o.cmd || (o.letra + ": " + o.texto); }).join("\n"), tema, true));
   }
+  // 3868 {orden-directa-cola}: la caja `orden` va directo a la cola con `orden: ...` crudo (sin burbuja en el
+  // chat ni paso por `corre_chat`). las cajas normales y `[escupir]` siguen saliendo con `#<opc_id><letra>`.
+  if(ops.every(esCajaOrden)){
+    return siSalio((accMandarFn || mandar)(ops.map(function(o){ return ordenCajaLinea(m, o, tema); }).join("\n"), tema, true));
+  }
   // 2096 {codigocaja}: con `opc_id` sale el codigo pelado (sin texto y sin cita: el id ya dice de que
   // respuesta es). sin el (una caja vieja ya pintada, o el celu con el html de antes), el formato de siempre.
   var cod = cajaCod(m, decir, false);
@@ -4515,6 +4618,15 @@ function arrepentirse(m, caja, lista_, letra){
   if(!op || letras.indexOf(letra) < 0) return;
   var quedan = letras.split("").filter(function(l){ return l !== letra; }).join("");
   var horas = conHoras(estadoCaja(m), quedan, Date.now());   // 1203: la desmarcada pierde su hora
+  // 3868 {orden-directa-cola}: revertir una caja `orden` manda `frenar {<slug>}` directo al sistema (cancela si
+  // esta en `[ ]` y mata el arbol si ya arranco en `[>]`), sin pasar por el asistente ni publicar burbuja en el chat
+  if(esCajaOrden(op)){
+    return alEnviar((accMandarFn || mandar)(frenarCajaLinea(m, op), m.tema || m.tag || temaActivo(), true),
+                    function(ok, r){
+                      if(!ok){ cajaError(caja, r.motivo); return; }
+                      cajaSinError(caja); guardarOpc(k, quedan, horas); marcarHecho(caja, quedan, horas);
+                    });
+  }
   var codA = cajaCod(m, letra, true);   // 2096: `#k7f2-A`
   // 2334 {caja}: igual que al mandar, la caja no se toca hasta que el `me arrepentí` salio de verdad
   return alEnviar((accMandarFn || mandar)(codA || (citaCaja(m) + "me arrepentí: " + letra + ": " + op.texto),
@@ -4532,10 +4644,10 @@ function pintarMsg(m, arriba){
   if(!arriba) adoptarVuelo(m);
   // 1212: respuesta nueva con cajas -> se limpia el estado viejo antes de pintarla (no se hereda una marca)
   if(m.clase === "agente" && tieneCajas(m) && purgarOpc() && !renderando) refrescarCajas();
-  // 2096 {codigocaja}: un mensaje de f que es SOLO el codigo de una caja no se pinta como burbuja (la
-  // marca visual es la caja tocada: letra, hora y el checkmark `enviada` de la 2080). sigue en `msgs`,
-  // asi los otros dispositivos deducen de el que esa opcion ya salio.
-  var oculto = m.clase === "yo" && esCodigoCaja(m.texto);
+  // 2096 {codigocaja} + 3868 {orden-directa-cola}: un mensaje de f que es SOLO el codigo o el envio directo de
+  // una caja no se pinta como burbuja (la marca visual es la caja tocada: letra, hora y el checkmark `enviada`).
+  // sigue en `msgs`, asi los otros dispositivos deducen de el que esa opcion ya salio o se revirtio.
+  var oculto = m.clase === "yo" && esMensajeCaja(m.texto);
   if(deEstaTab(m.tema, temaActivo()) && lista && !oculto){
     var n = nodoMsg(m);
     n.dataset.clave = claveNodo(m); n.dataset.firma = firmaMsg(m);
@@ -4698,8 +4810,8 @@ function firmaMsg(m){
 // los mensajes que van en la pestaña activa, en orden (mismo criterio que tenia `pintarMsg`)
 function msgsVisibles(){
   return msgs.filter(function(m){
-    // 2096 {codigocaja}: un mensaje de f que es SOLO el codigo de una caja no se pinta como burbuja
-    return deEstaTab(m.tema, temaActivo()) && !(m.clase === "yo" && esCodigoCaja(m.texto));
+    // 2096 {codigocaja} + 3868 {orden-directa-cola}: un mensaje de f que es SOLO el codigo o envio directo de una caja no se pinta como burbuja
+    return deEstaTab(m.tema, temaActivo()) && !(m.clase === "yo" && esMensajeCaja(m.texto));
   });
 }
 // 2149 {pestana}: el nodo de un mensaje sobrevive a que lo saquen del dom. asi cambiar de pestaña no rearma
@@ -5196,9 +5308,16 @@ function agregar(c, arriba){
     // `<!--nodo:cloud modelo:fable dur:12 cuello:modelo-->` va al header, no al cuerpo
     var lm = leerMeta(b.slice(MARCA.length).replace(/^\n/, "")), mm = lm.meta;
     var cuerpo = lm.cuerpo, mt = /^\[([\w\/#-]+)\]\s*/.exec(cuerpo), tag = null;
-    // 1237: los `aviso: ...` que el daemon viejo comentaba en el buzon no se pintan: van a la campanita
-    if(/^aviso: /.test(cuerpo)) return null;
+    // 1237: los `aviso: ...` que el daemon viejo comentaba en el buzon no se pintan: van a la campanita.
+    // 3868 {orden-directa-cola}: el acuse técnico `encolada` y el `[sin modelo] frené ...` del revertir de una
+    // caja `orden` tampoco se pintan como burbuja del chat (la confirmación visual es el estado de la caja).
+    if(/^aviso: /.test(cuerpo) || /^encolada$/i.test(cuerpo.trim())) return null;
     if(mt && esTema(mt[1])){ tag = normTema(mt[1]); cuerpo = cuerpo.slice(mt[0].length); }
+    if(!arriba && /^\[sin modelo\]\s+(frené|cancelé|no encontré|la \d+ ya )/i.test(cuerpo.trim())){
+      var ultYo = null;
+      for(var ui = msgsCom.length - 1; ui >= 0; ui--){ if(msgsCom[ui].clase === "yo"){ ultYo = msgsCom[ui]; break; } }
+      if(ultYo && (ordenCajaMsg(ultYo.texto) || {}).tipo === "frenar") return null;
+    }
     m = {id: c.id, clase: "agente", quien: QUIEN_AGENTE, texto: cuerpo, iso: c.created_at, srv: fecha(c.created_at), tag: tag,
          nodo: mm.nodo || null, modelo: mm.modelo ? modeloCorto(mm.modelo) : null,
          duracion_s: mm.dur !== undefined ? mm.dur : null, cuello: mm.cuello || null};
@@ -5206,6 +5325,10 @@ function agregar(c, arriba){
     var sd = sacarDesde(b), se = sacarEnviado(sd.texto), tg = null, texto = se.texto;
     var mp = RE_TEMA.exec(texto);
     if(mp && esTema(mp[1])){ tg = normTema(mp[1]); texto = texto.slice(mp[0].length); }
+    else {
+      var oc = ordenCajaMsg(texto);
+      if(oc && oc.tema) tg = oc.tema;
+    }
     // la hora de ENVIO manda sobre la que le puso github al comentario (1191): un audio se postea
     // recien cuando termino de subir, asi que `created_at` llega tarde
     m = {id: c.id, clase: "yo", quien: QUIEN_F, texto: texto,
@@ -10256,7 +10379,7 @@ function nodoTramo(t){
     b.innerHTML = '<span class="l"></span><span class="t"></span>';
     b.querySelector(".l").textContent = String(t.letra || "");
     b.querySelector(".t").textContent = String(t.texto || "");
-    b.dataset.letra = String(t.letra || ""); marcaLetra(b);   // 2026-10-15 (orden 3752): misma letra arriba al centro
+    b.dataset.letra = String(t.letra || ""); b.dataset.varias = "1"; marcaLetra(b);   // 2026-10-15 (orden 3752): misma letra arriba al centro
     b.title = "llegando las demas: se toca cuando termine la ronda";
     if(puntuable(t.texto)) b.appendChild(puntajeFila(t.tema || (vuelo && vuelo.tema) || temaActivo(), String(t.letra || ""), String(t.texto || "")));
     d.appendChild(b);
@@ -10718,8 +10841,11 @@ function alEnviar(x, fn){
 // `tsEnvio` (1191): cuando facundo apreto mandar. lo pasan la foto y el audio, que salen recien
 // despues de subirse; para un texto es ahora mismo. de ahi sale el `[enviado: ...]` y la hora que se pinta.
 function mandar(texto, tema, crudo, tsEnvio){
-  var aparte = mandarAparte;   // 1350: sale del modal de una push: no toca la caja, ni borradores, ni el scroll
   texto = (texto || "").trim();
+  // 3868 {orden-directa-cola}: el envío de una caja `orden` (encolar o revertir con `frenar {<slug>}`) va
+  // directo al sistema sin publicar burbuja en el chat, sin activar `#vuelo` y sin tocar el borrador del input
+  var sinChat = !!ordenCajaMsg(texto);
+  var aparte = mandarAparte || sinChat;   // 1350: sale del modal de una push o de una caja `orden`
   // 2334 {caja}: `mandar()` NUNCA sale muda. siempre devuelve una promesa con `{ok, via, motivo}`, asi el que
   // la llamo (una caja de decision, una caja `dale`) sabe si el mensaje salio de verdad o si se cayo por el
   // camino. `via` es `post` (entro al buzon), `espera` (quedo en `salida` y sale solo) o `hook` (una prueba).
@@ -10785,6 +10911,7 @@ function mandar(texto, tema, crudo, tsEnvio){
         }
       }
       else if(!aparte) sacarProvisional();
+      if(sinChat){ try{ colaReanudar(); }catch(x){} }
       etagCom = null;
     })
     .catch(function(e){
@@ -10795,7 +10922,7 @@ function mandar(texto, tema, crudo, tsEnvio){
       if(errRed(e)){ guardarSalida(texto, tema, cuerpo, "red");                       // 1631: se corto en el camino
                      res = {ok: true, via: "espera", motivo: "sin conexión"}; return; }
       res = {ok: false, motivo: (e && e.message) || "no se pudo mandar"};
-      if(!txt.value.trim()){ ponerCaja(texto); guardarBorrador(caja || tema, texto, true); }
+      if(!aparte && !txt.value.trim()){ ponerCaja(texto); guardarBorrador(caja || tema, texto, true); }
       if(ruidoso(e)) sistema("no se pudo mandar: " + e.message, "error");
     })
     .then(function(){ enviando = Math.max(0, enviando - 1); $("mandar").disabled = false; return res; });
@@ -11427,17 +11554,18 @@ function pintarNotiPush(){
     var w = document.createElement("div");
     w.className = "nmopc";
     o.lista.forEach(function(op){
-      var b = moldeBoton({tipo: "term", letra: op.letra, txt: op.texto, clase: "nmop"});
+      var b = moldeBoton({tipo: "term", letra: o.lista.length > 1 ? op.letra : "", txt: op.texto, clase: "nmop"});
       b.dataset.letra = op.letra;
       if(o.lista.length > 1) b.dataset.varias = "1";   // 2026-10-15 (orden 3752): `orden A`, `orden B`
-      // 2026-10-06 (harness2 {cajas}): la caja `orden` se ve igual que en el chat y manda el codigo de la caja
-      // (`#k7f2D`), asi el daemon la encola sin modelo, como el toque desde el hilo
+      // 2026-10-06 (harness2 {cajas}): la caja `orden` se ve igual que en el chat y manda la orden directa a la cola
       var cod = (op.orden || op.escupir) && c.m ? cajaCod(c.m, op.letra) : null;
+      var ord = esCajaOrden(op) ? ordenCajaLinea(c.m, op, c.tema) : null;
       if(op.orden) marcaOrden(b);
       else if(op.escupir) marcaEscupir(b);
+      else marcaLetra(b);
       b.addEventListener("click", function(){
         if(b.classList.contains("sel")) return;
-        if(responderNotiPush(cod || op.cmd || (op.letra + ": " + op.texto), !!(cod || op.cmd))) b.classList.add("sel");
+        if(responderNotiPush(ord || cod || op.cmd || (op.letra + ": " + op.texto), !!(ord || cod || op.cmd))) b.classList.add("sel");
       });
       w.appendChild(b);
     });
@@ -17153,6 +17281,9 @@ window.__agente = {
   opcionesDe: opcionesDe,
   // 2096 {codigocaja}: el codigo corto que manda una caja (`prueba_caja_codigo`)
   codigoCaja: codigoCaja, esCodigoCaja: esCodigoCaja, cajaCod: cajaCod,
+  // 3868 {orden-directa-cola}: el envio directo de una caja `orden` a la cola y su revertir con `frenar {<slug>}`
+  esCajaOrden: esCajaOrden, slugCajaOrden: slugCajaOrden, ordenCajaLinea: ordenCajaLinea,
+  frenarCajaLinea: frenarCajaLinea, ordenCajaMsg: ordenCajaMsg, esMensajeCaja: esMensajeCaja,
   hhmmDe: hhmmDe, citaCaja: citaCaja, hhmmBA: hhmmBA,
   diaBA: diaBA, hoyBA: hoyBA, diaMas: diaMas, ddmm: ddmm, selloMsg: selloMsg, etiquetaDia: etiquetaDia, sepDias: sepDias,   // 2132 {dia}
   hora12: hora12, norm12: norm12, horaNoti: horaNoti,   // 1660: 12 h con am/pm en todo lo que ve facundo   // 1203: hora de envio de cada caja marcada
