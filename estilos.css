@@ -124,12 +124,6 @@
   /* mensaje en vuelo: spinner de texto, fase y eta mientras contesta el agente */
   .msg.vuelo .cuerpo{color:var(--gris);display:flex;align-items:center;gap:6px}
   .msg.vuelo .giro{color:var(--verde);display:inline-block;min-width:1ch;cursor:default}
-  .msg.vuelo .btn-stop-chat{
-    background:#221111;color:#ff5555;border:1px solid #661818;border-radius:4px;
-    padding:2px 7px;font-size:11px;font-weight:600;cursor:pointer;margin-left:8px;
-    font-family:inherit;line-height:1.2;transition:background .15s,color .15s;
-  }
-  .msg.vuelo .btn-stop-chat:hover{background:#ff4d4d;color:#000}
   /* 1776 (facundo, 2026-09-16): la respuesta es un hilo que crece. `.hilo` son los tramos que el modelo ya termino
      (texto), en orden y nunca editados; abajo, en vuelo, la unica linea que cambia es `.cuerpo` (bolita + lo que esta
      haciendo). en la respuesta guardada el hilo queda arriba del cuerpo final.

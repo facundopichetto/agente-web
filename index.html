@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.603">
-<link rel="manifest" href="manifest.json?v=4.603">
+<meta name="agente-web-version" content="4.604">
+<link rel="manifest" href="manifest.json?v=4.604">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.603">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.604">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.559">
 <style id="css-listas-drag">
 #sellistas, #sellistas * {
@@ -10460,12 +10460,6 @@ function vueloTerminar(){
   if(n) n.remove();
   reprogramar();
 }
-function chatPararVuelo(){
-  var t = (vuelo && vuelo.tema) || temaActivo();
-  api("POST", "/chat/parar", {tema: t}).then(function(r){
-    console.log("chat parado:", r);
-  }).catch(function(e){ console.error("error al parar chat:", e); });
-}
 function pintarVuelo(){
   var n = document.getElementById("vuelo");
   if(!vuelo || !lista || !deEstaTab(vuelo.tema, temaActivo())){ if(n) n.remove(); return; }
@@ -10473,8 +10467,7 @@ function pintarVuelo(){
     n = document.createElement("div");
     n.id = "vuelo"; n.className = "msg agente vuelo";
     n.innerHTML = '<div><span class="quien">flaudio</span><span class="ts"></span></div><div class="hilo"></div>' +
-                  '<div class="cuerpo"><span class="giro"></span> <span class="fase"></span><span class="eta"></span>' +
-                  '<button class="btn-stop-chat" type="button" title="detener respuesta" onclick="chatPararVuelo()">✕ parar</button></div>';
+                  '<div class="cuerpo"><span class="giro"></span> <span class="fase"></span><span class="eta"></span></div>';
     vuelo.tramos.forEach(function(t){ n.querySelector(".hilo").appendChild(nodoTramo(t)); });   // el nodo se rehizo (cambio de pestaña): mismo hilo
   }
   if(n.parentNode !== lista || lista.lastChild !== n) lista.appendChild(n);
