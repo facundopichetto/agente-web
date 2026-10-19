@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.601">
-<link rel="manifest" href="manifest.json?v=4.601">
+<meta name="agente-web-version" content="4.602">
+<link rel="manifest" href="manifest.json?v=4.602">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.601">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.602">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.559">
 <style id="css-listas-drag">
 #sellistas, #sellistas * {
@@ -3835,7 +3835,8 @@ function cajasDe(m){
         var tx = String(x.texto || "");
         var esc = x.escupir === true || x.tipo === "escupir" || /^\[escupir(?:\s+[0-9a-f]{8})?\]\s*/i.test(tx) || /\s*\[escupir(?:\s+[0-9a-f]{8})?\]$/i.test(tx);
         if(esc) tx = tx.replace(/^\[escupir(?:\s+[0-9a-f]{8})?\]\s*/i, "").replace(/\s*\[escupir(?:\s+[0-9a-f]{8})?\]$/i, "").trim();
-        return {letra: String(x.letra).toUpperCase(), texto: tx, orden: x.orden === true, escupir: esc, slug: x.slug || ""};
+        var ordCmd = !esc && (RE_TAG_MODELO.test(tx) || /\[\s*toca:[^\]]*\]/i.test(tx));
+        return {letra: String(x.letra).toUpperCase(), texto: tx, orden: x.orden === true || ordCmd, escupir: esc, slug: x.slug || ""};
       });
   } else if(o.lista.length){
     o.lista.forEach(function(x){
@@ -3904,14 +3905,14 @@ function cajaCod(m, letras, arrepentir){
 var RE_ORDEN_CAJA = /^orden\s*:\s*(?:\[pestana\s+([\w\/#-]+)\]\s*)?tema\s+([\w\/#-]+)\s*:\s*(?:\{([a-z0-9][a-z0-9-]{0,39})\}\s*)?([\s\S]+)$/i;
 var RE_FRENAR_CAJA = /^(?:frenar|fren[aá]|cancelar|cancel[aá])\s+(?:la\s+)?`?\{([a-z0-9][a-z0-9-]{0,39})\}`?\s*$/i;
 function esCajaOrden(o){ return !!(o && o.orden && !o.escupir); }
-// 3896 {escupir-sin-burbuja}: tocar una caja `escupir` no ensucia la conversación con una burbuja de f
+// 3901 {escupir-sin-burbuja}: tocar una caja `escupir` pasa el resumen directo al comandante sin generar burbuja de chat
 var RE_MSG_ESCUPIR = /(?:^|\s)\[\s*escupir(?:\s+[0-9a-f]{8})?\]|\b(?:escupir|pasar)\s+al\s+comandante\b/i;
 function esCajaEscupir(o){ return !!(o && o.escupir); }
 function esMensajeEscupir(texto){
   if(!texto) return false;
   var pc = partirCita(texto), c = String(pc.cuerpo || "").trim();
   if(RE_MSG_ESCUPIR.test(c)) return true;
-  if(/^[A-P](?:\s*(?:y|,)\s*[A-P])*\s*:\s*/i.test(c) && /\[\s*escupir\b/i.test(c)) return true;
+  if(/^[A-P](?:\s*(?:y|,)\s*[A-P])*\s*:\s*/i.test(c) && /(?:\[\s*escupir\b|\[\s*modelo:|\[\s*toca:)/i.test(c)) return true;
   return false;
 }
 function slugCajaOrden(m, o){
@@ -4209,6 +4210,8 @@ function estadoDeducido(m){
       }
       continue;
     }
+    // 3901 {escupir-sin-burbuja}: un toque de caja `escupir` nunca marca una caja posterior de `orden` del Comandante
+    if(esMensajeEscupir(x.texto) && !o.lista.some(esCajaEscupir)) continue;
     // 1211: sin cita, la letra es de la caja mas reciente SOLO si esa caja ya existia cuando f mando
     // (el orden es por hora de envio: una respuesta que llego despues no hereda la eleccion)
     var mia = pc.cita ? citaEsDe(pc.cita, m) : cajaAlMandar(j, tema, fecha(x.iso)) === m;
@@ -10858,6 +10861,7 @@ function mandar(texto, tema, crudo, tsEnvio){
   // 3868 {orden-directa-cola}: el envío de una caja `orden` (encolar o revertir con `frenar {<slug>}`) va
   // directo al sistema sin publicar burbuja en el chat, sin activar `#vuelo` y sin tocar el borrador del input
   var sinChat = !!ordenCajaMsg(texto);
+  var esCaja = esMensajeCaja(texto);
   var aparte = mandarAparte || sinChat;   // 1350: sale del modal de una push o de una caja `orden`
   // 2334 {caja}: `mandar()` NUNCA sale muda. siempre devuelve una promesa con `{ok, via, motivo}`, asi el que
   // la llamo (una caja de decision, una caja `dale`) sabe si el mensaje salio de verdad o si se cayo por el
@@ -10872,7 +10876,7 @@ function mandar(texto, tema, crudo, tsEnvio){
   var caja = temaCaja;
   ultimoTexto = texto; ultimoTs = Date.now();
   if(Date.now() < frenoHasta){                                   // github frenado: ni lo intento, queda guardado
-    if(!aparte){
+    if(!aparte && !esCaja){
       if(txt.value.trim() === texto){ txt.value = ""; txt.style.height = ""; }
       borrarBorrador(tema); if(caja && caja !== tema) borrarBorrador(caja);
     }
@@ -10880,7 +10884,7 @@ function mandar(texto, tema, crudo, tsEnvio){
     return Promise.resolve({ok: true, via: "espera", motivo: "github frenado"});
   }
   if(sinRed()){                                                  // 1631: pwa sin conexion: queda en espera y sale al volver
-    if(!aparte){
+    if(!aparte && !esCaja){
       if(txt.value.trim() === texto){ txt.value = ""; txt.style.height = ""; }
       borrarBorrador(tema); if(caja && caja !== tema) borrarBorrador(caja);
     }
@@ -10888,9 +10892,9 @@ function mandar(texto, tema, crudo, tsEnvio){
     return Promise.resolve({ok: true, via: "espera", motivo: "sin conexión"});
   }
   enviando++;
-  if(!aparte && !esMensajeEscupir(texto)) subioAManoSoltar();   // 1645: mandar un mensaje apaga la marca de "subio a mano"
+  if(!aparte && !esCaja) subioAManoSoltar();   // 1645: mandar un mensaje apaga la marca de "subio a mano"
   $("mandar").disabled = true;
-  if(!aparte && !esMensajeEscupir(texto)){
+  if(!aparte && !esCaja){
     if(txt.value.trim() === texto){ txt.value = ""; txt.style.height = ""; }   // la caja se vacia ya
     borrarBorrador(tema); if(caja && caja !== tema) borrarBorrador(caja);      // y su tumba se publica ya
   }
@@ -10935,7 +10939,7 @@ function mandar(texto, tema, crudo, tsEnvio){
       if(errRed(e)){ guardarSalida(texto, tema, cuerpo, "red");                       // 1631: se corto en el camino
                      res = {ok: true, via: "espera", motivo: "sin conexión"}; return; }
       res = {ok: false, motivo: (e && e.message) || "no se pudo mandar"};
-      if(!aparte && !txt.value.trim()){ ponerCaja(texto); guardarBorrador(caja || tema, texto, true); }
+      if(!aparte && !esCaja && !txt.value.trim()){ ponerCaja(texto); guardarBorrador(caja || tema, texto, true); }
       if(ruidoso(e)) sistema("no se pudo mandar: " + e.message, "error");
     })
     .then(function(){ enviando = Math.max(0, enviando - 1); $("mandar").disabled = false; return res; });
