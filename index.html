@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.602">
-<link rel="manifest" href="manifest.json?v=4.602">
+<meta name="agente-web-version" content="4.603">
+<link rel="manifest" href="manifest.json?v=4.603">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.602">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.603">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.559">
 <style id="css-listas-drag">
 #sellistas, #sellistas * {
@@ -3242,10 +3242,151 @@ var msgs = [], msgsHist = {}, msgsCom = [];
 // de un clon el tema de OTRO clon y quedaba pintada en la pestaña equivocada (y su caja, al tocarla,
 // salia con ese tema). los comandos sin modelo, que son los que contestan sin tag, siguen cayendo donde
 // se escribieron: en la pestaña del mensaje de facundo que contestan.
+// 3923 {ruteo-cierre-pestana-2}: un cierre de tarea (`listo (...):`, `terminó \`slug\` (...):`, `falló ...`)
+// NUNCA es respuesta al último mensaje que facundo escribió en otra pestaña (`prevF`), ni debe clasificarse con
+// la cabecera técnica `(sonnet, cuenta awtomic (opus), 2 min, $0.48):` (donde `sonnet`/`opus` matchean `modelos`).
+// se separa cabecera y cuerpo, y se resuelve la pestaña donde nació la orden (por slug, caja `orden:` encolada,
+// `[pestana ...]` en `widDatos.agent`, ticket CX/MVP del clon, `cuenta awtomic` o contenido del cuerpo).
+function partesCierreTarea(texto){
+  var s = String(texto || "").trim();
+  if(!s) return null;
+  var m = /^(?:listo|fall[oó]\s*\(rc=-?\d+\))\s*\(([^\n]+)\)\s*:\s*(?:\n|$)([\s\S]*)$/i.exec(s);
+  if(m) return {slug: null, etiqueta: m[1], cuerpo: m[2] || ""};
+  m = /^termin[oó]\s+`([^`\n]+)`\s*\(([^\n]+)\)(?:\s*·\s*sin verificar[^\n:]*)?\s*:\s*(?:\n|$)([\s\S]*)$/i.exec(s);
+  if(m) return {slug: m[1].trim().toLowerCase(), etiqueta: m[2], cuerpo: m[3] || ""};
+  m = /^fall[oó]\s*\(rc=-?\d+\)\s+`([^`\n]+)`\s*\(([^\n]+)\)\s*:\s*(?:\n|$)([\s\S]*)$/i.exec(s);
+  if(m) return {slug: m[1].trim().toLowerCase(), etiqueta: m[2], cuerpo: m[3] || ""};
+  m = /^`([^`\n]+)`\s+(?:corri[oó]\s+pero\s+no\s+cierra|espera\s+a\s+[^\n(]+)\s*\(([^\n]+)\)[^\n:]*:\s*(?:\n|$)([\s\S]*)$/i.exec(s);
+  if(m) return {slug: m[1].trim().toLowerCase(), etiqueta: m[2], cuerpo: m[3] || ""};
+  return null;
+}
+function esCierreTarea(texto){
+  return !!partesCierreTarea(texto);
+}
+function ticketsEnTexto(s){
+  var out = [], re = /\b(cx|mvp)[ -]?(\d{2,6})\b/gi, m;
+  while((m = re.exec(String(s || ""))) !== null){
+    var tk = (m[1] + m[2]).toLowerCase();
+    if(out.indexOf(tk) < 0) out.push(tk);
+  }
+  return out;
+}
+function temaCierreTarea(m, listaMsgs){
+  if(!m) return "flos";
+  if(m.explicito && m.tema && esTema(m.tema)) return normTema(m.tema);
+  if(m.tag && esTema(m.tag)) return normTema(m.tag);
+  var pc = partesCierreTarea(m.texto);
+  if(!pc) return "flos";
+  var slug = pc.slug, cuerpo = String(pc.cuerpo || ""), etq = String(pc.etiqueta || "");
+  var tickets = ticketsEnTexto((slug || "") + " " + cuerpo);
+  var ctaTema = /\bcuenta\s+awtomic\b/i.test(etq) ? "awtomic" : null;
+  var cuerpoTema = clasificar(cuerpo).tema;
+  var universo = (listaMsgs && listaMsgs.length) ? listaMsgs : msgs.concat(msgsCom || []);
+  var tsM = fecha(m.iso) || Infinity;
+  // 1) buscar en los mensajes de facundo la caja `orden:` que encoló esta tarea (por slug o por ticket)
+  var candPorTicket = null, candPorTema = null;
+  for(var i = universo.length - 1; i >= 0; i--){
+    var x = universo[i];
+    if(!x || x.clase !== "yo") continue;
+    var oc = ordenCajaMsg(x.texto);
+    var tOrig = (oc && oc.tema) ? normTema(oc.tema) : ((x.tag && esTema(x.tag)) ? normTema(x.tag) : ((x.explicito && x.tema && esTema(x.tema)) ? normTema(x.tema) : null));
+    if(!tOrig) continue;
+    var tsX = fecha(x.iso) || 0;
+    if(tsX && tsM && tsX > tsM + 120000) continue;
+    if(oc && oc.tipo === "encolar"){
+      if(slug && ((oc.slug && oc.slug === slug) || (oc.slugs && oc.slugs.indexOf(slug) >= 0))) return tOrig;
+      if(!slug && oc.slug && cuerpo.toLowerCase().indexOf(oc.slug) >= 0) return tOrig;
+      if(tickets.length && !candPorTicket){
+        var tksOc = ticketsEnTexto((oc.slug || "") + " " + (oc.linea || "") + " " + (x.texto || ""));
+        for(var ti = 0; ti < tickets.length; ti++){
+          if(tksOc.indexOf(tickets[ti]) >= 0){ candPorTicket = tOrig; break; }
+        }
+      }
+      var baseCand0 = ctaTema || cuerpoTema;
+      if(baseCand0 && !candPorTema && baseTema(tOrig) === baseTema(baseCand0)) candPorTema = tOrig;
+    }
+  }
+  if(candPorTicket) return candPorTicket;
+  // 2) buscar en `widDatos.agent` (`tabla`, `corriendo`, `hechas`, `ultimas`, `programadas`) por slug o ticket
+  var ag = (typeof widDatos !== "undefined" && widDatos && widDatos.agent) ? widDatos.agent : null;
+  var temaAgente = null;
+  if(ag){
+    var bolsas = [ag.tabla || [], ag.corriendo || [], ag.hechas || [], ag.ultimas || [], ag.programadas || []];
+    for(var bi = 0; bi < bolsas.length; bi++){
+      var filas = bolsas[bi] || [];
+      for(var fi = 0; fi < filas.length; fi++){
+        var f = filas[fi];
+        if(!f) continue;
+        var fSlug = String(f.slug || "").trim().toLowerCase();
+        var fTxt = String(f.completo || f.texto || "");
+        var coincide = false;
+        if(slug && fSlug && (fSlug === slug || fSlug.indexOf(slug) === 0 || slug.indexOf(fSlug) === 0)) coincide = true;
+        else if(slug && fTxt.toLowerCase().indexOf("{" + slug) >= 0) coincide = true;
+        else if(!slug && tickets.length){
+          var tksF = ticketsEnTexto(fSlug + " " + fTxt);
+          for(var tj = 0; tj < tickets.length; tj++){
+            if(tksF.indexOf(tickets[tj]) >= 0){ coincide = true; break; }
+          }
+        }
+        if(coincide){
+          var mp = /\[pestana\s+([\w\/#-]+)\]/i.exec(fTxt);
+          if(mp && esTema(mp[1])) return normTema(mp[1]);
+          if(f.tema && esTema(f.tema) && !temaAgente) temaAgente = normTema(f.tema);
+        }
+      }
+    }
+  }
+  // 3) si el cierre menciona un ticket (`CX-5250`) y existe un clon abierto o con historial de ese ticket (`awtomic#102`), va a ese clon
+  if(tickets.length){
+    var candidatosClon = (tabs || []).slice();
+    Object.keys(msgsHist || {}).forEach(function(k){ if(candidatosClon.indexOf(k) < 0) candidatosClon.push(k); });
+    if(typeof CLON_INFO !== "undefined" && CLON_INFO) Object.keys(CLON_INFO).forEach(function(k){ if(candidatosClon.indexOf(k) < 0) candidatosClon.push(k); });
+    if(typeof CLON_VIS !== "undefined" && CLON_VIS) Object.keys(CLON_VIS).forEach(function(k){ if(candidatosClon.indexOf(k) < 0) candidatosClon.push(k); });
+    if(typeof CLONES !== "undefined" && Array.isArray(CLONES)) CLONES.forEach(function(k){ if(candidatosClon.indexOf(k) < 0) candidatosClon.push(k); });
+    for(var ci = 0; ci < candidatosClon.length; ci++){
+      var ct = candidatosClon[ci];
+      if(!esClon(ct)) continue;
+      if(ctaTema && baseTema(ct) !== ctaTema) continue;
+      var infoClon = (typeof CLON_INFO !== "undefined" && CLON_INFO && CLON_INFO[ct]) ? CLON_INFO[ct] : null;
+      var tkClon = ((typeof ticketDeTema === "function") ? ticketDeTema(ct) : null)
+                   || (infoClon && (infoClon.nombre || infoClon.ticket)) || "";
+      var visRaw = (typeof CLON_VIS !== "undefined" && CLON_VIS && CLON_VIS[ct]) ? String(CLON_VIS[ct]) : "";
+      var visClon = visRaw ? visRaw.toLowerCase().replace(/^[a-z]\//, "").replace(/[^a-z0-9]/g, "") : null;
+      var tksClon = ticketsEnTexto(String(tkClon) + " " + visRaw);
+      for(var tkIdx = 0; tkIdx < tickets.length; tkIdx++){
+        var tkNorm = tickets[tkIdx];
+        if(tksClon.indexOf(tkNorm) >= 0
+           || (tkClon && String(tkClon).toLowerCase().replace(/[^a-z0-9]/g, "") === tkNorm)
+           || (visClon && visClon === tkNorm)){
+          return normTema(ct);
+        }
+      }
+    }
+  }
+  if(candPorTema) return candPorTema;
+  var base = temaAgente || ctaTema || cuerpoTema;
+  if(base && !esClon(base) && Array.isArray(tabs) && tabs.indexOf(base) < 0){
+    var clonesBase = tabs.filter(function(t){ return esClon(t) && baseTema(t) === base; });
+    if(clonesBase.length === 1) return normTema(clonesBase[0]);
+  }
+  return base || "flos";
+}
+function claveCierreMsg(m){
+  if(!m || m.clase !== "agente") return null;
+  var pc = partesCierreTarea(m.texto);
+  if(!pc) return null;
+  var c = String(pc.cuerpo || "").replace(/\s+/g, " ").trim().slice(0, 120).toLowerCase();
+  return c ? ("cierre|" + c) : null;
+}
 function temaDe(m, prev, prevF){
   if(m.explicito) return m.tema;
   if(m.tag) return m.tag;
-  if(m.clase === "agente") return prevF || prev || "flos";
+  if(m.clase === "agente"){
+    if(esCierreTarea(m.texto)) return temaCierreTarea(m, msgs);
+    return prevF || prev || "flos";
+  }
+  var oc = ordenCajaMsg(m.texto);
+  if(oc && oc.tema) return oc.tema;
   var c = clasificar(m.texto);
   return c.tema || prevF || prev || "flos";
 }
@@ -3253,8 +3394,13 @@ function recalcularTemas(){
   var prev = null, prevF = null;
   msgs.forEach(function(m){
     m.tema = temaDe(m, prev, prevF);
-    prev = m.tema;
-    if(m.clase === "yo") prevF = m.tema;
+    if(!(m.clase === "agente" && esCierreTarea(m.texto))){
+      prev = m.tema;
+    }
+    if(m.clase === "yo"){
+      var oc = ordenCajaMsg(m.texto);
+      if(!(oc && oc.tipo === "frenar")) prevF = m.tema;
+    }
   });
 }
 // el mismo mensaje puede venir por las dos fuentes (el daemon publica la charla despues de contestar,
@@ -3316,12 +3462,16 @@ function mezclar(){
     l.forEach(function(m){
       var k = claveMsg(m);
       (porClave[k] = porClave[k] || []).push(fecha(m.iso));
+      var kc = claveCierreMsg(m);
+      if(kc) (porClave[kc] = porClave[kc] || []).push(fecha(m.iso));
     });
   });
   // lo que ya esta en el historial no se pinta de nuevo cuando vuelve por el poll de comentarios
   var sueltos = msgsCom.filter(function(m){
-    var ts = fecha(m.iso), c = porClave[claveMsg(m)];
-    return !(c && c.some(function(t){ return Math.abs(t - ts) < CERCA; }));
+    var ts = fecha(m.iso), c = porClave[claveMsg(m)], cc = claveCierreMsg(m) ? porClave[claveCierreMsg(m)] : null;
+    if(c && c.some(function(t){ return Math.abs(t - ts) < CERCA; })) return false;
+    if(cc && cc.some(function(t){ return Math.abs(t - ts) < CERCA; })) return false;
+    return true;
   });
   if(sueltos.length) listas.push(sueltos);
   msgs = sinDobles(mezclarOrdenadas(listas)).filter(function(m){ return !esEstadoTransitorio(m); });
@@ -5334,8 +5484,9 @@ function agregar(c, arriba){
       for(var ui = msgsCom.length - 1; ui >= 0; ui--){ if(msgsCom[ui].clase === "yo"){ ultYo = msgsCom[ui]; break; } }
       if(ultYo && (ordenCajaMsg(ultYo.texto) || {}).tipo === "frenar") return null;
     }
+    var temaIni = tag || (esCierreTarea(cuerpo) ? temaCierreTarea({clase: "agente", texto: cuerpo, iso: c.created_at}, msgsCom.concat(msgs)) : null);
     m = {id: c.id, clase: "agente", quien: QUIEN_AGENTE, texto: cuerpo, iso: c.created_at, srv: fecha(c.created_at), tag: tag,
-         nodo: mm.nodo || null, modelo: mm.modelo ? modeloCorto(mm.modelo) : null,
+         tema: temaIni, nodo: mm.nodo || null, modelo: mm.modelo ? modeloCorto(mm.modelo) : null,
          duracion_s: mm.dur !== undefined ? mm.dur : null, cuello: mm.cuello || null};
   }else{
     var sd = sacarDesde(b), se = sacarEnviado(sd.texto), tg = null, texto = se.texto;
@@ -5461,9 +5612,13 @@ function recibirChat(tema, d){
     if(f.pregunta && !propia) out.push({id: "h:" + base + ":q", clase: "yo", quien: QUIEN_F, texto: f.pregunta,
                              iso: f.ts, tema: t, explicito: true, disp: dispDe(f.desde) || null,
                              modo: modoDe(f.desde) || null});
-    var r = String(f.respuesta || ""), mt = /^\s*\[([\w\/#-]+)\]\s*/.exec(r);
+    var r = String(f.respuesta || ""), mt = /^\s*\[([\w\/#-]+)\]\s*/.exec(r), tFila = t;
     if(/^aviso: /.test(r)) return;   // 1237: los avisos van solo a la campanita, nunca al chat
-    if(mt && esTema(mt[1])) r = r.slice(mt[0].length);   // el `[tema]` ya lo dice la pestaña
+    if(mt && esTema(mt[1])){
+      var tagFila = normTema(mt[1]);
+      if(!deEstaTab(tagFila, t) && !deEstaTab(t, tagFila)) tFila = tagFila;
+      r = r.slice(mt[0].length);   // el `[tema]` ya lo dice la pestaña
+    }
     var lm = leerMeta(r), nodo = f.nodo || lm.meta.nodo || null;   // el `[cloud]` viejo sale del cuerpo
     r = lm.cuerpo;
 
@@ -5487,8 +5642,8 @@ function recibirChat(tema, d){
       // en `mezclar`), y si nadie la dibujo fresca con la que se escribio (`ts_llegada`). la clave no cambia
       out.push({id: "h:" + base + ":r", clase: "agente", quien: QUIEN_AGENTE, texto: r, iso: f.ts_llegada || f.ts,
                 srv: fecha(f.ts_llegada || f.ts),
-                clave: "r:" + t + "|" + (f.ts_llegada || f.ts || "") + "|" + hashTexto(r),   // 1211: no por posicion
-                tema: t, explicito: true, tag: t, audio: esPuente ? null : (f.audio || null), nodo: nodo, tarea: f.tarea || null,
+                clave: "r:" + tFila + "|" + (f.ts_llegada || f.ts || "") + "|" + hashTexto(r),   // 1211: no por posicion
+                tema: tFila, explicito: true, tag: tFila, audio: esPuente ? null : (f.audio || null), nodo: nodo, tarea: f.tarea || null,
                 ts_envio: f.ts || null,   // 2417 {boton}: el `ts` de ESTA fila, lo unico que identifica el turno
                 audios_seg: f.audios_seg || null,
                 motor: f.motor || null, effort: f.effort || null, corrio: f.corrio || null,
@@ -17302,6 +17457,7 @@ window.__agente = {
   esCajaOrden: esCajaOrden, slugCajaOrden: slugCajaOrden, ordenCajaLinea: ordenCajaLinea,
   frenarCajaLinea: frenarCajaLinea, ordenCajaMsg: ordenCajaMsg, esMensajeCaja: esMensajeCaja,
   esCajaEscupir: esCajaEscupir, esMensajeEscupir: esMensajeEscupir,
+  partesCierreTarea: partesCierreTarea, esCierreTarea: esCierreTarea, temaCierreTarea: temaCierreTarea,
   hhmmDe: hhmmDe, citaCaja: citaCaja, hhmmBA: hhmmBA,
   diaBA: diaBA, hoyBA: hoyBA, diaMas: diaMas, ddmm: ddmm, selloMsg: selloMsg, etiquetaDia: etiquetaDia, sepDias: sepDias,   // 2132 {dia}
   hora12: hora12, norm12: norm12, horaNoti: horaNoti,   // 1660: 12 h con am/pm en todo lo que ve facundo   // 1203: hora de envio de cada caja marcada
