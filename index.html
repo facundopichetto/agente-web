@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.605">
-<link rel="manifest" href="manifest.json?v=4.605">
+<meta name="agente-web-version" content="4.606">
+<link rel="manifest" href="manifest.json?v=4.606">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.605">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.606">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.559">
 <style id="css-listas-drag">
 #sellistas, #sellistas * {
@@ -2933,7 +2933,7 @@ function costos(l){
 // ORDEN:/PROPUESTA: amarillo. el texto ya viene escapado: aca solo se agregan spans.
 function enCodigo(l, f){  // saca los `code` antes de tocar el resto y los devuelve al final
   var trozos = [];
-  l = l.replace(/`([^`]+)`/g, function(m0, c){
+  l = l.replace(/`+([^`]+)`+/g, function(m0, c){
     trozos.push('<span class="cod">' + c + "</span>");
     return "\u0001" + (trozos.length - 1) + "\u0001";
   });
@@ -3201,8 +3201,8 @@ function lineaHtml(l, i){
   if(/^\s*(?:\*\*)?APREND[IÍ](?:\*\*)?:/i.test(l)) return '<span class="aprendi">' + enLinea(l) + "</span>";   // 1502
   var linea = enLinea(l);
   if(i === 0){                                     // [tema] / [openrouter/x] al inicio de la respuesta
-    linea = linea.replace(/^(\s*)\[([^\]\n]{1,40})\]/, function(m0, sp, dentro){
-      return sp + '<span class="tag">[' + dentro + "]</span>";
+    linea = linea.replace(/^(\s*)\[([^\]\n]{1,40})\]([ \t]*)/, function(m0, sp, dentro, pos){
+      return sp + '<span class="tag">[' + dentro + "]</span>" + (pos || (m0.length < linea.length ? " " : ""));
     });
   }
   return linea.replace(/^(\s*)([-*])(\s)/, function(m0, sp, g, fin){
@@ -4738,7 +4738,7 @@ function cajaVista(texto){
   var dep = /\[\s*depende de\s*\{?([^\]}]*)\}?\s*\]/i.exec(raw);
   if(/\[\s*paralelo\s*\]/i.test(raw)) meta.push("corre en paralelo");
   else if(dep) meta.push("espera a " + dep[1].trim());
-  var limpio = raw.replace(RE_TAG_MODELO, "").replace(RE_TAGS_COLA, "").replace(/[ \t]{2,}/g, " ").trim()
+  var limpio = raw.replace(RE_TAG_MODELO, " ").replace(RE_TAGS_COLA, " ").replace(/[ \t]{2,}/g, " ").trim()
     .replace(/^\{[a-z0-9][a-z0-9-]{0,39}\}\s*/i, "");   // el `{slug}` del principio es de la cola, no de facundo
   return {texto: limpio || raw, meta: meta.join(" · ")};
 }
@@ -10711,7 +10711,9 @@ function vueloTramos(lista){
     if(tk && vk && (tk.delta || vk.delta) && (tk.tipo === "texto" || tk.tipo === "thinking") && (vk.tipo === "texto" || vk.tipo === "thinking")){
       var txtNuevo = String(tk.texto || "");
       if(txtNuevo !== String(vk.texto || "") || !!tk.delta !== !!vk.delta){
-        if(vk.texto && txtNuevo && !txtNuevo.startsWith(vk.texto) && txtNuevo.length < vk.texto.length && tk.delta){
+        if(vk.texto && txtNuevo && vk.texto.startsWith(txtNuevo) && tk.delta){
+          // snapshot más corto que el delta ya acumulado en vivo: conservar vk.texto
+        } else if(vk.texto && txtNuevo && !txtNuevo.startsWith(vk.texto) && txtNuevo.length < vk.texto.length && tk.delta){
           vk.texto += txtNuevo;
         } else {
           vk.texto = txtNuevo;
@@ -10991,30 +10993,31 @@ function vueloMirar(){
            var trs = vuelo.tramos ? vuelo.tramos.slice() : [];
            r.json.chunks.forEach(function(c) {
              if(c.t * 1000 < vuelo.t - 2000) return; // Ignore chunks from before this turn
-             if(c.tipo === "evento" && c.meta && (c.meta.event === "chunk" || c.meta.event === "thinking" || c.meta.event === "paso" || c.meta.event === "hecho") && c.meta.texto) {
-               var esPaso = c.meta.tipo === "paso" || c.meta.tipo === "hecho" || c.meta.event === "paso" || c.meta.event === "hecho" || String(c.meta.texto).trim().indexOf("»") === 0;
+             if(c.tipo === "evento" && c.meta && (c.meta.event === "chunk" || c.meta.event === "thinking" || c.meta.event === "paso" || c.meta.event === "hecho") && c.meta.texto !== undefined && c.meta.texto !== null && String(c.meta.texto).length > 0) {
+               var txtChunk = String(c.meta.texto);
+               var esPaso = c.meta.tipo === "paso" || c.meta.tipo === "hecho" || c.meta.event === "paso" || c.meta.event === "hecho" || txtChunk.trim().indexOf("»") === 0;
                var tTipo = (c.meta.thinking || c.meta.event === "thinking") ? "thinking" : (esPaso ? "paso" : (c.meta.tipo || "texto"));
                if(tTipo === "paso") {
-                 if(!trs.some(function(x){ return (x.tipo === "paso" || x.tipo === "hecho") && x.texto === c.meta.texto; })) {
+                 if(txtChunk.trim() && !trs.some(function(x){ return (x.tipo === "paso" || x.tipo === "hecho") && x.texto === txtChunk; })) {
                    if(trs.length > 0) {
                      var last = Object.assign({}, trs[trs.length-1]);
                      last.delta = false;
                      trs[trs.length-1] = last;
                    }
-                   trs.push({tipo: "paso", texto: c.meta.texto, delta: false});
+                   trs.push({tipo: "paso", texto: txtChunk, delta: false});
                  }
                } else if(trs.length > 0 && trs[trs.length-1].tipo === tTipo && trs[trs.length-1].delta !== false) {
                  var last = Object.assign({}, trs[trs.length-1]);
-                 last.texto += c.meta.texto;
+                 last.texto += txtChunk;
                  trs[trs.length-1] = last;
-               } else {
+               } else if(txtChunk.trim()) {
                  if(trs.length > 0) {
                    var last = Object.assign({}, trs[trs.length-1]);
                    last.delta = false;
                    trs[trs.length-1] = last;
                  }
                  var isDelta = c.meta.delta !== false;
-                 trs.push({tipo: tTipo, texto: c.meta.texto, delta: isDelta});
+                 trs.push({tipo: tTipo, texto: txtChunk, delta: isDelta});
                }
              }
            });
