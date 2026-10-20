@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.604">
-<link rel="manifest" href="manifest.json?v=4.604">
+<meta name="agente-web-version" content="4.605">
+<link rel="manifest" href="manifest.json?v=4.605">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.604">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.605">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.559">
 <style id="css-listas-drag">
 #sellistas, #sellistas * {
@@ -3271,6 +3271,72 @@ function ticketsEnTexto(s){
   }
   return out;
 }
+var STOP_CIERRE = {
+  para:1, como:1, cuando:1, hacer:1, solo:1, esta:1, este:1, esto:1, todo:1, toda:1, todos:1, todas:1,
+  entre:1, sobre:1, desde:1, hasta:1, pero:1, sino:1, tambien:1, mientras:1, porque:1, donde:1,
+  modelo:1, claude:1, sonnet:1, opus:1, fable:1, haiku:1, agy:1, gemini:1, effort:1, high:1, medium:1, low:1,
+  toca:1, facundo:1, toco:1, caja:1, texto:1, literal:1, ninguna:1, otra:1, otro:1, letra:1, menu:1,
+  autoriza:1, nada:1, contexto:1, charla:1, previa:1, pestana:1, pedido:1, escrito:1, pediste:1, quedo:1,
+  hecho:1, lados:1, coincide:1, actualice:1, estado:1, tema:1, corre:1, sola:1, cola:1, apenas:1,
+  terminar:1, termine:1, cierra:1, sesion:1, dejar:1, dejo:1,
+  con:1, sin:1, por:1, una:1, uno:1, los:1, las:1, del:1, que:1, mas:1
+};
+var CORTAS_CIERRE = {pc:1, ig:1, wa:1, rx:1, ip:1, db:1, pr:1, qa:1, ui:1};
+function normAcentosCierre(s){
+  var r = String(s || "").toLowerCase();
+  try{ r = r.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); }catch(x){}
+  return r;
+}
+function palabrasCierre(s){
+  var lim = normAcentosCierre(s)
+    .replace(/\[(?:modelo|toca|contexto|pestana|hilo)[^\]]*\]/g, " ")
+    .replace(/\[facundo toco la caja[^\]]*\]/g, " ");
+  var ws = lim.match(/[a-z0-9]{2,}/g) || [], out = [];
+  for(var i = 0; i < ws.length; i++){
+    var w = ws[i];
+    if(STOP_CIERRE[w]) continue;
+    if(w.length < 4 && !CORTAS_CIERRE[w]) continue;
+    if(out.indexOf(w) < 0) out.push(w);
+  }
+  return out;
+}
+function puntajeCierreOrden(candSlug, candTexto, cuerpo){
+  var cNorm = normAcentosCierre(cuerpo);
+  if(!cNorm) return 0;
+  var sNorm = normAcentosCierre(candSlug || "").replace(/^\{+|\}+$/g, "").trim();
+  if(sNorm.length >= 4 && cNorm.indexOf(sNorm) >= 0) return 100;
+  var mPed = /(?:^|\n)\s*(?:[-*]\s*)?\*{0,2}pediste\*{0,2}\s*:\s*([^\n]+)/i.exec(cuerpo || "");
+  var pedNorm = mPed ? normAcentosCierre(mPed[1]) : "";
+  var wCand = palabrasCierre((sNorm ? sNorm.replace(/-/g, " ") + " " : "") + (candTexto || ""));
+  if(!wCand.length) return 0;
+  var hits = 0, pts = 0;
+  for(var i = 0; i < wCand.length; i++){
+    var w = wCand[i], raiz = w.length >= 7 ? w.slice(0, 6) : w;
+    var enPed = pedNorm && (pedNorm.indexOf(w) >= 0 || (raiz.length >= 6 && pedNorm.indexOf(raiz) >= 0));
+    var enCue = cNorm.indexOf(w) >= 0 || (raiz.length >= 6 && cNorm.indexOf(raiz) >= 0);
+    if(enPed){ hits++; pts += 2; }
+    else if(enCue){ hits++; pts += 1; }
+  }
+  if(sNorm){
+    var partesS = sNorm.split("-").filter(function(p){ return p.length >= 3 || CORTAS_CIERRE[p]; });
+    var hitsSlug = 0;
+    for(var j = 0; j < partesS.length; j++){
+      var ps = partesS[j], rPs = ps.length >= 7 ? ps.slice(0, 6) : ps;
+      if(cNorm.indexOf(ps) >= 0 || (rPs.length >= 6 && cNorm.indexOf(rPs) >= 0)) hitsSlug++;
+    }
+    if(partesS.length >= 2 && hitsSlug >= 2) pts += 3;
+  }
+  return (hits >= 2 && pts >= 4) ? pts : 0;
+}
+function temaRutaEnCuerpo(cuerpo){
+  var s = String(cuerpo || "");
+  var re = /(?:^|[\s`'"(])(?:\/home\/agente\/\.claudio\/)?(personal|juegos|tinder|fuzzer|plata|server|podcast|flabs|mesa|flaudio|board|modelos|awtomic)\/[\w.\/-]+/gi, m;
+  while((m = re.exec(s)) !== null){
+    var t = normTema(m[1]);
+    if(t && esTema(t)) return t;
+  }
+  return null;
+}
 function temaCierreTarea(m, listaMsgs){
   if(!m) return "flos";
   if(m.explicito && m.tema && esTema(m.tema)) return normTema(m.tema);
@@ -3280,20 +3346,36 @@ function temaCierreTarea(m, listaMsgs){
   var slug = pc.slug, cuerpo = String(pc.cuerpo || ""), etq = String(pc.etiqueta || "");
   var tickets = ticketsEnTexto((slug || "") + " " + cuerpo);
   var ctaTema = /\bcuenta\s+awtomic\b/i.test(etq) ? "awtomic" : null;
-  var cuerpoTema = clasificar(cuerpo).tema;
-  var universo = (listaMsgs && listaMsgs.length) ? listaMsgs : msgs.concat(msgsCom || []);
+  var rutaTema = temaRutaEnCuerpo(cuerpo);
+  var cuerpoTema = rutaTema || clasificar(cuerpo).tema;
+  var baseLista = (listaMsgs && listaMsgs.length) ? listaMsgs.slice() : msgs.concat(msgsCom || []);
+  var vistosU = [], universo = [];
+  function sumarListaU(arr){
+    if(!Array.isArray(arr)) return;
+    for(var k = 0; k < arr.length; k++){
+      var item = arr[k];
+      if(item && vistosU.indexOf(item) < 0){ vistosU.push(item); universo.push(item); }
+    }
+  }
+  sumarListaU(baseLista);
+  sumarListaU(msgs);
+  sumarListaU(msgsCom);
+  if(typeof msgsHist !== "undefined" && msgsHist){
+    Object.keys(msgsHist).forEach(function(tk){ sumarListaU(msgsHist[tk]); });
+  }
   var tsM = fecha(m.iso) || Infinity;
-  // 1) buscar en los mensajes de facundo la caja `orden:` que encoló esta tarea (por slug o por ticket)
+  // 1) recolectar órdenes candidatas desde mensajes de facundo (`orden:`) y cajas `orden` ofrecidas en el historial de cada pestaña
   var candPorTicket = null, candPorTema = null;
+  var mejorTextoTema = null, mejorTextoPts = 0;
   for(var i = universo.length - 1; i >= 0; i--){
     var x = universo[i];
-    if(!x || x.clase !== "yo") continue;
-    var oc = ordenCajaMsg(x.texto);
-    var tOrig = (oc && oc.tema) ? normTema(oc.tema) : ((x.tag && esTema(x.tag)) ? normTema(x.tag) : ((x.explicito && x.tema && esTema(x.tema)) ? normTema(x.tema) : null));
-    if(!tOrig) continue;
+    if(!x || x === m) continue;
     var tsX = fecha(x.iso) || 0;
     if(tsX && tsM && tsX > tsM + 120000) continue;
-    if(oc && oc.tipo === "encolar"){
+    if(x.clase === "yo"){
+      var oc = ordenCajaMsg(x.texto);
+      var tOrig = (oc && oc.tema) ? normTema(oc.tema) : ((x.tag && esTema(x.tag)) ? normTema(x.tag) : ((x.explicito && x.tema && esTema(x.tema)) ? normTema(x.tema) : null));
+      if(!tOrig || !oc || oc.tipo !== "encolar") continue;
       if(slug && ((oc.slug && oc.slug === slug) || (oc.slugs && oc.slugs.indexOf(slug) >= 0))) return tOrig;
       if(!slug && oc.slug && cuerpo.toLowerCase().indexOf(oc.slug) >= 0) return tOrig;
       if(tickets.length && !candPorTicket){
@@ -3302,12 +3384,37 @@ function temaCierreTarea(m, listaMsgs){
           if(tksOc.indexOf(tickets[ti]) >= 0){ candPorTicket = tOrig; break; }
         }
       }
+      if(!slug){
+        var ptsYo = puntajeCierreOrden(oc.slug, oc.texto || x.texto, cuerpo);
+        if(ptsYo > mejorTextoPts){ mejorTextoPts = ptsYo; mejorTextoTema = tOrig; }
+      }
       var baseCand0 = ctaTema || cuerpoTema;
       if(baseCand0 && !candPorTema && baseTema(tOrig) === baseTema(baseCand0)) candPorTema = tOrig;
+    }else if(x.clase === "agente" && Array.isArray(x.opciones) && x.opciones.length){
+      var tAg = (x.tag && esTema(x.tag)) ? normTema(x.tag) : ((x.tema && esTema(x.tema)) ? normTema(x.tema) : null);
+      if(!tAg) continue;
+      for(var oi = 0; oi < x.opciones.length; oi++){
+        var op = x.opciones[oi];
+        if(!op || (!op.orden && !op.slug)) continue;
+        var opSlug = String(op.slug || slugCajaOrden(x, op) || "").toLowerCase();
+        var opTxt = String(op.texto || "");
+        if(slug && opSlug && opSlug === slug) return tAg;
+        if(!slug && opSlug && cuerpo.toLowerCase().indexOf(opSlug) >= 0) return tAg;
+        if(tickets.length && !candPorTicket){
+          var tksOp = ticketsEnTexto(opSlug + " " + opTxt);
+          for(var tki = 0; tki < tickets.length; tki++){
+            if(tksOp.indexOf(tickets[tki]) >= 0){ candPorTicket = tAg; break; }
+          }
+        }
+        if(!slug){
+          var ptsOp = puntajeCierreOrden(opSlug, opTxt, cuerpo);
+          if(ptsOp > mejorTextoPts){ mejorTextoPts = ptsOp; mejorTextoTema = tAg; }
+        }
+      }
     }
   }
   if(candPorTicket) return candPorTicket;
-  // 2) buscar en `widDatos.agent` (`tabla`, `corriendo`, `hechas`, `ultimas`, `programadas`) por slug o ticket
+  // 2) buscar en `widDatos.agent` (`tabla`, `corriendo`, `hechas`, `ultimas`, `programadas`) por slug, ticket o similitud con el pedido
   var ag = (typeof widDatos !== "undefined" && widDatos && widDatos.agent) ? widDatos.agent : null;
   var temaAgente = null;
   if(ag){
@@ -3317,25 +3424,33 @@ function temaCierreTarea(m, listaMsgs){
       for(var fi = 0; fi < filas.length; fi++){
         var f = filas[fi];
         if(!f) continue;
-        var fSlug = String(f.slug || "").trim().toLowerCase();
+        var fSlug = String(f.slug || f.nombre || "").trim().toLowerCase();
         var fTxt = String(f.completo || f.texto || "");
+        var mpF = /\[pestana\s+([\w\/#-]+)\]/i.exec(fTxt);
+        var fDest = (mpF && esTema(mpF[1])) ? normTema(mpF[1]) : ((f.pestana && esTema(f.pestana)) ? normTema(f.pestana) : ((f.tema && esTema(f.tema)) ? normTema(f.tema) : null));
         var coincide = false;
         if(slug && fSlug && (fSlug === slug || fSlug.indexOf(slug) === 0 || slug.indexOf(fSlug) === 0)) coincide = true;
         else if(slug && fTxt.toLowerCase().indexOf("{" + slug) >= 0) coincide = true;
+        else if(!slug && fSlug && fSlug.length >= 4 && cuerpo.toLowerCase().indexOf(fSlug) >= 0) coincide = true;
         else if(!slug && tickets.length){
           var tksF = ticketsEnTexto(fSlug + " " + fTxt);
           for(var tj = 0; tj < tickets.length; tj++){
             if(tksF.indexOf(tickets[tj]) >= 0){ coincide = true; break; }
           }
         }
-        if(coincide){
-          var mp = /\[pestana\s+([\w\/#-]+)\]/i.exec(fTxt);
-          if(mp && esTema(mp[1])) return normTema(mp[1]);
-          if(f.tema && esTema(f.tema) && !temaAgente) temaAgente = normTema(f.tema);
+        if(coincide && fDest){
+          if(mpF && esTema(mpF[1])) return normTema(mpF[1]);
+          if(!temaAgente) temaAgente = fDest;
+        }
+        if(!slug && fDest){
+          var ptsF = puntajeCierreOrden(fSlug, fTxt, cuerpo);
+          if(ptsF > mejorTextoPts){ mejorTextoPts = ptsF; mejorTextoTema = fDest; }
         }
       }
     }
   }
+  if(temaAgente && (slug || tickets.length)) return temaAgente;
+  if(!slug && mejorTextoTema && mejorTextoPts >= 4) return mejorTextoTema;
   // 3) si el cierre menciona un ticket (`CX-5250`) y existe un clon abierto o con historial de ese ticket (`awtomic#102`), va a ese clon
   if(tickets.length){
     var candidatosClon = (tabs || []).slice();
@@ -3363,6 +3478,7 @@ function temaCierreTarea(m, listaMsgs){
       }
     }
   }
+  if(rutaTema) return rutaTema;
   if(candPorTema) return candPorTema;
   var base = temaAgente || ctaTema || cuerpoTema;
   if(base && !esClon(base) && Array.isArray(tabs) && tabs.indexOf(base) < 0){
@@ -4095,7 +4211,8 @@ function ordenCajaLinea(m, o, tema){
   var letra = String((o && o.letra) || "A").toUpperCase();
   var firma = /facundo toc[oó] la caja/i.test(cuerpo) ? "" :
     (" [facundo tocó la caja " + letra + " y ese es su texto literal: hacer SOLO eso, ninguna otra letra del menú autoriza nada; el contexto está en la charla previa de la pestaña]");
-  return "orden: " + pref + (slug ? "{" + slug + "} " : "") + cuerpo + firma;
+  var tagPest = /\[pestana\s+[\w\/#-]+\]/i.test(pref + " " + cuerpo) ? "" : (" [pestana " + t + "]");
+  return "orden: " + pref + (slug ? "{" + slug + "} " : "") + cuerpo + firma + tagPest;
 }
 function idFrenarCajaOrden(m, o){
   var slug = slugCajaOrden(m, o);
@@ -4122,7 +4239,8 @@ function ordenCajaMsg(texto){
       var ml = RE_ORDEN_CAJA.exec(l.trim());
       if(ml && ml[3]) slugs.push(ml[3].toLowerCase());
     });
-    return {tipo: "encolar", tema: normTema(m[1] || m[2]), slug: (m[3] || "").toLowerCase(),
+    var mp = /\[pestana\s+([\w\/#-]+)\]/i.exec(p0);
+    return {tipo: "encolar", tema: normTema((mp && mp[1]) || m[1] || m[2]), slug: (m[3] || "").toLowerCase(),
             slugs: slugs, texto: (m[4] || "").trim()};
   }
   if((m = RE_FRENAR_CAJA.exec(p0))){
@@ -5991,7 +6109,17 @@ document.addEventListener("visibilitychange", function(){ if(!document.hidden) m
 // crudo, o que venga de la pestaña general (que no fija tema: ahi clasifica el daemon)
 function cuerpoMsg(texto, tema, crudo, tsEnvio){
   var ya = RE_TEMA.test(texto);
-  var base = (crudo || ya || tema === AUTO) ? texto : "tema " + tema + ": " + texto;
+  var mOrd = (!crudo && tema && tema !== AUTO) ? /^\s*orden\s*:\s*([\s\S]+)$/i.exec(texto || "") : null;
+  var base;
+  if(mOrd){
+    var rOrd = mOrd[1].trim(), tNorm = normTema(tema);
+    var prefOrd = "[pestana " + tNorm + "] tema " + (esClon(tNorm) ? baseTema(tNorm) : tNorm) + ": ";
+    if(/^\[pestana\s+[\w\/#-]+\]/i.test(rOrd)) base = "orden: " + rOrd;
+    else if(RE_TEMA.test(rOrd)) base = "orden: [pestana " + tNorm + "] " + rOrd;
+    else base = "orden: " + prefOrd + rOrd;
+  }else{
+    base = (crudo || ya || tema === AUTO) ? texto : "tema " + tema + ": " + texto;
+  }
   // las dos marcas al final, `desde` ultima: el daemon las saca antes de mirar el texto.
   // `tsEnvio` lo pasa lo que tarda en salir (una foto, un audio que se sube): es cuando facundo mando.
   return base + "\n" + marcaEnviado(tsEnvio) + "\n" + marcaDesde();
