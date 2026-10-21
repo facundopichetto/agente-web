@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.611">
-<link rel="manifest" href="manifest.json?v=4.611">
+<meta name="agente-web-version" content="4.612">
+<link rel="manifest" href="manifest.json?v=4.612">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.611">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.612">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.607">
 <style id="css-listas-drag">
 #sync, #sync.oculta, #sync.off { display: none !important; }
@@ -3569,13 +3569,35 @@ var TRANSITORIOS = /^(subiendo (la foto|el audio|la imagen)|grabando|mandando|en
 function esEstadoTransitorio(m){
   return !!m && (m.clase === "sistema" || m.quien === "web") && TRANSITORIOS.test(String(m.texto || "").trim());
 }
+// 4042 {duplicados-chat-board} (facundo, 2026-10-21: "está todo duplicado en esa ultima charla"): un motor
+// comparte el log de su padre (`chat_log_tema`: `awtomic/qa` -> `chat-awtomic.jsonl`), asi que con las dos
+// pestañas abiertas la misma fila llegaba en `msgsHist.awtomic` y en `msgsHist["awtomic/qa"]`, con otro `id` y
+// otra `clave`, y la pestaña del padre pintaba la tira entera dos veces. la identidad de una fila es la del
+// jsonl (hora de envio + pregunta + respuesta), no la de la pestaña que la bajo, y se pinta UNA copia.
+function filaId(f){
+  return "f:" + (f.ts || "") + "|" + hashTexto(String(f.pregunta || "") + "\n" + String(f.respuesta || ""));
+}
+// que copia gana: la de la lista del tema propio de la fila (`tema` del jsonl), si no la del padre, si no la
+// primera. dentro de una misma lista, la primera vez que aparece.
+function duenosFila(){
+  var dueno = {}, rango = {};
+  Object.keys(msgsHist).sort().forEach(function(t){
+    (msgsHist[t] || []).forEach(function(m){
+      if(!m.fila) return;
+      var r = m.filaTema === t ? 2 : (padreTema(t) === t ? 1 : 0);
+      if(!dueno[m.fila] || r > rango[m.fila]){ dueno[m.fila] = m; rango[m.fila] = r; }
+    });
+  });
+  return dueno;
+}
 function mezclar(){
   var porClave = {}, listas = [], lleNuevas = false;
   Object.keys(msgsHist).forEach(function(t){ if(conLlegadas(msgsHist[t] || [], true)) lleNuevas = true; });
   if(conLlegadas(msgsCom, false)) lleNuevas = true;
   if(lleNuevas){ guardarCache(); publicarTabs(); }
+  var dueno = duenosFila();
   Object.keys(msgsHist).sort().forEach(function(t){
-    var l = msgsHist[t] || [];
+    var l = (msgsHist[t] || []).filter(function(m){ return !m.fila || dueno[m.fila] === m; });
     if(l.length) listas.push(l);
     l.forEach(function(m){
       var k = claveMsg(m);
@@ -5740,13 +5762,16 @@ function recibirChat(tema, d){
   filas.sort(function(a, b){ return fecha(a.ts) - fecha(b.ts); });
   filas.forEach(function(f, i){
     var base = t + "-" + i;
+    // 4042 {duplicados-chat-board}: la fila del jsonl, sin la pestaña que la bajo (`filaId`)
+    var fila = filaId(f), filaTema = f.tema ? normTema(f.tema) : null;
     audSegsPoner(f.audios_seg);   // 2086: la duracion de cada audio de la fila, medida por el server
     // `(aviso de claudio)`, `(tarea 12: ...)`, `(menu de claudio)`: filas que escribe el agente solo, no son de f
     // 1237: el fin de tarea ahora dice `(tarea <nombre>: ...)` y trae `fuente: tarea`; la linea queda en el jsonl
     // como contexto del chat pero no se pinta como mensaje de f
     var propia = f.fuente === "tarea" || f.fuente === "menu" ||
         /^\((aviso de [fc]laudio|menu de [fc]laudio|turno nocturno|tarea [^:()\s]+:)/.test(String(f.pregunta || ""));
-    if(f.pregunta && !propia) out.push({id: "h:" + base + ":q", clase: "yo", quien: QUIEN_F, texto: f.pregunta,
+    if(f.pregunta && !propia) out.push({id: "h:" + base + ":q", fila: fila + ":q", filaTema: filaTema,
+                             clase: "yo", quien: QUIEN_F, texto: f.pregunta,
                              iso: f.ts, tema: t, explicito: true, disp: dispDe(f.desde) || null,
                              modo: modoDe(f.desde) || null});
     var r = String(f.respuesta || ""), mt = /^\s*\[([\w\/#-]+)\]\s*/.exec(r), tFila = t;
@@ -5777,7 +5802,8 @@ function recibirChat(tema, d){
       // nodo, modelo y mini estado solo en las filas que los traen (las viejas no tienen `nodo`: no se pinta nada)
       // la pregunta se pinta con la hora de envio; la respuesta, con la que llego al cliente (1553, `horaLlegada`
       // en `mezclar`), y si nadie la dibujo fresca con la que se escribio (`ts_llegada`). la clave no cambia
-      out.push({id: "h:" + base + ":r", clase: "agente", quien: QUIEN_AGENTE, texto: r, iso: f.ts_llegada || f.ts,
+      out.push({id: "h:" + base + ":r", fila: fila + ":r", filaTema: filaTema,
+                clase: "agente", quien: QUIEN_AGENTE, texto: r, iso: f.ts_llegada || f.ts,
                 srv: fecha(f.ts_llegada || f.ts),
                 clave: "r:" + tFila + "|" + (f.ts_llegada || f.ts || "") + "|" + hashTexto(r),   // 1211: no por posicion
                 tema: tFila, explicito: true, tag: tFila, audio: esPuente ? null : (f.audio || null), nodo: nodo, tarea: f.tarea || null,

@@ -1,5 +1,5 @@
 {
-  "version": "4.611",
+  "version": "4.612",
   "name": "flaudio board",
   "short_name": "flaudio board",
   "description": "flaudio board, la interfaz principal de flaudio (antes claudio)",
