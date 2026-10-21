@@ -1821,8 +1821,8 @@
       "modelo": "agy"
     },
     "flos": {
-      "motor": "claude",
-      "modelo": "sonnet"
+      "motor": "agy",
+      "modelo": "agy"
     },
     "flos#2": {
       "motor": "agy",
@@ -1830,8 +1830,7 @@
     },
     "juegos": {
       "motor": "agy",
-      "modelo": "gemini-3.8-flash",
-      "effort": "low"
+      "modelo": "agy"
     },
     "juegos#2": {
       "motor": "claude",

@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.607">
-<link rel="manifest" href="manifest.json?v=4.607">
+<meta name="agente-web-version" content="4.608">
+<link rel="manifest" href="manifest.json?v=4.608">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,9 +27,11 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.607">
-<link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.559">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.608">
+<link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.607">
 <style id="css-listas-drag">
+#sync, #sync.oculta, #sync.off { display: none !important; }
+body.sincronizando #lista, body.sincronizando #widgets, body.sincronizando #tabs .tab { opacity: 1 !important; }
 #sellistas, #sellistas * {
   user-select: none !important;
   -webkit-user-select: none !important;
@@ -5966,7 +5968,7 @@ function tick(){
 }
 
 // ---------- sincronizacion al abrir y al volver al foco (facundo, 2026-09-11 / 2026-10-20) ----------
-// 3988 {eliminar-cartel-sync-y-acelerar}: refresco en segundo plano, silencioso e inmediato, sin cartel
+// 3988/3989 {eliminar-cartel-sync-y-acelerar}: refresco silencioso e inmediato, sin cartel
 // `sincronizando…` ni atenuacion de opacidad. la pestaña activa se pinta apenas llega su charla sin esperar
 // al indice ni al resto de los endpoints.
 var sincronizando = false, syncUlt = 0, syncEnVuelo = null;
@@ -6000,11 +6002,12 @@ function sincronizar(primera){
   function suave(p){
     return p.catch(function(e){ if(e && e.message === "401") throw e; });
   }
+  var pIssue = issueEnVuelo || Promise.resolve(false);
   syncEnVuelo = Promise.all([
-    suave(cargarEstado()),
+    suave(pIssue.then(function(){ return cargarEstado(); })),
     // el historial completo de cada pestaña (activa primero y sin esperar al indice) y la franja reciente de comentarios
     suave(cargarChat(pintarSiCambio).then(pintarSiCambio)),
-    suave(cargarComentarios(!!primera).then(pintarSiCambio)),
+    suave(pIssue.then(function(){ return cargarComentarios(!!primera).then(pintarSiCambio); })),
     cargarWidgets().catch(function(e){ if(e && e.message === "401") throw e; if(ruidoso(e)) pintarWidgets(null, e.message); }),
     (lan.base && !primera) ? Promise.resolve() : cargarVotaciones().catch(function(){}),
     suave(cargarTabs()),
@@ -17261,7 +17264,8 @@ function arrancar(t){
   // 1388/1407: la seleccion arranca aparte: si github falla al sincronizar (buzón lleno, freno), el modal y `votar` igual
   probarLan();
   selArrancar();
-  cargarIssue(true).then(function(){ return sincronizar(true); })   // primero el número de issue vivo del buzón
+  cargarIssue(true);
+  sincronizar(true)   // arranca en paralelo con cargarIssue (estado y comentarios esperan issueEnVuelo)
     .then(function(){ reprogramar(); votArrancar(); })   // 1373: animaciones y votacion abierta
     .catch(function(e){
       if(ruidoso(e)) sistema("error: " + e.message, "error");
