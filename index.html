@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.609">
-<link rel="manifest" href="manifest.json?v=4.609">
+<meta name="agente-web-version" content="4.610">
+<link rel="manifest" href="manifest.json?v=4.610">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.609">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.610">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.607">
 <style id="css-listas-drag">
 #sync, #sync.oculta, #sync.off { display: none !important; }
@@ -11006,7 +11006,7 @@ function rastroSubir(){
 // dice algo. TODAS las frases las arma el server (`recetas/reglas_chat.ETAPAS`): la web no tiene vocabulario propio,
 // pinta `paso` si hay y si no `palabra`, tal cual llegan.
 function faseTexto(ahora, v){
-  v = v || vueloDe(temaActivo()) || vuelo;
+  v = v || vuelo || (typeof vueloDe === "function" && typeof temaActivo === "function" ? vueloDe(temaActivo()) : null);
   if(!v) return "";
   return v.paso || v.palabra || "";
 }
@@ -11024,7 +11024,7 @@ var ETA_SUBE_MS = 1500;   // un reestimado que corre el fin menos que esto para 
 var ETA_DESFASE_MS = 3000;
 var ETA_CLAVADO_MS = 1000;
 function etaFin(inicio, eta, ahora, v){
-  v = v || vueloDe(temaActivo()) || vuelo;
+  v = v || vuelo || (typeof vueloDe === "function" && typeof temaActivo === "function" ? vueloDe(temaActivo()) : null);
   if(!v) return;
   var fin = inicio + eta * 1000;
   // un eta del daemon que ya vencio no deshace la reestimacion local (volveria a clavar `1s`)
@@ -11032,7 +11032,7 @@ function etaFin(inicio, eta, ahora, v){
   if(!v.fin || fin < v.fin || fin > v.fin + ETA_SUBE_MS) v.fin = fin;
 }
 function etaReestimar(ahora, v){
-  v = v || vueloDe(temaActivo()) || vuelo;
+  v = v || vuelo || (typeof vueloDe === "function" && typeof temaActivo === "function" ? vueloDe(temaActivo()) : null);
   if(!v || !v.fin || ahora < v.fin + ETA_CLAVADO_MS) return false;
   var base = v.base || v.t, trans = (ahora - base) / 1000;
   var quedan = (v.recientes || []).filter(function(x){ return x > trans + 1; }).sort(function(a, b){ return a - b; });
@@ -11046,7 +11046,7 @@ function etaReestimar(ahora, v){
   return true;
 }
 function etaFalta(ahora, v){
-  v = v || vueloDe(temaActivo()) || vuelo;
+  v = v || vuelo || (typeof vueloDe === "function" && typeof temaActivo === "function" ? vueloDe(temaActivo()) : null);
   if(!v || !v.fin) return null;
   ahora = ahora === undefined ? Date.now() : ahora;
   etaReestimar(ahora, v);
@@ -11082,16 +11082,18 @@ function faseCambiar(f, ft){
 }
 // lo que publica el daemon. un estado de un intercambio anterior (ts_inicio viejo) no se pinta, y el estado de otra pestaña tampoco
 function recibirEstado(e, ahora, vTarget){
-  var v = vTarget || vueloDe(temaActivo()) || vuelo;
+  var v = vTarget || vuelo || (typeof vueloDe === "function" && typeof temaActivo === "function" ? vueloDe(temaActivo()) : null);
   if(!v || !e) return false;
-  if(e.tema){
+  if(e.tema && typeof normTema === "function" && typeof deEstaTab === "function"){
     var eTema = normTema(e.tema);
-    if(eTema && eTema !== AUTO && v.tema !== AUTO && !deEstaTab(eTema, v.tema) && !deEstaTab(v.tema, eTema)) return false;
+    var autoVal = typeof AUTO !== "undefined" ? AUTO : "auto";
+    if(eTema && eTema !== autoVal && v.tema !== autoVal && !deEstaTab(eTema, v.tema) && !deEstaTab(v.tema, eTema)) return false;
   }
   if(e.clave){
     var eClave = String(e.clave).toLowerCase();
     var vClave = String(v.clave || "").toLowerCase();
-    if(eClave && vClave && eClave !== vClave && claveDeTema(v.tema) !== eClave) return false;
+    var cTema = typeof claveDeTema === "function" ? claveDeTema(v.tema) : vClave;
+    if(eClave && vClave && eClave !== vClave && cTema !== eClave) return false;
   }
   if(e.ts_inicio && e.ts_inicio * 1000 < v.ref - 15000) return false;
   ahora = ahora === undefined ? Date.now() : ahora;
@@ -11112,7 +11114,7 @@ function recibirEstado(e, ahora, vTarget){
   v.ultTs = e.ts;
   if(!mismo && (e.eta_respuesta_s || e.eta_s)){ v.eta = e.eta_respuesta_s || e.eta_s; etaFin(v.base, v.eta, ahora, v); }
   if((e.fase === "listo" || e.fase === "sin claude") && !v.listo) v.listo = Date.now();
-  if(deEstaTab(v.tema, temaActivo())) pintarVuelo();
+  if(typeof deEstaTab !== "function" || typeof temaActivo !== "function" || deEstaTab(v.tema, temaActivo())) pintarVuelo();
   return true;
 }
 function mirarUnVuelo(v){
@@ -11198,12 +11200,21 @@ function vueloContestadoDe(v){
   return false;
 }
 function vueloContestado(tema){
+  if(typeof vueloContestadoDe !== "function" || typeof vuelos !== "object" || !vuelos){
+    if(!vuelo) return false;
+    for(var i = msgs.length - 1; i >= 0; i--){
+      var m = msgs[i];
+      if(m.clase !== "agente" || fecha(m.iso) < (vuelo.ref || vuelo.t) - 2000) continue;
+      if((m.tag && (!vuelo.tema || m.tag === vuelo.tema)) || vuelo.listo){ vueloTerminar(vuelo.tema); return true; }
+    }
+    return false;
+  }
   if(tema !== undefined && tema !== null){
     return vueloContestadoDe(vueloDe(tema));
   }
   var ks = Object.keys(vuelos);
-  for(var i = 0; i < ks.length; i++){
-    var v = vuelos[ks[i]];
+  for(var j = 0; j < ks.length; j++){
+    var v = vuelos[ks[j]];
     if(v && !deEstaTab(v.tema, temaActivo())) vueloContestadoDe(v);
   }
   var vAct = vueloDe(temaActivo()) || vuelo;
