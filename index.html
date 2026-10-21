@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.606">
-<link rel="manifest" href="manifest.json?v=4.606">
+<meta name="agente-web-version" content="4.607">
+<link rel="manifest" href="manifest.json?v=4.607">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.606">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.607">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.559">
 <style id="css-listas-drag">
 #sellistas, #sellistas * {
@@ -128,7 +128,7 @@ body.arrastrando-liscaja #sellistas {
 <div id="panel-chat">
 <div id="tabs"></div>
 <div id="tab-motor-fila" class="tab-motor-fila oculta" hidden aria-hidden="true" style="display:none"></div>
-<div id="sync" class="oculta">sincronizando…</div>
+<div id="sync" class="oculta" hidden aria-hidden="true" style="display:none"></div>
 <div id="envoltorio">
   <div id="hist"><div id="lista"></div></div>
   <!-- 1997 {pestana} punto 3 (facundo, 2026-09-25): "si scrolleo 2000px para arriba, me gustaria que en el
@@ -5793,13 +5793,15 @@ function cargarChatTema(tema){
     chatIndexTema[t] = index;
     var q = pedazosFaltan(t, index);
     chatPed[t] = chatPed[t] || {};
-    return q.falta.reduce(function(prev, p){
-      return prev.then(function(){
-        return crudo(dirChat(t) + "/" + p.dia + ".json", null).then(function(rp){
-          if(rp.json) chatPed[t][p.dia] = {firma: p.firma, filas: (rp.json.filas || [])};
-        }).catch(function(e){ if(!/http 404/.test((e && e.message) || "")) throw e; });
-      });
-    }, Promise.resolve()).then(function(){
+    if(!q.falta.length && msgsHist[t]){
+      delete chat404[t];
+      return msgsHist[t].length;
+    }
+    return Promise.all(q.falta.map(function(p){
+      return crudo(dirChat(t) + "/" + p.dia + ".json", null).then(function(rp){
+        if(rp.json) chatPed[t][p.dia] = {firma: p.firma, filas: (rp.json.filas || [])};
+      }).catch(function(e){ if(!/http 404/.test((e && e.message) || "")) throw e; });
+    })).then(function(){
       // los dias que ya no estan en el index (github se queda con los ultimos 20) no se tiran del cache:
       // el board sigue mostrando lo que bajo antes, que es mas historial que el que quedo en el repo
       delete chat404[t];
@@ -5886,8 +5888,17 @@ function cargarChatTemaSuave(t){
     return 0;
   });
 }
-function cargarChat(){
-  return cargarChatIndex().then(function(idx){ delete chatFalla[CHAT_INDEX]; return idx; }, function(e){
+function cargarChat(alTenerActiva){
+  var iniciales = temasACargar(), vistosT = {}, tAct = normTema(temaActivo());
+  iniciales.forEach(function(t){ vistosT[t] = true; });
+  var promIni = Promise.all(iniciales.map(function(t){
+    var p = cargarChatTemaSuave(t);
+    if(t === tAct && typeof alTenerActiva === "function"){
+      return p.then(function(n){ alTenerActiva(); return n; });
+    }
+    return p;
+  }));
+  var pIdx = cargarChatIndex().then(function(idx){ delete chatFalla[CHAT_INDEX]; return idx; }, function(e){
     if(!chatFalla[CHAT_INDEX]){
       chatFalla[CHAT_INDEX] = true;
       var m = (e && e.message) || "?";
@@ -5895,9 +5906,13 @@ function cargarChat(){
     }
     return chatIndex || {};
   }).then(function(){
-    return Promise.all(temasACargar().map(cargarChatTemaSuave));
-  }).then(function(ns){
-    return (ns || []).reduce(function(a, b){ return a + (b || 0); }, 0);
+    var extras = temasACargar().filter(function(t){ return !vistosT[t]; });
+    if(!extras.length) return [];
+    return Promise.all(extras.map(cargarChatTemaSuave));
+  });
+  return Promise.all([promIni, pIdx]).then(function(res){
+    var ns = (res[0] || []).concat(res[1] || []);
+    return ns.reduce(function(a, b){ return a + (b || 0); }, 0);
   });
 }
 // volver a una pestaña le pide SU charla (1997 {pestana}: "tan dificil es mantener las pestañas como una
@@ -5950,12 +5965,10 @@ function tick(){
   }
 }
 
-// ---------- sincronizacion al abrir y al volver al foco (facundo, 2026-09-11) ----------
-// "cuando vuelvo a la interfaz desde el telefono se ven cosas re viejas y va actualizando": el cache
-// de localStorage se pintaba como si fuera el estado real. ahora, al abrir la web o al recuperar el
-// foco, se baja **todo el buzon en paralelo** (chat, `widgets.json`, `tabs.json`) y hasta que llega se
-// ve `sincronizando…` con lo cacheado apagado. si github no contesta, el cartel lo dice y la cache
-// queda como lo que es: modo offline.
+// ---------- sincronizacion al abrir y al volver al foco (facundo, 2026-09-11 / 2026-10-20) ----------
+// 3988 {eliminar-cartel-sync-y-acelerar}: refresco en segundo plano, silencioso e inmediato, sin cartel
+// `sincronizando…` ni atenuacion de opacidad. la pestaña activa se pinta apenas llega su charla sin esperar
+// al indice ni al resto de los endpoints.
 var sincronizando = false, syncUlt = 0, syncEnVuelo = null;
 function pintarSync(estado, texto){
   var n = $("sync");
@@ -5964,6 +5977,8 @@ function pintarSync(estado, texto){
   document.body.classList.toggle("sincronizando", sincronizando);
   n.classList.toggle("oculta", !estado);
   n.classList.toggle("off", estado === "off");
+  n.hidden = true;
+  n.style.display = "none";
   if(estado) n.textContent = texto || "sincronizando…";
 }
 // una sola sincronizacion a la vez; las que llegan encima se cuelgan de la que ya esta en vuelo
@@ -5971,26 +5986,36 @@ function sincronizar(primera){
   if(!token) return Promise.resolve();
   if(syncEnVuelo) return syncEnVuelo;
   syncUlt = Date.now();
+  pintarSync(null);
   if(primera || Date.now() - lan.ult > LAN_CADA) probarLan();   // no frena la sync: si contesta, lo que sigue va por ahi
   widUlt = 0; tabsUlt = 0; votJsonUlt = 0; chatUlt = Date.now();   // que el tick no las saltee (ni repita el chat)
-  var cartel = setTimeout(function(){ pintarSync("sync"); }, primera ? 0 : 250);
+  function pintarSiCambio(){
+    if(!chatPendiente()) return;
+    var pego = primera || seguirAlFinal();
+    mezclar(); render();
+    if(primera) irDonde();
+    else if(pego) alFinal();
+    else restaurarVistas();
+  }
+  function suave(p){
+    return p.catch(function(e){ if(e && e.message === "401") throw e; });
+  }
   syncEnVuelo = Promise.all([
-    cargarEstado(),
-    // el historial completo de cada pestaña y la franja reciente de comentarios, en paralelo
-    cargarChat(),
-    cargarComentarios(!!primera),
-    cargarWidgets().catch(function(e){ if(ruidoso(e)) pintarWidgets(null, e.message); }),
-    cargarVotaciones().catch(function(){}),   // 1666: al abrir, la confirmacion fresca antes que nada
-    cargarTabs(),
-    cargarCfgMotor().catch(function(){})
+    suave(cargarEstado()),
+    // el historial completo de cada pestaña (activa primero y sin esperar al indice) y la franja reciente de comentarios
+    suave(cargarChat(pintarSiCambio).then(pintarSiCambio)),
+    suave(cargarComentarios(!!primera).then(pintarSiCambio)),
+    cargarWidgets().catch(function(e){ if(e && e.message === "401") throw e; if(ruidoso(e)) pintarWidgets(null, e.message); }),
+    (lan.base && !primera) ? Promise.resolve() : cargarVotaciones().catch(function(){}),
+    suave(cargarTabs()),
+    cfgMotor ? Promise.resolve(cfgMotor) : cargarCfgMotor().catch(function(){})
   ]).then(function(){
-    mezclar(); render();               // una sola pasada de pintado, ya con todo abajo
-    clearTimeout(cartel); pintarSync(null);
-    irDonde();                         // y te deja donde estabas leyendo esa pestaña
+    if(chatPendiente() || primera){ mezclar(); render(); }
+    if(primera) irDonde(); else restaurarVistas();
+    pintarSync(null);
   }).catch(function(e){
-    clearTimeout(cartel);
-    if(e && e.message === "401"){ pintarSync(null); throw e; }
-    pintarSync("off", "sin conexión con el buzón: esto es la copia local");
+    pintarSync(null);
+    if(e && e.message === "401") throw e;
     if(ruidoso(e)) throw e;
   }).then(function(){ syncEnVuelo = null; }, function(e){ syncEnVuelo = null; throw e; });
   return syncEnVuelo;
@@ -17234,6 +17259,7 @@ function arrancar(t){
   etagWid = null; widUlt = 0;
   etagTabs = null; shaTabs = null; tabsUlt = 0; tabsListo = false; tabsSync = true;
   // 1388/1407: la seleccion arranca aparte: si github falla al sincronizar (buzón lleno, freno), el modal y `votar` igual
+  probarLan();
   selArrancar();
   cargarIssue(true).then(function(){ return sincronizar(true); })   // primero el número de issue vivo del buzón
     .then(function(){ reprogramar(); votArrancar(); })   // 1373: animaciones y votacion abierta

@@ -1821,17 +1821,17 @@
       "modelo": "agy"
     },
     "flos": {
-      "motor": "agy",
-      "modelo": "agy"
+      "motor": "claude",
+      "modelo": "sonnet"
     },
     "flos#2": {
       "motor": "agy",
       "modelo": "agy"
     },
     "juegos": {
-      "motor": "claude",
-      "modelo": "sonnet",
-      "effort": "high"
+      "motor": "agy",
+      "modelo": "gemini-3.8-flash",
+      "effort": "low"
     },
     "juegos#2": {
       "motor": "claude",

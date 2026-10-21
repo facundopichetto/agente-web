@@ -2393,17 +2393,9 @@
      queda aca de aquella tira es la caja de responder del detalle, que la campana sigue usando. */
   #mcuerpo textarea.nresp{display:block;width:100%;box-sizing:border-box;margin-top:10px;background:#000;color:var(--blanco);
     border:1px solid var(--linea);border-radius:4px;padding:6px;font:inherit;resize:vertical;min-height:60px}
-  /* ---------- sincronizando (facundo, 2026-09-11) ----------
-     al abrir la web o al volver al foco, el cache de localStorage no se pinta como si fuera el
-     estado real: mientras baja el buzon se ve esta linea y lo cacheado queda apagado. */
-  #sync{
-    flex:0 0 auto;padding:2px 10px;font-size:13px;color:var(--cian);
-    background:var(--fondo-panel);
-  }
-  #sync.oculta{display:none}
-  #sync.off{color:var(--amarillo)}
-  body.sincronizando #lista,
-  body.sincronizando #widgets,body.sincronizando #tabs .tab{opacity:.45}
+  /* ---------- sincronizando (facundo, 2026-09-11 / 2026-10-20) ----------
+     3988 {eliminar-cartel-sync-y-acelerar}: sin cartel de texto ni atenuacion de opacidad al sincronizar. */
+  #sync,#sync.oculta,#sync.off{display:none!important}
   /* soltar una imagen sobre el chat (desktop, facundo 2026-09-11) */
   #panel-chat.soltar-img{position:relative}
   #panel-chat.soltar-img::after{
