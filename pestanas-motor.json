@@ -1822,7 +1822,7 @@
     },
     "flos": {
       "motor": "agy",
-      "modelo": "agy"
+      "modelo": "gemini-4-argon"
     },
     "flos#2": {
       "motor": "agy",
@@ -1830,7 +1830,8 @@
     },
     "juegos": {
       "motor": "agy",
-      "modelo": "agy"
+      "modelo": "gemini-3.8-flash",
+      "effort": "low"
     },
     "juegos#2": {
       "motor": "claude",
@@ -1841,8 +1842,9 @@
       "modelo": "agy"
     },
     "personal": {
-      "motor": "claude",
-      "modelo": "opus"
+      "motor": "agy",
+      "modelo": "gemini-3.8-flash",
+      "effort": "low"
     },
     "plata": {
       "motor": "claude",

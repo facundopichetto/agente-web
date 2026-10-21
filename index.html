@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.608">
-<link rel="manifest" href="manifest.json?v=4.608">
+<meta name="agente-web-version" content="4.609">
+<link rel="manifest" href="manifest.json?v=4.609">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.608">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.609">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.607">
 <style id="css-listas-drag">
 #sync, #sync.oculta, #sync.off { display: none !important; }
@@ -4944,7 +4944,7 @@ function pintarMsg(m, arriba){
   if(!arriba && m.clase === "yo" && !renderando) refrescarCajas();
   if(!arriba && m.clase === "agente") spConfirmo(m);   // 1432: la confirmacion de una carga del widget de salud
   if(!renderando) sepDias();                            // 2132 {dia}: el hilo cambio, las separadoras tambien
-  if(!arriba && vuelo) pintarVuelo();                   // el bloque en vuelo queda siempre al final
+  if(!arriba && vueloDe(temaActivo())) pintarVuelo();   // el bloque en vuelo de la pestaña activa queda siempre al final
 }
 // 2132 {dia} (facundo, 2026-09-19: "si son de otro dia que no es hoy... el separador"): entre el ultimo
 // mensaje de un dia y el primero del siguiente va UNA linea con el dia que empieza (`ayer`, `hoy`, `18/09`).
@@ -5069,8 +5069,10 @@ function renderYa(){
     renderando = true;
     try{ sincronizarLista(); } finally { renderando = false; }
     sepDias();                       // 2132 {dia}: una sola pasada al final del render, no una por mensaje
-    if(!vueloContestado()) pintarVuelo();
-    if(!vuelo) vueloHidratarSiFalta();
+    vueloContestado();
+    sincronizarVueloActivo();
+    pintarVuelo();
+    if(!vueloDe(temaActivo())) vueloHidratarSiFalta();
     if(ancla && !ancla.abajo) anclaPoner(ancla);
     pintarAlFinalPronto();           // 1997 {pestana}: llego charla abajo y facundo esta arriba -> la flecha
   });
@@ -5153,9 +5155,20 @@ function sincronizarLista(){
   vis.forEach(function(m){ if(m.clase === "agente") spConfirmo(m); });   // 1432: la carga del widget de salud
 }
 // 1776: el hilo que facundo ya vio mientras el bloque estaba en vuelo se lo lleva la respuesta que lo cierra
-function adoptarVuelo(m){
-  if(m.clase === "agente" && !m.tramos && vuelo && vuelo.tramos.length && (m.tag || vuelo.listo) &&
-     fecha(m.iso) >= vuelo.ref - 2000 && deEstaTab(m.tema, vuelo.tema)) m.tramos = tramosSinFinal(vuelo.tramos, m.texto);
+function msgDeVuelo(m, v){
+  if(!m || !v || m.clase !== "agente") return false;
+  if(fecha(m.iso) < v.ref - 2000) return false;
+  if(m.tarea || esCierreTarea(m.texto)) return false;
+  if(!(m.tag || v.listo)) return false;
+  var tm = normTema(m.tag || m.tema || AUTO);
+  var tv = normTema(v.tema || AUTO);
+  if(tv === AUTO) return deEstaTab(tm, AUTO);
+  return deEstaTab(tm, tv);
+}
+function adoptarVuelo(m, v){
+  if(!m || m.clase !== "agente" || m.tramos) return;
+  v = v || vueloDe(m.tag || m.tema);
+  if(v && v.tramos && v.tramos.length && msgDeVuelo(m, v)) m.tramos = tramosSinFinal(v.tramos, m.texto);
 }
 // un nodo reusado sigue apuntando al objeto viejo: las cajas leen el mensaje por `cajaMsg`, se reapunta
 function adoptarCajas(n, m){
@@ -5367,7 +5380,11 @@ function lanPoner(x){
   lan.base = x ? x.url : null;
   lan.via = x ? (x.via || "lan") : "buzón";
   // los etag del endpoint y los de github no se mezclan
-  if(antes !== lan.base){ etagCom = null; etagWid = null; etagIssue = null; etagChat = {}; etagEstado = null; lan.sinGithub = false; }
+  if(antes !== lan.base){
+    etagCom = null; etagWid = null; etagIssue = null; etagChat = {}; etagEstado = null;
+    Object.keys(vuelos).forEach(function(k){ if(vuelos[k]) vuelos[k].etag = null; });
+    lan.sinGithub = false;
+  }
   pintarVia();
   // 2265 {clon}: la lista de clones vive en el server. en cuanto hay endpoint se pide una vez, asi el menu
   // del `MAS` y `sanearLayout` ven las pestañas que se crearon desde el celu o desde otra maquina.
@@ -5937,7 +5954,7 @@ function tick(){
   cargarIssue(false);   // cada 5 min: si el daemon rotó el issue del buzón, el próximo tick ya va al nuevo
   Promise.all([cargarEstado(), cargarComentarios(false)])
     .catch(function(e){ if(ruidoso(e)) sistema("error: " + e.message, "error"); });
-  if(!vuelo) vueloHidratarSiFalta();
+  if(!vueloDe(temaActivo())) vueloHidratarSiFalta();
   // los widgets y las pestañas van a 30 s a la vista y 120 s en background (facundo, 2026-09-13):
   // el daemon publica `widgets.json` cada 60 s (`widgets_web`), pedir cada 10 s traia el mismo archivo.
   // al abrir o volver al foco se sincroniza aparte, asi que el celu no ve datos viejos por esto.
@@ -6038,7 +6055,7 @@ function reprogramar(){
   if(timer) clearInterval(timer);
   if(!token) return;
   // con un mensaje en vuelo los comentarios van cada 3 s: la respuesta aparece apenas sale
-  var ms = document.hidden ? 30000 : (vuelo ? 3000 : 5000);
+  var ms = document.hidden ? 30000 : (hayVuelos() ? 3000 : 5000);
   if(Date.now() < frenoHasta) ms = Math.min(Math.max(frenoHasta - Date.now() + 500, ms), 60000);
   timer = setInterval(tick, ms);
 }
@@ -10588,52 +10605,118 @@ window.addEventListener("keydown", function(ev){
 // `recetas/chat_estado.clave_archivo`) y lo que falta para la respuesta (`8s`... `1s`). mientras hay uno en vuelo el estado se mira cada 1 s y
 // los comentarios cada 3 s. llega la respuesta (o el estado dice `listo` y pasan 15 s): el bloque se va.
 var GIRO = ["-", "\\", "|", "/"], VUELO_MAX_MS = 600000, VUELO_LISTO_MS = 15000;
-var vuelo = null, vueloGiro = null, vueloPoll = null, etagEstado = null;
+var vuelo = null, vuelos = {}, vueloGiro = null, vueloPoll = null, etagEstado = null;
+var vueloHidratando = false, vuelosHidratando = {};
 function claveEstado(cuerpo){
   var m = /^\s*tema\s+([\w\/#-]+)\s*:/i.exec(cuerpo || "");
   return m ? m[1].toLowerCase().replace(/\//g, "-").replace(/#/g, "~") : "auto";
+}
+function claveDeTema(tema){
+  return (!tema || tema === AUTO) ? "auto" : slugChat(tema);
+}
+function claveVueloTab(tema){
+  var t = normTema(tema || AUTO);
+  return t || AUTO;
+}
+function vueloDe(tema){
+  var t = claveVueloTab(tema || temaActivo());
+  if(vuelos[t]) return vuelos[t];
+  var ks = Object.keys(vuelos), mejor = null;
+  for(var i = 0; i < ks.length; i++){
+    var v = vuelos[ks[i]];
+    if(v && deEstaTab(v.tema, t)){
+      if(!mejor || (v.t || 0) >= (mejor.t || 0)) mejor = v;
+    }
+  }
+  return mejor;
+}
+function hayVuelos(){
+  return Object.keys(vuelos).length > 0;
+}
+function sincronizarVueloActivo(){
+  vuelo = vueloDe(temaActivo());
+  etagEstado = vuelo ? (vuelo.etag || null) : null;
+  vueloHidratando = !!vuelosHidratando[claveVueloTab(temaActivo())];
+  return vuelo;
+}
+function asegurarTimersVuelo(){
+  if(hayVuelos()){
+    if(!vueloGiro) vueloGiro = setInterval(vueloGirar, 120);
+    if(!vueloPoll) vueloPoll = setInterval(vueloMirar, 1000);
+  } else {
+    if(vueloGiro){ clearInterval(vueloGiro); vueloGiro = null; }
+    if(vueloPoll){ clearInterval(vueloPoll); vueloPoll = null; }
+  }
 }
 // `t` = reloj del celu (eta, tope); `ref` = reloj del server/github (`created_at` del POST): con eso se compara
 // lo que publica el daemon. 1259: el iphone iba ~90 s adelantado, el estado y la respuesta parecian "de antes"
 // y el bloque quedaba clavado en `enviado` hasta el tope de 10 min.
 function vueloIniciar(m, cuerpo){
   var t0 = fecha(m.iso) || Date.now();
-  vuelo = {id: m.id, tema: m.tema, iso: m.iso, t: t0, ref: fecha(m.creado) || t0, clave: claveEstado(cuerpo),
-           palabra: "", eta: null, fin: 0, giro: 0, listo: 0, anim: animSpinner(),   // 1373: sin animaciones, la ruedita. 1842: arranca solo la animacion, sin texto
+  var temaV = normTema((m && m.tema) || temaActivo() || AUTO) || AUTO;
+  var cl = claveEstado(cuerpo);
+  if(cl === "auto" && temaV !== AUTO && (!cuerpo || !/^\s*tema\s+/i.test(cuerpo))) cl = claveDeTema(temaV);
+  var kTab = claveVueloTab(temaV);
+  var v = {id: m.id, tema: temaV, iso: m.iso, t: t0, ref: fecha(m.creado) || t0, clave: cl,
+           etag: null, subprocesoSeq: 0,
+           palabra: "", paso: null, eta: null, fin: 0, giro: 0, listo: 0, anim: animSpinner(),   // 1373: sin animaciones, la ruedita. 1842: arranca solo la animacion, sin texto
            tramos: []};   // 1776: lo ya pintado del hilo, en orden; solo crece
-  etagEstado = null;
-  if(vueloGiro) clearInterval(vueloGiro);
-  if(vueloPoll) clearInterval(vueloPoll);
-  vueloGiro = setInterval(vueloGirar, 120);
-  vueloPoll = setInterval(vueloMirar, 1000);
+  vuelos[kTab] = v;
+  sincronizarVueloActivo();
+  if(!vuelo && deEstaTab(v.tema, temaActivo())) vuelo = v;
+  asegurarTimersVuelo();
   pintarVuelo(); reprogramar();
 }
-function vueloTerminar(){
-  vuelo = null;
-  if(vueloGiro){ clearInterval(vueloGiro); vueloGiro = null; }
-  if(vueloPoll){ clearInterval(vueloPoll); vueloPoll = null; }
+function vueloTerminar(tema){
+  if(tema && typeof tema === "object" && tema.tema) tema = tema.tema;
+  if(tema === undefined || tema === null){
+    var act = claveVueloTab(temaActivo());
+    if(vuelos[act]) delete vuelos[act];
+    Object.keys(vuelos).forEach(function(k){
+      if(vuelos[k] && (vuelos[k] === vuelo || deEstaTab(vuelos[k].tema, act))) delete vuelos[k];
+    });
+  } else {
+    var kt = claveVueloTab(tema);
+    delete vuelos[kt];
+    Object.keys(vuelos).forEach(function(k){
+      if(vuelos[k] && claveVueloTab(vuelos[k].tema) === kt) delete vuelos[k];
+    });
+  }
+  sincronizarVueloActivo();
+  asegurarTimersVuelo();
   var n = document.getElementById("vuelo");
-  if(n) n.remove();
+  if(!vuelo && n) n.remove();
+  else if(vuelo) pintarVuelo();
   reprogramar();
 }
 function pintarVuelo(){
+  sincronizarVueloActivo();
+  var v = vuelo;
   var n = document.getElementById("vuelo");
-  if(!vuelo || !lista || !deEstaTab(vuelo.tema, temaActivo())){ if(n) n.remove(); return; }
+  if(!v || !lista || !deEstaTab(v.tema, temaActivo())){ if(n) n.remove(); return; }
+  var kTab = claveVueloTab(v.tema), idV = String(v.id !== undefined ? v.id : "");
+  if(n && (n.dataset.tema !== kTab || n.dataset.vueloId !== idV)){
+    n.remove();
+    n = null;
+  }
   if(!n){
     n = document.createElement("div");
     n.id = "vuelo"; n.className = "msg agente vuelo";
+    n.dataset.tema = kTab; n.dataset.vueloId = idV;
     n.innerHTML = '<div><span class="quien">flaudio</span><span class="ts"></span></div><div class="hilo"></div>' +
                   '<div class="cuerpo"><span class="giro"></span> <span class="fase"></span><span class="eta"></span></div>';
-    vuelo.tramos.forEach(function(t){ n.querySelector(".hilo").appendChild(nodoTramo(t)); });   // el nodo se rehizo (cambio de pestaña): mismo hilo
+    v.tramos.forEach(function(t){
+      if(t && t.tipo && t.tipo !== "vacio" && String(t.texto || "").trim()) n.querySelector(".hilo").appendChild(nodoTramo(t));
+    });   // el nodo se rehizo (cambio de pestaña): solo el hilo de ESTA pestaña
   }
   if(n.parentNode !== lista || lista.lastChild !== n) lista.appendChild(n);
-  n.querySelector(".ts").textContent = " · " + desde(vuelo.iso);
+  n.querySelector(".ts").textContent = " · " + desde(v.iso);
   var gi = n.querySelector(".giro");
-  if(vuelo.anim){ if(gi.dataset.anim !== vuelo.anim.id || !animEls.some(function(x){ return x.el === gi; })) animPoner(gi, vuelo.anim); }   // reloj local: `vuelo.t` puede venir corrido
-  else gi.textContent = GIRO[vuelo.giro % GIRO.length];
-  var fs = n.querySelector(".fase"), ft = faseTexto();
+  if(v.anim){ if(gi.dataset.anim !== v.anim.id || !animEls.some(function(x){ return x.el === gi; })) animPoner(gi, v.anim); }   // reloj local: `vuelo.t` puede venir corrido
+  else gi.textContent = GIRO[v.giro % GIRO.length];
+  var fs = n.querySelector(".fase"), ft = faseTexto(undefined, v);
   if(fs.textContent !== ft) faseCambiar(fs, ft);
-  n.querySelector(".eta").textContent = etaTexto();
+  n.querySelector(".eta").textContent = etaTexto(undefined, v);
   vueloOcultarActivo();
 }
 // 1776 (facundo, 2026-09-16: "comunicacion mas progresiva, que no se borren cosas y de repente aparezca un choclo"):
@@ -10729,13 +10812,18 @@ function nodoTramo(t){
 
   return d;
 }
-function vueloTramos(lista){
-  if(!vuelo || !Array.isArray(lista)) return 0;
-  if(!deEstaTab(vuelo.tema, temaActivo())) return 0;
-  var n = document.getElementById("vuelo"), hilo = n && n.querySelector(".hilo"), nuevos = 0;
-  var pego = pegadoAbajo(), ancla = pego ? null : anclaMedir();   // 1805
-  for(var k = 0; k < vuelo.tramos.length && k < lista.length; k++){
-    var tk = lista[k], vk = vuelo.tramos[k];
+function vueloTramos(lista, vTarget){
+  var v = vTarget || vueloDe(temaActivo()) || vuelo;
+  if(!v || !Array.isArray(lista)) return 0;
+  var kTab = claveVueloTab(v.tema);
+  if(vuelos[kTab] && vuelos[kTab] !== v) return 0;
+  var visible = deEstaTab(v.tema, temaActivo()) && (!vuelo || vuelo === v);
+  var n = visible ? document.getElementById("vuelo") : null;
+  if(n && n.dataset.tema && n.dataset.tema !== kTab) n = null;
+  var hilo = n && n.querySelector(".hilo"), nuevos = 0;
+  var pego = visible ? pegadoAbajo() : false, ancla = (visible && !pego) ? anclaMedir() : null;   // 1805
+  for(var k = 0; k < v.tramos.length && k < lista.length; k++){
+    var tk = lista[k], vk = v.tramos[k];
     if(tk && vk && (tk.delta || vk.delta) && (tk.tipo === "texto" || tk.tipo === "thinking") && (vk.tipo === "texto" || vk.tipo === "thinking")){
       var txtNuevo = String(tk.texto || "");
       if(txtNuevo !== String(vk.texto || "") || !!tk.delta !== !!vk.delta){
@@ -10764,21 +10852,24 @@ function vueloTramos(lista){
       }
     }
   }
-  for(var i = vuelo.tramos.length; i < lista.length; i++){
+  for(var i = v.tramos.length; i < lista.length; i++){
     var t = lista[i], tipo = tipoTramo(t);
-    if(!tipo || !String(t.texto || "").trim()) { vuelo.tramos.push({i: i, tipo: "vacio", texto: ""}); continue; }
-    var copia = {i: i, tipo: tipo, texto: String(t.texto)};
+    if(!tipo || !String(t.texto || "").trim()) { v.tramos.push({i: i, tipo: "vacio", texto: ""}); continue; }
+    if(t.pestana && normTema(t.pestana) !== normTema(v.tema)) { v.tramos.push({i: i, tipo: "vacio", texto: ""}); continue; }
+    var copia = {i: i, tipo: tipo, texto: String(t.texto), tema: v.tema};
     if(t.letra) copia.letra = String(t.letra);   // 2557: la letra de una caja que llego
     if(t.voto) copia.voto = String(t.voto);      // 1931: la plantilla del pool, para el `mas`/`menos`
     if(t.etapa) copia.etapa = String(t.etapa);
     if(t.delta) copia.delta = true;
-    vuelo.tramos.push(copia);
+    v.tramos.push(copia);
     if(hilo) hilo.appendChild(nodoTramo(copia));
     nuevos++;
   }
-  if(nuevos && pego) alFinal();
-  else if(nuevos && ancla) anclaPoner(ancla);
-  vueloOcultarActivo();
+  if(visible){
+    if(nuevos && pego) alFinal();
+    else if(nuevos && ancla) anclaPoner(ancla);
+    vueloOcultarActivo();
+  }
   return nuevos;
 }
 // 3380 {aplicar-ambos} (facundo, 2026-10-08): la ultima accion en vuelo se ve en la bolita blanca de abajo
@@ -10914,9 +11005,10 @@ function rastroSubir(){
 // poronguismos: git log`, `porongueo aceptado`, `respondiendo`) y arranca vacia: solo la animacion hasta que el server
 // dice algo. TODAS las frases las arma el server (`recetas/reglas_chat.ETAPAS`): la web no tiene vocabulario propio,
 // pinta `paso` si hay y si no `palabra`, tal cual llegan.
-function faseTexto(ahora){
-  if(!vuelo) return "";
-  return vuelo.paso || vuelo.palabra || "";
+function faseTexto(ahora, v){
+  v = v || vueloDe(temaActivo()) || vuelo;
+  if(!v) return "";
+  return v.paso || v.palabra || "";
 }
 // `eta_respuesta_s` = segundos hasta la respuesta completa, contados desde `ts_inicio` (reloj del daemon). el numero
 // es SIEMPRE lo que falta para poder leer la respuesta (facundo, 2026-09-13, orden 1160): en cada tick
@@ -10931,43 +11023,50 @@ function faseTexto(ahora){
 var ETA_SUBE_MS = 1500;   // un reestimado que corre el fin menos que esto para arriba no se pinta (sin saltos raros)
 var ETA_DESFASE_MS = 3000;
 var ETA_CLAVADO_MS = 1000;
-function etaFin(inicio, eta, ahora){
+function etaFin(inicio, eta, ahora, v){
+  v = v || vueloDe(temaActivo()) || vuelo;
+  if(!v) return;
   var fin = inicio + eta * 1000;
   // un eta del daemon que ya vencio no deshace la reestimacion local (volveria a clavar `1s`)
-  if(vuelo.reest && ahora !== undefined && fin < vuelo.fin && fin <= ahora + ETA_CLAVADO_MS) return;
-  if(!vuelo.fin || fin < vuelo.fin || fin > vuelo.fin + ETA_SUBE_MS) vuelo.fin = fin;
+  if(v.reest && ahora !== undefined && fin < v.fin && fin <= ahora + ETA_CLAVADO_MS) return;
+  if(!v.fin || fin < v.fin || fin > v.fin + ETA_SUBE_MS) v.fin = fin;
 }
-function etaReestimar(ahora){
-  if(!vuelo || !vuelo.fin || ahora < vuelo.fin + ETA_CLAVADO_MS) return false;
-  var base = vuelo.base || vuelo.t, trans = (ahora - base) / 1000;
-  var quedan = (vuelo.recientes || []).filter(function(x){ return x > trans + 1; }).sort(function(a, b){ return a - b; });
+function etaReestimar(ahora, v){
+  v = v || vueloDe(temaActivo()) || vuelo;
+  if(!v || !v.fin || ahora < v.fin + ETA_CLAVADO_MS) return false;
+  var base = v.base || v.t, trans = (ahora - base) / 1000;
+  var quedan = (v.recientes || []).filter(function(x){ return x > trans + 1; }).sort(function(a, b){ return a - b; });
   var total = trans + Math.max(5, trans * 0.25);
   if(quedan.length){
     var i = 0.75 * (quedan.length - 1), lo = Math.floor(i), hi = Math.min(lo + 1, quedan.length - 1);
     total = quedan[lo] + (quedan[hi] - quedan[lo]) * (i - lo);
   }
-  vuelo.fin = base + Math.max(total, trans + 2) * 1000;
-  vuelo.reest = (vuelo.reest || 0) + 1;
+  v.fin = base + Math.max(total, trans + 2) * 1000;
+  v.reest = (v.reest || 0) + 1;
   return true;
 }
-function etaFalta(ahora){
-  if(!vuelo || !vuelo.fin) return null;
+function etaFalta(ahora, v){
+  v = v || vueloDe(temaActivo()) || vuelo;
+  if(!v || !v.fin) return null;
   ahora = ahora === undefined ? Date.now() : ahora;
-  etaReestimar(ahora);
-  return Math.max(1, Math.ceil((vuelo.fin - ahora) / 1000));
+  etaReestimar(ahora, v);
+  return Math.max(1, Math.ceil((v.fin - ahora) / 1000));
 }
-function etaTexto(ahora){
-  var f = etaFalta(ahora);
+function etaTexto(ahora, v){
+  var f = etaFalta(ahora, v);
   return f === null ? "" : " " + fmtTiempo(f);
 }
 function vueloGirar(){
+  Object.keys(vuelos).forEach(function(k){
+    if(vuelos[k]) vuelos[k].giro++;
+  });
+  sincronizarVueloActivo();
   if(!vuelo) return;
-  vuelo.giro++;
   var g = document.querySelector("#vuelo .giro");
   if(g && !vuelo.anim) g.textContent = GIRO[vuelo.giro % GIRO.length];   // con animacion la mueve animTick
-  var e = document.querySelector("#vuelo .eta"), t = etaTexto();
+  var e = document.querySelector("#vuelo .eta"), t = etaTexto(undefined, vuelo);
   if(e && e.textContent !== t) e.textContent = t;
-  var f = document.querySelector("#vuelo .fase"), ft = faseTexto();
+  var f = document.querySelector("#vuelo .fase"), ft = faseTexto(undefined, vuelo);
   if(f && f.textContent !== ft) faseCambiar(f, ft);
 }
 // 1835 + 1813: la linea de estado cambia de largo (un paso del ruteo, `calculando porongas con opus`) y puede pasar a dos
@@ -10981,46 +11080,62 @@ function faseCambiar(f, ft){
   if(pego) alFinal();
   else if(ancla) anclaPoner(ancla);
 }
-// lo que publica el daemon. un estado de un intercambio anterior (ts_inicio viejo) no se pinta
-function recibirEstado(e, ahora){
-  if(!vuelo || !e) return false;
-  if(e.ts_inicio && e.ts_inicio * 1000 < vuelo.ref - 15000) return false;
+// lo que publica el daemon. un estado de un intercambio anterior (ts_inicio viejo) no se pinta, y el estado de otra pestaña tampoco
+function recibirEstado(e, ahora, vTarget){
+  var v = vTarget || vueloDe(temaActivo()) || vuelo;
+  if(!v || !e) return false;
+  if(e.tema){
+    var eTema = normTema(e.tema);
+    if(eTema && eTema !== AUTO && v.tema !== AUTO && !deEstaTab(eTema, v.tema) && !deEstaTab(v.tema, eTema)) return false;
+  }
+  if(e.clave){
+    var eClave = String(e.clave).toLowerCase();
+    var vClave = String(v.clave || "").toLowerCase();
+    if(eClave && vClave && eClave !== vClave && claveDeTema(v.tema) !== eClave) return false;
+  }
+  if(e.ts_inicio && e.ts_inicio * 1000 < v.ref - 15000) return false;
   ahora = ahora === undefined ? Date.now() : ahora;
-  if(e.tramos && typeof vueloTramos === "function") vueloTramos(e.tramos);   // 1776: el hilo crece, nunca se reescribe
-  vuelo.palabra = e.palabra || e.fase || vuelo.palabra;
-  vuelo.paso = e.paso ? String(e.paso) : null;   // 1835: el ruteo, efimero: se pisa, no se anexa
+  if(e.tramos && typeof vueloTramos === "function") vueloTramos(e.tramos, v);   // 1776: el hilo crece, nunca se reescribe
+  v.palabra = e.palabra || e.fase || v.palabra;
+  v.paso = e.paso ? String(e.paso) : null;   // 1835: el ruteo, efimero: se pisa, no se anexa
   if(e.fase === "modelo"){
-    vuelo.modelo = e.modelo || vuelo.modelo || e.palabra;   // un daemon viejo no manda `modelo`: la palabra es el modelo
-    vuelo.accion = e.accion || null;
-  } else vuelo.accion = null;
-  vuelo.fase = e.fase;
-  if(e.ts){ var d = ahora - e.ts * 1000; if(vuelo.desfase === undefined || vuelo.desfase === null || d < vuelo.desfase) vuelo.desfase = d; }
-  var corr = Math.abs(vuelo.desfase || 0) > ETA_DESFASE_MS ? vuelo.desfase : 0;
-  if(e.ts_inicio) vuelo.inicio = e.ts_inicio * 1000;
-  vuelo.base = (vuelo.inicio || vuelo.t) + corr;
-  if(e.recientes_s && e.recientes_s.length) vuelo.recientes = e.recientes_s;
-  var mismo = e.ts && e.ts === vuelo.ultTs;   // el mismo estado releido (poll sin etag) no vuelve a mover el fin
-  vuelo.ultTs = e.ts;
-  if(!mismo && (e.eta_respuesta_s || e.eta_s)){ vuelo.eta = e.eta_respuesta_s || e.eta_s; etaFin(vuelo.base, vuelo.eta, ahora); }
-  if((e.fase === "listo" || e.fase === "sin claude") && !vuelo.listo) vuelo.listo = Date.now();
-  pintarVuelo();
+    v.modelo = e.modelo || v.modelo || e.palabra;   // un daemon viejo no manda `modelo`: la palabra es el modelo
+    v.accion = e.accion || null;
+  } else v.accion = null;
+  v.fase = e.fase;
+  if(e.ts){ var d = ahora - e.ts * 1000; if(v.desfase === undefined || v.desfase === null || d < v.desfase) v.desfase = d; }
+  var corr = Math.abs(v.desfase || 0) > ETA_DESFASE_MS ? v.desfase : 0;
+  if(e.ts_inicio) v.inicio = e.ts_inicio * 1000;
+  v.base = (v.inicio || v.t) + corr;
+  if(e.recientes_s && e.recientes_s.length) v.recientes = e.recientes_s;
+  var mismo = e.ts && e.ts === v.ultTs;   // el mismo estado releido (poll sin etag) no vuelve a mover el fin
+  v.ultTs = e.ts;
+  if(!mismo && (e.eta_respuesta_s || e.eta_s)){ v.eta = e.eta_respuesta_s || e.eta_s; etaFin(v.base, v.eta, ahora, v); }
+  if((e.fase === "listo" || e.fase === "sin claude") && !v.listo) v.listo = Date.now();
+  if(deEstaTab(v.tema, temaActivo())) pintarVuelo();
   return true;
 }
-function vueloMirar(){
-  if(!vuelo) return;
-  if(Date.now() - vuelo.t > VUELO_MAX_MS || (vuelo.listo && Date.now() - vuelo.listo > VUELO_LISTO_MS)){
-    vueloTerminar(); return;
+function mirarUnVuelo(v){
+  if(!v) return;
+  var kTab = claveVueloTab(v.tema);
+  if(vuelos[kTab] !== v) return;
+  if(Date.now() - v.t > VUELO_MAX_MS || (v.listo && Date.now() - v.listo > VUELO_LISTO_MS)){
+    vueloTerminar(v.tema); return;
   }
   if(!token && !apiStub) return;
-  if(lan.base && (vuelo.tema === "flos" || vuelo.tema.indexOf("flos#") === 0)) {
-    var sSeq = vuelo.subprocesoSeq || 0;
-    lanFetch(lan.base + "/subproceso/buffer?pestana=" + encodeURIComponent(vuelo.tema) + "&desde=" + sSeq, {headers: {"authorization": "Bearer " + token}})
+  if(lan.base && (v.tema === "flos" || v.tema.indexOf("flos#") === 0)) {
+    var sSeq = v.subprocesoSeq || 0;
+    var desdeT = Math.max(0, Math.floor((v.t - 2000) / 1000));
+    lanFetch(lan.base + "/subproceso/buffer?pestana=" + encodeURIComponent(v.tema) + "&desde=" + sSeq + "&desde_t=" + desdeT, {headers: {"authorization": "Bearer " + token}})
       .then(function(r) {
+        if(vuelos[kTab] !== v) return;
         if(r && r.json && r.json.ok && r.json.chunks && r.json.chunks.length > 0) {
-           vuelo.subprocesoSeq = r.json.ultimo_seq;
-           var trs = vuelo.tramos ? vuelo.tramos.slice() : [];
+           if(r.json.pestana && normTema(r.json.pestana) !== normTema(v.tema)) return;
+           v.subprocesoSeq = r.json.ultimo_seq;
+           var trs = v.tramos ? v.tramos.slice() : [];
            r.json.chunks.forEach(function(c) {
-             if(c.t * 1000 < vuelo.t - 2000) return; // Ignore chunks from before this turn
+             if(c.t * 1000 < v.t - 2000) return; // Ignore chunks from before this turn
+             if(c.meta && c.meta.pestana && normTema(c.meta.pestana) !== normTema(v.tema)) return;
              if(c.tipo === "evento" && c.meta && (c.meta.event === "chunk" || c.meta.event === "thinking" || c.meta.event === "paso" || c.meta.event === "hecho") && c.meta.texto !== undefined && c.meta.texto !== null && String(c.meta.texto).length > 0) {
                var txtChunk = String(c.meta.texto);
                var esPaso = c.meta.tipo === "paso" || c.meta.tipo === "hecho" || c.meta.event === "paso" || c.meta.event === "hecho" || txtChunk.trim().indexOf("»") === 0;
@@ -11032,7 +11147,7 @@ function vueloMirar(){
                      last.delta = false;
                      trs[trs.length-1] = last;
                    }
-                   trs.push({tipo: "paso", texto: txtChunk, delta: false});
+                   trs.push({tipo: "paso", texto: txtChunk, delta: false, tema: v.tema});
                  }
                } else if(trs.length > 0 && trs[trs.length-1].tipo === tTipo && trs[trs.length-1].delta !== false) {
                  var last = Object.assign({}, trs[trs.length-1]);
@@ -11045,54 +11160,81 @@ function vueloMirar(){
                    trs[trs.length-1] = last;
                  }
                  var isDelta = c.meta.delta !== false;
-                 trs.push({tipo: tTipo, texto: txtChunk, delta: isDelta});
+                 trs.push({tipo: tTipo, texto: txtChunk, delta: isDelta, tema: v.tema});
                }
              }
            });
-           if(typeof vueloTramos === "function") vueloTramos(trs);
+           if(typeof vueloTramos === "function") vueloTramos(trs, v);
         }
       }).catch(function(){});
   }
-  crudo("chat/estado-" + vuelo.clave + ".json", etagEstado).then(function(r){
+  crudo("chat/estado-" + v.clave + ".json", v.etag).then(function(r){
+    if(vuelos[kTab] !== v) return;
     if(!r || r.status === 304) return;
-    etagEstado = r.etag;
-    recibirEstado(r.json);
+    v.etag = r.etag;
+    if(vuelo === v) etagEstado = r.etag;
+    recibirEstado(r.json, undefined, v);
   }).catch(function(){});
 }
-// llego la respuesta: un mensaje del agente despues del que esta en vuelo, con `[tema]` (un aviso suelto no
-// cuenta) o sin tag si el daemon ya dijo `listo` (los comandos sin modelo contestan sin tema)
-function vueloContestado(){
-  if(!vuelo) return false;
+function vueloMirar(){
+  var ks = Object.keys(vuelos);
+  if(!ks.length){ asegurarTimersVuelo(); return; }
+  ks.forEach(function(k){
+    if(vuelos[k]) mirarUnVuelo(vuelos[k]);
+  });
+}
+// llego la respuesta: un mensaje del agente despues del que esta en vuelo EN ESA PESTAÑA, con `[tema]` (un aviso suelto
+// o un cierre de tarea en segundo plano no cuentan) o sin tag si el daemon ya dijo `listo` en esa pestaña
+function vueloContestadoDe(v){
+  if(!v) return false;
   for(var i = msgs.length - 1; i >= 0; i--){
     var m = msgs[i];
-    if(m.clase !== "agente" || fecha(m.iso) < vuelo.ref - 2000) continue;
-    if(m.tag || vuelo.listo){ vueloTerminar(); return true; }
+    if(msgDeVuelo(m, v)){
+      adoptarVuelo(m, v);
+      vueloTerminar(v.tema);
+      return true;
+    }
   }
   return false;
 }
-// {hidratar-vuelo}: hidrata el bloque de vuelo en cualquier instancia activa leyendo el estado
-// de la pestaña cuando detecta un turno reciente sin respuesta (orden 3586)
-var vueloHidratando = false;
-function claveDeTema(tema){
-  return (!tema || tema === AUTO) ? "auto" : slugChat(tema);
-}
-function vueloHidratarSiFalta(tema){
-  tema = tema || temaActivo();
-  if(!token && !apiStub) return Promise.resolve(false);
-  if(vuelo && deEstaTab(vuelo.tema, tema)) return Promise.resolve(false);
-  if(vuelo && (!deEstaTab(vuelo.tema, tema) && (vueloContestado() || Date.now() - vuelo.t > VUELO_MAX_MS || (vuelo.listo && Date.now() - vuelo.listo > VUELO_LISTO_MS)))){
-    vueloTerminar();
+function vueloContestado(tema){
+  if(tema !== undefined && tema !== null){
+    return vueloContestadoDe(vueloDe(tema));
   }
-  if(vuelo || vueloHidratando) return Promise.resolve(false);
+  var ks = Object.keys(vuelos);
+  for(var i = 0; i < ks.length; i++){
+    var v = vuelos[ks[i]];
+    if(v && !deEstaTab(v.tema, temaActivo())) vueloContestadoDe(v);
+  }
+  var vAct = vueloDe(temaActivo()) || vuelo;
+  return vueloContestadoDe(vAct);
+}
+// {hidratar-vuelo}: hidrata el bloque de vuelo en cualquier instancia activa leyendo el estado
+// de la pestaña cuando detecta un turno reciente sin respuesta (orden 3586), aislado por pestaña (orden 4002)
+function vueloHidratarSiFalta(tema){
+  tema = normTema(tema || temaActivo()) || AUTO;
+  var kTab = claveVueloTab(tema);
+  if(!token && !apiStub) return Promise.resolve(false);
+  var vExist = vueloDe(tema);
+  if(vExist){
+    if(vueloContestadoDe(vExist) || Date.now() - vExist.t > VUELO_MAX_MS || (vExist.listo && Date.now() - vExist.listo > VUELO_LISTO_MS)){
+      vueloTerminar(vExist.tema);
+    } else {
+      return Promise.resolve(false);
+    }
+  }
+  if(vuelos[kTab] || vuelosHidratando[kTab]) return Promise.resolve(false);
 
   var ultYo = null;
   for(var i = msgs.length - 1; i >= 0; i--){
     var m = msgs[i];
     if(!deEstaTab(m.tema, tema)) continue;
     if(m.clase === "agente"){
+      if(m.tarea || esCierreTarea(m.texto)) continue;
       return Promise.resolve(false);
     }
     if(m.clase === "yo"){
+      if(esMensajeCaja(m.texto) && ordenCajaMsg(m.texto)) continue;
       ultYo = m;
       break;
     }
@@ -11108,25 +11250,35 @@ function vueloHidratarSiFalta(tema){
     else clave = claveDeTema(tema);
   }
 
-  vueloHidratando = true;
+  vuelosHidratando[kTab] = true;
+  sincronizarVueloActivo();
   return crudo("chat/estado-" + clave + ".json").then(function(r){
-    vueloHidratando = false;
-    if(!r || !r.json || vuelo) return false;
+    delete vuelosHidratando[kTab];
+    sincronizarVueloActivo();
+    if(!r || !r.json || vuelos[kTab]) return false;
     var e = r.json, ahora = Date.now();
+    if(e.tema){
+      var eTema = normTema(e.tema);
+      if(eTema && eTema !== AUTO && tema !== AUTO && !deEstaTab(eTema, tema) && !deEstaTab(tema, eTema)) return false;
+    }
+    if(e.clave && String(e.clave).toLowerCase() !== String(clave).toLowerCase()) return false;
     var tEstado = (e.ts || e.ts_inicio || 0) * 1000;
     if(tEstado && Math.abs(ahora - tEstado) > VUELO_MAX_MS) return false;
     if(e.ts_inicio && e.ts_inicio * 1000 < tMsg - 15000) return false;
     if((e.fase === "listo" || e.fase === "sin claude") && ahora - ((e.ts || 0) * 1000 || tMsg) > VUELO_LISTO_MS) return false;
 
     var t0 = tMsg;
-    vuelo = {
+    var vNuevo = {
       id: ultYo.id,
-      tema: ultYo.tema || tema,
+      tema: normTema(ultYo.tema || tema) || AUTO,
       iso: ultYo.iso,
       t: t0,
       ref: fecha(ultYo.creado) || t0,
       clave: clave,
+      etag: r.etag || null,
+      subprocesoSeq: 0,
       palabra: "",
+      paso: null,
       eta: null,
       fin: 0,
       giro: 0,
@@ -11134,18 +11286,17 @@ function vueloHidratarSiFalta(tema){
       anim: animSpinner(),
       tramos: []
     };
-    etagEstado = r.etag || null;
-    if(vueloGiro) clearInterval(vueloGiro);
-    if(vueloPoll) clearInterval(vueloPoll);
-    vueloGiro = setInterval(vueloGirar, 120);
-    vueloPoll = setInterval(vueloMirar, 1000);
+    vuelos[kTab] = vNuevo;
+    sincronizarVueloActivo();
+    asegurarTimersVuelo();
     pintarVuelo();
-    recibirEstado(e, ahora);
+    recibirEstado(e, ahora, vNuevo);
     reprogramar();
-    if(seguirAlFinal()) alFinal();
+    if(deEstaTab(vNuevo.tema, temaActivo()) && seguirAlFinal()) alFinal();
     return true;
   }).catch(function(){
-    vueloHidratando = false;
+    delete vuelosHidratando[kTab];
+    sincronizarVueloActivo();
     return false;
   });
 }
@@ -18267,7 +18418,7 @@ window.__agente = {
   chatIndexPoner: function(idx){ chatIndex = idx || {}; pintarTabs(); return chatIndex; },
   esperaTabs: esperaTabs, esperaTab: esperaTab, esperaApagar: esperaApagar,
   limpiarChat: function(){ msgsHist = {}; msgsCom = []; chatIndex = null; etagChat = {};
-                           msgs = []; nodoCache = {}; render(); },
+                           msgs = []; nodoCache = {}; vuelos = {}; vuelosHidratando = {}; vueloTerminar(); render(); },
   // 2149 {pestana}: los contadores del board (ms del ultimo render y del ultimo cambio de pestaña, nodos
   // construidos vs reusados). `prueba_web_render` mide con esto, sin tocar el dom.
   perf: function(){ var o = {}; Object.keys(perf).forEach(function(k){ o[k] = perf[k]; });
@@ -18284,9 +18435,12 @@ window.__agente = {
   // estado en vivo y una sola respuesta por mensaje (2026-09-13, prueba_web_tabs lo chequea)
   leerMeta: leerMeta, modeloCorto: modeloCorto, sinDobles: sinDobles, claveEstado: claveEstado,
   vueloIniciar: vueloIniciar, vueloTerminar: vueloTerminar, recibirEstado: recibirEstado,
-  vueloHidratar: vueloHidratarSiFalta,
+  vueloHidratar: vueloHidratarSiFalta, vueloDe: vueloDe,
   vueloOcultarActivo: vueloOcultarActivo, coincideAccionVuelo: coincideAccionVuelo,
-  vuelo: function(){ return vuelo ? {clave: vuelo.clave, palabra: vuelo.palabra, paso: vuelo.paso || null, eta: vuelo.eta, giro: vuelo.giro} : null; },
+  vuelo: function(t){
+    var v = (t !== undefined && t !== null) ? vueloDe(t) : (vueloDe(temaActivo()) || vuelo);
+    return v ? {clave: v.clave, tema: v.tema, palabra: v.palabra, paso: v.paso || null, eta: v.eta, fin: v.fin, giro: v.giro} : null;
+  },
   // 1776: el hilo progresivo. `tramos()` = los textos pintados en el chat, en orden (vuelo y respuestas)
   tramos: function(){ return lista ? [].map.call(lista.querySelectorAll(".msg .hilo .tramo"), function(d){
     return {clase: d.className, texto: d.textContent, msg: (d.closest(".msg") || {}).id || ((d.closest(".msg") || {}).dataset || {}).id || ""}; }) : []; },
