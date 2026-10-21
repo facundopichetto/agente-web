@@ -1821,8 +1821,8 @@
       "modelo": "agy"
     },
     "flos": {
-      "motor": "agy",
-      "modelo": "gemini-4-argon"
+      "motor": "gemini-3.8-flash",
+      "modelo": "gemini-3.8-flash"
     },
     "flos#2": {
       "motor": "agy",
