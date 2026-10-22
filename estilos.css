@@ -2273,8 +2273,8 @@
   }
   #tabs .tab{
     flex:0 0 auto;min-width:60px;background:#000;color:var(--gris);border:0;
-    border-radius:4px 4px 0 0;padding:16px 9px;font:inherit;font-size:12px;cursor:pointer;
-    white-space:nowrap;display:inline-flex;align-items:center;
+    border-radius:4px 4px 0 0;padding: 3px 12px;font:inherit;font-size:12px;cursor:pointer;
+    white-space:nowrap;display:inline-flex;align-items: flex-start;
     letter-spacing:normal;font-weight:100;
   }
   @media (min-width:900px) and (min-aspect-ratio: 1/1){
@@ -2338,7 +2338,7 @@
      3556 {pestanas-ajustes-completos}: boton nueva pestana sin borde, fondo transparente, color #888 y glifo 22px
      igual que crear subpestana pero mas claro. */
   #tabs .barrabtn{
-    flex:0 0 auto;align-self:stretch;background:transparent;color:#888;border:0;
+    flex:0 0 auto;height: 24.5px;background:transparent;color:#888;border:0;
     border-radius:4px;padding:0;font:inherit;font-size:calc(var(--icono-max) + 4px);line-height:1;cursor:pointer;white-space:nowrap;
     margin:0 0 0 4px;display:inline-flex;align-items:center;justify-content:center;width:22px;
   }
