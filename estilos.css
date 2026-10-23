@@ -575,6 +575,12 @@
        entera entra sin desbordar el cuadrado */
     #selmodal.pantalla #selacciones[data-n="4"] .tjbtn{padding:4px 2px}
     #selmodal.pantalla #selacciones[data-n="4"] .tjbtn .tjglf{transform:scale(1.1)}
+    /* 4128 {sumar-unfollow-ignore}: con cinco botones (`new` y `limbo`) se ajusta gap, padding, escala y frase
+       para que los cinco entren en una fila de 5 columnas iguales sin cortar palabras ni desbordar al ancho del celu */
+    #selmodal.pantalla #selacciones[data-n="5"]{gap:4px}
+    #selmodal.pantalla #selacciones[data-n="5"] .tjbtn{padding:3px 2px;gap:2px}
+    #selmodal.pantalla #selacciones[data-n="5"] .tjbtn .tjglf{transform:scale(1)}
+    #selmodal.pantalla #selacciones[data-n="5"] .tjbtn .tjtxt{font-size:11px;line-height:1.1;overflow-wrap:break-word}
     /* 2247: los chicos van pegados ARRIBA de los tres grandes, y el pie de `enviar` queda por encima de ellos */
     #selmodal.pantalla .selpie{order:7}
     #selmodal.pantalla #selextras{order:8;flex:0 0 auto;max-width:none}

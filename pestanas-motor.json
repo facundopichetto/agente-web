@@ -1795,8 +1795,8 @@
       "modelo": "sonnet"
     },
     "awtomic#102": {
-      "motor": "claude",
-      "modelo": "sonnet",
+      "motor": "agy",
+      "modelo": "gemini-3.8-flash",
       "effort": "high"
     },
     "awtomic#14": {
@@ -1821,8 +1821,8 @@
       "modelo": "agy"
     },
     "flos": {
-      "motor": "agy",
-      "modelo": "agy"
+      "motor": "claude",
+      "modelo": "fable"
     },
     "flos#2": {
       "motor": "agy",
@@ -1862,8 +1862,9 @@
       "modelo": "fable"
     },
     "tinder": {
-      "motor": "agy",
-      "modelo": "agy"
+      "motor": "claude",
+      "modelo": "sonnet",
+      "effort": "high"
     }
   },
   "modelos_agy": {
