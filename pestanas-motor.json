@@ -1795,8 +1795,8 @@
       "modelo": "sonnet"
     },
     "awtomic#102": {
-      "motor": "agy",
-      "modelo": "gemini-3.8-flash",
+      "motor": "claude",
+      "modelo": "sonnet",
       "effort": "high"
     },
     "awtomic#14": {
@@ -1821,8 +1821,8 @@
       "modelo": "agy"
     },
     "flos": {
-      "motor": "claude",
-      "modelo": "fable"
+      "motor": "gemini-3.8-flash",
+      "modelo": "gemini-3.8-flash"
     },
     "flos#2": {
       "motor": "agy",
@@ -1830,7 +1830,8 @@
     },
     "juegos": {
       "motor": "agy",
-      "modelo": "agy"
+      "modelo": "gemini-3.8-flash",
+      "effort": "low"
     },
     "juegos#2": {
       "motor": "claude",
@@ -1854,17 +1855,17 @@
       "modelo": "agy"
     },
     "podcast": {
-      "motor": "agy",
-      "modelo": "agy"
+      "motor": "claude",
+      "modelo": "sonnet",
+      "effort": "high"
     },
     "server": {
       "motor": "claude",
       "modelo": "fable"
     },
     "tinder": {
-      "motor": "claude",
-      "modelo": "sonnet",
-      "effort": "high"
+      "motor": "agy",
+      "modelo": "agy"
     }
   },
   "modelos_agy": {

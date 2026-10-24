@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.616">
-<link rel="manifest" href="manifest.json?v=4.616">
+<meta name="agente-web-version" content="4.617">
+<link rel="manifest" href="manifest.json?v=4.617">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.616">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.617">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.607">
 <style id="css-listas-drag">
 #sync, #sync.oculta, #sync.off { display: none !important; }
@@ -883,7 +883,7 @@ function guardarCache(){
       {tabs: tabs, activo: activo, ts: layoutTs, origen: DISPOSITIVO,
        borradores: borradoresLimpios(), vistas: vistasLimpias(), split: splitLimpio(),
        wsets: wsetsLimpias(), orden_widgets: ordenLimpio(), avisos_leidos: leidosLimpios(),
-       llegadas: llegadasLimpias()}));
+       llegadas: llegadasLimpias(), opciones_cajas: typeof opcRemotasLimpias === "function" ? opcRemotasLimpias() : null}));
   }catch(x){}
 }
 // 2149 {pestana} (facundo, 2026-09-23: "escribo y no veo lo que escribo y en un segundo actualiza"): tipear no
@@ -1556,6 +1556,7 @@ function borrarBorrador(tema){
     if(L && L.orden_widgets) recibirOrden(L.orden_widgets);
     if(L && L.avisos_leidos) recibirLeidos(L.avisos_leidos);
     if(L && L.llegadas) recibirLlegadas(L.llegadas);
+    if(L && L.opciones_cajas && typeof recibirOpcRemotas === "function") recibirOpcRemotas(L.opciones_cajas);
   }catch(x){}
   aplicarSplit();
   layoutFirma = firmaLayout(layoutActual());
@@ -1619,11 +1620,13 @@ function recibirTabs(L){
   var avl = recibirLeidos(L.avisos_leidos);
   // 1553: la hora en que llego cada respuesta: se suman y gana la mas temprana
   var lle = recibirLlegadas(L.llegadas);
+  // 4134 {sincronizar-cajas-web}: las cajas tocadas viajan en tabs.json para reflejarse al instante entre celu y mac
+  var opcR = typeof recibirOpcRemotas === "function" ? recibirOpcRemotas(L.opciones_cajas) : false;
   // la ultima vez que facundo miro el board (el daemon lo usa para poner el badge en 0): gana el mayor
   if(+L.push_leido > pushLeido) pushLeido = +L.push_leido;
   if(ts > layoutTs){ aplicarLayout(L, ts); return "remoto"; }
   if(layoutTs > ts && L.origen !== DISPOSITIVO){ publicarTabs(true); return "mio"; }
-  if(borr || vis || sp || ws || orw || avl === "mio" || lle === "mio") publicarTabs();   // mezcle los dos lados: que el otro vea el resultado
+  if(borr || vis || sp || ws || orw || avl === "mio" || lle === "mio" || opcR === "mio") publicarTabs();   // mezcle los dos lados: que el otro vea el resultado
   return "igual";
 }
 // agrupa los cambios seguidos (abrir una pestaña, cambiar de pestaña, mover el separador) en una
@@ -1647,6 +1650,8 @@ function ponerTabs(reintento){
   L.orden_widgets = ordenLimpio();
   L.avisos_leidos = leidosLimpios();
   L.llegadas = llegadasLimpias();
+  var opcL = typeof opcRemotasLimpias === "function" ? opcRemotasLimpias() : null;
+  if(opcL) L.opciones_cajas = opcL;
   if(pushLeido) L.push_leido = pushLeido;
   var cuerpo = {message: "tabs " + DISPOSITIVO, content: textoAb64(JSON.stringify(L))};
   if(shaTabs) cuerpo.sha = shaTabs;
@@ -3918,8 +3923,66 @@ var OPC_DOBLE_MS = 60;
 // `me arrepentí: A: ...` la vuelve a abrir. gana el mas nuevo de los dos.
 // 1202: un toque manda y marca. si la caja YA tiene marca, el toque no manda nada: pide confirmacion
 // adentro de la caja tocada (`opcConf[clave] = {letra, tipo}`) y recien el tap en `si` manda.
-var opcHecho = {}, opcConf = {}, cajaMsg = {};
-try{ opcHecho = JSON.parse(localStorage.getItem("agente_opciones") || "{}") || {}; }catch(x){ opcHecho = {}; }
+var opcHecho = {}, opcConf = {}, cajaMsg = {}, opcRemoto = {}, opcLsActivo = false;
+try{
+  var _lsOpc = localStorage.getItem("agente_opciones");
+  if(_lsOpc !== null) opcLsActivo = true;
+  opcHecho = JSON.parse(_lsOpc || "{}") || {};
+}catch(x){ opcHecho = {}; }
+var OPC_REM_TOPE = 60;
+function opcRemotasLimpias(){
+  var ahora = Date.now(), ks = Object.keys(opcRemoto || {}).filter(function(k){
+    var v = opcRemoto[k];
+    return v && typeof v === "object" && typeof v.l === "string" && /^[A-P]{0,16}$/.test(v.l)
+           && (+v.ts || 0) > 0 && ahora - (+v.g || +v.ts || 0) <= OPC_VIDA_MS;
+  });
+  if(!ks.length) return null;
+  ks.sort(function(a, b){ return (+opcRemoto[b].ts || 0) - (+opcRemoto[a].ts || 0); });
+  var out = {};
+  ks.slice(0, OPC_REM_TOPE).forEach(function(k){
+    var v = opcRemoto[k];
+    out[k] = {l: v.l, ts: +v.ts || 0, g: +v.g || +v.ts || ahora, h: limpiarHoras(v.l, v.h)};
+  });
+  return out;
+}
+function registrarOpcRemota(k, reg){
+  if(!k || !reg) return;
+  opcRemoto[k] = reg;
+  var m = cajaMsg[k];
+  if(m){
+    if(m.opc_id) opcRemoto["id:" + String(m.opc_id).toLowerCase()] = reg;
+    if(m.texto) opcRemoto["h:" + llaveLlegada(m)] = reg;
+  }
+  guardarCachePronto(100);
+  publicarTabs(true);
+}
+function recibirOpcRemotas(rem){
+  if(!rem || typeof rem !== "object") return false;
+  var tome = false, tengo = false, ahora = Date.now();
+  Object.keys(rem).forEach(function(k){
+    var r = rem[k];
+    if(!r || typeof r !== "object" || typeof r.l !== "string" || !/^[A-P]{0,16}$/.test(r.l)) return;
+    var tsR = +r.ts || 0;
+    if(!tsR || ahora - (+r.g || tsR) > OPC_VIDA_MS) return;
+    var mio = opcRemoto[k];
+    if(!mio || tsR > (+mio.ts || 0)){
+      opcRemoto[k] = {l: r.l, ts: tsR, g: +r.g || tsR, h: limpiarHoras(r.l, r.h)};
+      tome = true;
+    } else if((+mio.ts || 0) > tsR){
+      tengo = true;
+    }
+  });
+  Object.keys(opcRemoto).forEach(function(k){ if(!(k in rem)) tengo = true; });
+  if(tome){
+    if(!opcLsActivo){
+      opcLsActivo = true;
+      try{ if(localStorage.getItem("agente_opciones") === null) localStorage.setItem("agente_opciones", JSON.stringify(opcHecho)); }catch(x){}
+    }
+    guardarCache();
+    if(typeof refrescarCajas === "function" && !renderando) refrescarCajas();
+  }
+  return tengo ? "mio" : tome ? "remoto" : "igual";
+}
 // 1212: el estado local de una caja no sobrevive mas de 24 h. cada vez que llega una respuesta nueva con
 // cajas se purga `agente_opciones`: lo de mas de 24 h y lo que no es una clave/valor valido (basura vieja
 // de versiones anteriores). `g` es cuando se guardo en ESTE dispositivo (para la purga); `ts` sigue siendo
@@ -4463,13 +4526,17 @@ function conHoras(est, letras, ts){
 function estadoDeducido(m){
   var i = msgs.indexOf(m), est = {l: "", ts: 0, h: {}};
   if(i < 0) return est;
-  var tema = m.tema || temaActivo(), o = cajasDe(m);
-  for(var j = i + 1; j < msgs.length; j++){
+  var tema = m.tema || temaActivo(), o = cajasDe(m), tsM = fecha(m.iso);
+  var frenadasSlug = {};
+  var jIni = Math.max(0, i - 6);
+  for(var j = jIni; j < msgs.length; j++){
+    if(j === i) continue;
     var x = msgs[j];
     if(x.clase !== "yo") continue;
     var oc = ordenCajaMsg(x.texto);
     if(oc){
       var tsO = fecha(x.iso) || j;
+      if(j < i && (!tsM || !tsO || Math.abs(tsO - tsM) > 300000)) continue;
       var opsO = o.lista.filter(function(op){
         if(!esCajaOrden(op)) return false;
         var sl = slugCajaOrden(m, op);
@@ -4479,7 +4546,11 @@ function estadoDeducido(m){
       if(opsO.length){
         if(oc.tipo === "frenar"){
           var qO = est.l;
-          opsO.forEach(function(op){ qO = qO.replace(new RegExp("[" + op.letra + "]", "g"), ""); });
+          opsO.forEach(function(op){
+            qO = qO.replace(new RegExp("[" + op.letra + "]", "g"), "");
+            var slF = slugCajaOrden(m, op);
+            if(slF) frenadasSlug[slF] = Math.max(frenadasSlug[slF] || 0, tsO);
+          });
           est = {l: qO, ts: tsO, h: conHoras(est, qO, tsO)};
         } else {
           var lO = letrasDe((est.l || "") + opsO.map(function(op){ return op.letra; }).join(""));
@@ -4502,6 +4573,7 @@ function estadoDeducido(m){
       }
       continue;
     }
+    if(j < i) continue;
     // 3901 {escupir-sin-burbuja}: un toque de caja `escupir` nunca marca una caja posterior de `orden` del Comandante
     if(esMensajeEscupir(x.texto) && !o.lista.some(esCajaEscupir)) continue;
     // 1211: sin cita, la letra es de la caja mas reciente SOLO si esa caja ya existia cuando f mando
@@ -4528,20 +4600,80 @@ function estadoDeducido(m){
       est = {l: lc, ts: ts, h: conHoras(est, lc, ts)};
     }
   }
+  // 4134 {sincronizar-cajas-web}: si la orden ya figura en la cola viva (`widDatos.agente` / `cola.json`),
+  // la caja se marca como mandada con su hora `pedida_ts` aunque el comentario de github todavia no haya bajado.
+  if(o.lista.some(esCajaOrden)){
+    var ag = (typeof widDatos !== "undefined" && widDatos && (widDatos.agente || widDatos.agent)) || null;
+    if(ag){
+      var filasAg = (ag.tabla || []).concat(ag.corriendo || [], ag.programadas || [], ag.hechas || [], ag.ultimas || []);
+      if(filasAg.length){
+        o.lista.forEach(function(op){
+          if(!esCajaOrden(op) || (est.l || "").indexOf(op.letra) >= 0) return;
+          var sl = slugCajaOrden(m, op);
+          if(!sl) return;
+          var tProxMismoSlug = 0;
+          for(var k2 = i + 1; k2 < msgs.length; k2++){
+            var m2 = msgs[k2];
+            if(m2.clase !== "agente" || !tieneCajas(m2)) continue;
+            var o2 = cajasDe(m2);
+            if(o2.lista.some(function(op2){ return esCajaOrden(op2) && slugCajaOrden(m2, op2) === sl; })){
+              tProxMismoSlug = fecha(m2.iso) || 1;
+              break;
+            }
+          }
+          for(var fi = 0; fi < filasAg.length; fi++){
+            var f = filasAg[fi];
+            if(!f || f.estado === "borrada" || f.estado === "frenada" || f.estado === "cancelada") continue;
+            var nomF = String(f.nombre || f.slug || "").trim().toLowerCase();
+            var compF = String(f.completo || f.texto || "");
+            var coincide = (nomF && nomF === sl) || (compF && compF.toLowerCase().indexOf("{" + sl + "}") >= 0);
+            if(!coincide) continue;
+            var mLet = /facundo toc[oó] la caja ([A-P])\b/i.exec(compF);
+            if(mLet && mLet[1].toUpperCase() !== op.letra) continue;
+            var tsPed = fecha(f.pedida_ts || f.iniciada_ts || "");
+            if(tsM && tsPed && tsPed < tsM - 180000) continue;
+            if(tProxMismoSlug && (!tsPed || (tProxMismoSlug > 1 && tsPed >= tProxMismoSlug - 5000))) continue;
+            if(frenadasSlug[sl] && (!tsPed || frenadasSlug[sl] >= tsPed)) continue;
+            var lCola = letrasDe((est.l || "") + op.letra);
+            var tsCola = tsPed || tsM || 1;
+            est = {l: lCola, ts: Math.max(est.ts || 0, tsCola), h: conHoras(est, lCola, tsPed || tsM || 0)};
+            break;
+          }
+        });
+      }
+    }
+  }
   return est;
 }
 function estadoCaja(m){
+  try{
+    if(opcLsActivo && localStorage.getItem("agente_opciones") === null){
+      opcHecho = {}; opcRemoto = {}; opcLsActivo = false;
+    }
+  }catch(x){}
   var k = claveCajas(m), loc = opcHecho[k], ded = estadoDeducido(m);
   if(typeof loc === "string") loc = {l: loc === "-" ? "" : loc, ts: 1};   // formato viejo (una letra)
-  if(!loc) return ded;
-  var gana = (+loc.ts || 0) >= (ded.ts || 0) ? loc : ded;
-  return {l: gana.l, ts: gana.ts, h: limpiarHoras(gana.l, gana.h)};      // 1203: horas del que gano
+  var cands = [ded];
+  if(loc) cands.push(loc);
+  if(opcRemoto){
+    if(opcRemoto[k]) cands.push(opcRemoto[k]);
+    if(m && m.opc_id && opcRemoto["id:" + String(m.opc_id).toLowerCase()]) cands.push(opcRemoto["id:" + String(m.opc_id).toLowerCase()]);
+    if(m && m.texto && opcRemoto["h:" + llaveLlegada(m)]) cands.push(opcRemoto["h:" + llaveLlegada(m)]);
+  }
+  var gana = cands[0];
+  for(var ci = 1; ci < cands.length; ci++){
+    if((+cands[ci].ts || 0) >= (+gana.ts || 0)) gana = cands[ci];
+  }
+  return {l: gana.l || "", ts: +gana.ts || 0, h: limpiarHoras(gana.l, gana.h)};      // 1203: horas del que gano
 }
 // guarda letras + hora de cada una. al desmarcar (revertir) la hora de esa letra se va con ella.
 function guardarOpc(k, letras, horas){
-  var ahora = Date.now();
-  opcHecho[k] = {l: letras, ts: ahora, g: ahora, h: limpiarHoras(letras, horas)};
+  var ahora = Date.now(), hLimp = limpiarHoras(letras, horas);
+  var reg = {l: letras, ts: ahora, g: ahora, h: hLimp};
+  opcHecho[k] = reg;
+  opcLsActivo = true;
   try{ localStorage.setItem("agente_opciones", JSON.stringify(opcHecho)); }catch(x){}
+  registrarOpcRemota(k, reg);
 }
 function marcarHecho(caja, letras, horas){
   letras = letras || "";
@@ -15202,7 +15334,10 @@ var BOARD = {
     // directo al endpoint, sin el respaldo a github de `api()`: un pedazo de widget no existe en el buzon
     return apiLan("GET", "/repos/" + REPO + "/contents/" + arch, null, etag || null, "application/vnd.github.raw+json");
   },
-  datos: function(clave, v){ if(widDatos && v) widDatos[clave] = v; },
+  datos: function(clave, v){
+    if(v){ widDatos = widDatos || {}; widDatos[clave] = v; }
+    if((clave === "agente" || clave === "agent") && !renderando && typeof refrescarCajas === "function") refrescarCajas();
+  },
   anclado: function(fn){ anclaClavar(); try{ return fn(); } finally{ anclaSoltar(); } },
   // el chat es del shell: un widget que manda un comando lo manda por aca (sin burbuja, como el switch)
   mandarAparte: function(cmd, tema){
@@ -15388,6 +15523,7 @@ function pintarWidgets(d, err){
   $("panel-widgets").scrollTop = y;
   pintarNodos(d.nodos);         // la barra de arriba: SERVER | MAC | CLOUD, con quien esta de guardia
   pintarAvisos();                // los avisos sin leer: el badge de la campana (la tira del chat se fue, 2151)
+  if(!renderando && typeof refrescarCajas === "function") refrescarCajas();
 }
 
 // el `[↻]` del header: vuelve a bajar widgets.json aunque no haya cambiado (sin etag) y repinta.
@@ -17806,7 +17942,8 @@ window.__agente = {
   // 1212: purga de `agente_opciones` (24 h y claves invalidas)
   purgarOpc: purgarOpc, opcHecho: function(){ return JSON.parse(JSON.stringify(opcHecho)); },
   refrescarCajas: refrescarCajas,   // 1203: repintar con el estado que llego de otro dispositivo
-  ponerOpcHecho: function(o){ opcHecho = o || {}; try{ localStorage.setItem("agente_opciones", JSON.stringify(opcHecho)); }catch(x){} },
+  ponerOpcHecho: function(o){ opcHecho = o || {}; opcRemoto = {}; opcLsActivo = true; try{ localStorage.setItem("agente_opciones", JSON.stringify(opcHecho)); }catch(x){} },
+  recibirOpcRemotas: recibirOpcRemotas, opcRemotas: function(){ return JSON.parse(JSON.stringify(opcRemoto)); },
   cajas: function(){
     return [].map.call(document.querySelectorAll("#lista .opciones"), function(c){
       var cf = opcConf[c.dataset.clave] || null;
@@ -17924,7 +18061,9 @@ window.__agente = {
   guardarLayout: guardarLayout, layoutRemoto: function(){
     var L = layoutActual(); L.v = 1; L.ts = layoutTs; L.origen = DISPOSITIVO;
     L.borradores = borradoresLimpios(); L.vistas = vistasLimpias(); L.split = splitLimpio();
-    L.wsets = wsetsLimpias(); L.orden_widgets = ordenLimpio(); L.llegadas = llegadasLimpias(); return L;
+    L.wsets = wsetsLimpias(); L.orden_widgets = ordenLimpio(); L.llegadas = llegadasLimpias();
+    var opcL = opcRemotasLimpias(); if(opcL) L.opciones_cajas = opcL;
+    return L;
   },
   // 1553: horas de llegada de las respuestas (`prueba_web_tabs`)
   llegadas: function(){ return JSON.parse(JSON.stringify(llegadas)); },
