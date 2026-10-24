@@ -2685,3 +2685,37 @@
                   opacity:.7;white-space:nowrap}
 .ticfila .ticgente{color:var(--gris)}
 .ticfila .tictit{display:block;margin-top:3px;font-weight:400;color:var(--texto)}
+
+/* 4144 {embellecer-board-captura} (facundo, 2026-10-24, captura IMG_8365 del celu: "hay varias cosas feas aca").
+   lo que se veia: (1) en el modal `pestaña nueva` un tema con subpestañas iba en una tira horizontal
+   (`flos · abierta · ▾ · flos 2 · flos 3`) de botones de distinto alto que se cortaba a la derecha
+   (`personal · p/quever · p/mudanza · p/le…`), con la marca `abierta` dibujada como un boton apagado y el `▾`
+   como un botoncito suelto; (2) el modal no tenia la `✕` del molde (2002 {back}); (3) el `+` de pestaña nueva
+   flotaba arriba de la fila de pestañas: tenia `height:24.5px` fijo y `align-self:stretch` (de `tema-facu.css`)
+   no estira a un boton con alto fijo, asi que quedaba pegado al techo mientras los nombres van centrados;
+   (4) `●mac` quedaba cortado a la derecha de la cabecera con el `gap` de 18 px en una pantalla de 375 px.
+   ahora: cada grupo es un bloque. la fila del padre va al ancho entero como las demas, con `abierta` adentro, a la
+   derecha, en gris y sin borde, y el `▾` como esquina de la misma altura; las subpestañas van DEBAJO como fichas
+   que se envuelven en varias filas (nunca una tira que se corta); la cabecera lleva la `✕` del molde
+   (`.bglifo.mesquina.b-x`, el svg de siempre); el `+` estira al alto de la fila y centra el glifo; la barra de
+   nodos baja el `gap` de 18 a 14 px (9 en pantallas angostas; `prueba_web_tabs` pide 14 como minimo en desktop). las reglas van con `body` adelante a proposito:
+   `tema-facu.css` es una copia de esta hoja cargada DESPUES, repite las mismas reglas de `#dd`, `#tabs` y
+   `#nodos` y con la misma especificidad las pisaria. */
+body #dd{padding:6px 8px calc(8px + env(safe-area-inset-bottom)) 8px;gap:5px}
+body #dd .ddhead{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 0 0 4px;min-height:38px}
+body #dd .ddhead .ddtit{padding:0;flex:1 1 auto;min-width:0}
+body #dd .ddhead .b-x{min-width:38px;min-height:38px;padding:4px;margin-left:auto}
+body #dd .ddhead .b-x svg{width:22px;height:22px}
+body #dd .ddgrupo{display:flex;flex-direction:column;align-items:stretch;gap:5px;overflow:visible;white-space:normal;max-width:none;flex:0 0 auto}
+body #dd .ddpadre-fila{display:flex;flex-direction:row;align-items:stretch;gap:5px;flex:0 0 auto;white-space:nowrap;min-width:0}
+body #dd .ddpadre-btn{flex:1 1 auto;min-width:0;display:flex;align-items:center;justify-content:space-between;gap:8px;overflow:hidden}
+body #dd .ddbadge{font-size:11px;color:var(--gris);border:0;padding:0;background:none;letter-spacing:.04em;flex:0 0 auto}
+body #dd .ddtoggle{flex:0 0 auto;height:auto;min-width:40px;padding:0 10px;font-size:14px;color:var(--gris);line-height:1}
+body #dd .ddhijos{display:flex;flex-direction:row;flex-wrap:wrap;align-items:stretch;gap:5px;padding:0 0 0 10px;margin:0 0 0 8px;border-left:1px solid var(--linea);white-space:normal;flex:0 0 auto}
+body #dd .ddsubop{flex:0 1 auto;max-width:100%;overflow:hidden;text-overflow:ellipsis;padding:7px 10px}
+body #dd .ddgrupo.colapsado .ddhijos{display:none}
+body #tabs .barrabtn{height:auto;align-self:stretch}
+body #cabecera #nodos{gap:14px}
+@media (max-width:420px){
+  body #cabecera #nodos{gap:9px}
+}
