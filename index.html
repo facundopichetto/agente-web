@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.618">
-<link rel="manifest" href="manifest.json?v=4.618">
+<meta name="agente-web-version" content="4.619">
+<link rel="manifest" href="manifest.json?v=4.619">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.618">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.619">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.607">
 <style id="css-listas-drag">
 #sync, #sync.oculta, #sync.off { display: none !important; }
@@ -5505,7 +5505,8 @@ var lan = {base: null, via: "buzón", ult: 0, probando: null};
 var lanMsgs = {};          // lid -> true: salio por la lan, su copia del buzon no se pinta dos veces
 var lanStub = null;        // `prueba_web_tabs` simula el endpoint vivo o caido
 function lanFetch(url, opts){
-  return lanStub ? Promise.resolve().then(function(){ return lanStub(url, opts || {}); }) : fetch(url, opts);
+  return (lanStub ? Promise.resolve().then(function(){ return lanStub(url, opts || {}); }) : fetch(url, opts))
+    .then(function(r){ redVolvio(); return r; });   // 4214: una respuesta = la red volvio
 }
 function lanCandidatos(){
   var c = [], extra = [];
@@ -5693,6 +5694,7 @@ function api(metodo, ruta, cuerpo, etag, accept){
     body: cuerpo ? JSON.stringify(cuerpo) : undefined,
     cache: "no-store"
   }).then(function(r){
+    redVolvio();   // 4214: una respuesta de github = la red volvio
     if(r.status === 304) return {status:304};
     if(r.status === 401 || r.status === 403 || r.status === 429){
       return r.json().catch(function(){ return {}; }).then(function(j){
@@ -6065,6 +6067,7 @@ function cargarChatTemaSuave(t){
     return n;
   }, function(e){
     var m = (e && e.message) || "?";
+    if(errRed(e)){ fallaRed("chat", e); return 0; }   // 4214: sin red se calla y cuenta, una sola fila si sigue caida
     if(!chatFalla[t]){
       chatFalla[t] = m;
       // 2102 {resultado}: un fetch fallido de OTRA pestaña nunca escribe en la charla de la abierta ni en su
@@ -6086,7 +6089,8 @@ function cargarChat(alTenerActiva){
     return p;
   }));
   var pIdx = cargarChatIndex().then(function(idx){ delete chatFalla[CHAT_INDEX]; return idx; }, function(e){
-    if(!chatFalla[CHAT_INDEX]){
+    if(errRed(e)) fallaRed("chat", e);   // 4214: sin red se calla y cuenta
+    else if(!chatFalla[CHAT_INDEX]){
       chatFalla[CHAT_INDEX] = true;
       var m = (e && e.message) || "?";
       if(m !== "401" && m !== "freno") notiLocal("fetch-chat", "no pude bajar el índice del chat (" + m + ").", null);
@@ -6116,27 +6120,77 @@ function chatDeTab(tema){
   });
 }
 
+// ---------- fallos de red fuera del chat (4214 {fallos-de-red-fuera-del-chat}, facundo 2026-10-27) ----------
+// captura de las 2:30 am: veinte lineas rojas `error: Failed to fetch` / `votaciones: ...` / `pestañas: ...`
+// adentro del chat. al volver de estar inactivo el board dispara varios pedidos de golpe y cada fallo se
+// pintaba con `sistema(..., "error")`, contra {tira} (ningun aviso adentro del chat) y {campana} (los
+// repetidos en UNA fila). ahora TODO fallo del refresco de fondo (`tick`, `sincronizar`, `alVolver`, el
+// arranque) pasa por `fallaRed`: un fallo de red se calla y se reintenta solo (cada `tick`, al foco, en
+// `pageshow`, al cambiar de visibilidad y en el evento `online`, que ademas vuelve a probar la lan ya), y
+// recien si sigue caida RED_AVISO_MS queda UNA noti local en la campana (familia `red`) con el conteo, que
+// se actualiza en lugar de sumar filas; la primera respuesta que llega (`lanFetch` o el fetch de github)
+// la cierra sola. un error que no es de red (http 500, json roto) tampoco va al chat: una fila por ambito
+// en la campana. **la hace cumplir** `prueba_web_red_campana`.
+var RED_AVISO_MS = 90000;
+var red = {caida: 0, fallos: 0, noti: null, ult: 0};
+function fallaRed(ambito, e){
+  if(!ruidoso(e)) return;                       // 401 ya abrio el login, "freno" ya aviso
+  if(!errRed(e) && !sinRed()){                  // no es la red: a la campana igual, nunca al chat
+    notiLocal("sync-" + ambito, ambito + ": " + e.message, null, "amarillo");
+    return;
+  }
+  var ahora = Date.now();
+  // el celu dormido o la laptop cerrada: si el ultimo fallo fue hace mas de 2x el umbral, el reloj salto mientras
+  // la pestaña no corria y la red recien se esta despertando. se cuenta de cero, nunca una noti al primer fallo.
+  if(red.caida && ahora - red.ult > RED_AVISO_MS * 2){ red.caida = 0; red.fallos = 0; }
+  if(!red.caida) red.caida = ahora;
+  red.fallos++; red.ult = ahora;
+  if(ahora - red.caida < RED_AVISO_MS) return;  // recien volvio o es un parpadeo: callado, el tick reintenta
+  var txt = "sin conexión con el server desde las " + hhmmBA(red.caida) + ": " + red.fallos +
+            " pedidos fallaron. reintento solo al volver la red o la pestaña.";
+  var n = red.noti ? notisLocales.filter(function(x){ return x.id === red.noti; })[0] : null;
+  if(n){ if(n.texto !== txt){ n.texto = txt; pintarAvisos(); } }
+  else red.noti = notiLocal("red", txt, null, "naranja");
+}
+// llego una respuesta (de la lan o de github): la red volvio, la noti se cierra sola y el conteo arranca de cero
+function redVolvio(){
+  if(!red.caida && !red.noti) return;
+  red.caida = 0; red.fallos = 0;
+  if(red.noti){ var id = red.noti; red.noti = null; notiLocalCerrar(id); }
+}
+// reintento al volver la red o la pestaña: la lan se vuelve a probar ya (sin esperar los 60 s de `tick`)
+function redProbar(){
+  if(!token || document.hidden) return Promise.resolve(false);
+  lan.ult = 0;
+  return probarLan().then(function(){ return sincronizar(false); })
+    .then(function(){ return true; }, function(e){ fallaRed("sync", e); return false; });
+}
+window.addEventListener("online", function(){ redProbar(); });
+
 function tick(){
   if(Date.now() - lan.ult > (colaVieja() ? LAN_CADA_VIEJA : LAN_CADA)) probarLan();   // lan primero: cada 60 s se vuelve a probar el endpoint (15 s con la cola sin sync, 3816)
   vaciarSalida();   // lo que github freno sale solo apenas levanta el freno
   cargarIssue(false);   // cada 5 min: si el daemon rotó el issue del buzón, el próximo tick ya va al nuevo
   Promise.all([cargarEstado(), cargarComentarios(false)])
-    .catch(function(e){ if(ruidoso(e)) sistema("error: " + e.message, "error"); });
+    .catch(function(e){ fallaRed("estado", e); });   // 4214: nunca en el chat
   if(!vueloDe(temaActivo())) vueloHidratarSiFalta();
   // los widgets y las pestañas van a 30 s a la vista y 120 s en background (facundo, 2026-09-13):
   // el daemon publica `widgets.json` cada 60 s (`widgets_web`), pedir cada 10 s traia el mismo archivo.
   // al abrir o volver al foco se sincroniza aparte, asi que el celu no ve datos viejos por esto.
   var cada = document.hidden ? 120000 : 30000;
   if(Date.now() - widUlt > cada){
-    cargarWidgets().catch(function(e){ if(ruidoso(e)) pintarWidgets(null, e.message); });
+    cargarWidgets().catch(function(e){
+      if(errRed(e) || sinRed()) fallaRed("widgets", e);   // 4218: sin red la caja no dice `Failed to fetch` en rojo
+      else if(ruidoso(e)) pintarWidgets(null, e.message);
+    });
   }
   // 1666: la confirmacion de las votaciones va aparte y mas seguido (es un archivo de 10 KB con etag)
   if(!lan.base && Date.now() - votJsonUlt > (document.hidden ? 120000 : 20000)){
-    cargarVotaciones().catch(function(e){ if(ruidoso(e)) sistema("votaciones: " + e.message, "error"); });
+    cargarVotaciones().catch(function(e){ fallaRed("votaciones", e); });
   }
   // las pestañas van al mismo ritmo: si las cambiaste en el celu, el desktop las ve en <= 30 s
   if(tabsSync && Date.now() - tabsUlt > cada){
-    cargarTabs().catch(function(e){ if(ruidoso(e)) sistema("pestañas: " + e.message, "error"); });
+    cargarTabs().catch(function(e){ fallaRed("pestañas", e); });
   }
   // y el historial tambien: el daemon republica `chat/<tema>.json` cuando termina de renderizar el
   // audio de una respuesta, asi que el `[▶]` aparece a los pocos segundos sin volver al foco.
@@ -6148,7 +6202,7 @@ function tick(){
       var pego = seguirAlFinal();
       mezclar(); render();
       if(pego) alFinal(); else restaurarVistas();   // 1645/1650: subio a mano -> se queda donde esta
-    }).catch(function(e){ if(ruidoso(e)) sistema("chat: " + e.message, "error"); });
+    }).catch(function(e){ fallaRed("chat", e); });
   }
 }
 
@@ -6193,7 +6247,11 @@ function sincronizar(primera){
     // el historial completo de cada pestaña (activa primero y sin esperar al indice) y la franja reciente de comentarios
     suave(cargarChat(pintarSiCambio).then(pintarSiCambio)),
     suave(pIssue.then(function(){ return cargarComentarios(!!primera).then(pintarSiCambio); })),
-    cargarWidgets().catch(function(e){ if(e && e.message === "401") throw e; if(ruidoso(e)) pintarWidgets(null, e.message); }),
+    cargarWidgets().catch(function(e){
+      if(e && e.message === "401") throw e;
+      if(errRed(e) || sinRed()) fallaRed("widgets", e);   // 4218: idem, callado y contado
+      else if(ruidoso(e)) pintarWidgets(null, e.message);
+    }),
     (lan.base && !primera) ? Promise.resolve() : cargarVotaciones().catch(function(){}),
     suave(cargarTabs()),
     cfgMotor ? Promise.resolve(cfgMotor) : cargarCfgMotor().catch(function(){})
@@ -6214,7 +6272,8 @@ function alVolver(){
   colaReanudar();   // 3814 {cola-sin-desfase}: la cola se confirma ya, sin esperar el golpe de 2 s ni un backoff viejo
   if(selTxViva()){ selTxSync = true; return; }   // 1622: volver al foco no le apaga la seleccion a facundo
   if(Date.now() - syncUlt < 1200) return;
-  sincronizar(false).catch(function(e){ if(ruidoso(e)) sistema("error: " + e.message, "error"); });
+  if(red.caida){ redProbar(); return; }   // 4214: con la red caida se vuelve a probar la lan primero
+  sincronizar(false).catch(function(e){ fallaRed("sync", e); });
 }
 window.addEventListener("focus", alVolver);
 window.addEventListener("pageshow", alVolver);
@@ -11629,7 +11688,7 @@ function vaciarSalida(){
     })
     .catch(function(e){ saliendo = false; if(!errRed(e) && ruidoso(e)) sistema("no se pudo mandar lo guardado: " + e.message, "error"); });
 }
-window.addEventListener("online", function(){ vaciarSalida(); });
+window.addEventListener("online", function(){ vaciarSalida(); });   // 4214: `redProbar` va por su propio `online`
 // el mensaje escrito en la pestaña X viaja a otra: X se queda **solo con lo que no viajo** (caja y
 // borrador de `tabs.json`), si no facundo lo ve repetido al volver. va **antes** de `abrirTab`, que
 // guarda la caja como borrador de la pestaña que se deja.
@@ -14974,6 +15033,13 @@ function notiLocal(familia, texto, tema, nivel){
   pintarAvisos();
   return n.id;
 }
+function notiLocalCerrar(id){   // 4214: cerrar una local sin tocar `avLeidos` ni publicar las pestañas
+  var k = notisLocales.findIndex(function(n){ return n.id === id; });
+  if(k < 0) return false;
+  notisLocales.splice(k, 1);
+  pintarAvisos();
+  return true;
+}
 function notisNoLeidas(){
   var ns = ((widDatos || {}).notificaciones);
   ns = (Array.isArray(ns) ? ns : []).concat(notisLocales);
@@ -17602,7 +17668,7 @@ function arrancar(t){
   sincronizar(true)   // arranca en paralelo con cargarIssue (estado y comentarios esperan issueEnVuelo)
     .then(function(){ reprogramar(); votArrancar(); })   // 1373: animaciones y votacion abierta
     .catch(function(e){
-      if(ruidoso(e)) sistema("error: " + e.message, "error");
+      fallaRed("sync", e);   // 4214: nunca en el chat
       if(e && e.message !== "401") reprogramar();
     });
 }
@@ -17720,6 +17786,11 @@ window.__agente = {
   notiLocal: notiLocal, notisNoLeidas: notisNoLeidas, chatFalla: function(){ return chatFalla; },
   notisLocales: function(){ return notisLocales.slice(); }, avLeidos: function(){ return avLeidos; },
   cargarChatTemaSuave: cargarChatTemaSuave, msgs: function(){ return msgs.slice(); },
+  // 4214 {fallos-de-red-fuera-del-chat}: los fallos de red del refresco van callados y a UNA fila de la campana
+  fallaRed: fallaRed, redVolvio: redVolvio, redProbar: redProbar, red: function(){ return red; },
+  redAvisoMs: function(v){ if(v != null) RED_AVISO_MS = +v; return RED_AVISO_MS; },
+  stubToken: function(t){ token = t || token; tabsListo = true; tabsSync = true; frenoHasta = 0; return !!token; },
+  tick: tick, sincronizar: sincronizar, alVolver: alVolver, notisAccion: notisAccion,
   // 1676 {vista}: la vista `docs` (`prueba_docs_vista`)
   docsPintar: docsPintar, docsCargarIndice: docsCargarIndice, docsAbrir: docsAbrir, docsCerrarDoc: docsCerrarDoc,
   // 2190 {vista}: la vista `claves` vive en el modulo; el shell solo la abre y deja mirar su estado (`prueba_web_claves`)
