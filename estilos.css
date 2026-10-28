@@ -1677,6 +1677,9 @@
   /* 1681 {cuelgue}: una pendiente esperando hace mas de 2 h va en rojo, para ver el atasco antes de que se acumule */
   .igtab .qvieja{color:var(--rojo);opacity:1}
   .igpie{font-size:12px;margin-top:3px}
+  /* 4233 {igcola-modal-cancelar-forzar}: un follow/unfollow de la cola se toca y abre su modal (cancelar / forzar) */
+  .igtab .igtoca{cursor:pointer}
+  .igficha{white-space:pre-line}
   /* 1959: el widget `madrugada`. la tabla es la misma `.igtab` (cuatro columnas: tarea, arranca, dura, semana),
      asi que lo unico propio es el boton de largar la cola, la ficha de una tarea y sus dos campos. las fuentes
      salen de `--texto-max` (14 px) y no hay ningun tamaño nuevo. */

@@ -50,12 +50,16 @@
   }
   // 1681 {cuelgue}: el rojo del atascado viene del server en `cl` (`qcola qvieja`), con la espera en el `title`:
   // aca no se calcula ninguna demora, igual que las horas
+  // 4233 {igcola-modal-cancelar-forzar}: toda fila de follow/unfollow es tocable (las cinco celdas llevan el id) y
+  // abre el modal de esa accion
+  var TOCABLES = {follow: 1, unfollow: 1};
   function fila(f){
     var cl = f.cl || CL[f.estado] || "qcola";
-    return '<span class="' + cl + ' qnom">' + esc(f.que || "") + "</span>" +
-           '<span class="' + cl + ' ignom" title="' + esc(f.detalle || "") + '">' + esc(f.quien || "") + "</span>" +
-           celda(cl, f.pedido) + celda(cl, f.sale) +
-           '<span class="' + cl + ' qcel igest">' + esc(f.estado || "") + "</span>";
+    var t = (TOCABLES[f.tipo || f.que] && f.id) ? ' igtoca" data-igid="' + esc(f.id) : "";
+    return '<span class="' + cl + ' qnom' + t + '">' + esc(f.que || "") + "</span>" +
+           '<span class="' + cl + ' ignom' + t + '" title="' + esc(f.detalle || "") + '">' + esc(f.quien || "") + "</span>" +
+           celda(cl, f.pedido, t) + celda(cl, f.sale, t) +
+           '<span class="' + cl + ' qcel igest' + t + '">' + esc(f.estado || "") + "</span>";
   }
   function cabecera(){
     return '<span class="qth qnom">qué</span><span class="qth ignom">quién</span>' +
@@ -138,14 +142,95 @@
       vivo.hasta = Date.now() + vivo.espera;
     });
   }
+  // ---------- 4233 {igcola-modal-cancelar-forzar}: el modal de una fila ----------
+  // tocar un follow o unfollow pide la ficha FRESCA al server ({modalviejo}: `POST /ig/cola {accion: ver}`, que lee
+  // la cola del disco en el momento) y recien ahi abre el modal. sin lan no abre nada. `cancelar` lo saca de la cola
+  // (`cancelada`, como a mano) e `intentar forzarlo` lo larga ya: el server saltea solo el turno y respeta el
+  // congelado, los frenos, el enfriamiento, la franja, el tope del dia y la sesion; si no sale, el modal dice por que.
+  var igModal = null, igAbierta = null, igUltimo = null;
+  function postCola(cuerpo){
+    igUltimo = cuerpo;   // lo lee `prueba_ig_cola_web`
+    return B.pedir("/ig/cola", {method: "POST", headers: {"content-type": "application/json"},
+                                body: JSON.stringify(cuerpo)});
+  }
+  function fichaHtml(f){
+    return '<div class="cmod igficha">' +
+      '<span class="g">pedido</span> <span class="b">' + esc(f.pedido || "") + "</span>" +
+      (f.sale ? ' <span class="g">· sale</span> <span class="b">' + esc(f.sale) + "</span>" : "") +
+      (f.detalle ? '\n<span class="g">' + esc(f.detalle) + "</span>" : "") +
+      (f.cancelable && !f.forzable && f.no_forzar
+        ? '\n<span class="r">forzarlo ahora no sale: ' + esc(f.no_forzar) + "</span>" : "") +
+      "</div>";
+  }
+  function botones(f){
+    if(!f.cancelable) return [];
+    return [
+      {tipo: "rojo", txt: "cancelar", accion: function(m){ accionar("cancelar", f, m); }},
+      {tipo: "verde", txt: "intentar forzarlo", accion: function(m){ accionar("forzar", f, m); }}
+    ];
+  }
+  function pintarFicha(f, m){
+    m.pintar({titulo: (f.tipo || "") + " a " + (f.quien || ""), cuenta: f.estado || "",
+              html: fichaHtml(f), botones: botones(f)});
+  }
+  function accionar(acc, f, m){
+    m.estado(acc === "forzar" ? "intentando que salga ya…" : "cancelando…");
+    m.el.querySelectorAll(".mbotones button").forEach(function(b){ b.disabled = true; });
+    return postCola({accion: acc, id: f.id}).then(function(r){
+      r = r || {};
+      if(r.ficha && r.ficha.ok && m.abierto) pintarFicha(r.ficha, m);
+      m.estado(r.ok ? (r.texto || "listo") : ("no salió: " + (r.motivo || "sin motivo")));
+      vivo.etag = null; vivo.hasta = 0; pedir();   // la caja se entera ya, sin esperar el poll
+      return r;
+    }, function(e){
+      m.el.querySelectorAll(".mbotones button").forEach(function(b){ b.disabled = false; });
+      m.estado("no llegó al server (" + ((e && e.message) || "sin lan") + ")");
+      return {ok: false};
+    });
+  }
+  function fichaAbrir(id){
+    if(!B.modalMolde || !B.lan()) return Promise.resolve(false);
+    if(!igModal){
+      igModal = B.modalMolde({id: "igcolamodal", z: 43, sinServer: true, alCerrar: function(){ igAbierta = null; }});
+      // 2002 {back}: el back grande a la izquierda (vuelve a la cola) y la `✕` del molde a la derecha
+      var head = igModal.el.querySelector(".mhead");
+      if(head && !head.querySelector(".igatras")){
+        var bk = document.createElement("button");
+        bk.type = "button"; bk.className = "bglifo mesquina b-atras igatras";
+        bk.setAttribute("aria-label", "back"); bk.title = "back";
+        bk.innerHTML = '<span class="mglf">←</span>';
+        bk.addEventListener("click", function(){ igModal.cerrar(false); });
+        head.insertBefore(bk, head.firstChild);
+      }
+    }
+    return postCola({accion: "ver", id: id}).then(function(f){
+      if(!f || !f.ok) return false;
+      igAbierta = f.id;
+      return igModal.abrir({titulo: (f.tipo || "") + " a " + (f.quien || ""), cuenta: f.estado || "",
+                            html: fichaHtml(f), botones: botones(f)});
+    }, function(){ return false; });
+  }
+  function alTocar(ev){
+    var n = ev.target.closest && ev.target.closest('#widgets [data-w="igcola"] [data-igid]');
+    if(!n) return;
+    ev.preventDefault(); ev.stopPropagation();
+    fichaAbrir(n.getAttribute("data-igid"));
+  }
+  document.addEventListener("click", alTocar, true);
+
   B.cada(RELOJ_MS, contar);
   B.cada(POLL_MS, pedir);
 
   B.registrar("igcola", {
     html: function(d){ var w = adoptar(d || {}); setTimeout(contar, 0); return cajaIgCola(w); },
     pintar: function(d, nodo){ var w = adoptar(d || {}); setTimeout(contar, 0); return B.reemplazar(nodo, cajaIgCola(w)); },
-    destruir: function(){ vivo.base = null; vivo.hash = null; },   // los dos timers los apaga el shell (`B.cada`)
+    destruir: function(){   // los dos timers los apaga el shell (`B.cada`); el listener del toque lo saca aca
+      vivo.base = null; vivo.hash = null; igAbierta = null;
+      document.removeEventListener("click", alTocar, true);
+    },
     recibir: recibir, contar: contar, pedir: pedir, durCol: durCol,
+    fichaAbrir: fichaAbrir, accionar: accionar,
+    modal: function(){ return {abierta: igAbierta, ultimo: igUltimo, abierto: !!(igModal && igModal.abierto)}; },
     vivo: function(){ return {offset: vivo.offset, hash: vivo.hash, recibidos: vivo.recibidos,
                               repintados: vivo.repintados, espera: vivo.espera,
                               filas: vivo.base ? (vivo.base.tabla || []).length : 0}; }
