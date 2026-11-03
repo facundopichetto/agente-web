@@ -59,7 +59,7 @@
                                          alCerrar: function(){ cuAbierta = null; }});
     var esActiva = activa(cu), bs = cu.barras || [], lp = lineasClaude[cu.nombre] || {};
     var estado = cu.agotada ? '<span class="r">agotada: sin creditos hasta que renueve</span>'
-               : cu.dormida ? '<span class="r">dormida: sin 5h; la semana todavia tiene lugar</span>'
+               : cu.dormida ? '<span class="r">dormida: la semana todavia tiene lugar</span>'
                : esActiva ? '<span class="v">es la cuenta que usa el agente ahora</span>'
                : '<span class="g">no es la cuenta activa</span>';
     var html = '<div class="cmod">' + estado +
@@ -79,8 +79,8 @@
         var b = bs.filter(function(x){ return x.clave === k[0] || x.nombre === k[1]; })[0];
         return barraHtml(b || {nombre: k[1], pct: null, linea: null, nivel: "sin"});
       }).join("") + "</div>" +
-      (bs.some(function(b){ return b.falta_txt && !b.oculta; }) ?
-        '<div class="cmod-r">' + bs.filter(function(b){ return b.falta_txt && !b.oculta; }).map(function(b){
+      (bs.some(function(b){ return b.falta_txt && !b.oculta && b.clave !== "five_hour" && b.nombre !== "5h"; }) ?
+        '<div class="cmod-r">' + bs.filter(function(b){ return b.falta_txt && !b.oculta && b.clave !== "five_hour" && b.nombre !== "5h"; }).map(function(b){
           return '<span><span class="g">' + esc(b.nombre) + " renueva en</span> " + esc(b.falta_txt) + "</span>";
         }).join("") + "</div>" : "") + "</div>";
     var botones = [];
@@ -106,8 +106,11 @@
   }
   document.addEventListener("click", alTocar, true);
   // el orden de las cuentas lo pone el server (`gasto_api.lineas`), no la web. las tres barras siguen
-  // vivas SOLO adentro del modal de una cuenta de claude (5h, week y el weekly de fable de esa cuenta).
-  var USAGE_BARRAS = [["five_hour", "5h"], ["seven_day", "week"], ["fable", "fable"]];
+  // vivas SOLO adentro del modal de una cuenta de claude (week y el weekly de fable de esa cuenta).
+  // {widgets-sacar-5h} (facundo, 2026-11-03: "se puede sacar el 5h de los widget de claude? está deprecated ese
+  // indice"): la 5h se fue de claude, de la fila y del modal; el server la sigue mandando y la web no la pinta.
+  // los pozos de gemini y el minuto de groq no son esta barra y siguen igual.
+  var USAGE_BARRAS = [["seven_day", "week"], ["fable", "fable"]];
   // orden 1808 (facundo, 2026-09-16): una cuenta sin limite que cuente (ninguna barra `week` ni `fable`
   // con numero: sin plan, sin login, sin datos de uso) se pinta en gris apagado y NO es tocable: no abre
   // el modal de detalle ni ofrece pasar el agente a ella. las otras siguen igual.
@@ -140,7 +143,7 @@
   // su texto (`l.linea_txt`) llegan armados del server (`gasto_api.tick_ritmo` / `tick_txt`, ninguno en usd): la
   // web no calcula ninguna fraccion. una fila sin cuota conocida (groq) llega con `linea: null` y no se pinta
   // nada: la web no inventa una marca. {fila} (facundo, 2026-09-22, segunda vuelta): la fila de `awtomic` ya
-  // no es la excepcion, lleva el tick en sus DOS barritas (la de 5 h y la de week), cada una contra su ventana.
+  // no es la excepcion, lleva el tick en sus barritas, cada una contra su ventana ({widgets-sacar-5h}: sin la de 5 h).
   function tickHtml(l){
     if(l.linea === null || l.linea === undefined) return "";
     var t = Number(l.linea);
@@ -189,7 +192,7 @@
   // que llega con su `%` pero sin nivel propio
   function nivelPozo(p){ return p >= 90 ? "mal" : p >= 70 ? "cerca" : "ok"; }
   // los limites de una fila, en orden y SOLO los que existen. claude: las tres barras de su cuenta (`c.barras`)
-  // menos la `oculta` (la 5h de una agotada); sin la cuenta, lo que traiga la fila (`cinco` y la week)
+  // menos la `oculta`; sin la cuenta, la week de la fila ({widgets-sacar-5h}: el `cinco` de claude ya no se pinta)
   function limitesDe(l, c){
     var out = [];
     if(l.tipo === "claude"){
@@ -200,8 +203,6 @@
         out.push({et: k[1], pct: numPct(b.pct), nivel: b.nivel, linea: b.linea, t: b.falta_txt ? cortoTxt(b.falta_txt) : cortoSeg(b.falta_s)});
       });
       if(!bs.length){
-        if(l.cinco && numPct(l.cinco.pct) !== null)
-          out.push({et: l.cinco.etiqueta || "5h", pct: numPct(l.cinco.pct), nivel: l.cinco.nivel, linea: l.cinco.linea, t: cortoTxt(l.cinco.falta_txt)});
         if(numPct(l.pct) !== null) out.push({et: "week", pct: numPct(l.pct), nivel: l.nivel, linea: l.linea, t: ""});
       }
       return out;
@@ -241,7 +242,7 @@
     var tit = nombreVisto(l.nombre) + lim.map(function(q){
       return "\n" + q.et + " " + Math.round(q.pct) + "%" + (q.t ? " · renueva en " + q.t : "");
     }).join("") + (l.linea_txt ? "\n" + sinPlata(l.linea_txt) : "") +
-      (l.cinco && l.cinco.linea_txt ? "\n" + sinPlata(l.cinco.linea_txt) : "") +
+      (l.tipo !== "claude" && l.cinco && l.cinco.linea_txt ? "\n" + sinPlata(l.cinco.linea_txt) : "") +
       (l.tipo !== "claude" ? (l.sec ? "\n" + sinPlata(l.sec) : "") + (l.extra ? "\n" + sinPlata(l.extra) : "") : "") +
       (l.prioritaria_txt ? "\n" + sinPlata(l.prioritaria_txt) : "");
     return '<div class="gcu n-' + esc(l.nivel || "sin") + (l.agotada ? " agotada" : "") +
