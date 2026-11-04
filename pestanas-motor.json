@@ -1821,7 +1821,7 @@
     },
     "flos": {
       "motor": "claude",
-      "modelo": "sonnet"
+      "modelo": "fable"
     },
     "flos#2": {
       "motor": "agy",
@@ -1838,21 +1838,19 @@
     },
     "modelos": {
       "motor": "claude",
-      "modelo": "sonnet",
-      "effort": "high"
+      "modelo": "opus"
     },
     "personal": {
       "motor": "claude",
       "modelo": "sin modelo"
     },
     "plata": {
-      "motor": "agy",
-      "modelo": "gemini-3.8-flash",
-      "effort": "low"
+      "motor": "claude",
+      "modelo": "sin modelo"
     },
     "plata#2": {
-      "motor": "claude",
-      "modelo": "opus"
+      "motor": "agy",
+      "modelo": "agy"
     },
     "podcast": {
       "motor": "claude",
@@ -1864,7 +1862,8 @@
     },
     "tinder": {
       "motor": "claude",
-      "modelo": "fable"
+      "modelo": "sonnet",
+      "effort": "high"
     }
   },
   "modelos_agy": {

@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.622">
-<link rel="manifest" href="manifest.json?v=4.622">
+<meta name="agente-web-version" content="4.623">
+<link rel="manifest" href="manifest.json?v=4.623">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.622">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.623">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.607">
 <style id="css-listas-drag">
 #sync, #sync.oculta, #sync.off { display: none !important; }
@@ -9163,7 +9163,7 @@ function votacionSalir(){
 // listas, la info que se tenga, si se puede fotito chica mejor, por que estan ahi, y si hay alguna accion recomendada
 // [...] clickear en la accion deberia aparecer un modal con algo para ejecutar la accion o algo para hablar de eso".
 // la web NO calcula ni redacta nada: el json entero lo arma el server sin modelo (`recetas/ig_listas.py`, script del
-// daemon cada 10 min) cruzando embudo, fotos, cola de instagram, dm bajados, calendar y `personal/ESTADO.md`.
+// daemon cada 10 min) cruzando embudo, fotos, cola de instagram, calendar y `personal/ESTADO.md`.
 // el molde no se toca: la caja es la misma `.selcaja` a pantalla completa de la 1874 y el modal de la accion es
 // `modalMolde` + `moldeBoton`.
 // 2078 {home}: esto es la HOME de la vista (se entra directo aca, sin pasar por ningun selector) y es de donde
@@ -10286,7 +10286,7 @@ function stVideoCae(vd, fo, pie, dura, motivo){
 // ---------- 1948 {cartita}: la cartita de una persona (facundo, 2026-09-17) ----------
 // "hacer que cada persona de una lista sea tocable y abra SU cartita completa, y que toda persona tenga acciones".
 // la ficha es la MISMA tarjeta del votador (foto grande con `object-fit:contain`, chips, datos, bio, por que esta,
-// `te dejo de seguir`, historial y el hilo de dm) y la arma ENTERA el server (`ig_listas.ficha`): aca no se calcula
+// `te dejo de seguir` e historial) y la arma ENTERA el server (`ig_listas.ficha`): aca no se calcula
 // ni se redacta nada, ni una hora. el molde no cambia: `.capa` + `.mcaja` + la `.selcaja` de la 1874 a pantalla
 // completa, `moldeBoton` en cada accion y `esc` por la pila de capas (arriba del votador, asi el teclado no vota).
 // caso 21 {votador} (2026-10-11): la cartita de arriba NO existe mas como vista: `lisFicha` queda solo como alias
@@ -10337,12 +10337,12 @@ function lisLinea(clase, txt){
   return d;
 }
 function lisFicha(p){ return lisCartita(p); }   // caso 21: alias, nunca un modal
-// `lisAccionar` / `lisConfirmar` / `lisDraftModal` quedan: son el molde de confirmacion (`#liscmd`) que reusa
+// `lisAccionar` / `lisConfirmar` quedan: son el molde de confirmacion (`#liscmd`) que reusa
 // `lisMasivoModal`, y lo exporta `__agente`
 // lo de lectura sale directo; lo que escribe estado o toca instagram pide UNA caja verde `dale`, sin caja `no`
 function lisAccionar(p, a){
+  if(!a || a.tipo === "draft" || a.clave === "dm") return false;
   if(a.confirma === "dale") return lisConfirmar(p, a);
-  if(a.tipo === "draft") return lisDraftModal(p, a);
   if(a.tipo === "chat"){ lisEscribir(a.chat || ("sobre @" + p.cuenta + ": "), true); return true; }
   return false;
 }
@@ -10363,19 +10363,6 @@ function lisConfirmar(p, a){
     {txt: "dale", clase: "lisdale", accion: function(mm){
       if(a.comando) (accMandarFn || mandar)(a.comando, "personal", true);
       mm.cerrar();
-    }}]});
-}
-// el draft de dm queda A LA VISTA y no se manda: el ok de facundo sobre el draft es lo que autoriza (nunca esto)
-function lisDraftModal(p, a){
-  var m = lisCmdMolde();
-  var cu = document.createElement("div"); cu.className = "lisdet";
-  cu.appendChild(lisLinea("lisdetacc", "draft de dm, no se manda solo"));
-  var pre = document.createElement("pre"); pre.className = "lisdraft"; pre.textContent = a.draft || "";
-  cu.appendChild(pre);
-  return m.abrir({titulo: p.nombre || p.cuenta, cuenta: "@" + p.cuenta, cuerpo: cu, botones: [
-    {txt: "pasarlo al chat", clase: "lisachat", accion: function(mm){
-      mm.cerrar();
-      lisEscribir(a.chat || a.draft || "", true);
     }}]});
 }
 // deja el texto escrito en la pestaña `personal` SIN mandar nada; `irse` cierra el votador y va al chat
@@ -15385,6 +15372,12 @@ function gridFr(cols){
     return i === 0 ? "minmax(0," + n + "fr)" : n + "fr";
   }).join(" ");
 }
+function limpiarIgCola(w){
+  if(!w || typeof w !== "object") return w;
+  if(Array.isArray(w.frenos)) w.frenos = w.frenos.filter(function(t){ return t === "follow" || t === "unfollow"; });
+  if(Array.isArray(w.tabla)) w.tabla = w.tabla.filter(function(f){ var t = (f && (f.tipo || f.que)) || ""; return t === "follow" || t === "unfollow"; });
+  return w;
+}
 var BOARD = {
   contrato: 1,
   registrar: function(clave, api){ mods[clave] = api; delete modsError[clave]; modsCargas++; },
@@ -15408,10 +15401,13 @@ var BOARD = {
   bajar: function(arch, etag){
     if(!lan.base) return Promise.reject(new Error("sin lan"));
     // directo al endpoint, sin el respaldo a github de `api()`: un pedazo de widget no existe en el buzon
-    return apiLan("GET", "/repos/" + REPO + "/contents/" + arch, null, etag || null, "application/vnd.github.raw+json");
+    return apiLan("GET", "/repos/" + REPO + "/contents/" + arch, null, etag || null, "application/vnd.github.raw+json").then(function(r){
+      if(arch === "igcola.json" && r && r.json && r.json.igcola) limpiarIgCola(r.json.igcola);
+      return r;
+    });
   },
   datos: function(clave, v){
-    if(v){ widDatos = widDatos || {}; widDatos[clave] = v; }
+    if(v){ widDatos = widDatos || {}; widDatos[clave] = clave === "igcola" ? limpiarIgCola(v) : v; }
     if((clave === "agente" || clave === "agent") && !renderando && typeof refrescarCajas === "function") refrescarCajas();
   },
   anclado: function(fn){ anclaClavar(); try{ return fn(); } finally{ anclaSoltar(); } },
@@ -15487,7 +15483,10 @@ function soltarMod(clave){
   delete mods[clave];
   if(m && m.destruir){ try{ m.destruir(); }catch(x){} }
 }
-function modDatos(clave){ return (widDatos || {})[MOD_DATOS[clave] || clave] || {}; }
+function modDatos(clave){
+  var d = (widDatos || {})[MOD_DATOS[clave] || clave] || {};
+  return clave === "igcola" ? limpiarIgCola(d) : d;
+}
 // el html de un widget migrado; mientras no cargo, su caja dice que esta cargando (y no rompe el orden)
 function modHtml(clave){
   var m = mods[clave];
