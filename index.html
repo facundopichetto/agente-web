@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.623">
-<link rel="manifest" href="manifest.json?v=4.623">
+<meta name="agente-web-version" content="4.625">
+<link rel="manifest" href="manifest.json?v=4.625">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.623">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.625">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.607">
 <style id="css-listas-drag">
 #sync, #sync.oculta, #sync.off { display: none !important; }
@@ -7817,7 +7817,8 @@ function tjFicha(e, c){
   caja.appendChild(ch);
   if((c.datos || []).length) linea(c.datos.join(" · "), "tjfdatos");
   var mismo = function(t){ return String(t || "").trim().toLowerCase(); };
-  if(c.detalle && mismo(c.detalle) !== mismo(c.titulo) && mismo(c.detalle) !== mismo(c.cuenta)) linea(c.detalle, "tjfdet");
+  var detLimpio = limpiarTextoSinDms(c.detalle);
+  if(detLimpio && mismo(detLimpio) !== mismo(c.titulo) && mismo(detLimpio) !== mismo(c.cuenta)) linea(detLimpio, "tjfdet");
   linea(c.bio, "tjfbio");   // completa: la caja envuelve y scrollea, nunca un `…`
   // 2405 {tarjeta} paso 4 (facundo, 2026-09-28: "no pongas puntaje ni numero, no me importa a mi. eso es para vos,
   // vos mostrame info de la persona"): el puntaje y el puesto de `super candidatas` NO se pintan mas, ni aca ni en
@@ -9182,27 +9183,50 @@ var LIS_AVISO = "no pude actualizar: esto es lo último que bajó";
 var lis = {sub: "listas", datos: null, ts: 0, bajando: null, etag: null, scroll: 0, origen: null,
            una: null, unaScroll: 0, refT: null, aviso: "",
            piso: null};   // 1605 {piso}: por que el ultimo toque no abrio el votador (`vacia` / `error`)
+function limpiarTextoSinDms(s){
+  var t = String(s || "");
+  if(/charla previa|por dm|podcast-concretar|ig\s*·\s*charla/i.test(t)) return "";
+  return t;
+}
+function limpiarPersonaSinDms(p){
+  if(!p || typeof p !== "object") return p;
+  if(p.porque) p.porque = limpiarTextoSinDms(p.porque);
+  if(Array.isArray(p.acciones)) p.acciones = p.acciones.filter(function(a){ return a && a.clave !== "dm" && a.tipo !== "draft"; });
+  if(p.ficha && typeof p.ficha === "object"){
+    p.ficha.dm = "";
+    if(p.ficha.porque) p.ficha.porque = limpiarTextoSinDms(p.ficha.porque);
+    if(Array.isArray(p.ficha.chips)) p.ficha.chips = p.ficha.chips.filter(function(c){ return !/dm|podcast-concretar|charla previa/i.test(String(c || "")); });
+  }
+  return p;
+}
+function limpiarListasSinDms(d){
+  if(!d || !Array.isArray(d.listas)) return d;
+  d.listas.forEach(function(f){
+    if(f && Array.isArray(f.gente)) f.gente.forEach(limpiarPersonaSinDms);
+  });
+  return d;
+}
 function lisCacheLeer(){
   if(lis.datos) return lis.datos;
   try{
     var j = JSON.parse(localStorage.getItem(LIS_LS) || "null");
     // `ts: 0`: el cache nunca frena un refresco. `cacheTs` (paso 1) es CUANDO se bajo lo que se esta pintando:
     // un numero de hace horas es un numero erroneo, y facundo prefiere no ver ninguno
-    if(j && j.d && j.d.listas){ lis.datos = j.d; lis.ts = 0; lis.cacheTs = j.ts || 0; }
+    if(j && j.d && j.d.listas){ lis.datos = limpiarListasSinDms(j.d); lis.ts = 0; lis.cacheTs = j.ts || 0; }
   }catch(x){}
   return lis.datos;
 }
 function lisCacheGuardar(d){
   lis.cacheTs = Date.now();
-  try{ localStorage.setItem(LIS_LS, JSON.stringify({ts: lis.cacheTs, d: d})); }catch(x){}
+  try{ localStorage.setItem(LIS_LS, JSON.stringify({ts: lis.cacheTs, d: limpiarListasSinDms(d)})); }catch(x){}
 }
 function lisBajar(fresco){
   lisCacheLeer();
   if(!fresco && lis.datos && lis.ts && Date.now() - lis.ts < LIS_TTL) return Promise.resolve(lis.datos);
-  if(lis.bajando) return lis.bajando;
+  if(lis.bajando) return Promise.resolve(lis.bajando);
   lis.bajando = api("GET", "/repos/" + REPO + "/contents/" + LIS_ARCH, null, null,
                     "application/vnd.github.raw+json").then(function(r){
-    if(r.json && r.json.listas){ lis.datos = r.json; lis.ts = Date.now(); lisCacheGuardar(r.json); }
+    if(r.json && r.json.listas){ lis.datos = limpiarListasSinDms(r.json); lis.ts = Date.now(); lisCacheGuardar(lis.datos); }
     lis.aviso = "";   // 2143: contesto el server (aunque sea un 304): lo que se ve es de ahora
     return lis.datos;
   }).catch(function(){ lis.aviso = LIS_AVISO; return lis.datos; })   // 2143: queda lo cacheado, con el aviso
@@ -9863,7 +9887,7 @@ function lisUnaBajar(clave){
     // un "no hay nadie" que seria mentira
     if(!j || !j.gente){ if(lis.una && lis.una.clave === clave) lis.una.fallo = true; }
     if(!j || !j.gente || !lis.una || lis.una.clave !== clave) return false;
-    lis.una.gente = j.gente; lis.una.entera = !!j.entera; lis.una.bajando = false; lis.una.fallo = false;
+    lis.una.gente = (j.gente || []).map(limpiarPersonaSinDms); lis.una.entera = !!j.entera; lis.una.bajando = false; lis.una.fallo = false;
     lis.una.aviso = j.aviso || null;   // 2244: el motivo de la lista vacia, fresco del server
     if(lis.sub === "una") lisUnaPintar();
     return true;
@@ -9927,7 +9951,7 @@ function tjDePersona(p, f){
     privada: !!(fch.privada || p.privada),
     datos: (p.datos && p.datos.length) ? p.datos : (fch.datos || []),
     bio: bio,
-    detalle: p.porque || fch.porque || "",
+    detalle: limpiarTextoSinDms(p.porque || fch.porque || ""),
     lista: lista,
     sup: sup,
     virt: virt,
@@ -15380,7 +15404,24 @@ function limpiarIgCola(w){
 }
 var BOARD = {
   contrato: 1,
-  registrar: function(clave, api){ mods[clave] = api; delete modsError[clave]; modsCargas++; },
+  registrar: function(clave, api){
+    if(clave === "igcola" && api){
+      var origRecibir = api.recibir, origHtml = api.html, origPintar = api.pintar;
+      if(typeof origRecibir === "function"){
+        api.recibir = function(j){
+          if(j && j.igcola) limpiarIgCola(j.igcola);
+          return origRecibir.call(this, j);
+        };
+      }
+      if(typeof origHtml === "function"){
+        api.html = function(w){ return origHtml.call(this, limpiarIgCola(w)); };
+      }
+      if(typeof origPintar === "function"){
+        api.pintar = function(w, nodo){ return origPintar.call(this, limpiarIgCola(w), nodo); };
+      }
+    }
+    mods[clave] = api; delete modsError[clave]; modsCargas++;
+  },
   // lo que un modulo puede usar del shell, y nada mas
   esc: esc, it: it, caja: caja, vacio: vacio, wset: wset, limFilas: limFilas, corto: corto, pad: pad,
   gridFr: gridFr,   // 1843: las columnas de una tabla de widget, en `fr` proporcional al contenido
@@ -15548,6 +15589,7 @@ function pintarWidgets(d, err){
   }
   if(d) widDatos = d;
   d = widDatos;
+  if(d && d.igcola) limpiarIgCola(d.igcola);
   // 1883 {periodo}: lo que acaba de bajar fresco de jira manda sobre el `widgets.json` del script de 60 s
   if(d && ticFresco && Date.now() - ticFresco.t < TIC_HOLD)
     for(var kt in ticFresco.d) d[kt] = ticFresco.d[kt];
@@ -17909,7 +17951,7 @@ window.__agente = {
   lisSub: function(){ return lis.sub; },
   // {home} paso 1: meter datos a mano es lo mismo que una bajada que salio bien (fresca y sin aviso): si no, la
   // home no mostraria ningun numero, que es lo que hace cuando lo que ve es cache vieja o el server no contesto
-  lisDatos: function(d){ if(d){ lis.datos = d; lis.ts = lis.cacheTs = Date.now(); lis.aviso = ""; } return lis.datos; },
+  lisDatos: function(d){ if(d){ lis.datos = limpiarListasSinDms(d); lis.ts = lis.cacheTs = Date.now(); lis.aviso = ""; } return lis.datos; },
   // 1801: los procesos y la fila de botones de cada uno (el dropdown se fue en la 2078)
   votItems: votItems, votMenuAbrir: votMenuAbrir, tinderAbrirCol: tinderAbrirCol,
   tjInyectarPersona: tjInyectarPersona, lisAbrirCuenta: lisAbrirCuenta,

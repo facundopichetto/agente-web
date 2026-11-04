@@ -1820,8 +1820,8 @@
       "modelo": "agy"
     },
     "flos": {
-      "motor": "claude",
-      "modelo": "fable"
+      "motor": "gemini-3.8-flash",
+      "modelo": "gemini-3.8-flash"
     },
     "flos#2": {
       "motor": "agy",
