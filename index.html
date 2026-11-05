@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.625">
-<link rel="manifest" href="manifest.json?v=4.625">
+<meta name="agente-web-version" content="4.627">
+<link rel="manifest" href="manifest.json?v=4.627">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.625">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.627">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.607">
 <style id="css-listas-drag">
 #sync, #sync.oculta, #sync.off { display: none !important; }
@@ -7053,6 +7053,11 @@ function movPoner(e, c, q){
            col: e.coleccion, q: q, desde: String(desde || ""), destino: String(destino), accion: accion,
            ts: Date.now(), hasta: Date.now() + gracia, enviado: 0, ses: sel.sesion || ""};
   movLeer()[m.id] = m; movGuardar();
+  cacheSacarDe(m.col, m.desde, m.id);
+  if(m.accion === "unfollow"){
+    cacheSacarDe(m.col, "following", m.id);
+    cacheSacarDe(m.col, "following_not_followers", m.id);
+  }
   gracPintar();
   return m;
 }
@@ -7099,7 +7104,21 @@ function movPodar(d){
   Object.keys(m).forEach(function(k){
     var x = m[k], ed = enDestino[k] || {};
     var confirmado = x.desde !== x.destino ? !!ed[x.destino] : (x.accion === "unfollow" && !ed.following && !ed.following_not_followers);
-    if(confirmado || (x.enviado && ts && ts > x.enviado)){ delete m[k]; n++; }
+    if(confirmado || (x.enviado && ts && ts > x.enviado)){
+      cacheSacarDe(x.col, x.desde, k);
+      if(x.accion === "unfollow"){
+        cacheSacarDe(x.col, "following", k);
+        cacheSacarDe(x.col, "following_not_followers", k);
+      }
+      delete m[k]; n++;
+    }
+  });
+  d.listas.forEach(function(f){
+    if(!f || f.grande || !f.proceso || !f.clave || !Array.isArray(f.gente)) return;
+    var vivos = {};
+    f.gente.forEach(function(p){ if(p && p.id !== undefined) vivos[String(p.id)] = true; });
+    Object.keys(m).forEach(function(k){ if(m[k] && m[k].destino === f.clave) vivos[k] = true; });
+    cachePodarVivos(f.proceso, f.clave, vivos);
   });
   if(n){ movGuardar(); gracPintar(); }
   return n;
@@ -7282,6 +7301,38 @@ function cacheOlvidar(col, lista){
   delete filaCache[k];
   var m = selLeer("cache", {});
   if(k in m){ delete m[k]; selEscribir("cache", m); }
+}
+function cacheSacarDe(col, lista, id){
+  if(!col || !lista || id === undefined || id === null) return false;
+  var k = cacheClave(col, lista), sid = String(id), cambio = false;
+  if(Array.isArray(filaCache[k])){
+    var antes = filaCache[k].length;
+    filaCache[k] = filaCache[k].filter(function(c){ return c && String(c.id) !== sid; });
+    if(filaCache[k].length !== antes) cambio = true;
+  }
+  var m = selLeer("cache", {});
+  if(Array.isArray(m[k])){
+    var n0 = m[k].length;
+    m[k] = m[k].filter(function(c){ return c && String(c.id) !== sid; });
+    if(m[k].length !== n0){ selEscribir("cache", m); cambio = true; }
+  }
+  return cambio;
+}
+function cachePodarVivos(col, lista, vivos){
+  if(!col || !lista || !vivos) return false;
+  var k = cacheClave(col, lista), cambio = false;
+  if(Array.isArray(filaCache[k])){
+    var a0 = filaCache[k].length;
+    filaCache[k] = filaCache[k].filter(function(c){ return c && !!vivos[String(c.id)]; });
+    if(filaCache[k].length !== a0) cambio = true;
+  }
+  var m = selLeer("cache", {});
+  if(Array.isArray(m[k])){
+    var n0 = m[k].length;
+    m[k] = m[k].filter(function(c){ return c && !!vivos[String(c.id)]; });
+    if(m[k].length !== n0){ selEscribir("cache", m); cambio = true; }
+  }
+  return cambio;
 }
 function filaMarcar(col, id){
   var f = selLeer("fila", {}), ahora = Date.now(), m = f[col] = f[col] || {};
@@ -7999,7 +8050,7 @@ function tjEnFiltro(c){
     if(c.virt && c.virt.length) return c.virt.indexOf(String(sel.filtro)) >= 0;
     return String(c.lista || "") === "following";
   }
-  var l = c && c.lista;
+  var l = (m && m.destino) || (c && c.lista);
   return !l || String(l) === String(sel.filtro);
 }
 // 2134 paso 4: en la lista virtual la fila va por puntaje descendente (el `puesto` lo calcula el server)
