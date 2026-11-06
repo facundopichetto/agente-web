@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.627">
-<link rel="manifest" href="manifest.json?v=4.627">
+<meta name="agente-web-version" content="4.628">
+<link rel="manifest" href="manifest.json?v=4.628">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.627">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.628">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.607">
 <style id="css-listas-drag">
 #sync, #sync.oculta, #sync.off { display: none !important; }
@@ -2872,13 +2872,24 @@ function tecladoArriba(alto){
 // sube o baja, y reescribir `--alto` y el `transform` del body con el mismo valor forzaba un layout del board
 // entero por frame: la pantalla temblaba y el input se "desacomodaba" un instante antes de volver a su lugar.
 var vvUlt = {alto: null, off: null};
-function ajustarAlto(){
+// 4367 {viewport-al-volver} (facundo, 2026-11-04, IMG_8582: "a veces vuelvo a la app y queda asi, como que el teclado
+// se escondio pero no se estiro el viewport"): con la app de fondo ios baja el teclado sin avisar (el `resize` del
+// visualViewport y el `blur` del input no llegan, o llegan con la pestaña oculta y `vv.height` todavia viejo). al
+// volver nadie remedia, `vvUlt` decia "ya esta" y `--alto` quedaba en el alto con teclado hasta el proximo gesto.
+// `ajustarAlto(true)` es la pasada que ignora lo guardado: vacia `vvUlt` (reescribe aunque el numero sea el mismo)
+// y, si el teclado ya no esta (el input sin foco: nada puede tener el teclado abierto), estira al alto completo de
+// la ventana, sin `transform` y sin `body.teclado`. con el input con foco se confia en el viewport visible, que
+// las pasadas siguientes van a ver ya actualizado.
+function altoCompleto(v){ return Math.max(window.innerHeight || 0, (v && v.height) || 0); }
+function ajustarAlto(forzar){
   var v = vvActual();
   if(!v) return;
   trabarScroll();
+  if(forzar === true) vvUlt = {alto: null, off: null};
   var alto = v.height;
   // lo que queda de desplazamiento del viewport visible dentro del layout viewport
   var off = v.offsetTop || 0;
+  if(forzar === true && document.activeElement !== txt){ alto = altoCompleto(v); off = 0; }
   if(alto !== vvUlt.alto){ document.documentElement.style.setProperty("--alto", alto + "px"); vvUlt.alto = alto; }
   if(off !== vvUlt.off){ document.body.style.transform = off ? "translateY(" + off + "px)" : ""; vvUlt.off = off; }
   // teclado arriba: ios sigue reservando el safe-area de abajo y queda una franja negra entre el
@@ -2914,6 +2925,22 @@ if(txt){
 }
 // rotar el celu cambia el ancho: `tecladoArriba` arranca una base nueva en la primera medicion con el ancho nuevo
 window.addEventListener("orientationchange", remedirEnTandas);
+// 4367 {viewport-al-volver}: al volver a la app (foco de la ventana, `pageshow`, la pestaña que vuelve a verse) se
+// remide en varias pasadas cortas: la primera ignorando el valor guardado y estirando si no hay teclado, las
+// siguientes normales, porque ios termina de acomodar el viewport unos cientos de ms despues de volver.
+var vvVolver = [];
+function remedirAlVolver(){
+  if(document.hidden) return;
+  vvVolver.forEach(clearTimeout); vvVolver = [];
+  vvTandas.forEach(clearTimeout); vvTandas = [];
+  var p = pegadoAbajo(); ajustarAlto(true); if(p) abajo();
+  [60, 120, 250, 400, 800].forEach(function(ms){
+    vvVolver.push(setTimeout(function(){ var q = pegadoAbajo(); ajustarAlto(true); if(q) abajo(); }, ms));
+  });
+}
+window.addEventListener("focus", remedirAlVolver);
+window.addEventListener("pageshow", remedirAlVolver);
+document.addEventListener("visibilitychange", function(){ if(!document.hidden) remedirAlVolver(); });
 
 // urls clickeables (facundo, 2026-09-12: abrio una url de oauth cortada antes de `&state=` y claude.com
 // le dijo "Missing state parameter"). el texto YA viene escapado, asi que `&` llega como `&amp;` y va
@@ -18571,6 +18598,7 @@ window.__agente = {
   // `#hist` y volver al fondo solo si ya estaba ahi (1657 {pelado})
   stubVV: function(v){ var p = pegadoAbajo(); vvStub = v || null; ajustarAlto(); if(p) abajo(); },
   ajustarAlto: ajustarAlto,
+  remedirAlVolver: remedirAlVolver,
   viewportInfo: function(){          // donde quedaron el body y el pie respecto del viewport visible
     var p = $("pie").getBoundingClientRect(), v = vvActual() || {height: window.innerHeight, offsetTop: 0};
     return {alto: getComputedStyle(document.documentElement).getPropertyValue("--alto").trim(),
