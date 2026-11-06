@@ -1816,12 +1816,13 @@
       "modelo": "opus"
     },
     "board": {
-      "motor": "agy",
-      "modelo": "agy"
+      "motor": "claude",
+      "modelo": "sonnet",
+      "effort": "high"
     },
     "flos": {
       "motor": "agy",
-      "modelo": "gemini-4-argon"
+      "modelo": "agy"
     },
     "flos#2": {
       "motor": "agy",
@@ -1842,7 +1843,7 @@
     },
     "personal": {
       "motor": "claude",
-      "modelo": "fable"
+      "modelo": "sin modelo"
     },
     "plata": {
       "motor": "claude",
@@ -1862,9 +1863,8 @@
       "modelo": "fable"
     },
     "tinder": {
-      "motor": "claude",
-      "modelo": "sonnet",
-      "effort": "high"
+      "motor": "agy",
+      "modelo": "agy"
     }
   },
   "modelos_agy": {

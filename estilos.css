@@ -1648,9 +1648,9 @@
      ancho de la caja (`fr`, nunca `max-content` que deja hueco a la derecha). el valor exacto lo pone el widget
      con `B.gridFr` segun lo que hay en cada columna; esto es el default con el ancho fijo de `08:49:12 pm` (11)
      y `0:04:12` (7). el nombre sigue siendo el unico que se achica (`minmax(0,...)`): sin scroll horizontal. */
-  /* 1862 {cola}: seis columnas, `delay` (7, `0:04:12`) entre `pedida` e `iniciada` */
+  /* 6155 {cola-sin-delay} (facundo, 2026-11-06): cinco columnas, se fue `delay` (1862) de entre `pedida` e `iniciada` */
   /* 3553: tipografia achicada 2px a 12px (facundo, 2026-10-12) */
-  .qtab{display:grid;grid-template-columns:minmax(0,14fr) 11fr 7fr 11fr 7fr 11fr;width:100%;
+  .qtab{display:grid;grid-template-columns:minmax(0,14fr) 11fr 11fr 7fr 11fr;width:100%;
         column-gap:4px;row-gap:1px;white-space:nowrap;font-size:12px;line-height:1.6;max-width:100%}
   .qtab .it{display:contents}
   .qtab .qth{color:var(--gris);font-size:12px;letter-spacing:.3px;opacity:.75}
@@ -1753,7 +1753,7 @@
   .qtab .qforz:hover{border-color:var(--cian)}
   .qtab .qforz:disabled{opacity:.5;cursor:default}
   @media (pointer:coarse){ .qtab .qforz{padding:3px 10px;min-height:35px} }
-  /* 1862: con la sexta columna (`delay`) las cinco horas ocupan mas: la tabla baja a 11.5px (1938: era 9.5) y 4px de gap tambien
+  /* 1862: con la sexta columna (`delay`, ya ida en la 6155) las cinco horas ocupaban mas: la tabla baja a 11.5px (1938: era 9.5) y 4px de gap tambien
      en la compu (antes 10.5/7, solo el celu bajaba), asi el nombre sigue teniendo lugar y no se corta con `…`;
      en 390 px baja un poco mas */
   @media (max-width:430px){ .qtab{font-size:12px;column-gap:2px} }   /* 2014: 3 -> 2, el gap es el lever de la 1946; 3553: 12px */
@@ -2283,7 +2283,7 @@
   #tabs .tab{
     flex:0 0 auto;min-width:60px;background:#000;color:var(--gris);border:0;
     border-radius:4px 4px 0 0;padding: 3px 12px;font:inherit;font-size:12px;cursor:pointer;
-    white-space:nowrap;display:inline-flex;align-items: flex-start;
+    white-space:nowrap;display:block;text-align:left;
     letter-spacing:normal;font-weight:100;
   }
   @media (min-width:900px) and (min-aspect-ratio: 1/1){
@@ -2327,17 +2327,25 @@
     color:inherit;font:inherit;font-size:12px;padding:0;margin:0;min-width:5em;max-width:14em;
     outline:0;caret-color:var(--verde);letter-spacing:inherit;font-weight:100;
   }
-  #tabs .tab .mas{
-    display:inline-flex;align-items:center;justify-content:center;
-    width:22px;height:22px;color:#555;margin-left:5px;font-size:calc(var(--icono-max) + 4px);line-height:1;font-weight:normal;
-    transform:translateY(-2px);
+  /* 6167 {centrado-pestanas} (facundo, 2026-11-06: "esto deberia estar todo exactamente centrado verticalmente.
+     + y x estan mas arriba, y el ultimo + principal mas abajo"): los glifos `+` y `×` de la fuente tienen cada
+     uno su tinta a otra altura (y distinta en cada fuente), asi que ningun `translateY` a mano los alinea. el
+     texto del span queda (font-size 0, sigue siendo el textContent) y el dibujo es css: dos barras de 2 px en
+     `currentColor`, la `×` es el `+` girado 45°. lo que los centra es `vertical-align:middle` adentro de la
+     linea de la pestaña: el medio de la caja cae a media altura de las minusculas del texto, con cualquier
+     fuente. con el padding de 5 px la caja mide 22 px (para tocar), la linea queda en 22 y la pestaña en 28,
+     el mismo alto que antes, con los iconos justo en el medio de la pestaña. */
+  #tabs .mas,#tabs .x{
+    display:inline-block;vertical-align:middle;box-sizing:content-box;width:22px;height:12px;padding:5px 0;
+    margin:0 0 0 5px;font-size:0;line-height:0;color:#555;
+    background:linear-gradient(currentColor,currentColor) center/10px 2px no-repeat,
+               linear-gradient(currentColor,currentColor) center/2px 10px no-repeat;
   }
-  #tabs .tab .x{
-    display:inline-flex;align-items:center;justify-content:center;
-    width:22px;height:22px;color:#555;margin-left:5px;margin-right:-3px;font-size:calc(var(--icono-max) + 9px);line-height:1;font-weight:normal;
-    transform:translateY(-2px);
+  #tabs .x{
+    margin-right:-3px;transform:rotate(45deg);
+    background-size:12px 2px,2px 12px;
   }
-  #tabs .tab .mas + .x{margin-left:1px}
+  #tabs .tab .mas + .x{margin-left:-5px}
   #tabs .tab.activo .mas,#tabs .tab.activo .x{color:var(--gris)}
   #tabs .tab .mas:hover,#tabs .tab .x:hover{color:var(--verde)}
   /* 2097 {pestanas}: con la pestaña en 56.8 px un boton de 27.7 px flotando 3 px arriba del piso quedaba
@@ -2346,11 +2354,14 @@
      cada vez que cambia el padding de `.tab`.
      3556 {pestanas-ajustes-completos}: boton nueva pestana sin borde, fondo transparente, color #888 y glifo 22px
      igual que crear subpestana pero mas claro. */
+  /* 6167 {centrado-pestanas}: el `+` principal es una pestaña sin texto: mismo padding vertical, misma letra y
+     mismo alto de linea que `.tab`, asi su `span.mas` cae en la misma linea base que los de las pestañas. */
   #tabs .barrabtn{
-    flex:0 0 auto;height: 24.5px;background:transparent;color:#888;border:0;
-    border-radius:4px;padding:0;font:inherit;font-size:calc(var(--icono-max) + 4px);line-height:1;cursor:pointer;white-space:nowrap;
-    margin:0 0 0 4px;display:inline-flex;align-items:center;justify-content:center;width:22px;
+    flex:0 0 auto;background:transparent;color:#888;border:0;
+    border-radius:4px;padding:3px 0;font:inherit;font-size:12px;cursor:pointer;white-space:nowrap;
+    margin:0 0 0 4px;display:block;width:22px;
   }
+  #tabs .barrabtn .mas{margin-left:0;color:inherit}
   #tabs .barrabtn:hover{color:var(--verde)}
   #tabs .barrabtn:active{background:transparent}
   /* + de pestaña nueva sin borde (facundo, 2026-09-15, orden 1557): el 1px vuelve al padding, mismo alto */
@@ -2661,16 +2672,15 @@
 /* ---------- {pulida-mobile} (facundo, 2026-10-14, captura del iphone): cola, modelos y tickets cx ----------
    1) cola: las palabras (`pedida`, `tiempo`) y las horas no se parten nunca: la causa era `word-break:break-word`
       que hereda de `.caja .cuerpo` mas el `white-space:normal` de `.qcel`. el boton `forzar` no baja de su ancho.
-      en el celu se esconden `delay` (3a columna) y `tiempo` (5a) y quedan nombre, pedida, iniciada y terminó:
-      el grid inline de `B.gridFr` es de seis columnas, por eso el override lleva `!important`. */
+      en el celu se esconde `tiempo` (4a columna; 6155: `delay` ya no existe) y quedan nombre, pedida, iniciada y
+      terminó: el grid inline de `B.gridFr` es de cinco columnas, por eso el override lleva `!important`. */
 .qtab .qth,.qtab .qth.qtiempo,.qtab .qcel{white-space:nowrap;word-break:normal;overflow-wrap:normal;
                                           min-width:0;overflow:hidden;text-overflow:ellipsis}
 .qtab .qcel.a{white-space:normal;word-break:normal;overflow-wrap:normal}
 .qtab .qforz{white-space:nowrap;word-break:normal;min-width:62px;writing-mode:horizontal-tb;text-align:center}
 @media (max-width:430px){
   .qtab{grid-template-columns:minmax(0,1fr) auto auto auto !important;column-gap:10px}
-  .qtab > .qth:nth-child(3),.qtab > .qth:nth-child(5),
-  .qtab .it > :nth-child(3),.qtab .it > :nth-child(5){display:none}
+  .qtab > .qth:nth-child(4),.qtab .it > :nth-child(4){display:none}
   .qtab .qcel.a{white-space:nowrap;max-width:12ch;text-overflow:ellipsis}
 }
 /* 2) modelos: aire entre el texto y las barras (el renglon `gsec` iba pegado con margen -1px) */
@@ -2717,7 +2727,7 @@ body #dd .ddtoggle{flex:0 0 auto;height:auto;min-width:40px;padding:0 10px;font-
 body #dd .ddhijos{display:flex;flex-direction:row;flex-wrap:wrap;align-items:stretch;gap:5px;padding:0 0 0 10px;margin:0 0 0 8px;border-left:1px solid var(--linea);white-space:normal;flex:0 0 auto}
 body #dd .ddsubop{flex:0 1 auto;max-width:100%;overflow:hidden;text-overflow:ellipsis;padding:7px 10px}
 body #dd .ddgrupo.colapsado .ddhijos{display:none}
-body #tabs .barrabtn{height:auto;align-self:stretch}
+body #tabs .barrabtn{height:auto}
 body #cabecera #nodos{gap:14px}
 @media (max-width:420px){
   body #cabecera #nodos{gap:9px}

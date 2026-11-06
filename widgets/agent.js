@@ -33,8 +33,9 @@
   }
   // 1792: una fila de la tabla de la cola. las horas y las duraciones ya vienen armadas del server
   // (`recetas/cola_tiempos.py`): aca no se calcula ninguna, solo se pintan. la unica excepcion (1849 {fluida}) es
-  // el `tiempo` de la que corre y el `delay` de la que espera, que el reloj de abajo hace avanzar segundo a segundo
-  // desde el `dur_s` / `delay_s` del server (3635).
+  // el `tiempo` de la que corre, que el reloj de abajo hace avanzar segundo a segundo desde el `dur_s` del server.
+  // 6155 {cola-sin-delay} (facundo, 2026-11-06: "sacame la columna delay del widget QUEUE"): la columna `delay`
+  // (1862, 3635) se fue de la cabecera, de las filas y del ancho de las columnas.
   var QCLASE = {hecha: "qpaso", fallo: "qfallo", corriendo: "qcorre", corre: "qcorre", cola: "qcola", borrada: "qborrada"};
   function qCelda(cl, v, mas, attrs){
     return '<span class="' + cl + " qcel qh" + (mas || "") + '"' + (attrs || "") + '>' + esc(v || "") + "</span>";
@@ -68,8 +69,6 @@
       (f.veces > 1 ? ' <span class="g" title="' + esc(f.veces + ' ordenes con este nombre, juntas en una fila') + '">×' +
                      esc(String(f.veces)) + "</span>" : "") + "</span>" +
       qCelda(cl, qFmtHora(f.pedida)) +
-      qCelda(cl, pend && f.delay_vivo ? delayVivo(f) : f.delay, pend && f.delay_vivo ? " qvivo" : "",
-             pend && f.delay_vivo ? ' data-k="delay" data-n="' + esc(String(f.n)) + '"' : "") +
       (pend ? qEsperaCelda(f) : qCelda(cl, qFmtHora(f.iniciada))) +
       qCelda(cl, corre ? durVivo(f) : f.dur, corre ? " b qvivo" : "", corre ? ' data-k="dur" data-n="' + esc(String(f.n)) + '"' : "") +
       (pend ? qForzarCelda(f) : qCelda(cl, qFmtHora(f.termino))));
@@ -79,7 +78,6 @@
   function qTxtFin(f){ return f.estado === "cola" ? (f.forzada || !f.espera ? "" : "forzar") : qFmtHora(f.termino); }
   function qCabecera(){
     return '<span class="qth qnom">nombre</span><span class="qth qcel">pedida</span>' +
-           '<span class="qth qcel">delay</span>' +          // 1862: lo que espero de `pedida` a `iniciada`
            '<span class="qth qcel">iniciada</span>' +       // 2202: en una pendiente, por que espera
            '<span class="qth qcel qtiempo">tiempo</span>' +
            '<span class="qth qcel">terminó</span>';
@@ -105,14 +103,13 @@
            B.limFilas("agent", ps.map(pFila)).join("") + "</div>";
   }
   function cajaAgente(a){
-    var corr = a.corriendo || [], tabla = a.tabla || [];
+    var tabla = a.tabla || [];
     var verCola = wset("agent", "cola");
     var filas = tabla.filter(function(f){ return verCola || f.estado !== "cola"; }).map(qFila);
     filas = B.limFilas("agent", filas);
     // 1843: columnas `fr` proporcionales a lo que hay en cada una, para ocupar el 100% del ancho de la caja
     var vis = tabla.filter(function(f){ return verCola || f.estado !== "cola"; });
     var cols = [vis.map(function(f){ return f.nombre || ("" + f.n); }), vis.map(function(f){ return qFmtHora(f.pedida); }),
-                vis.map(function(f){ return f.delay; }),
                 vis.map(qTxtEspera), vis.map(function(f){ return f.dur; }),
                 vis.map(qTxtFin)];
     var prog = a.programadas || [];
@@ -123,24 +120,20 @@
     cuerpo += secProgramadas(prog);
     // 2671 {encolo-2}: el pie lo arma el server (`cola_filas.pie`) y nunca viene vacio
     cuerpo += '<div class="g igpie">' + esc(a.pie || "sin novedades de la cola") + "</div>";
-    // dato esencial, corto para que entre en el celu: la cuenta, cuantas corren (verde) y +las que esperan.
-    // 1915 {widgets}: la cuenta la manda el server ya resuelta (`cuenta_cola`): la que de verdad puede tomar
-    // trabajo, o `sin cuenta hasta <hora>` si ninguna puede. la web no decide nada ni arma esa hora.
+    // 6155 {cola-sin-delay} (facundo, 2026-11-06: "sacame ... todo lo que está con texto 'facundo blabla' en el
+    // titulo"): el titulo dice `queue` y nada mas. la cuenta (`facundo`), cuantas corren, el `+N` y las
+    // programadas ya estan en la tabla y en el pie; arriba queda solo lo que es una alarma: `sin cuenta hasta
+    // <hora>` (1915 {widgets}, lo manda el server ya resuelto), `PAUSA` y el desfase de la 3814.
     var sinCta = !!((a.cuenta_cola || {}).sin_cuenta);
-    var ese = '<span class="' + (sinCta ? "r" : "c") + ' b">' + esc(a.cuenta || "?") + "</span> " +
-              (a.pausa ? '<span class="r b">PAUSA</span>'
-                       : corr.length ? '<span class="v b">' + corr.length + "</span>" : '<span class="g">idle</span>') +
-              (a.pendientes ? ' <span class="qcola">+' + a.pendientes + "</span>" : "") +
-              // 2368 {hora}: las programadas no son cola de ahora, asi que se cuentan aparte del `+N`
-              (prog.length ? ' <span class="g">· ' + prog.length + " programada" + (prog.length === 1 ? "" : "s") +
-                             "</span>" : "") +
+    var ese = (sinCta ? '<span class="r b">' + esc(a.cuenta || "sin cuenta") + "</span> " : "") +
+              (a.pausa ? '<span class="r b">PAUSA</span>' : "") +
                viejoHtml();   // 3814 {cola-sin-desfase}: si no se confirma contra el server, la caja lo dice
     return caja("queue", ese, cuerpo, false, "agent");
   }
 
   // ---------- 1849 {fluida} (facundo, 2026-09-17: "la lista de queue tiene que ser fluida, actualizar el tiempo
   // cada segundo y ni bien entra una orden nueva meterla") ----------
-  // (1) el `tiempo` (antes `delta`) de la que corre y el `delay` de la que espera (3635) avanzan cada segundo aca, sin pedirle nada al server: el server manda `dur_s`
+  // (1) el `tiempo` (antes `delta`) de la que corre avanza cada segundo aca, sin pedirle nada al server: el server manda `dur_s`
   //     (lo que llevaba) y `ahora` (su epoch en ese instante); el reloj del cliente se corrige con `offset`
   //     (reloj cliente - reloj server, el minimo visto: la latencia solo lo agranda), asi no salta si el celu
   //     tiene la hora corrida. se toca SOLO el textContent de esa celda: ni el grid ni el ancla del chat.
@@ -181,25 +174,18 @@
     var s = segVivo(f);
     return s === null ? (f.dur || "") : durCol(Math.max(s, f.dur_s || 0));
   }
-  // 3635: el `delay` de una pendiente es lo que lleva esperando desde `pedida`; corre igual que el `tiempo`
-  function delayVivo(f){
-    if(!vivo.base || f.delay_s === null || f.delay_s === undefined) return f.delay || "";
-    var s = f.delay_s + (Date.now() / 1000 - (vivo.offset || 0) - (vivo.base.ahora || 0));
-    return durCol(Math.max(s, f.delay_s));
-  }
   function nodoCaja(){ return document.querySelector('#widgets [data-w="agent"]'); }
-  // el reloj de 1 s: solo el textContent de la celda `tiempo` de cada fila que corre y del `delay` de cada pendiente
+  // el reloj de 1 s: solo el textContent de la celda `tiempo` de cada fila que corre
   function contar(){
     var nodo = nodoCaja();
     if(!nodo || !vivo.base) return;
     marcarViejo();
     if(esViejo()) return;   // 3814 {cola-sin-desfase}: sobre datos sin confirmar el reloj no corre (parecerian vivos)
     (vivo.base.tabla || []).forEach(function(f){
-      var corre = f.estado === "corriendo", pendv = f.estado === "cola" && f.delay_vivo;
-      if(!corre && !pendv) return;
-      var c = nodo.querySelector('.qvivo[data-k="' + (corre ? "dur" : "delay") + '"][data-n="' + String(f.n).replace(/"/g, "") + '"]');
+      if(f.estado !== "corriendo") return;
+      var c = nodo.querySelector('.qvivo[data-k="dur"][data-n="' + String(f.n).replace(/"/g, "") + '"]');
       if(!c) return;
-      var t = corre ? durVivo(f) : delayVivo(f);
+      var t = durVivo(f);
       if(t && c.textContent !== t) c.textContent = t;
     });
   }
