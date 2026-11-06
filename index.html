@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.628">
-<link rel="manifest" href="manifest.json?v=4.628">
+<meta name="agente-web-version" content="4.629">
+<link rel="manifest" href="manifest.json?v=4.629">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.628">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.629">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.607">
 <style id="css-listas-drag">
 #sync, #sync.oculta, #sync.off { display: none !important; }
@@ -9304,7 +9304,20 @@ function lisBajar(fresco){
   if(lis.bajando) return Promise.resolve(lis.bajando);
   lis.bajando = api("GET", "/repos/" + REPO + "/contents/" + LIS_ARCH, null, null,
                     "application/vnd.github.raw+json").then(function(r){
-    if(r.json && r.json.listas){ lis.datos = limpiarListasSinDms(r.json); lis.ts = Date.now(); lisCacheGuardar(lis.datos); }
+    if(r.json && r.json.listas){
+      var prevMap = {};
+      if(lis.datos && Array.isArray(lis.datos.listas)){
+        lis.datos.listas.forEach(function(x){ if(x && x.clave) prevMap[x.clave] = x.n !== undefined ? x.n : x.total; });
+      }
+      var nuevo = limpiarListasSinDms(r.json);
+      nuevo.listas.forEach(function(x){
+        var xn = x && (x.n !== undefined ? x.n : x.total);
+        if(x && x.clave && prevMap[x.clave] !== undefined && prevMap[x.clave] !== xn){
+          delete filaCache[x.clave];
+        }
+      });
+      lis.datos = nuevo; lis.ts = Date.now(); lisCacheGuardar(lis.datos);
+    }
     lis.aviso = "";   // 2143: contesto el server (aunque sea un 304): lo que se ve es de ahora
     return lis.datos;
   }).catch(function(){ lis.aviso = LIS_AVISO; return lis.datos; })   // 2143: queda lo cacheado, con el aviso
@@ -9616,7 +9629,11 @@ function lisVotables(f){
   if(selArranca(f.proceso) && !cacheTiene(f.proceso, f.clave)) return null;
   var e = (sel.abiertas || []).filter(function(a){ return a.coleccion === f.proceso; })[0];
   if(!e) return null;
-  return tjFilaFiltrada(e, f.clave).length;
+  var n = tjFilaFiltrada(e, f.clave).length;
+  if(!n && !cacheTiene(f.proceso, f.clave) && String(e.lista || "") !== String(f.clave) &&
+     ((typeof e.pendientes === "number" && e.pendientes > (e.candidatas || []).length) ||
+      (e.circular === false && tjListaCircular(f.clave) && f.proceso !== "ig-embudo"))) return null;
+  return n;
 }
 // el numero del renglon de arriba de la caja. el server manda (es el total de la lista, que es lo que el votador
 // continuo recorre: la fila rota y pide mas, 2140), con UNA correccion: si la fila de esa lista esta cargada y no
@@ -15737,6 +15754,7 @@ function refrescarWidgets(clave){
   if(b) b.classList.add("girando");
   etagWid = null;
   if(clave === "agent") colaReanudar();   // 3814: el `[↻]` de la cola tambien la pide fresca por la lan
+  if(clave && mods[clave] && typeof mods[clave].pedir === "function"){ try{ mods[clave].pedir(); }catch(x){} }
   function listo(){
     refrescando = false;
     var n = document.querySelector('#widgets [data-ref="' + (clave || "").replace(/"/g, "") + '"]');
