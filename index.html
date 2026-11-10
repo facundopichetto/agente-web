@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.630">
-<link rel="manifest" href="manifest.json?v=4.630">
+<meta name="agente-web-version" content="4.631">
+<link rel="manifest" href="manifest.json?v=4.631">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.630">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.631">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.607">
 <style id="css-listas-drag">
 #sync, #sync.oculta, #sync.off { display: none !important; }
@@ -4566,6 +4566,20 @@ function conHoras(est, letras, ts){
   letras.split("").forEach(function(l){ h[l] = (est.h || {})[l] || ts; });
   return h;
 }
+// 6256 {aislar-cajas-marcadas-pestanas}: una caja se marca solo con lo de SU pestaña o subpestaña exacta. `deEstaTab` deja
+// pasar la sub al padre (la charla del padre muestra a sus subs), pero marcar una caja con una orden de otra sub o de
+// otro tema es el cruce: ahi manda la igualdad de `normTema`. sin dato de pestaña de un lado no se puede decir que
+// es otra, y se deja pasar solo si NO hay nada que comparar.
+function mismaPestana(a, b){
+  a = normTema(a || ""); b = normTema(b || "");
+  return !a || !b || a === b;
+}
+// la pestaña de una fila de la cola: `[pestana x]` de la orden, si no su `tema x:`, si no el `tema` de la fila
+function pestanaDeFilaCola(f){
+  var c = String((f && (f.completo || f.texto)) || "");
+  var mp = /\[pestana\s+([\w\/#-]+)\]/i.exec(c) || /(?:^|\s)tema\s+([\w\/#-]+)\s*:/i.exec(c);
+  return normTema((mp && mp[1]) || (f && f.tema) || "");
+}
 function estadoDeducido(m){
   var i = msgs.indexOf(m), est = {l: "", ts: 0, h: {}};
   if(i < 0) return est;
@@ -4578,6 +4592,8 @@ function estadoDeducido(m){
     if(x.clase !== "yo") continue;
     var oc = ordenCajaMsg(x.texto);
     if(oc){
+      // 6256: una orden mandada para otra pestaña o sub (o desde otra) nunca marca la caja de esta
+      if(!mismaPestana(oc.tema || x.tema, tema)) continue;
       var tsO = fecha(x.iso) || j;
       if(j < i && (!tsM || !tsO || Math.abs(tsO - tsM) > 300000)) continue;
       var opsO = o.lista.filter(function(op){
@@ -4671,6 +4687,7 @@ function estadoDeducido(m){
             var compF = String(f.completo || f.texto || "");
             var coincide = (nomF && nomF === sl) || (compF && compF.toLowerCase().indexOf("{" + sl + "}") >= 0);
             if(!coincide) continue;
+            if(!mismaPestana(pestanaDeFilaCola(f), tema)) continue;   // 6256: la fila de la cola es de otra pestaña
             var mLet = /facundo toc[oó] la caja ([A-P])\b/i.exec(compF);
             if(mLet && mLet[1].toUpperCase() !== op.letra) continue;
             var tsPed = fecha(f.pedida_ts || f.iniciada_ts || "");
@@ -18863,7 +18880,8 @@ window.__agente = {
   alternarTema: alternarTema,
   temaActual: function(){ return temaActual; },
   mod: function(clave){ return mods[clave] || null; },   // 1849: la prueba le habla al modulo (`recibir`, `vivo`)
-  widDatos: function(){ return widDatos; }, visibleForzar: function(v){ visibleForzada = !!v; },
+  widDatos: function(){ return widDatos; }, widDatosPoner: function(d){ widDatos = d; },   // 6256: las pruebas plantan la cola viva
+  visibleForzar: function(v){ visibleForzada = !!v; },
   scrollTabActiva: scrollTabActiva,
   modHtml: modHtml, partes: function(){ return {vistas: partesVistas, ult: partesUlt}; },
   ponerPartes: function(p){ partesVistas = p || null; },
