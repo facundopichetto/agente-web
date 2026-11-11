@@ -1799,8 +1799,7 @@
   "ultimos": {
     "awtomic": {
       "motor": "agy",
-      "modelo": "gemini-4-argon",
-      "effort": "low"
+      "modelo": "agy"
     },
     "awtomic#100": {
       "motor": "claude",
@@ -1833,8 +1832,8 @@
       "effort": "high"
     },
     "flos": {
-      "motor": "agy",
-      "modelo": "agy"
+      "motor": "claude",
+      "modelo": "sonnet"
     },
     "flos#2": {
       "motor": "agy",
@@ -1850,8 +1849,8 @@
       "modelo": "sin modelo"
     },
     "modelos": {
-      "motor": "agy",
-      "modelo": "agy"
+      "motor": "claude",
+      "modelo": "sonnet"
     },
     "personal": {
       "motor": "agy",

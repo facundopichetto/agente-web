@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.631">
-<link rel="manifest" href="manifest.json?v=4.631">
+<meta name="agente-web-version" content="4.632">
+<link rel="manifest" href="manifest.json?v=4.632">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.631">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.632">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.607">
 <style id="css-listas-drag">
 #sync, #sync.oculta, #sync.off { display: none !important; }
@@ -5326,6 +5326,44 @@ function podarNodoCache(){
   ks.sort(function(a, b){ return (nodoCache[a].__visto || 0) - (nodoCache[b].__visto || 0); });
   ks.slice(0, ks.length - NODO_CACHE_TOPE).forEach(function(k){ delete nodoCache[k]; });
 }
+// registro de salidas (facundo, 2026-11-10, qd3d): una respuesta entera y sus cajas desaparecieron del chat y
+// no hubo con que saber por que. cada vez que `sincronizarLista` saca de la pestaña ACTIVA una fila que ya
+// estaba pintada (y que no se rehace en el mismo render) deja una linea: cuando, la pestaña, cuantas filas
+// habia antes y cuantas quedaron, el motivo de cada fila y de que llamada vino el repintado. es local: ni
+// red ni tokens, vive en memoria y en `localStorage` (`agente_reg_salidas`), con tope. cambiar de pestaña
+// saca las filas de la otra a proposito y no cuenta. se lee con `__agente.registroSalidas()`.
+var REG_SAL_TOPE = 120, REG_SAL_LS = "agente_reg_salidas", regSalidas = [], regTabVista = null;
+try{ regSalidas = JSON.parse(localStorage.getItem(REG_SAL_LS) || "[]"); if(!Array.isArray(regSalidas)) regSalidas = []; }
+catch(x){ regSalidas = []; }
+function regOrigen(){
+  try{
+    return String(new Error().stack || "").split("\n").slice(2).map(function(l){
+      var m = /at\s+([^\s(]+)/.exec(l); return m ? m[1] : "";
+    }).filter(function(n){ return n && n.indexOf("/") < 0 && n !== "sincronizarLista" && n !== "regSalida" && n !== "regOrigen" && n !== "renderYa" && n !== "Object.perfMedir" && n !== "perfMedir" && !/^(Object\.)?(anonymous|<anonymous>)$/.test(n); })
+      .slice(0, 4).join(" < ");
+  }catch(x){ return ""; }
+}
+function regMotivo(k, tab, firma){
+  var m = null;
+  for(var i = 0; i < msgs.length; i++){ if(claveNodo(msgs[i]) === k){ m = msgs[i]; break; } }
+  if(!m) return "fuera-de-msgs";
+  if(firma && firmaMsg(m) !== firma) return "clave-ahora-de-otra-fila";   // el id es posicional: sacar una fila corre las demas
+  if(m.clase === "yo" && esMensajeCaja(m.texto)) return "mensaje-de-caja";
+  if(!deEstaTab(m.tema, tab)) return "otra-pestana:" + normTema(m.tema || "");
+  return "filtrada";
+}
+function regSalida(tab, antes, despues, nodos){
+  try{
+    var filas = nodos.map(function(n){
+      var k = n.dataset.clave, t = (n.__msg && n.__msg.texto) || (n.textContent || "");
+      return {clave: k, motivo: regMotivo(k, tab, n.dataset.firma), texto: String(t).replace(/\s+/g, " ").slice(0, 60)};
+    });
+    regSalidas.push({ts: Date.now(), tab: tab, antes: antes, despues: despues, filas: filas.slice(0, 8),
+                     sacadas: filas.length, origen: regOrigen()});
+    if(regSalidas.length > REG_SAL_TOPE) regSalidas = regSalidas.slice(-REG_SAL_TOPE);
+    try{ localStorage.setItem(REG_SAL_LS, JSON.stringify(regSalidas)); }catch(x){}
+  }catch(x){}
+}
 function sincronizarLista(){
   if(!lista) return;
   var vis = msgsVisibles();
@@ -5348,11 +5386,18 @@ function sincronizarLista(){
   // lo que sobra: cualquier burbuja del dom que no este en la lista deseada. se marca la deseada con un sello
   // de este render en vez de buscarla, y no se mira la clave: dos nodos pueden traer la MISMA clave (el mensaje
   // cambio y se rehizo su nodo) y el viejo tambien tiene que salir.
-  var sacados = 0, sello = ++renderSello;
-  quiero.forEach(function(n){ n.__sello = sello; });
+  var sacados = 0, sello = ++renderSello, tabReg = temaActivo(), perdidas = [];
+  var antesReg = lista.querySelectorAll(".msg[data-clave]").length;
+  var claves = {};
+  quiero.forEach(function(n){ n.__sello = sello; claves[n.dataset.clave] = true; });
   [].forEach.call(lista.querySelectorAll(".msg[data-clave]"), function(n){
-    if(n.__sello !== sello){ lista.removeChild(n); sacados++; }      // sale del dom, queda en `nodoCache`
+    if(n.__sello !== sello){
+      if(!claves[n.dataset.clave]) perdidas.push(n);                 // una fila que se rehace con la misma clave no se fue
+      lista.removeChild(n); sacados++;      // sale del dom, queda en `nodoCache`
+    }
   });
+  if(perdidas.length && regTabVista === tabReg) regSalida(tabReg, antesReg, quiero.length, perdidas);
+  regTabVista = tabReg;
   podarNodoCache();
   // el orden: se camina la lista deseada contra la real y solo se mueve lo que no coincide
   var cur = lista.firstChild, movidos = 0;
@@ -18839,6 +18884,8 @@ window.__agente = {
                            msgs = []; nodoCache = {}; vuelos = {}; vuelosHidratando = {}; vueloTerminar(); render(); },
   // 2149 {pestana}: los contadores del board (ms del ultimo render y del ultimo cambio de pestaña, nodos
   // construidos vs reusados). `prueba_web_render` mide con esto, sin tocar el dom.
+  registroSalidas: function(){ return JSON.parse(JSON.stringify(regSalidas)); },
+  registroBorrar: function(){ regSalidas = []; regTabVista = null; try{ localStorage.removeItem(REG_SAL_LS); }catch(x){} },
   perf: function(){ var o = {}; Object.keys(perf).forEach(function(k){ o[k] = perf[k]; });
                     o.enLista = lista ? lista.querySelectorAll(".msg[data-clave]").length : -1;
                     o.cache = Object.keys(nodoCache).length; return o; },
