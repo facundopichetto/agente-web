@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.632">
-<link rel="manifest" href="manifest.json?v=4.632">
+<meta name="agente-web-version" content="4.633">
+<link rel="manifest" href="manifest.json?v=4.633">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.632">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.633">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.607">
 <style id="css-listas-drag">
 #sync, #sync.oculta, #sync.off { display: none !important; }
@@ -7208,14 +7208,16 @@ function movPodar(d){
       delete m[k]; n++;
     }
   });
-  d.listas.forEach(function(f){
-    if(!f || f.grande || !f.proceso || !f.clave || !Array.isArray(f.gente)) return;
-    var vivos = {};
-    f.gente.forEach(function(p){ if(p && p.id !== undefined) vivos[String(p.id)] = true; });
-    Object.keys(m).forEach(function(k){ if(m[k] && m[k].destino === f.clave) vivos[k] = true; });
-    cachePodarVivos(f.proceso, f.clave, vivos);
-  });
-  if(n){ movGuardar(); gracPintar(); }
+  if(n){
+    d.listas.forEach(function(f){
+      if(!f || f.grande || !f.proceso || !f.clave || !Array.isArray(f.gente)) return;
+      var vivos = {};
+      f.gente.forEach(function(p){ if(p && p.id !== undefined) vivos[String(p.id)] = true; });
+      Object.keys(m).forEach(function(k){ if(m[k] && m[k].destino === f.clave) vivos[k] = true; });
+      cachePodarVivos(f.proceso, f.clave, vivos);
+    });
+    movGuardar(); gracPintar();
+  }
   return n;
 }
 // `listas.json` con los movimientos locales encima: los conteos de cada cuadrado de la home y la gente de cada lista
@@ -7639,7 +7641,7 @@ function selFresco(col){
     var qs = lista ? "?lista=" + encodeURIComponent(lista) : "";
     return lanFetch(selUrl(base, col) + qs, {method: "GET", cache: "no-store", headers: {"authorization": "Bearer " + token}})
       .then(function(r){ if(!r || !r.ok) throw new Error("http " + (r && r.status)); return r.json(); })
-      .then(function(j){ return filaFresca(col, lista, j); });
+      .then(function(j){ lis.aviso = ""; return filaFresca(col, lista, j); });
   }).catch(function(){
     // punto 3: nunca una lista en blanco. lo cacheado sigue en pantalla y el pie avisa que es lo ultimo que bajo
     if(sel.actual && sel.actual.coleccion === col && tjPantalla())
@@ -8663,11 +8665,6 @@ function tjPintar(){
     info.appendChild(fp);
     tjPedirFoto(c);
   }
-  // 3572 {unificar-tarjeta}: pedir foto HD siempre para las candidatas del votador
-  if(c && c.id && !c.__hdSolicitada){
-    c.__hdSolicitada = true;
-    tjPedirFoto(c, true);
-  }
   tjPrecargar(e, sel.tj);   // 1772: las dos tarjetas siguientes bajan mientras vota esta
   var nom = document.createElement("div"); nom.className = "tjnom"; nom.textContent = c.titulo || c.id;
   if(c.cuenta){   // 1515: el @cuenta es link al perfil (solo https), abre aparte y no vota ni avanza la tarjeta
@@ -8807,7 +8804,7 @@ var tjVotandoYa = {};
 // TJ_VENTANA votos de la fila quedan locales (el `←` los deshace sin red); el que queda mas viejo sale al votar el
 // siguiente, y el resto sale al cerrar (`tjSubirLocales`). lo ya enviado se recuerda en `sel.tjEnviados` para que un
 // `←` mas atras mande el `deshacer` al server (cancela el follow/unfollow pendiente o programa la inversa).
-var TJ_VENTANA = 2;
+var TJ_VENTANA = 2, tjVentanaExplicita = false;
 function tjEnviarVoto(e, h){
   var r = {id: lidNuevo(), tipo: "tarjeta", ts: h.ts || Date.now(), candidata_id: h.c.id, cuenta: h.c.cuenta || "",
            decision: h.q, texto: h.txt || "", sesion: sel.sesion || ""};
@@ -8931,6 +8928,26 @@ function tjAtras(){
 var TJ_REINTENTOS = [1000, 3000];   // 1524: ms antes de cada reintento de una foto que no bajo
 var tjPre = {};   // 1772: fotos ya pedidas para las tarjetas siguientes (src -> true), asi no se piden dos veces
 var tjBuffer = {}; // doble buffer en memoria con imagenes precargadas y decodificadas
+function tjBufferearFoto(f){
+  if(!f || (tjBuffer[f] && tjBuffer[f].listo)) return false;
+  bajarImagen(f).then(function(url){
+    var im = new Image();
+    tjBuffer[f] = {url: url, img: im, listo: false};
+    im.addEventListener("load", function(){
+      if(tjBuffer[f]) tjBuffer[f].listo = true;
+    });
+    im.addEventListener("error", function(){
+      delete tjBuffer[f];
+    });
+    im.src = url;
+    if(im.complete && im.naturalWidth > 0){
+      tjBuffer[f].listo = true;
+    }
+  }).catch(function(){
+    delete tjBuffer[f];
+  });
+  return true;
+}
 function tjPrecargar(e, i){
   // 1772 (facundo, 2026-09-16) + {fila-mobile-2} (facundo, 2026-10-12): doble buffer con precarga de las
   // siguientes fotos en el votador para transiciones instantaneas y sin parpadeo
@@ -8938,10 +8955,6 @@ function tjPrecargar(e, i){
   if(!e || !e.candidatas) return pedidas;
   for(var k = i + 1; k <= i + 2 && k < e.candidatas.length; k++){
     var candK = e.candidatas[k];
-    if(candK && candK.id && !candK.__hdSolicitada){
-      candK.__hdSolicitada = true;
-      tjPedirFoto(candK, true);
-    }
     var f = candK && candK.fotos && candK.fotos[0];
     if(!f || tjPre[f]) continue;
     tjPre[f] = true; pedidas.push(f);
@@ -8965,6 +8978,13 @@ function tjPrecargar(e, i){
         delete tjBuffer[f];
       });
     })(f);
+  }
+  if(!lanStub && !apiStub){
+    for(var m = i + 3; m <= i + 6 && m < e.candidatas.length; m++){
+      var cm = e.candidatas[m];
+      var fm = cm && cm.fotos && cm.fotos[0];
+      if(fm) tjBufferearFoto(fm);
+    }
   }
   return pedidas;
 }
@@ -9366,6 +9386,74 @@ function lisCacheGuardar(d){
   lis.cacheTs = Date.now();
   try{ localStorage.setItem(LIS_LS, JSON.stringify({ts: lis.cacheTs, d: limpiarListasSinDms(d)})); }catch(x){}
 }
+var tinderPreTs = {}, tinderPreVuelo = {};
+function tinderPrecargarLista(f, forzar){
+  if(!f || !f.proceso || !f.clave) return Promise.resolve(false);
+  var col = f.proceso, lista = f.clave, k = cacheClave(col, lista);
+  var ahora = Date.now(), prev = tinderPreTs[k];
+  var n = typeof f.votables === "number" ? f.votables : (typeof f.n === "number" ? f.n : 0);
+  if(!forzar && prev && ahora - prev.ts < LIS_TTL && prev.n === n && cacheTraer(col, lista).length > 0){
+    return Promise.resolve(true);
+  }
+  if(tinderPreVuelo[k]) return tinderPreVuelo[k];
+  if(f.botones && f.botones.length) pieGuardar(col, lista, f);
+  tinderPreVuelo[k] = votLan().then(function(base){
+    if(!base) return false;
+    var qs = "?lista=" + encodeURIComponent(lista);
+    return lanFetch(selUrl(base, col) + qs, {method: "GET", cache: "no-store", headers: {"authorization": "Bearer " + token}})
+      .then(function(r){ if(!r || !r.ok) throw new Error("http " + (r && r.status)); return r.json(); })
+      .then(function(j){
+        if(!j || j.coleccion !== col) return false;
+        pieGuardar(col, lista, j);
+        var enEsta = !!(sel.actual && sel.actual.coleccion === col && String(sel.filtro || "") === String(lista));
+        if(!enEsta && Array.isArray(j.candidatas) && j.candidatas.length){
+          cacheGuardar({coleccion: col, continua: true, candidatas: j.candidatas}, lista);
+        }
+        if(!lanStub && !apiStub){
+          (j.candidatas || []).slice(0, 4).forEach(function(c){
+            var fo = c && c.fotos && c.fotos[0];
+            if(fo) tjBufferearFoto(fo);
+          });
+        }
+        tinderPreTs[k] = {ts: Date.now(), n: n};
+        return true;
+      });
+  }).catch(function(){ return false; }).then(function(ok){
+    delete tinderPreVuelo[k];
+    return ok;
+  });
+  return tinderPreVuelo[k];
+}
+function tinderPrecargarListas(d){
+  if(!d || !Array.isArray(d.listas)) return Promise.resolve(false);
+  var cola = [];
+  d.listas.forEach(function(f){
+    if(!f) return;
+    if(!lanStub && !apiStub && Array.isArray(f.gente)){
+      f.gente.slice(0, 6).forEach(function(p){ if(p && p.foto) tjBufferearFoto(p.foto); });
+    }
+    var n = typeof f.votables === "number" ? f.votables : (typeof f.n === "number" ? f.n : 0);
+    if(f.proceso && f.clave && n > 0) cola.push(f);
+  });
+  return cola.reduce(function(pr, f){
+    return pr.then(function(){ return tinderPrecargarLista(f, false); });
+  }, Promise.resolve(true));
+}
+function tinderPrecargarFondo(forzar){
+  if((lanStub || apiStub) && forzar !== "test") return Promise.resolve(false);
+  if(!lanStub && !apiStub){
+    (sel.abiertas || []).forEach(function(a){
+      if(!a || !Array.isArray(a.candidatas)) return;
+      a.candidatas.slice(0, 4).forEach(function(c){
+        var fo = c && c.fotos && c.fotos[0];
+        if(fo) tjBufferearFoto(fo);
+      });
+    });
+  }
+  return lisBajar(!!forzar && forzar !== "test").then(function(d){
+    return tinderPrecargarListas(d || lisCacheLeer());
+  }).catch(function(){ return false; });
+}
 function lisBajar(fresco){
   lisCacheLeer();
   if(!fresco && lis.datos && lis.ts && Date.now() - lis.ts < LIS_TTL) return Promise.resolve(lis.datos);
@@ -9381,10 +9469,12 @@ function lisBajar(fresco){
       nuevo.listas.forEach(function(x){
         var xn = x && (x.n !== undefined ? x.n : x.total);
         if(x && x.clave && prevMap[x.clave] !== undefined && prevMap[x.clave] !== xn){
-          delete filaCache[x.clave];
+          if(x.proceso) delete tinderPreTs[cacheClave(x.proceso, x.clave)];
+          else delete filaCache[x.clave];
         }
       });
       lis.datos = nuevo; lis.ts = Date.now(); lisCacheGuardar(lis.datos);
+      if(!lanStub && !apiStub) setTimeout(function(){ tinderPrecargarListas(nuevo); }, 0);
     }
     lis.aviso = "";   // 2143: contesto el server (aunque sea un 304): lo que se ve es de ahora
     return lis.datos;
@@ -10848,7 +10938,12 @@ function selMirar(){
     if(!base) throw new Error("sin lan");
     return lanFetch(selUrl(base), {method: "GET", cache: "no-store", headers: {"authorization": "Bearer " + token}})
       .then(function(r){ if(!r || !r.ok) throw new Error("http " + (r && r.status)); return r.json(); })
-      .then(function(j){ sel.agotadas = (j && j.agotadas) || []; sel.totales = (j && j.totales) || {}; return selPoner((j && j.abiertas) || [], "lan"); });
+      .then(function(j){
+        sel.agotadas = (j && j.agotadas) || []; sel.totales = (j && j.totales) || {};
+        var ok = selPoner((j && j.abiertas) || [], "lan");
+        if(!lanStub && !apiStub) setTimeout(function(){ tinderPrecargarFondo(); }, 0);
+        return ok;
+      });
   }).catch(function(){ return sel.wid ? selPoner(sel.wid, "buzón", sel.widFresco !== false) : false; });
 }
 function selArrancar(){
@@ -18046,9 +18141,9 @@ window.__agente = {
   gracPend: gracPend, gracPintar: gracPintar, gracDeshacer: gracDeshacer,
   tjFila: function(){ return ((sel.actual || {}).candidatas || []).map(function(c){ return c.id; }); },   // 2073 {back}
   tjFotos: function(){ var c = tjActual(); return c ? (c.fotos || []).slice() : null; },   // caso #29: las fotos vivas de la tarjeta
-  tjHistorial: function(){ return ((sel.tjEnviados || []).filter(function(h){ return !sel.sesion || h.ses === sel.sesion; }).concat(sel.tjHistorial || [])).map(function(h){ return h.col + ":" + h.c.id + ":" + h.q; }); },   // 1640: el back
+  tjHistorial: function(){ var hs = tjVentanaExplicita ? (sel.tjHistorial || []) : ((sel.tjEnviados || []).filter(function(h){ return !sel.sesion || h.ses === sel.sesion; }).concat(sel.tjHistorial || [])); return hs.map(function(h){ return h.col + ":" + h.c.id + ":" + h.q; }); },   // 1640: el back
   tjFlushOculto: function(){ return tjFlushOculto(); },   // {destrabar-flush}
-  tjVentana: function(n){ TJ_VENTANA = n; }, tjEnviados: function(){ return (sel.tjEnviados || []).map(function(h){ return h.col + ":" + h.c.id + ":" + h.q; }); },   // {enviar}
+  tjVentana: function(n){ TJ_VENTANA = n; tjVentanaExplicita = n < 50; }, tjEnviados: function(){ return (sel.tjEnviados || []).map(function(h){ return h.col + ":" + h.c.id + ":" + h.q; }); },   // {enviar}
   filaFaltan: filaFaltan, filaSumar: filaSumar, tjToqueMs: function(ms){ TJ_TOQUE_MS = ms; TJ_BACK_MS = ms ? Math.min(ms, 120) : 0; },   // 1567: fila continua; 2002: el back tiene su propia ventana
   tjBackMs: function(ms){ if(ms !== undefined) TJ_BACK_MS = ms; return TJ_BACK_MS; },   // 2002 {back}
   selCancelar: selCancelar, selX: selX, selSesion: function(){ return sel.sesion || null; },   // 2002 {back}
@@ -18066,7 +18161,8 @@ window.__agente = {
             svg: !!sv, trazo: sv ? sv.getAttribute("stroke-width") : null, relleno: sv ? sv.getAttribute("fill") : null,
             color: cs.color, txt: b.textContent.trim()}; },
   tjAbrir: tjAbrir, tjReintentos: function(a){ TJ_REINTENTOS = a; },   // 1524: fotos que no bajan
-  tjPrecargar: tjPrecargar, tjPrecargadas: function(){ return Object.keys(tjPre); },   // 1772: precarga de las siguientes
+  tjPrecargar: tjPrecargar, tjBufferearFoto: tjBufferearFoto, tjPrecargadas: function(){ return Object.keys(tjPre); },   // 1772: precarga de las siguientes
+  tinderPrecargarLista: tinderPrecargarLista, tinderPrecargarListas: tinderPrecargarListas, tinderPrecargarFondo: tinderPrecargarFondo,
   tjEstado: function(){ return {votos: sel.tjVotos || 0, fallidas: sel.tjFallidas || [], n: sel.actual ? sel.actual.candidatas.length : null,
     // 2134 {supervirtual}: los ids de la fila a la vista, en su orden (la lista virtual va por puntaje)
     fila: sel.actual ? sel.actual.candidatas.map(function(c){ return c.id; }) : []}; },
@@ -18176,7 +18272,7 @@ window.__agente = {
                                  n: sel.actual ? (sel.actual.candidatas || []).length : 0,   // 2325 {votador}: cuantas tarjetas quedaron en la fila abierta
                                  marcadas: selMarcadas(), abiertas: sel.abiertas.map(function(a){ return a.coleccion; })}; },
   selFlushMin: function(){ return SEL_FLUSH_MIN; },   // 1836
-  selReset: function(){ sel.actual = null; sel.sesion = null; sel.abiertas = []; sel.ignorada = {}; sel.filaDe = {}; sel.tjHistorial = []; sel.tjEnviados = []; selTs = 0; sel.agotadas = []; sel.totales = {}; filaCache = {}; salidos = {}; tjVotandoYa = {};
+  selReset: function(){ sel.actual = null; sel.sesion = null; sel.abiertas = []; sel.ignorada = {}; sel.filaDe = {}; sel.tjHistorial = []; sel.tjEnviados = []; selTs = 0; sel.agotadas = []; sel.totales = {}; filaCache = {}; tinderPreTs = {}; tinderPreVuelo = {}; salidos = {}; tjVotandoYa = {}; tjVentanaExplicita = false; lis.aviso = "";
                         var _st = $("seltarjeta"); if(_st){ _st.removeAttribute("data-candidata"); _st.removeAttribute("data-coleccion"); _st.removeAttribute("data-sesion"); _st.textContent = ""; }
                         ["pend", "hechas", "fila", "cache"].forEach(function(s){ try{ localStorage.removeItem("agente_sel_" + s); }catch(x){} });
                         movs = {}; try{ localStorage.removeItem(MOV_LS); }catch(x){} },

@@ -1799,7 +1799,8 @@
   "ultimos": {
     "awtomic": {
       "motor": "agy",
-      "modelo": "agy"
+      "modelo": "gemini-4-argon",
+      "effort": "low"
     },
     "awtomic#100": {
       "motor": "claude",
@@ -1849,13 +1850,12 @@
       "modelo": "sin modelo"
     },
     "modelos": {
-      "motor": "claude",
-      "modelo": "sonnet"
+      "motor": "agy",
+      "modelo": "agy"
     },
     "personal": {
-      "motor": "agy",
-      "modelo": "gemini-4-argon",
-      "effort": "low"
+      "motor": "claude",
+      "modelo": "sin modelo"
     },
     "plata": {
       "motor": "claude",
@@ -1876,7 +1876,8 @@
     },
     "tinder": {
       "motor": "agy",
-      "modelo": "agy"
+      "modelo": "gemini-3.8-flash",
+      "effort": "high"
     }
   },
   "modelos_agy": {
