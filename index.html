@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.633">
-<link rel="manifest" href="manifest.json?v=4.633">
+<meta name="agente-web-version" content="4.634">
+<link rel="manifest" href="manifest.json?v=4.634">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.633">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.634">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.607">
 <style id="css-listas-drag">
 #sync, #sync.oculta, #sync.off { display: none !important; }
@@ -5978,6 +5978,69 @@ function juntarPedazos(tema, usar){
   filas.sort(function(a, b){ return fecha(a.ts) - fecha(b.ts); });
   return filas;
 }
+// {chat-render-instantaneo} (facundo, 2026-11-12: "cuando abro el board para ver la respuesta tengo que esperar a
+// que se pinte"): `arrancar` vaciaba `msgsHist` y la charla recien se pintaba cuando volvia la red. ahora los
+// pedazos ya bajados (`chatPed`, con su firma) quedan en `localStorage` y el primer pintado sale de ahi, en el
+// mismo tick que el arranque; la red solo trae lo que cambio (la firma de cada dia decide). tope en caracteres
+// por tema (la activa mas, las demas menos) y en total; un dia entra entero o no entra, asi la firma nunca
+// miente sobre un pedazo recortado. si `localStorage` no deja escribir, se intenta de nuevo solo con la activa.
+var CHAT_CACHE_LS = "agente_chat_cache", CHAT_CACHE_ACT = 500000, CHAT_CACHE_OTRA = 120000, CHAT_CACHE_TOTAL = 1400000;
+var chatCacheTimer = null;
+function chatCacheArmar(solo){
+  var out = {}, total = 0, act = normTema(temaActivo());
+  var temas = [act].concat((tabs || []).map(normTema).filter(function(t){ return t !== act; }));
+  temas.forEach(function(t){
+    if(solo && t !== act) return;
+    var index = chatIndexTema[t], have = chatPed[t];
+    if(!index || !index.pedazos || !have) return;
+    var tope = t === act ? CHAT_CACHE_ACT : CHAT_CACHE_OTRA, usado = 0, dias = [];
+    for(var i = index.pedazos.length - 1; i >= 0; i--){
+      var p = index.pedazos[i], c = have[p.dia];
+      if(!c || c.firma !== p.firma) continue;
+      var tam = JSON.stringify(c.filas || []).length;
+      if(usado + tam > tope || total + usado + tam > CHAT_CACHE_TOTAL) break;
+      usado += tam; dias.push({dia: p.dia, firma: p.firma, n: p.n || 0, filas: c.filas || []});
+    }
+    if(!dias.length) return;
+    total += usado;
+    out[t] = dias.reverse();
+  });
+  return out;
+}
+function chatCacheGuardar(){
+  chatCacheTimer = null;
+  var intento = [false, true];
+  for(var i = 0; i < intento.length; i++){
+    try{ localStorage.setItem(CHAT_CACHE_LS, JSON.stringify({v: 1, ts: Date.now(), temas: chatCacheArmar(intento[i])})); return; }
+    catch(x){}
+  }
+  try{ localStorage.removeItem(CHAT_CACHE_LS); }catch(x){}
+}
+function chatCacheGuardarPronto(){
+  if(chatCacheTimer) return;
+  chatCacheTimer = setTimeout(chatCacheGuardar, 1500);
+}
+// lo que quedo de la ultima vez, a `chatPed`/`msgsHist` antes del primer render. devuelve cuantas filas entraron
+function chatCacheLeer(){
+  var c = null, n = 0;
+  try{ c = JSON.parse(localStorage.getItem(CHAT_CACHE_LS) || "null"); }catch(x){ c = null; }
+  if(!c || c.v !== 1 || !c.temas) return 0;
+  Object.keys(c.temas).forEach(function(t){
+    var dias = c.temas[t];
+    if(!Array.isArray(dias) || !dias.length || msgsHist[t]) return;
+    chatPed[t] = chatPed[t] || {};
+    var filas = [];
+    dias.forEach(function(d){
+      if(!d || !d.dia || !Array.isArray(d.filas)) return;
+      chatPed[t][d.dia] = {firma: d.firma, filas: d.filas};
+      filas = filas.concat(d.filas);
+    });
+    chatIndexTema[t] = {pedazos: dias.map(function(d){ return {dia: d.dia, firma: d.firma, n: d.n || 0}; })};
+    recibirChat(t, {filas: filas});
+    n += filas.length;
+  });
+  return n;
+}
 function crudo(ruta, etag){
   return api("GET", "/repos/" + REPO + "/contents/" + ruta, null, etag,
              "application/vnd.github.raw+json");
@@ -6089,7 +6152,9 @@ function cargarChatTema(tema){
       // los dias que ya no estan en el index (github se queda con los ultimos 20) no se tiran del cache:
       // el board sigue mostrando lo que bajo antes, que es mas historial que el que quedo en el repo
       delete chat404[t];
-      return recibirChat(t, {filas: juntarPedazos(t, q.usar)});
+      var nuevo = recibirChat(t, {filas: juntarPedazos(t, q.usar)});
+      chatCacheGuardarPronto();
+      return nuevo;
     });
   }).catch(function(e){
     var m = (e && e.message) || "";
@@ -6273,6 +6338,7 @@ function tick(){
   // el daemon publica `widgets.json` cada 60 s (`widgets_web`), pedir cada 10 s traia el mismo archivo.
   // al abrir o volver al foco se sincroniza aparte, asi que el celu no ve datos viejos por esto.
   var cada = document.hidden ? 120000 : 30000;
+  var cadaChat = hayVuelos() ? 5000 : cada;   // {chat-render-instantaneo}: con un vuelo la charla se baja seguido, a la vista o no
   if(Date.now() - widUlt > cada){
     cargarWidgets().catch(function(e){
       if(errRed(e) || sinRed()) fallaRed("widgets", e);   // 4218: sin red la caja no dice `Failed to fetch` en rojo
@@ -6290,7 +6356,7 @@ function tick(){
   // y el historial tambien: el daemon republica `chat/<tema>.json` cuando termina de renderizar el
   // audio de una respuesta, asi que el `[▶]` aparece a los pocos segundos sin volver al foco.
   // con etag esto es un 304 y no gasta rate limit; solo repinta si `recibirChat` trajo algo.
-  if(token && Date.now() - chatUlt > cada){
+  if(token && Date.now() - chatUlt > cadaChat){
     chatUlt = Date.now();
     cargarChat().then(function(){
       if(!chatPendiente()) return;   // 1997 {pestana}: el sello, no un booleano que otra pasada puede apagar
@@ -6377,7 +6443,9 @@ function reprogramar(){
   if(timer) clearInterval(timer);
   if(!token) return;
   // con un mensaje en vuelo los comentarios van cada 3 s: la respuesta aparece apenas sale
-  var ms = document.hidden ? 30000 : (hayVuelos() ? 3000 : 5000);
+  // {chat-render-instantaneo}: en background con un mensaje en vuelo tambien va rapido (5 s), asi la respuesta ya
+  // esta bajada cuando facundo vuelve; sin vuelo, 30 s como siempre
+  var ms = document.hidden ? (hayVuelos() ? 5000 : 30000) : (hayVuelos() ? 3000 : 5000);
   if(Date.now() < frenoHasta) ms = Math.min(Math.max(frenoHasta - Date.now() + 500, ms), 60000);
   timer = setInterval(tick, ms);
 }
@@ -17958,7 +18026,10 @@ function arrancar(t){
   login.style.display = "none";
   document.body.classList.remove("sinlogin");
   msgsCom = []; msgsHist = {}; chatIndex = null; etagChat = {};
+  var desdeCache = 0;
+  try{ desdeCache = chatCacheLeer(); }catch(x){ desdeCache = 0; }   // {chat-render-instantaneo}: pinta ya, la red solo corrige
   mezclar(); render(); vistos = {}; etagCom = null; etagIssue = null;
+  if(desdeCache) irDonde();
   etagWid = null; widUlt = 0;
   etagTabs = null; shaTabs = null; tabsUlt = 0; tabsListo = false; tabsSync = true;
   // 1388/1407: la seleccion arranca aparte: si github falla al sincronizar (buzón lleno, freno), el modal y `votar` igual
