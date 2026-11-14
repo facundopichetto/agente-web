@@ -6086,6 +6086,179 @@
     "#e8542a",
     "#2b2b2b"
    ]
+  },
+  {
+   "id": "chispa-fogonazo",
+   "nombre": "chispa fogonazo",
+   "frames": [
+    "·",
+    "+",
+    "*",
+    "@",
+    "%",
+    "#",
+    "*",
+    "·",
+    " "
+   ],
+   "intervalo": 55,
+   "alta": "2026-11-14",
+   "origen": "aprendida"
+  },
+  {
+   "id": "latigo-glitch-2",
+   "nombre": "latigo glitch",
+   "frames": [
+    "░▓",
+    "▓█",
+    "█▌",
+    "▌▐",
+    "▐░",
+    "██",
+    "  ",
+    "▒▒"
+   ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida"
+  },
+  {
+   "id": "esquirla-fuga-3",
+   "nombre": "esquirla que se fuga",
+   "frames": [
+    "  ·",
+    " ·+",
+    "·+*",
+    "+*@",
+    "*@#",
+    "@#·",
+    "#· ",
+    "·  ",
+    "   "
+   ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida"
+  },
+  {
+   "id": "trompo-braille-2",
+   "nombre": "trompo braille doble",
+   "frames": [
+    "⣾⣽",
+    "⣷⣻",
+    "⣯⢿",
+    "⣟⡿",
+    "⡿⣟",
+    "⢿⣯",
+    "⣻⣷",
+    "⣽⣾"
+   ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida"
+  },
+  {
+   "id": "pulso-cuadros-4",
+   "nombre": "pulso de cuadros",
+   "frames": [
+    "░  ░",
+    "▒░░▒",
+    "▓▒▒▓",
+    "███▓",
+    "▓███",
+    "▒▓▓▒",
+    "░▒▒░",
+    "    "
+   ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida"
+  },
+  {
+   "id": "bola-rebota-4",
+   "nombre": "bola que rebota",
+   "frames": [
+    "●   ",
+    "·●  ",
+    " ·● ",
+    "  ·●",
+    "  ◉ ",
+    " ◎· ",
+    "○·  ",
+    "    "
+   ],
+   "intervalo": 55,
+   "alta": "2026-11-14",
+   "origen": "aprendida"
+  },
+  {
+   "id": "cruz-estalla-3",
+   "nombre": "cruz que estalla",
+   "frames": [
+    " · ",
+    "·|·",
+    "-+-",
+    "*X*",
+    "#@#",
+    "%X%",
+    "*·*",
+    " + ",
+    "   "
+   ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida"
+  },
+  {
+   "id": "barra-desarma-4",
+   "nombre": "barra que se desarma",
+   "frames": [
+    "████",
+    "▓██▓",
+    "▒▓▓▒",
+    "░▒▒░",
+    "·░░·",
+    " ·· ",
+    "·  ·",
+    "    "
+   ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida"
+  },
+  {
+   "id": "zigzag-rayo-2",
+   "nombre": "zigzag del rayo",
+   "frames": [
+    "/ ",
+    "\\/",
+    " \\",
+    "X/",
+    "#X",
+    "*#",
+    "·*",
+    "  "
+   ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida"
+  },
+  {
+   "id": "nucleo-respira-3",
+   "nombre": "nucleo que respira",
+   "frames": [
+    "·°·",
+    "°○°",
+    "○◎○",
+    "◎◉◎",
+    "◉●◉",
+    "◎◉◎",
+    "○◎○",
+    "°○°"
+   ],
+   "intervalo": 55,
+   "alta": "2026-11-14",
+   "origen": "aprendida"
   }
  ]
 }
