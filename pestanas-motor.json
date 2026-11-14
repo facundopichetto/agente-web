@@ -1803,9 +1803,8 @@
   },
   "ultimos": {
     "awtomic": {
-      "motor": "agy",
-      "modelo": "gemini-3.8-flash",
-      "effort": "high"
+      "motor": "claude",
+      "modelo": "sonnet"
     },
     "awtomic#100": {
       "motor": "claude",
@@ -1856,7 +1855,8 @@
     },
     "modelos": {
       "motor": "agy",
-      "modelo": "agy"
+      "modelo": "gemini-3.8-flash",
+      "effort": "high"
     },
     "personal": {
       "motor": "claude",
@@ -1876,8 +1876,9 @@
       "effort": "low"
     },
     "server": {
-      "motor": "claude",
-      "modelo": "fable"
+      "motor": "agy",
+      "modelo": "gemini-4-argon",
+      "effort": "low"
     },
     "tinder": {
       "motor": "agy",

@@ -5496,6 +5496,310 @@
      "#f97316"
     ]
    ]
+  },
+  {
+   "id": "chispa-uno",
+   "nombre": "chispa uno",
+   "frames": [
+    "·",
+    "•",
+    "+",
+    "*",
+    "#",
+    "@",
+    "%",
+    "*",
+    "+",
+    "·",
+    " "
+   ],
+   "intervalo": 55,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#ffe066",
+    "#ffd43b",
+    "#ffa94d",
+    "#ff922b",
+    "#fa5252",
+    "#e03131",
+    "#c92a2a",
+    "#ff922b",
+    "#ffa94d",
+    "#ffe066",
+    "#000000"
+   ]
+  },
+  {
+   "id": "pulso-bloque-1",
+   "nombre": "pulso bloque",
+   "frames": [
+    "░",
+    "▒",
+    "▓",
+    "█",
+    "▓",
+    "▒",
+    "░",
+    " "
+   ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#ffe066",
+    "#ffc034",
+    "#ff922b",
+    "#fa5252",
+    "#ff922b",
+    "#ffc034",
+    "#ffe066",
+    "#000000"
+   ]
+  },
+  {
+   "id": "trueno-dos",
+   "nombre": "trueno dos",
+   "frames": [
+    "··",
+    "+·",
+    "*+",
+    "#*",
+    "@#",
+    "%@",
+    "*%",
+    "+*",
+    "·+",
+    "  "
+   ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#fff3bf",
+    "#ffe066",
+    "#ffd43b",
+    "#ffa94d",
+    "#ff922b",
+    "#f76707",
+    "#fa5252",
+    "#e03131",
+    "#ffd43b",
+    "#000000"
+   ]
+  },
+  {
+   "id": "glitch-tono-2",
+   "nombre": "glitch de tono",
+   "frames": [
+    "▓░",
+    "░▓",
+    "█▒",
+    "▒█",
+    "▌▐",
+    "▐▌",
+    "██",
+    "  "
+   ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#ffd43b",
+    "#51cf66",
+    "#ff6b6b",
+    "#4dabf7",
+    "#ffa94d",
+    "#cc5de8",
+    "#fa5252",
+    "#000000"
+   ]
+  },
+  {
+   "id": "nucleo-late-2",
+   "nombre": "nucleo que late",
+   "frames": [
+    "○○",
+    "◎◎",
+    "◉◉",
+    "●●",
+    "◉◉",
+    "◎◎",
+    "°°",
+    "··"
+   ],
+   "intervalo": 55,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#fff3bf",
+    "#ffe066",
+    "#ffa94d",
+    "#fa5252",
+    "#ff922b",
+    "#ffc034",
+    "#ffe066",
+    "#fff3bf"
+   ]
+  },
+  {
+   "id": "esquirlas-3",
+   "nombre": "esquirlas",
+   "frames": [
+    "·  ",
+    " · ",
+    "·+·",
+    "+*+",
+    "*#*",
+    "#@#",
+    "@%@",
+    "*  ",
+    "  ·",
+    "   "
+   ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#fff3bf",
+    "#ffe066",
+    "#ffd43b",
+    "#ffa94d",
+    "#ff922b",
+    "#f76707",
+    "#e03131",
+    "#fa5252",
+    "#ffe066",
+    "#000000"
+   ]
+  },
+  {
+   "id": "braille-chispazo-3",
+   "nombre": "braille chispazo",
+   "frames": [
+    "⠁⠂⠄",
+    "⠃⠆⠤",
+    "⠇⠖⠦",
+    "⡇⠶⡦",
+    "⡧⠷⡶",
+    "⡷⡿⡾",
+    "⣿⣿⣿",
+    "⡷⡧⡇",
+    "⠇⠃⠁",
+    "   "
+   ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#ffe066",
+    "#ffd43b",
+    "#ffc034",
+    "#ffa94d",
+    "#ff922b",
+    "#f76707",
+    "#fa5252",
+    "#e8590c",
+    "#ffd43b",
+    "#000000"
+   ]
+  },
+  {
+   "id": "eq-estalla-3",
+   "nombre": "eq que estalla",
+   "frames": [
+    "▁▂▁",
+    "▃▅▃",
+    "▅▇▅",
+    "▇█▇",
+    "███",
+    "▇█▇",
+    "▅▆▅",
+    "▃▄▃",
+    "▁▂▁",
+    "   "
+   ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#ffe066",
+    "#ffd43b",
+    "#ffa94d",
+    "#ff922b",
+    "#fa5252",
+    "#f76707",
+    "#ffa94d",
+    "#ffd43b",
+    "#ffe066",
+    "#000000"
+   ]
+  },
+  {
+   "id": "metralla-color-4",
+   "nombre": "metralla de color",
+   "frames": [
+    "·  ·",
+    " ·· ",
+    "·++·",
+    "+**+",
+    "*##*",
+    "#@@#",
+    "@%%@",
+    "%  %",
+    "*  *",
+    "·  ·",
+    "    "
+   ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#fff3bf",
+    "#ffe066",
+    "#ffd43b",
+    "#ffc034",
+    "#ffa94d",
+    "#ff922b",
+    "#f76707",
+    "#e8590c",
+    "#fa5252",
+    "#ffd43b",
+    "#000000"
+   ]
+  },
+  {
+   "id": "ruleta-caos-4",
+   "nombre": "ruleta caotica",
+   "frames": [
+    "?!#@",
+    "!#@%",
+    "#@%&",
+    "@%&$",
+    "%&$~",
+    "&$~^",
+    "$~^*",
+    "~^*?",
+    "^*?!",
+    "*?!#",
+    "    "
+   ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#ffd43b",
+    "#51cf66",
+    "#4dabf7",
+    "#cc5de8",
+    "#ff6b6b",
+    "#ffa94d",
+    "#20c997",
+    "#f783ac",
+    "#fab005",
+    "#fa5252",
+    "#000000"
+   ]
   }
  ]
 }
