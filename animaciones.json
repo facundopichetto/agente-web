@@ -6463,6 +6463,312 @@
    "intervalo": 50,
    "alta": "2026-11-14",
    "origen": "aprendida"
+  },
+  {
+   "id": "chicharra",
+   "nombre": "chicharra",
+   "frames": [
+    "|",
+    "·",
+    "/",
+    " ",
+    "\\",
+    "·",
+    "X",
+    " ",
+    "#",
+    "·"
+   ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#2e8bc0",
+    "#6fb9da",
+    "#2e8bc0",
+    "#1b5a7a",
+    "#8ed0ea",
+    "#3a9ac9",
+    "#c9a227",
+    "#1b5a7a",
+    "#d9542b",
+    "#2e8bc0"
+   ]
+  },
+  {
+   "id": "brasa-cae",
+   "nombre": "brasa que cae",
+   "frames": [
+    "'",
+    ":",
+    ";",
+    ",",
+    "·",
+    " ",
+    "'",
+    ":",
+    ";",
+    ","
+   ],
+   "intervalo": 55,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#e08b1a",
+    "#d9661f",
+    "#c4451c",
+    "#a3321a",
+    "#8a2a16",
+    "#5c1f12",
+    "#e08b1a",
+    "#d9661f",
+    "#c4451c",
+    "#a3321a"
+   ]
+  },
+  {
+   "id": "taladro-cruz",
+   "nombre": "taladro",
+   "frames": [
+    "┬",
+    "┤",
+    "┴",
+    "├",
+    "┼",
+    "╳",
+    "┼",
+    "┤"
+   ],
+   "intervalo": 55,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#7a8b99",
+    "#5d6e7d",
+    "#7a8b99",
+    "#5d6e7d",
+    "#9aa9b5",
+    "#c9a227",
+    "#9aa9b5",
+    "#5d6e7d"
+   ]
+  },
+  {
+   "id": "onda-expansiva-1",
+   "nombre": "onda expansiva",
+   "frames": [
+    "·",
+    "○",
+    "◎",
+    "●",
+    "█",
+    "▓",
+    "▒",
+    "░",
+    " "
+   ],
+   "intervalo": 55,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#d4a017",
+    "#e08b1a",
+    "#e2601a",
+    "#c42b1c",
+    "#a3211a",
+    "#8a4a3a",
+    "#6e5a52",
+    "#55504c",
+    "#3f3f3f"
+   ]
+  },
+  {
+   "id": "braille-granizo",
+   "nombre": "granizo braille",
+   "frames": [
+    "⣠",
+    "⡤",
+    "⠶",
+    "⠛",
+    "⠻",
+    "⣹",
+    "⣰",
+    "⢤",
+    "⠚",
+    "⡋"
+   ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#2fa37a",
+    "#2e8bc0",
+    "#8f5ac4",
+    "#c9a227",
+    "#d9542b",
+    "#2fa37a",
+    "#2e8bc0",
+    "#8f5ac4",
+    "#c9a227",
+    "#d9542b"
+   ]
+  },
+  {
+   "id": "estrobo-sucio",
+   "nombre": "estrobo sucio",
+   "frames": [
+    "█",
+    "░",
+    " ",
+    "▓",
+    "·",
+    " ",
+    "█",
+    "▒",
+    " ",
+    "░"
+   ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#2fa37a",
+    "#8f5ac4",
+    "#2fa37a",
+    "#2e8bc0",
+    "#c9a227",
+    "#2fa37a",
+    "#d9542b",
+    "#8f5ac4",
+    "#2fa37a",
+    "#2e8bc0"
+   ]
+  },
+  {
+   "id": "figuras-late",
+   "nombre": "figuras que laten",
+   "frames": [
+    "□",
+    "◇",
+    "△",
+    "·",
+    "△",
+    "◇",
+    "□",
+    "■",
+    "◆",
+    "▲",
+    "·",
+    " "
+   ],
+   "intervalo": 55,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#8f5ac4",
+    "#6d57c6",
+    "#4f6fc0",
+    "#2e8bc0",
+    "#2a9fa8",
+    "#2fa37a",
+    "#5aa83f",
+    "#8ba32b",
+    "#c9a227",
+    "#d98b1f",
+    "#d9542b",
+    "#a3321a"
+   ]
+  },
+  {
+   "id": "interferencia",
+   "nombre": "interferencia",
+   "frames": [
+    "▌",
+    "▐",
+    "░",
+    "▌",
+    "▐",
+    "█",
+    "▒",
+    " "
+   ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#2fa37a",
+    "#1f7d5c",
+    "#2fa37a",
+    "#8f5ac4",
+    "#2e8bc0",
+    "#c9a227",
+    "#2fa37a",
+    "#1f7d5c"
+   ]
+  },
+  {
+   "id": "tartamudo",
+   "nombre": "tartamudo",
+   "frames": [
+    "·",
+    "*",
+    " ",
+    "·",
+    "#",
+    " ",
+    "·",
+    "@",
+    " ",
+    "·"
+   ],
+   "intervalo": 55,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#c9a227",
+    "#e08b1a",
+    "#8a6a1f",
+    "#c9a227",
+    "#e2601a",
+    "#8a3a1f",
+    "#c9a227",
+    "#c42b1c",
+    "#7a2016",
+    "#c9a227"
+   ]
+  },
+  {
+   "id": "morse-loco",
+   "nombre": "morse loco",
+   "frames": [
+    "-",
+    "·",
+    "-",
+    "-",
+    "·",
+    " ",
+    "·",
+    "-",
+    "·",
+    "·",
+    " "
+   ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#2fa37a",
+    "#c9a227",
+    "#2e8bc0",
+    "#2fa37a",
+    "#d9542b",
+    "#1f7d5c",
+    "#8f5ac4",
+    "#c9a227",
+    "#2e8bc0",
+    "#2fa37a",
+    "#d9542b"
+   ]
   }
  ]
 }

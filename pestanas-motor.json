@@ -1804,23 +1804,22 @@
   "ultimos": {
     "awtomic": {
       "motor": "claude",
-      "modelo": "sonnet"
+      "modelo": "sonnet",
+      "effort": "high"
     },
     "awtomic#100": {
-      "motor": "claude",
-      "modelo": "sonnet"
+      "motor": "agy",
+      "modelo": "gemini-3.8-flash",
+      "effort": "low"
     },
     "awtomic#102": {
-      "motor": "agy",
-      "modelo": "agy"
+      "motor": "claude",
+      "modelo": "sonnet",
+      "effort": "high"
     },
     "awtomic#14": {
-      "motor": "claude",
-      "modelo": "sonnet"
-    },
-    "awtomic#88": {
-      "motor": "claude",
-      "modelo": "opus"
+      "motor": "sin modelo (guard)",
+      "modelo": "sin modelo (guard)"
     },
     "awtomic#90": {
       "motor": "claude",
@@ -1829,7 +1828,8 @@
     },
     "awtomic#91": {
       "motor": "claude",
-      "modelo": "opus"
+      "modelo": "sonnet",
+      "effort": "low"
     },
     "board": {
       "motor": "claude",
@@ -1841,17 +1841,13 @@
       "modelo": "fable"
     },
     "flos#2": {
-      "motor": "agy",
-      "modelo": "agy"
+      "motor": "gemini-3.8-flash",
+      "modelo": "gemini-3.8-flash"
     },
     "juegos": {
       "motor": "agy",
       "modelo": "gemini-3.8-flash",
       "effort": "low"
-    },
-    "juegos#2": {
-      "motor": "claude",
-      "modelo": "sin modelo"
     },
     "modelos": {
       "motor": "agy",
@@ -1860,15 +1856,17 @@
     },
     "personal": {
       "motor": "claude",
-      "modelo": "sin modelo"
+      "modelo": "sonnet",
+      "effort": "high"
     },
     "plata": {
       "motor": "claude",
       "modelo": "sin modelo"
     },
     "plata#2": {
-      "motor": "agy",
-      "modelo": "agy"
+      "motor": "claude",
+      "modelo": "sonnet",
+      "effort": "high"
     },
     "podcast": {
       "motor": "agy",
@@ -1876,13 +1874,14 @@
       "effort": "low"
     },
     "server": {
-      "motor": "agy",
-      "modelo": "gemini-4-argon",
-      "effort": "low"
+      "motor": "claude",
+      "modelo": "sonnet",
+      "effort": "high"
     },
     "tinder": {
       "motor": "agy",
-      "modelo": "agy"
+      "modelo": "gemini-3.8-flash",
+      "effort": "high"
     }
   },
   "modelos_agy": {
