@@ -5800,6 +5800,292 @@
     "#fa5252",
     "#000000"
    ]
+  },
+  {
+   "id": "trompo-denso",
+   "nombre": "trompo denso",
+   "frames": [
+    "⣾",
+    "⣷",
+    "⣯",
+    "⣟",
+    "⡿",
+    "⢿",
+    "⣻",
+    "⣽"
+   ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#e8a200",
+    "#f07b1b",
+    "#e8542a",
+    "#d93636",
+    "#e8542a",
+    "#f07b1b",
+    "#e8a200",
+    "#f0b63a"
+   ]
+  },
+  {
+   "id": "implosion-bloque",
+   "nombre": "implosion",
+   "frames": [
+    "█",
+    "▓",
+    "▒",
+    "░",
+    "·",
+    " ",
+    "·",
+    "░",
+    "▒",
+    "▓"
+   ],
+   "intervalo": 55,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#d93636",
+    "#e8542a",
+    "#f07b1b",
+    "#e8a200",
+    "#f0c23a",
+    "#2b2b2b",
+    "#f0c23a",
+    "#e8a200",
+    "#f07b1b",
+    "#e8542a"
+   ]
+  },
+  {
+   "id": "latigazo-box",
+   "nombre": "latigazo",
+   "frames": [
+    "─",
+    "┌",
+    "│",
+    "┐",
+    "─",
+    "┘",
+    "│",
+    "└"
+   ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#3ab7e8",
+    "#4f8bf0",
+    "#7a5ce8",
+    "#b84fe0",
+    "#e04fa8",
+    "#e8542a",
+    "#f0a01b",
+    "#2fc47a"
+   ]
+  },
+  {
+   "id": "metralleta",
+   "nombre": "metralleta",
+   "frames": [
+    "#",
+    " ",
+    "%",
+    "·",
+    "@",
+    " ",
+    "&",
+    "·",
+    "*",
+    " "
+   ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#f0c23a",
+    "#2b2b2b",
+    "#f07b1b",
+    "#8a5a1a",
+    "#d93636",
+    "#2b2b2b",
+    "#e8542a",
+    "#8a3a1a",
+    "#f0a01b",
+    "#2b2b2b"
+   ]
+  },
+  {
+   "id": "corto-1",
+   "nombre": "corto electrico",
+   "frames": [
+    "/",
+    "X",
+    "\\",
+    "#",
+    "|",
+    "*",
+    "-",
+    "·"
+   ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#5ad7f0",
+    "#e8e8f0",
+    "#5ad7f0",
+    "#f0e23a",
+    "#e8e8f0",
+    "#f0a01b",
+    "#4f8bf0",
+    "#3a6ad9"
+   ]
+  },
+  {
+   "id": "glitch-sombra",
+   "nombre": "glitch con sombra",
+   "frames": [
+    "░",
+    "▌",
+    "▓",
+    "▐",
+    "█",
+    "▒",
+    "▌",
+    "░"
+   ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#2fc47a",
+    "#3ab7e8",
+    "#7a5ce8",
+    "#e04fa8",
+    "#e8e8e8",
+    "#d93636",
+    "#f0a01b",
+    "#2fc47a"
+   ]
+  },
+  {
+   "id": "piston",
+   "nombre": "piston",
+   "frames": [
+    "▁",
+    "█",
+    "▂",
+    "▇",
+    "▃",
+    "▆",
+    "▄",
+    "▅"
+   ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#2fc47a",
+    "#f0c23a",
+    "#3ab7e8",
+    "#f07b1b",
+    "#4f8bf0",
+    "#e8542a",
+    "#7a5ce8",
+    "#d93636"
+   ]
+  },
+  {
+   "id": "chispa-loca",
+   "nombre": "chispa loca",
+   "frames": [
+    "^",
+    "·",
+    "*",
+    "~",
+    "+",
+    "°",
+    "·",
+    "#",
+    "*",
+    " "
+   ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#f0e23a",
+    "#5ad7f0",
+    "#e04fa8",
+    "#2fc47a",
+    "#f07b1b",
+    "#7a5ce8",
+    "#3ab7e8",
+    "#d93636",
+    "#f0a01b",
+    "#2b2b2b"
+   ]
+  },
+  {
+   "id": "dado-caos",
+   "nombre": "dado caos",
+   "frames": [
+    "■",
+    "%",
+    "□",
+    "&",
+    "●",
+    "#",
+    "○",
+    "@"
+   ],
+   "intervalo": 55,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#d93636",
+    "#f0c23a",
+    "#e8542a",
+    "#f0a01b",
+    "#7a5ce8",
+    "#3ab7e8",
+    "#2fc47a",
+    "#e04fa8"
+   ]
+  },
+  {
+   "id": "flash-blanco",
+   "nombre": "flash",
+   "frames": [
+    "·",
+    "+",
+    "█",
+    "+",
+    "·",
+    " ",
+    "*",
+    "█",
+    "*",
+    " "
+   ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#8a7a1a",
+    "#f0c23a",
+    "#f5f0e0",
+    "#f07b1b",
+    "#8a3a1a",
+    "#2b2b2b",
+    "#f0a01b",
+    "#f5f0e0",
+    "#e8542a",
+    "#2b2b2b"
+   ]
   }
  ]
 }
