@@ -1804,22 +1804,23 @@
   "ultimos": {
     "awtomic": {
       "motor": "claude",
-      "modelo": "sonnet",
-      "effort": "high"
+      "modelo": "sonnet"
     },
     "awtomic#100": {
-      "motor": "agy",
-      "modelo": "gemini-3.8-flash",
-      "effort": "low"
+      "motor": "claude",
+      "modelo": "sonnet"
     },
     "awtomic#102": {
-      "motor": "claude",
-      "modelo": "sonnet",
-      "effort": "high"
+      "motor": "agy",
+      "modelo": "agy"
     },
     "awtomic#14": {
-      "motor": "sin modelo (guard)",
-      "modelo": "sin modelo (guard)"
+      "motor": "claude",
+      "modelo": "sonnet"
+    },
+    "awtomic#88": {
+      "motor": "claude",
+      "modelo": "opus"
     },
     "awtomic#90": {
       "motor": "claude",
@@ -1828,8 +1829,7 @@
     },
     "awtomic#91": {
       "motor": "claude",
-      "modelo": "sonnet",
-      "effort": "low"
+      "modelo": "opus"
     },
     "board": {
       "motor": "claude",
@@ -1841,13 +1841,17 @@
       "modelo": "fable"
     },
     "flos#2": {
-      "motor": "gemini-3.8-flash",
-      "modelo": "gemini-3.8-flash"
+      "motor": "agy",
+      "modelo": "agy"
     },
     "juegos": {
       "motor": "agy",
       "modelo": "gemini-3.8-flash",
       "effort": "low"
+    },
+    "juegos#2": {
+      "motor": "claude",
+      "modelo": "sin modelo"
     },
     "modelos": {
       "motor": "agy",
@@ -1856,17 +1860,15 @@
     },
     "personal": {
       "motor": "claude",
-      "modelo": "sonnet",
-      "effort": "high"
+      "modelo": "sin modelo"
     },
     "plata": {
       "motor": "claude",
       "modelo": "sin modelo"
     },
     "plata#2": {
-      "motor": "claude",
-      "modelo": "sonnet",
-      "effort": "high"
+      "motor": "agy",
+      "modelo": "agy"
     },
     "podcast": {
       "motor": "agy",
@@ -1875,13 +1877,11 @@
     },
     "server": {
       "motor": "claude",
-      "modelo": "sonnet",
-      "effort": "high"
+      "modelo": "fable"
     },
     "tinder": {
       "motor": "agy",
-      "modelo": "gemini-3.8-flash",
-      "effort": "high"
+      "modelo": "agy"
     }
   },
   "modelos_agy": {

@@ -5498,1276 +5498,305 @@
    ]
   },
   {
-   "id": "chispa-uno",
-   "nombre": "chispa uno",
+   "id": "cortocircuito-seco",
+   "nombre": "cortocircuito seco",
    "frames": [
-    "·",
-    "•",
-    "+",
-    "*",
-    "#",
-    "@",
-    "%",
-    "*",
-    "+",
-    "·",
-    " "
-   ],
-   "intervalo": 55,
-   "alta": "2026-11-14",
-   "origen": "aprendida",
-   "colores": [
-    "#ffe066",
-    "#ffd43b",
-    "#ffa94d",
-    "#ff922b",
-    "#fa5252",
-    "#e03131",
-    "#c92a2a",
-    "#ff922b",
-    "#ffa94d",
-    "#ffe066",
-    "#000000"
-   ]
-  },
-  {
-   "id": "pulso-bloque-1",
-   "nombre": "pulso bloque",
-   "frames": [
-    "░",
-    "▒",
-    "▓",
+    "╎",
+    "╳",
+    "╋",
+    "━",
+    "╱",
+    "┼",
     "█",
-    "▓",
-    "▒",
-    "░",
+    "·",
     " "
    ],
    "intervalo": 50,
    "alta": "2026-11-14",
    "origen": "aprendida",
    "colores": [
-    "#ffe066",
-    "#ffc034",
-    "#ff922b",
-    "#fa5252",
-    "#ff922b",
-    "#ffc034",
-    "#ffe066",
-    "#000000"
+    "#00a0c0",
+    "#0077cc",
+    "#3355dd",
+    "#7733cc",
+    "#cc33aa",
+    "#ff6600",
+    "#ffaa00",
+    "#cc8800",
+    "#888888"
    ]
   },
   {
-   "id": "trueno-dos",
-   "nombre": "trueno dos",
+   "id": "ascua-respira",
+   "nombre": "ascua que respira",
    "frames": [
-    "··",
-    "+·",
-    "*+",
-    "#*",
-    "@#",
-    "%@",
-    "*%",
-    "+*",
-    "·+",
-    "  "
-   ],
-   "intervalo": 50,
-   "alta": "2026-11-14",
-   "origen": "aprendida",
-   "colores": [
-    "#fff3bf",
-    "#ffe066",
-    "#ffd43b",
-    "#ffa94d",
-    "#ff922b",
-    "#f76707",
-    "#fa5252",
-    "#e03131",
-    "#ffd43b",
-    "#000000"
-   ]
-  },
-  {
-   "id": "glitch-tono-2",
-   "nombre": "glitch de tono",
-   "frames": [
-    "▓░",
-    "░▓",
-    "█▒",
-    "▒█",
-    "▌▐",
-    "▐▌",
-    "██",
-    "  "
-   ],
-   "intervalo": 50,
-   "alta": "2026-11-14",
-   "origen": "aprendida",
-   "colores": [
-    "#ffd43b",
-    "#51cf66",
-    "#ff6b6b",
-    "#4dabf7",
-    "#ffa94d",
-    "#cc5de8",
-    "#fa5252",
-    "#000000"
-   ]
-  },
-  {
-   "id": "nucleo-late-2",
-   "nombre": "nucleo que late",
-   "frames": [
-    "○○",
-    "◎◎",
-    "◉◉",
-    "●●",
-    "◉◉",
-    "◎◎",
-    "°°",
-    "··"
-   ],
-   "intervalo": 55,
-   "alta": "2026-11-14",
-   "origen": "aprendida",
-   "colores": [
-    "#fff3bf",
-    "#ffe066",
-    "#ffa94d",
-    "#fa5252",
-    "#ff922b",
-    "#ffc034",
-    "#ffe066",
-    "#fff3bf"
-   ]
-  },
-  {
-   "id": "esquirlas-3",
-   "nombre": "esquirlas",
-   "frames": [
-    "·  ",
-    " · ",
-    "·+·",
-    "+*+",
-    "*#*",
-    "#@#",
-    "@%@",
-    "*  ",
-    "  ·",
-    "   "
-   ],
-   "intervalo": 50,
-   "alta": "2026-11-14",
-   "origen": "aprendida",
-   "colores": [
-    "#fff3bf",
-    "#ffe066",
-    "#ffd43b",
-    "#ffa94d",
-    "#ff922b",
-    "#f76707",
-    "#e03131",
-    "#fa5252",
-    "#ffe066",
-    "#000000"
-   ]
-  },
-  {
-   "id": "braille-chispazo-3",
-   "nombre": "braille chispazo",
-   "frames": [
-    "⠁⠂⠄",
-    "⠃⠆⠤",
-    "⠇⠖⠦",
-    "⡇⠶⡦",
-    "⡧⠷⡶",
-    "⡷⡿⡾",
-    "⣿⣿⣿",
-    "⡷⡧⡇",
-    "⠇⠃⠁",
-    "   "
-   ],
-   "intervalo": 50,
-   "alta": "2026-11-14",
-   "origen": "aprendida",
-   "colores": [
-    "#ffe066",
-    "#ffd43b",
-    "#ffc034",
-    "#ffa94d",
-    "#ff922b",
-    "#f76707",
-    "#fa5252",
-    "#e8590c",
-    "#ffd43b",
-    "#000000"
-   ]
-  },
-  {
-   "id": "eq-estalla-3",
-   "nombre": "eq que estalla",
-   "frames": [
-    "▁▂▁",
-    "▃▅▃",
-    "▅▇▅",
-    "▇█▇",
-    "███",
-    "▇█▇",
-    "▅▆▅",
-    "▃▄▃",
-    "▁▂▁",
-    "   "
-   ],
-   "intervalo": 50,
-   "alta": "2026-11-14",
-   "origen": "aprendida",
-   "colores": [
-    "#ffe066",
-    "#ffd43b",
-    "#ffa94d",
-    "#ff922b",
-    "#fa5252",
-    "#f76707",
-    "#ffa94d",
-    "#ffd43b",
-    "#ffe066",
-    "#000000"
-   ]
-  },
-  {
-   "id": "metralla-color-4",
-   "nombre": "metralla de color",
-   "frames": [
-    "·  ·",
-    " ·· ",
-    "·++·",
-    "+**+",
-    "*##*",
-    "#@@#",
-    "@%%@",
-    "%  %",
-    "*  *",
-    "·  ·",
-    "    "
-   ],
-   "intervalo": 50,
-   "alta": "2026-11-14",
-   "origen": "aprendida",
-   "colores": [
-    "#fff3bf",
-    "#ffe066",
-    "#ffd43b",
-    "#ffc034",
-    "#ffa94d",
-    "#ff922b",
-    "#f76707",
-    "#e8590c",
-    "#fa5252",
-    "#ffd43b",
-    "#000000"
-   ]
-  },
-  {
-   "id": "ruleta-caos-4",
-   "nombre": "ruleta caotica",
-   "frames": [
-    "?!#@",
-    "!#@%",
-    "#@%&",
-    "@%&$",
-    "%&$~",
-    "&$~^",
-    "$~^*",
-    "~^*?",
-    "^*?!",
-    "*?!#",
-    "    "
-   ],
-   "intervalo": 50,
-   "alta": "2026-11-14",
-   "origen": "aprendida",
-   "colores": [
-    "#ffd43b",
-    "#51cf66",
-    "#4dabf7",
-    "#cc5de8",
-    "#ff6b6b",
-    "#ffa94d",
-    "#20c997",
-    "#f783ac",
-    "#fab005",
-    "#fa5252",
-    "#000000"
-   ]
-  },
-  {
-   "id": "trompo-denso",
-   "nombre": "trompo denso",
-   "frames": [
-    "⣾",
-    "⣷",
-    "⣯",
-    "⣟",
-    "⡿",
-    "⢿",
-    "⣻",
-    "⣽"
-   ],
-   "intervalo": 50,
-   "alta": "2026-11-14",
-   "origen": "aprendida",
-   "colores": [
-    "#e8a200",
-    "#f07b1b",
-    "#e8542a",
-    "#d93636",
-    "#e8542a",
-    "#f07b1b",
-    "#e8a200",
-    "#f0b63a"
-   ]
-  },
-  {
-   "id": "implosion-bloque",
-   "nombre": "implosion",
-   "frames": [
-    "█",
-    "▓",
-    "▒",
-    "░",
     "·",
-    " ",
-    "·",
-    "░",
-    "▒",
-    "▓"
-   ],
-   "intervalo": 55,
-   "alta": "2026-11-14",
-   "origen": "aprendida",
-   "colores": [
-    "#d93636",
-    "#e8542a",
-    "#f07b1b",
-    "#e8a200",
-    "#f0c23a",
-    "#2b2b2b",
-    "#f0c23a",
-    "#e8a200",
-    "#f07b1b",
-    "#e8542a"
-   ]
-  },
-  {
-   "id": "latigazo-box",
-   "nombre": "latigazo",
-   "frames": [
-    "─",
-    "┌",
-    "│",
-    "┐",
-    "─",
-    "┘",
-    "│",
-    "└"
-   ],
-   "intervalo": 50,
-   "alta": "2026-11-14",
-   "origen": "aprendida",
-   "colores": [
-    "#3ab7e8",
-    "#4f8bf0",
-    "#7a5ce8",
-    "#b84fe0",
-    "#e04fa8",
-    "#e8542a",
-    "#f0a01b",
-    "#2fc47a"
-   ]
-  },
-  {
-   "id": "metralleta",
-   "nombre": "metralleta",
-   "frames": [
-    "#",
-    " ",
-    "%",
-    "·",
-    "@",
-    " ",
-    "&",
-    "·",
-    "*",
-    " "
-   ],
-   "intervalo": 50,
-   "alta": "2026-11-14",
-   "origen": "aprendida",
-   "colores": [
-    "#f0c23a",
-    "#2b2b2b",
-    "#f07b1b",
-    "#8a5a1a",
-    "#d93636",
-    "#2b2b2b",
-    "#e8542a",
-    "#8a3a1a",
-    "#f0a01b",
-    "#2b2b2b"
-   ]
-  },
-  {
-   "id": "corto-1",
-   "nombre": "corto electrico",
-   "frames": [
-    "/",
-    "X",
-    "\\",
-    "#",
-    "|",
-    "*",
-    "-",
-    "·"
-   ],
-   "intervalo": 50,
-   "alta": "2026-11-14",
-   "origen": "aprendida",
-   "colores": [
-    "#5ad7f0",
-    "#e8e8f0",
-    "#5ad7f0",
-    "#f0e23a",
-    "#e8e8f0",
-    "#f0a01b",
-    "#4f8bf0",
-    "#3a6ad9"
-   ]
-  },
-  {
-   "id": "glitch-sombra",
-   "nombre": "glitch con sombra",
-   "frames": [
-    "░",
-    "▌",
-    "▓",
-    "▐",
-    "█",
-    "▒",
-    "▌",
-    "░"
-   ],
-   "intervalo": 50,
-   "alta": "2026-11-14",
-   "origen": "aprendida",
-   "colores": [
-    "#2fc47a",
-    "#3ab7e8",
-    "#7a5ce8",
-    "#e04fa8",
-    "#e8e8e8",
-    "#d93636",
-    "#f0a01b",
-    "#2fc47a"
-   ]
-  },
-  {
-   "id": "piston",
-   "nombre": "piston",
-   "frames": [
-    "▁",
-    "█",
-    "▂",
-    "▇",
-    "▃",
-    "▆",
-    "▄",
-    "▅"
-   ],
-   "intervalo": 50,
-   "alta": "2026-11-14",
-   "origen": "aprendida",
-   "colores": [
-    "#2fc47a",
-    "#f0c23a",
-    "#3ab7e8",
-    "#f07b1b",
-    "#4f8bf0",
-    "#e8542a",
-    "#7a5ce8",
-    "#d93636"
-   ]
-  },
-  {
-   "id": "chispa-loca",
-   "nombre": "chispa loca",
-   "frames": [
-    "^",
-    "·",
-    "*",
-    "~",
-    "+",
     "°",
-    "·",
+    "*",
     "#",
-    "*",
-    " "
-   ],
-   "intervalo": 50,
-   "alta": "2026-11-14",
-   "origen": "aprendida",
-   "colores": [
-    "#f0e23a",
-    "#5ad7f0",
-    "#e04fa8",
-    "#2fc47a",
-    "#f07b1b",
-    "#7a5ce8",
-    "#3ab7e8",
-    "#d93636",
-    "#f0a01b",
-    "#2b2b2b"
-   ]
-  },
-  {
-   "id": "dado-caos",
-   "nombre": "dado caos",
-   "frames": [
-    "■",
-    "%",
-    "□",
-    "&",
-    "●",
-    "#",
-    "○",
-    "@"
-   ],
-   "intervalo": 55,
-   "alta": "2026-11-14",
-   "origen": "aprendida",
-   "colores": [
-    "#d93636",
-    "#f0c23a",
-    "#e8542a",
-    "#f0a01b",
-    "#7a5ce8",
-    "#3ab7e8",
-    "#2fc47a",
-    "#e04fa8"
-   ]
-  },
-  {
-   "id": "flash-blanco",
-   "nombre": "flash",
-   "frames": [
-    "·",
-    "+",
-    "█",
-    "+",
-    "·",
-    " ",
-    "*",
-    "█",
-    "*",
-    " "
-   ],
-   "intervalo": 50,
-   "alta": "2026-11-14",
-   "origen": "aprendida",
-   "colores": [
-    "#8a7a1a",
-    "#f0c23a",
-    "#f5f0e0",
-    "#f07b1b",
-    "#8a3a1a",
-    "#2b2b2b",
-    "#f0a01b",
-    "#f5f0e0",
-    "#e8542a",
-    "#2b2b2b"
-   ]
-  },
-  {
-   "id": "chispa-fogonazo",
-   "nombre": "chispa fogonazo",
-   "frames": [
-    "·",
-    "+",
-    "*",
-    "@",
     "%",
     "#",
     "*",
-    "·",
-    " "
+    "°"
    ],
-   "intervalo": 55,
+   "intervalo": 60,
    "alta": "2026-11-14",
-   "origen": "aprendida"
+   "origen": "aprendida",
+   "colores": [
+    "#cc6600",
+    "#ee8800",
+    "#ff9900",
+    "#ff6600",
+    "#dd2200",
+    "#ff6600",
+    "#ff9900",
+    "#ee8800"
+   ]
   },
   {
-   "id": "latigo-glitch-2",
-   "nombre": "latigo glitch",
+   "id": "braille-estruendo",
+   "nombre": "estruendo braille",
    "frames": [
-    "░▓",
-    "▓█",
-    "█▌",
-    "▌▐",
-    "▐░",
-    "██",
-    "  ",
-    "▒▒"
-   ],
-   "intervalo": 50,
-   "alta": "2026-11-14",
-   "origen": "aprendida"
-  },
-  {
-   "id": "esquirla-fuga-3",
-   "nombre": "esquirla que se fuga",
-   "frames": [
-    "  ·",
-    " ·+",
-    "·+*",
-    "+*@",
-    "*@#",
-    "@#·",
-    "#· ",
-    "·  ",
-    "   "
-   ],
-   "intervalo": 50,
-   "alta": "2026-11-14",
-   "origen": "aprendida"
-  },
-  {
-   "id": "trompo-braille-2",
-   "nombre": "trompo braille doble",
-   "frames": [
-    "⣾⣽",
-    "⣷⣻",
-    "⣯⢿",
-    "⣟⡿",
-    "⡿⣟",
-    "⢿⣯",
-    "⣻⣷",
-    "⣽⣾"
-   ],
-   "intervalo": 50,
-   "alta": "2026-11-14",
-   "origen": "aprendida"
-  },
-  {
-   "id": "pulso-cuadros-4",
-   "nombre": "pulso de cuadros",
-   "frames": [
-    "░  ░",
-    "▒░░▒",
-    "▓▒▒▓",
-    "███▓",
-    "▓███",
-    "▒▓▓▒",
-    "░▒▒░",
-    "    "
-   ],
-   "intervalo": 50,
-   "alta": "2026-11-14",
-   "origen": "aprendida"
-  },
-  {
-   "id": "bola-rebota-4",
-   "nombre": "bola que rebota",
-   "frames": [
-    "●   ",
-    "·●  ",
-    " ·● ",
-    "  ·●",
-    "  ◉ ",
-    " ◎· ",
-    "○·  ",
-    "    "
-   ],
-   "intervalo": 55,
-   "alta": "2026-11-14",
-   "origen": "aprendida"
-  },
-  {
-   "id": "cruz-estalla-3",
-   "nombre": "cruz que estalla",
-   "frames": [
-    " · ",
-    "·|·",
-    "-+-",
-    "*X*",
-    "#@#",
-    "%X%",
-    "*·*",
-    " + ",
-    "   "
-   ],
-   "intervalo": 50,
-   "alta": "2026-11-14",
-   "origen": "aprendida"
-  },
-  {
-   "id": "barra-desarma-4",
-   "nombre": "barra que se desarma",
-   "frames": [
-    "████",
-    "▓██▓",
-    "▒▓▓▒",
-    "░▒▒░",
-    "·░░·",
-    " ·· ",
-    "·  ·",
-    "    "
-   ],
-   "intervalo": 50,
-   "alta": "2026-11-14",
-   "origen": "aprendida"
-  },
-  {
-   "id": "zigzag-rayo-2",
-   "nombre": "zigzag del rayo",
-   "frames": [
-    "/ ",
-    "\\/",
-    " \\",
-    "X/",
-    "#X",
-    "*#",
-    "·*",
-    "  "
-   ],
-   "intervalo": 50,
-   "alta": "2026-11-14",
-   "origen": "aprendida"
-  },
-  {
-   "id": "nucleo-respira-3",
-   "nombre": "nucleo que respira",
-   "frames": [
-    "·°·",
-    "°○°",
-    "○◎○",
-    "◎◉◎",
-    "◉●◉",
-    "◎◉◎",
-    "○◎○",
-    "°○°"
-   ],
-   "intervalo": 55,
-   "alta": "2026-11-14",
-   "origen": "aprendida"
-  },
-  {
-   "id": "canon-braille-1",
-   "nombre": "cañón braille",
-   "frames": [
-    "⠁",
-    "⠃",
-    "⠇",
-    "⡇",
-    "⡧",
+    "⠄",
+    "⠤",
+    "⠶",
     "⡷",
-    "⡿",
     "⣿",
-    "⡿",
+    "⣷",
     "⠿",
     "⠛",
     "⠉",
     "⠁",
     " "
    ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#ddaa00",
+    "#ffbb00",
+    "#ff9900",
+    "#ff7700",
+    "#ff4400",
+    "#ee2200",
+    "#cc3300",
+    "#aa4400",
+    "#886600",
+    "#666633",
+    "#555555"
+   ]
+  },
+  {
+   "id": "glitch-persiana",
+   "nombre": "glitch persiana",
+   "frames": [
+    "▌",
+    "▐",
+    "█",
+    "░",
+    "▐",
+    "▌",
+    "▒",
+    " ",
+    "▓",
+    "·"
+   ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#22bb55",
+    "#00aacc",
+    "#aa33dd",
+    "#dd2255",
+    "#ff8800",
+    "#33bb99",
+    "#7744ee",
+    "#cc1144",
+    "#22aa66",
+    "#999900"
+   ]
+  },
+  {
+   "id": "nucleo-geo-colapsa",
+   "nombre": "nucleo que colapsa",
+   "frames": [
+    "·",
+    "◒",
+    "○",
+    "◓",
+    "◉",
+    "█",
+    "●",
+    "◐",
+    "°",
+    " "
+   ],
    "intervalo": 55,
    "alta": "2026-11-14",
-   "origen": "aprendida"
+   "origen": "aprendida",
+   "colores": [
+    "#3366dd",
+    "#2299cc",
+    "#22ccaa",
+    "#99dd33",
+    "#ffcc00",
+    "#ff8800",
+    "#ff4400",
+    "#cc2211",
+    "#883322",
+    "#555555"
+   ]
   },
   {
-   "id": "granada-geo-1",
-   "nombre": "granada geométrica",
+   "id": "taladro-bisel",
+   "nombre": "taladro bisel",
    "frames": [
-    "·",
-    "°",
-    "○",
-    "◎",
-    "◉",
-    "●",
-    "█",
-    "●",
-    "◉",
-    "○",
-    "·",
-    " "
-   ],
-   "intervalo": 60,
-   "alta": "2026-11-14",
-   "origen": "aprendida"
-  },
-  {
-   "id": "esquirla-box-1",
-   "nombre": "esquirla de cajas",
-   "frames": [
-    "│",
     "╱",
-    "─",
-    "╲",
     "┼",
+    "╲",
+    "┬",
     "╳",
     "┤",
-    "┬",
-    "├",
-    "┴",
+    "╋",
+    "├"
+   ],
+   "intervalo": 55,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#00cc66",
+    "#22dd88",
+    "#00bbaa",
+    "#0099cc",
+    "#44cc44",
+    "#88dd22",
+    "#ccbb00",
+    "#22bb77"
+   ]
+  },
+  {
+   "id": "esquirla-fugaz",
+   "nombre": "esquirla fugaz",
+   "frames": [
+    "'",
+    ":",
+    ";",
+    "·",
+    "°",
+    " ",
+    "`",
+    ",",
     "·",
     " "
    ],
    "intervalo": 50,
    "alta": "2026-11-14",
-   "origen": "aprendida"
+   "origen": "aprendida",
+   "colores": [
+    "#ffcc22",
+    "#ffaa00",
+    "#ff7711",
+    "#ee4400",
+    "#cc5500",
+    "#996600",
+    "#ffbb33",
+    "#ff8822",
+    "#dd3300",
+    "#777755"
+   ]
   },
   {
-   "id": "trueno-barras-1",
-   "nombre": "trueno de barras",
+   "id": "estrobo-tono",
+   "nombre": "estrobo de tono",
    "frames": [
-    "▁",
-    "▌",
-    "█",
-    "▐",
-    "▇",
     "░",
-    "▓",
     "█",
     "▒",
+    " ",
+    "▓",
     "·",
-    " "
+    "█",
+    "░",
+    " ",
+    "▒"
    ],
    "intervalo": 50,
    "alta": "2026-11-14",
-   "origen": "aprendida"
+   "origen": "aprendida",
+   "colores": [
+    "#00bb99",
+    "#ffdd00",
+    "#cc33cc",
+    "#444466",
+    "#ff5500",
+    "#22aadd",
+    "#ee0044",
+    "#55cc33",
+    "#333355",
+    "#9933ff"
+   ]
   },
   {
-   "id": "chispa-sucia-1",
-   "nombre": "chispa sucia",
+   "id": "caos-doce",
+   "nombre": "caos de doce",
    "frames": [
-    "^",
-    "·",
-    "~",
-    " ",
     "=",
-    "*",
-    "·",
-    "<",
+    "~",
     "#",
-    " ",
-    ">",
+    "<",
+    "&",
+    "^",
+    "@",
+    "*",
+    "$",
+    "%",
+    "!",
     "+"
    ],
    "intervalo": 50,
    "alta": "2026-11-14",
-   "origen": "aprendida"
+   "origen": "aprendida",
+   "colores": [
+    "#22cc88",
+    "#00aacc",
+    "#7755ee",
+    "#cc33bb",
+    "#ee2255",
+    "#ff6600",
+    "#ffaa00",
+    "#ccdd00",
+    "#55cc22",
+    "#00bbaa",
+    "#3377ee",
+    "#aa44dd"
+   ]
   },
   {
-   "id": "reactor-uno",
-   "nombre": "reactor",
+   "id": "pulso-braille-seco",
+   "nombre": "pulso braille seco",
    "frames": [
-    "░",
-    "▒",
-    "▓",
-    "█",
-    "◉",
-    "█",
-    "▓",
-    "▒",
-    "░",
-    "·",
-    " "
-   ],
-   "intervalo": 50,
-   "alta": "2026-11-14",
-   "origen": "aprendida"
-  },
-  {
-   "id": "metal-fundido-1",
-   "nombre": "metal fundido",
-   "frames": [
-    "%",
-    "#",
-    "@",
-    "*",
-    "⡿",
+    "⠁",
+    "⠉",
+    "⠛",
+    "⠿",
     "⣿",
     "⠿",
-    "*",
-    "+",
-    "·",
-    " "
-   ],
-   "intervalo": 55,
-   "alta": "2026-11-14",
-   "origen": "aprendida"
-  },
-  {
-   "id": "latigo-diagonal-1",
-   "nombre": "latigazo diagonal",
-   "frames": [
-    "╱",
-    "│",
-    "╲",
-    "─",
-    "╳",
-    "#",
-    "*",
-    "·",
-    " "
-   ],
-   "intervalo": 50,
-   "alta": "2026-11-14",
-   "origen": "aprendida"
-  },
-  {
-   "id": "pulso-irregular-1",
-   "nombre": "pulso irregular",
-   "frames": [
-    "○",
-    "●",
-    "◐",
-    "●",
-    "◑",
-    "●",
-    "◒",
-    "◉",
-    "·",
-    "°"
-   ],
-   "intervalo": 60,
-   "alta": "2026-11-14",
-   "origen": "aprendida"
-  },
-  {
-   "id": "ceniza-braille-1",
-   "nombre": "ceniza",
-   "frames": [
-    "⢀",
-    "⡀",
-    "⠄",
-    "⠂",
-    "⠁",
-    " ",
-    "⠈",
-    "⠐",
-    "⠠",
-    "⢀",
-    "·",
-    " "
-   ],
-   "intervalo": 50,
-   "alta": "2026-11-14",
-   "origen": "aprendida"
-  },
-  {
-   "id": "chicharra",
-   "nombre": "chicharra",
-   "frames": [
-    "|",
-    "·",
-    "/",
-    " ",
-    "\\",
-    "·",
-    "X",
-    " ",
-    "#",
-    "·"
-   ],
-   "intervalo": 50,
-   "alta": "2026-11-14",
-   "origen": "aprendida",
-   "colores": [
-    "#2e8bc0",
-    "#6fb9da",
-    "#2e8bc0",
-    "#1b5a7a",
-    "#8ed0ea",
-    "#3a9ac9",
-    "#c9a227",
-    "#1b5a7a",
-    "#d9542b",
-    "#2e8bc0"
-   ]
-  },
-  {
-   "id": "brasa-cae",
-   "nombre": "brasa que cae",
-   "frames": [
-    "'",
-    ":",
-    ";",
-    ",",
-    "·",
-    " ",
-    "'",
-    ":",
-    ";",
-    ","
-   ],
-   "intervalo": 55,
-   "alta": "2026-11-14",
-   "origen": "aprendida",
-   "colores": [
-    "#e08b1a",
-    "#d9661f",
-    "#c4451c",
-    "#a3321a",
-    "#8a2a16",
-    "#5c1f12",
-    "#e08b1a",
-    "#d9661f",
-    "#c4451c",
-    "#a3321a"
-   ]
-  },
-  {
-   "id": "taladro-cruz",
-   "nombre": "taladro",
-   "frames": [
-    "┬",
-    "┤",
-    "┴",
-    "├",
-    "┼",
-    "╳",
-    "┼",
-    "┤"
-   ],
-   "intervalo": 55,
-   "alta": "2026-11-14",
-   "origen": "aprendida",
-   "colores": [
-    "#7a8b99",
-    "#5d6e7d",
-    "#7a8b99",
-    "#5d6e7d",
-    "#9aa9b5",
-    "#c9a227",
-    "#9aa9b5",
-    "#5d6e7d"
-   ]
-  },
-  {
-   "id": "onda-expansiva-1",
-   "nombre": "onda expansiva",
-   "frames": [
-    "·",
-    "○",
-    "◎",
-    "●",
-    "█",
-    "▓",
-    "▒",
-    "░",
-    " "
-   ],
-   "intervalo": 55,
-   "alta": "2026-11-14",
-   "origen": "aprendida",
-   "colores": [
-    "#d4a017",
-    "#e08b1a",
-    "#e2601a",
-    "#c42b1c",
-    "#a3211a",
-    "#8a4a3a",
-    "#6e5a52",
-    "#55504c",
-    "#3f3f3f"
-   ]
-  },
-  {
-   "id": "braille-granizo",
-   "nombre": "granizo braille",
-   "frames": [
-    "⣠",
-    "⡤",
-    "⠶",
     "⠛",
-    "⠻",
-    "⣹",
-    "⣰",
-    "⢤",
-    "⠚",
-    "⡋"
-   ],
-   "intervalo": 50,
-   "alta": "2026-11-14",
-   "origen": "aprendida",
-   "colores": [
-    "#2fa37a",
-    "#2e8bc0",
-    "#8f5ac4",
-    "#c9a227",
-    "#d9542b",
-    "#2fa37a",
-    "#2e8bc0",
-    "#8f5ac4",
-    "#c9a227",
-    "#d9542b"
-   ]
-  },
-  {
-   "id": "estrobo-sucio",
-   "nombre": "estrobo sucio",
-   "frames": [
-    "█",
-    "░",
-    " ",
-    "▓",
-    "·",
-    " ",
-    "█",
-    "▒",
-    " ",
-    "░"
-   ],
-   "intervalo": 50,
-   "alta": "2026-11-14",
-   "origen": "aprendida",
-   "colores": [
-    "#2fa37a",
-    "#8f5ac4",
-    "#2fa37a",
-    "#2e8bc0",
-    "#c9a227",
-    "#2fa37a",
-    "#d9542b",
-    "#8f5ac4",
-    "#2fa37a",
-    "#2e8bc0"
-   ]
-  },
-  {
-   "id": "figuras-late",
-   "nombre": "figuras que laten",
-   "frames": [
-    "□",
-    "◇",
-    "△",
-    "·",
-    "△",
-    "◇",
-    "□",
-    "■",
-    "◆",
-    "▲",
-    "·",
-    " "
+    "⠉"
    ],
    "intervalo": 55,
    "alta": "2026-11-14",
    "origen": "aprendida",
    "colores": [
-    "#8f5ac4",
-    "#6d57c6",
-    "#4f6fc0",
-    "#2e8bc0",
-    "#2a9fa8",
-    "#2fa37a",
-    "#5aa83f",
-    "#8ba32b",
-    "#c9a227",
-    "#d98b1f",
-    "#d9542b",
-    "#a3321a"
-   ]
-  },
-  {
-   "id": "interferencia",
-   "nombre": "interferencia",
-   "frames": [
-    "▌",
-    "▐",
-    "░",
-    "▌",
-    "▐",
-    "█",
-    "▒",
-    " "
-   ],
-   "intervalo": 50,
-   "alta": "2026-11-14",
-   "origen": "aprendida",
-   "colores": [
-    "#2fa37a",
-    "#1f7d5c",
-    "#2fa37a",
-    "#8f5ac4",
-    "#2e8bc0",
-    "#c9a227",
-    "#2fa37a",
-    "#1f7d5c"
-   ]
-  },
-  {
-   "id": "tartamudo",
-   "nombre": "tartamudo",
-   "frames": [
-    "·",
-    "*",
-    " ",
-    "·",
-    "#",
-    " ",
-    "·",
-    "@",
-    " ",
-    "·"
-   ],
-   "intervalo": 55,
-   "alta": "2026-11-14",
-   "origen": "aprendida",
-   "colores": [
-    "#c9a227",
-    "#e08b1a",
-    "#8a6a1f",
-    "#c9a227",
-    "#e2601a",
-    "#8a3a1f",
-    "#c9a227",
-    "#c42b1c",
-    "#7a2016",
-    "#c9a227"
-   ]
-  },
-  {
-   "id": "morse-loco",
-   "nombre": "morse loco",
-   "frames": [
-    "-",
-    "·",
-    "-",
-    "-",
-    "·",
-    " ",
-    "·",
-    "-",
-    "·",
-    "·",
-    " "
-   ],
-   "intervalo": 50,
-   "alta": "2026-11-14",
-   "origen": "aprendida",
-   "colores": [
-    "#2fa37a",
-    "#c9a227",
-    "#2e8bc0",
-    "#2fa37a",
-    "#d9542b",
-    "#1f7d5c",
-    "#8f5ac4",
-    "#c9a227",
-    "#2e8bc0",
-    "#2fa37a",
-    "#d9542b"
+    "#886644",
+    "#cc9900",
+    "#ffbb00",
+    "#ff8800",
+    "#ff3300",
+    "#ff8800",
+    "#ffbb00",
+    "#cc9900"
    ]
   }
  ]
