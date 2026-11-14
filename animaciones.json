@@ -6259,6 +6259,210 @@
    "intervalo": 55,
    "alta": "2026-11-14",
    "origen": "aprendida"
+  },
+  {
+   "id": "canon-braille-1",
+   "nombre": "cañón braille",
+   "frames": [
+    "⠁",
+    "⠃",
+    "⠇",
+    "⡇",
+    "⡧",
+    "⡷",
+    "⡿",
+    "⣿",
+    "⡿",
+    "⠿",
+    "⠛",
+    "⠉",
+    "⠁",
+    " "
+   ],
+   "intervalo": 55,
+   "alta": "2026-11-14",
+   "origen": "aprendida"
+  },
+  {
+   "id": "granada-geo-1",
+   "nombre": "granada geométrica",
+   "frames": [
+    "·",
+    "°",
+    "○",
+    "◎",
+    "◉",
+    "●",
+    "█",
+    "●",
+    "◉",
+    "○",
+    "·",
+    " "
+   ],
+   "intervalo": 60,
+   "alta": "2026-11-14",
+   "origen": "aprendida"
+  },
+  {
+   "id": "esquirla-box-1",
+   "nombre": "esquirla de cajas",
+   "frames": [
+    "│",
+    "╱",
+    "─",
+    "╲",
+    "┼",
+    "╳",
+    "┤",
+    "┬",
+    "├",
+    "┴",
+    "·",
+    " "
+   ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida"
+  },
+  {
+   "id": "trueno-barras-1",
+   "nombre": "trueno de barras",
+   "frames": [
+    "▁",
+    "▌",
+    "█",
+    "▐",
+    "▇",
+    "░",
+    "▓",
+    "█",
+    "▒",
+    "·",
+    " "
+   ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida"
+  },
+  {
+   "id": "chispa-sucia-1",
+   "nombre": "chispa sucia",
+   "frames": [
+    "^",
+    "·",
+    "~",
+    " ",
+    "=",
+    "*",
+    "·",
+    "<",
+    "#",
+    " ",
+    ">",
+    "+"
+   ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida"
+  },
+  {
+   "id": "reactor-uno",
+   "nombre": "reactor",
+   "frames": [
+    "░",
+    "▒",
+    "▓",
+    "█",
+    "◉",
+    "█",
+    "▓",
+    "▒",
+    "░",
+    "·",
+    " "
+   ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida"
+  },
+  {
+   "id": "metal-fundido-1",
+   "nombre": "metal fundido",
+   "frames": [
+    "%",
+    "#",
+    "@",
+    "*",
+    "⡿",
+    "⣿",
+    "⠿",
+    "*",
+    "+",
+    "·",
+    " "
+   ],
+   "intervalo": 55,
+   "alta": "2026-11-14",
+   "origen": "aprendida"
+  },
+  {
+   "id": "latigo-diagonal-1",
+   "nombre": "latigazo diagonal",
+   "frames": [
+    "╱",
+    "│",
+    "╲",
+    "─",
+    "╳",
+    "#",
+    "*",
+    "·",
+    " "
+   ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida"
+  },
+  {
+   "id": "pulso-irregular-1",
+   "nombre": "pulso irregular",
+   "frames": [
+    "○",
+    "●",
+    "◐",
+    "●",
+    "◑",
+    "●",
+    "◒",
+    "◉",
+    "·",
+    "°"
+   ],
+   "intervalo": 60,
+   "alta": "2026-11-14",
+   "origen": "aprendida"
+  },
+  {
+   "id": "ceniza-braille-1",
+   "nombre": "ceniza",
+   "frames": [
+    "⢀",
+    "⡀",
+    "⠄",
+    "⠂",
+    "⠁",
+    " ",
+    "⠈",
+    "⠐",
+    "⠠",
+    "⢀",
+    "·",
+    " "
+   ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida"
   }
  ]
 }
