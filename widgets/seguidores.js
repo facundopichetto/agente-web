@@ -18,7 +18,7 @@
     if(Array.isArray(p.movimientos)){
       p.movimientos.forEach(function(u, i){
         lista.push({usuario: u.usuario, nombre: u.nombre, fecha: u.fecha, hora: u.hora, ts: u.ts,
-                    tipo: u.tipo, signo: u.signo || (u.tipo === "dejo_de_seguirte" ? "-" : "+"), _i: i});
+                    tipo: u.tipo, signo: u.signo || (u.tipo === "dejo_de_seguirte" ? "-" : "+"), vueltas: u.vueltas, _i: i});
       });
     } else {
       (p.dejaron || []).forEach(function(u, i){
@@ -56,7 +56,7 @@
     ordenarMovimientos(p).forEach(function(u){
       var esBaja = u.signo === "-" || u.tipo === "dejo_de_seguirte";
       filas.push('<span class="' + (esBaja ? "r" : "v") + '">' + (esBaja ? "-" : "+") + "</span> " +
-                 quien(u) + ' <span class="g">' + esc((u.fecha || "").slice(5)) + "</span>");
+                 quien(u) + ' <span class="g">' + esc((u.fecha || "").slice(5)) + (u.vueltas > 1 ? " ×" + u.vueltas : "") + "</span>");
     });
     if(!filas.length) filas.push(vacio("sin bajas ni altas en " + (p.dias || 7) + " días"));
     // 3653: sin la linea de `no te siguen` (con su `vos: -N +N` y la hora de la foto): "saca toda la linea"

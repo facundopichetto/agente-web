@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.634">
-<link rel="manifest" href="manifest.json?v=4.634">
+<meta name="agente-web-version" content="4.635">
+<link rel="manifest" href="manifest.json?v=4.635">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,8 +27,16 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.634">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.635">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.607">
+<style id="css-dock-mac">
+/* {board-dock-fullscreen} (facundo, 2026-11-16): en la mac a pantalla completa el dock asoma al empujar el puntero
+   contra el borde de abajo; el pie del board llegaba hasta el ultimo pixel y el gesto se perdia. con puntero fino
+   (mouse o trackpad, nunca el celu) el `html` fijo deja 3 px libres abajo. */
+@media (hover:hover) and (pointer:fine) {
+  html { bottom: 3px !important; }
+}
+</style>
 <style id="css-listas-drag">
 #sync, #sync.oculta, #sync.off { display: none !important; }
 body.sincronizando #lista, body.sincronizando #widgets, body.sincronizando #tabs .tab { opacity: 1 !important; }
@@ -704,6 +712,9 @@ function clasificar(txt){
 // dragandropeables"): no hay segundo panel ni arrastre, solo la pestaña activa.
 var tabs = ["flos", AUTO], activo = "flos";   // 2044: la pestaña `audio` se fue; la general sigue fija
 var layoutTs = 0;                 // cuando se escribio el layout que estoy mostrando
+var layoutBaseTs = 0;             // 6451: ultimo ts remoto recibido, para distinguir remoto nuevo de pisada local
+var tabsAbiertas = {}, tabsCerradas = {};   // 6451: {tema: ts} de aperturas y cierres explicitos por pestaña
+var tabsLecturaEnVuelo = null;    // 6451: promesa de lectura remota en vuelo (frena escrituras con cache viejo)
 var shaTabs = null;               // sha del tabs.json remoto (para el PUT)
 var etagTabs = null, tabsUlt = 0; // poll con etag, como los widgets
 var tabsSync = true;              // si el token no puede escribir el repo, queda en local y no insiste
@@ -864,6 +875,163 @@ function sanearLayout(L){
 }
 function layoutActual(){ return {tabs: tabs, activo: activo}; }
 function firmaLayout(L){ return JSON.stringify([L.tabs, L.activo]); }
+function marcarTabAbierta(tema, ts){
+  tema = tema === AUTO ? AUTO : normTema(tema);
+  if(!tema) return;
+  var t = +ts || Math.max(Date.now(), layoutTs + 1);
+  tabsAbiertas[tema] = Math.max(t, +tabsAbiertas[tema] || 0);
+  delete tabsCerradas[tema];
+}
+function marcarTabCerrada(tema, ts){
+  tema = tema === AUTO ? AUTO : normTema(tema);
+  if(!tema) return;
+  var t = +ts || Math.max(Date.now(), layoutTs + 1);
+  tabsCerradas[tema] = Math.max(t, +tabsCerradas[tema] || 0);
+  delete tabsAbiertas[tema];
+}
+function recibirAbiertasCerradas(remAb, remCe){
+  var ab = remAb && typeof remAb === "object" ? remAb : {};
+  var ce = remCe && typeof remCe === "object" ? remCe : {};
+  Object.keys(ab).forEach(function(k){
+    var tk = k === AUTO ? AUTO : normTema(k), v = +ab[k] || 0;
+    if(tk && v > (+tabsAbiertas[tk] || 0)) tabsAbiertas[tk] = v;
+  });
+  Object.keys(ce).forEach(function(k){
+    var tk = k === AUTO ? AUTO : normTema(k), v = +ce[k] || 0;
+    if(tk && v > (+tabsCerradas[tk] || 0)) tabsCerradas[tk] = v;
+  });
+  Object.keys(tabsAbiertas).forEach(function(k){
+    if((+tabsCerradas[k] || 0) > (+tabsAbiertas[k] || 0)) delete tabsAbiertas[k];
+    else delete tabsCerradas[k];
+  });
+}
+function abiertasLimpias(){
+  var o = {};
+  Object.keys(tabsAbiertas).forEach(function(k){
+    if(tabs.indexOf(k) >= 0 && (+tabsAbiertas[k] || 0) > 0) o[k] = +tabsAbiertas[k];
+  });
+  return Object.keys(o).length ? o : null;
+}
+function cerradasLimpias(){
+  var o = {}, ahora = Date.now();
+  Object.keys(tabsCerradas).forEach(function(k){
+    var v = +tabsCerradas[k] || 0;
+    if(v > 0 && tabs.indexOf(k) < 0 && ahora - v < BORRA_VIDA) o[k] = v;
+  });
+  return Object.keys(o).length ? o : null;
+}
+// 6451 {persistencia-raiz-pestanas-celu}: deduce y reconstruye en la barra todas las pestañas de temas y tickets
+// que tengan tareas activas o en curso, vuelos activos o subpestañas de ticket abiertas.
+function temaDeOrdenEnCurso(f){
+  if(!f) return null;
+  var estado = String(f.estado || (f.marca === ">" ? "corriendo" : "cola")).toLowerCase();
+  var slug = String(f.slug || f.nombre || "").trim();
+  var txt = String(f.completo || f.texto || "");
+  var todo = slug + " " + txt;
+  if(/\[madrugada\b/i.test(todo)) return null;
+  if(/\[a las\s+\d/i.test(todo) && estado !== "corriendo" && estado !== "corre") return null;
+  var mp = /\[pestana\s+([\w\/#~-]+)\]/i.exec(todo);
+  var pExp = (mp && mp[1]) ? normTema(mp[1].replace(/~/g, "#")) : (f.pestana ? normTema(String(f.pestana).replace(/~/g, "#")) : null);
+  if(pExp && pExp !== AUTO && esTema(pExp)) return pExp;
+  var tks = typeof ticketsEnTexto === "function" ? ticketsEnTexto(todo) : [];
+  if(tks.length){
+    var mapaTk = {};
+    if(typeof CLON_INFO !== "undefined" && CLON_INFO){
+      Object.keys(CLON_INFO).forEach(function(k){
+        var inf = CLON_INFO[k];
+        if(inf && !inf.archivado && inf.nombre){
+          var tn = ticketNorm(inf.nombre);
+          if(tn) mapaTk[tn] = normTema(k);
+        }
+      });
+    }
+    if(typeof CLON_VIS !== "undefined" && CLON_VIS){
+      Object.keys(CLON_VIS).forEach(function(k){
+        var v = String(CLON_VIS[k] || "").split("/").pop();
+        var tn = ticketNorm(v);
+        if(tn && !mapaTk[tn]) mapaTk[tn] = normTema(k);
+      });
+    }
+    for(var i = 0; i < tks.length; i++){
+      if(mapaTk[tks[i]]) return mapaTk[tks[i]];
+    }
+  }
+  if(estado !== "corriendo" && estado !== "corre" && !f.pedida_ts) return null;
+  var tCand = f.tema ? normTema(f.tema) : null;
+  if(!tCand){
+    var mt = /(?:^|\s)tema\s+([\w\/#~-]+)\s*:/i.exec(todo);
+    if(mt && mt[1]) tCand = normTema(mt[1].replace(/~/g, "#"));
+  }
+  if(tCand && tCand !== AUTO && esTema(tCand)){
+    if(esClon(tCand) && CLON_INFO && CLON_INFO[tCand] && CLON_INFO[tCand].archivado) return null;
+    return tCand;
+  }
+  return null;
+}
+function pestanasEnCurso(){
+  var out = [];
+  function sumar(t){
+    t = normTema(t);
+    if(!t || t === AUTO || !esTema(t) || out.indexOf(t) >= 0) return;
+    if(esClon(t) && CLON_INFO && CLON_INFO[t] && CLON_INFO[t].archivado) return;
+    out.push(t);
+  }
+  var ag = (typeof widDatos !== "undefined" && widDatos && (widDatos.agente || widDatos.agent)) || null;
+  if(ag){
+    var corr = ag.corriendo || [];
+    for(var i = 0; i < corr.length; i++){
+      var c = corr[i];
+      var tc = temaDeOrdenEnCurso(c ? {estado: "corriendo", slug: c.slug, nombre: c.nombre,
+                                       completo: c.completo, texto: c.texto,
+                                       pestana: c.pestana, tema: c.tema} : null);
+      if(tc) sumar(tc);
+    }
+    var tab = ag.tabla || [];
+    for(var j = 0; j < tab.length; j++){
+      var f = tab[j];
+      if(!f || (f.estado !== "corriendo" && f.estado !== "corre" && f.estado !== "cola")) continue;
+      var tf = temaDeOrdenEnCurso(f);
+      if(tf) sumar(tf);
+    }
+  }
+  if(typeof vuelos !== "undefined" && vuelos){
+    var ahora = Date.now();
+    Object.keys(vuelos).forEach(function(k){
+      var v = vuelos[k];
+      if(v && v.tema && !v.listo && (!v.t || ahora - v.t <= (typeof VUELO_MAX_MS !== "undefined" ? VUELO_MAX_MS : 1800000))){
+        sumar(v.tema);
+      }
+    });
+  }
+  if(typeof CLON_INFO !== "undefined" && CLON_INFO && Array.isArray(CLONES)){
+    CLONES.forEach(function(c){
+      var id = normTema(c && c.id ? c.id : c);
+      var inf = CLON_INFO[id];
+      if(id && esSubTicket(id) && inf && !inf.archivado && inf.nombre) sumar(id);
+    });
+  }
+  return out;
+}
+function asegurarPestanasEnCurso(sinPublicar){
+  var enC = pestanasEnCurso();
+  if(!enC.length) return false;
+  var agregadas = false;
+  enC.forEach(function(t){
+    if(tabs.indexOf(t) >= 0) return;
+    if(tabsCerradas[t] && tabsCerradas[t] > layoutTs) return;
+    var idx = tabs.length && tabs[tabs.length - 1] === AUTO ? tabs.length - 1 : tabs.length;
+    tabs.splice(idx, 0, t);
+    marcarTabAbierta(t, layoutTs || Date.now());
+    agregadas = true;
+  });
+  if(!agregadas) return false;
+  var prevAplicando = aplicando;
+  if(sinPublicar) aplicando = true;
+  try{ pintarTabs(); }finally{ aplicando = prevAplicando; }
+  guardarCache();
+  if(!sinPublicar && tabsListo) publicarTabs();
+  return true;
+}
 // pinta un layout (venga del cache o del buzon) sin dispararme una publicacion de vuelta
 function aplicarLayout(L, ts){
   var s = sanearLayout(L);
@@ -880,7 +1048,8 @@ function guardarCache(){
   layoutFirma = firmaLayout(layoutActual());
   try{
     localStorage.setItem("agente_tabs", JSON.stringify(
-      {tabs: tabs, activo: activo, ts: layoutTs, origen: DISPOSITIVO,
+      {tabs: tabs, activo: activo, ts: layoutTs, visto_ts: layoutBaseTs, origen: DISPOSITIVO,
+       abiertas: abiertasLimpias(), cerradas: cerradasLimpias(),
        borradores: borradoresLimpios(), vistas: vistasLimpias(), split: splitLimpio(),
        wsets: wsetsLimpias(), orden_widgets: ordenLimpio(), avisos_leidos: leidosLimpios(),
        llegadas: llegadasLimpias(), opciones_cajas: typeof opcRemotasLimpias === "function" ? opcRemotasLimpias() : null}));
@@ -1536,7 +1705,8 @@ function borrarBorrador(tema){
   try{
     var L = JSON.parse(localStorage.getItem("agente_tabs") || "null");
     var s = L && sanearLayout(L);
-    if(s){ tabs = s.tabs; activo = s.activo; layoutTs = L.ts || 0; }
+    if(s){ tabs = s.tabs; activo = s.activo; layoutTs = L.ts || 0; layoutBaseTs = +L.visto_ts || 0; }
+    if(L && (L.abiertas || L.cerradas)) recibirAbiertasCerradas(L.abiertas, L.cerradas);
     if(L && L.borradores) recibirBorradores(L.borradores);
     if(L && L.vistas) recibirVistas(L.vistas);
     // 1770: la posicion exacta guardada al recargar manda sobre una vista mas vieja del buzon
@@ -1584,9 +1754,9 @@ function sinSync(motivo){
 function cargarTabs(){
   if(!token) return Promise.resolve();
   tabsUlt = Date.now();
-  return api("GET", "/repos/" + REPO + "/contents/" + TABS_ARCHIVO, null, etagTabs).then(function(r){
+  var p = api("GET", "/repos/" + REPO + "/contents/" + TABS_ARCHIVO, null, etagTabs).then(function(r){
     tabsListo = true;
-    if(r.status === 304) return;
+    if(r.status === 304){ asegurarPestanasEnCurso(true); return; }
     etagTabs = r.etag;
     var j = r.json || {};
     if(j.sha) shaTabs = j.sha;
@@ -1601,11 +1771,14 @@ function cargarTabs(){
     if(m === "401" || m === "freno") return;
     throw e;
   });
+  tabsLecturaEnVuelo = p.then(function(){ tabsLecturaEnVuelo = null; }, function(e){ tabsLecturaEnVuelo = null; throw e; });
+  return tabsLecturaEnVuelo;
 }
 // llego un layout del buzon: gana el `ts` mas nuevo. si el mio es mas nuevo y lo escribio otro
-// dispositivo, publico el mio. devuelve "remoto" | "mio" | "igual" (lo usa la prueba).
+// dispositivo, fusiono las pestañas abiertas que no vi antes y publico el resultado. devuelve "remoto" | "mio" | "igual".
 function recibirTabs(L){
   var ts = +L.ts || 0;
+  recibirAbiertasCerradas(L.abiertas, L.cerradas);
   // los borradores no se resuelven por el `ts` del layout: uno por uno, el mas nuevo de cada tema
   var borr = recibirBorradores(L.borradores);
   // idem el scroll: donde quedaste leyendo cada pestaña se resuelve por tema, no por layout
@@ -1624,25 +1797,80 @@ function recibirTabs(L){
   var opcR = typeof recibirOpcRemotas === "function" ? recibirOpcRemotas(L.opciones_cajas) : false;
   // la ultima vez que facundo miro el board (el daemon lo usa para poner el badge en 0): gana el mayor
   if(+L.push_leido > pushLeido) pushLeido = +L.push_leido;
-  if(ts > layoutTs){ aplicarLayout(L, ts); return "remoto"; }
-  if(layoutTs > ts && L.origen !== DISPOSITIVO){ publicarTabs(true); return "mio"; }
+  var basePrev = layoutBaseTs;
+  if(ts > layoutTs){
+    var sRem = sanearLayout(L);
+    if(sRem && basePrev > 0 && L.origen && L.origen !== DISPOSITIVO){
+      tabs.forEach(function(t){
+        var tAb = +tabsAbiertas[t] || 0;
+        var rCe = (L.cerradas && +L.cerradas[t]) || 0;
+        if(sRem.tabs.indexOf(t) < 0 && tAb > basePrev && tAb > rCe){
+          var idx = sRem.tabs.length && sRem.tabs[sRem.tabs.length - 1] === AUTO ? sRem.tabs.length - 1 : sRem.tabs.length;
+          sRem.tabs.splice(idx, 0, t);
+        }
+      });
+      L = {tabs: sRem.tabs, activo: sRem.activo};
+    }
+    layoutBaseTs = Math.max(layoutBaseTs, ts);
+    aplicarLayout(L, ts);
+    asegurarPestanasEnCurso(true);
+    return "remoto";
+  }
+  if(layoutTs > ts && L.origen !== DISPOSITIVO){
+    var sOtro = sanearLayout(L);
+    if(sOtro && ((basePrev > 0 && ts > basePrev) || L.abiertas)){
+      var abRem = (L.abiertas && typeof L.abiertas === "object") ? L.abiertas : {};
+      var sumadas = false;
+      sOtro.tabs.forEach(function(t){
+        if(tabs.indexOf(t) >= 0) return;
+        var tAp = +abRem[t] || (basePrev > 0 && ts > basePrev ? ts : 0);
+        if(!tAp) return;
+        if((+tabsCerradas[t] || 0) > tAp) return;
+        var idx = tabs.length && tabs[tabs.length - 1] === AUTO ? tabs.length - 1 : tabs.length;
+        tabs.splice(idx, 0, t);
+        sumadas = true;
+      });
+      if(sumadas){
+        aplicando = true;
+        try{ pintarTabs(); }finally{ aplicando = false; }
+        guardarCache();
+      }
+    }
+    layoutBaseTs = Math.max(layoutBaseTs, ts);
+    asegurarPestanasEnCurso(true);
+    publicarTabs(true);
+    return "mio";
+  }
+  layoutBaseTs = Math.max(layoutBaseTs, ts);
+  asegurarPestanasEnCurso(true);
   if(borr || vis || sp || ws || orw || avl === "mio" || lle === "mio" || opcR === "mio") publicarTabs();   // mezcle los dos lados: que el otro vea el resultado
   return "igual";
 }
 // agrupa los cambios seguidos (abrir una pestaña, cambiar de pestaña, mover el separador) en una
-// sola escritura
+// sola escritura. con el endpoint directo (`lan.base`) no espera los 8 s del buzon de github.
 function publicarTabs(ya, debounce){
   if(!token || !tabsSync || !tabsListo) return;
   if(tabsPendiente) clearTimeout(tabsPendiente);
-  var espera = Math.max(ya ? 0 : (debounce || TABS_DEBOUNCE), TABS_MINIMO - (Date.now() - tabsPub));
-  tabsPendiente = setTimeout(function(){ tabsPendiente = null; ponerTabs(false); }, espera);
+  var minIntervalo = lan.base ? (ya ? 0 : 150) : TABS_MINIMO;
+  var espera = Math.max(ya ? 0 : (debounce || (lan.base ? 150 : TABS_DEBOUNCE)), minIntervalo - (Date.now() - tabsPub));
+  tabsPendiente = setTimeout(function(){
+    tabsPendiente = null;
+    if(tabsLecturaEnVuelo){
+      tabsLecturaEnVuelo.then(function(){ ponerTabs(false); }, function(){ ponerTabs(false); });
+      return;
+    }
+    ponerTabs(false);
+  }, espera);
 }
 function ponerTabs(reintento){
   if(!token || !tabsSync) return Promise.resolve();
   if(Date.now() < frenoHasta){ publicarTabs(); return Promise.resolve(); }
   tabsPub = Date.now();
   var L = layoutActual();
-  L.v = 1; L.ts = layoutTs; L.origen = DISPOSITIVO;
+  L.v = 1; L.ts = layoutTs; L.visto_ts = layoutBaseTs || layoutTs; L.origen = DISPOSITIVO;
+  var abL = abiertasLimpias(), ceL = cerradasLimpias();
+  if(abL) L.abiertas = abL;
+  if(ceL) L.cerradas = ceL;
   L.borradores = borradoresLimpios();
   L.vistas = vistasLimpias();
   L.split = splitLimpio();
@@ -1664,7 +1892,11 @@ function ponerTabs(reintento){
       body: JSON.stringify(cuerpo)
     }).then(function(r){
       if(!r.ok) throw new Error("http " + r.status);
-      return r.json().then(function(j){ shaTabs = ((j || {}).content || {}).sha || null; etagTabs = null; });
+      return r.json().then(function(j){
+        shaTabs = ((j || {}).content || {}).sha || null;
+        etagTabs = null;
+        if(j && j.layout && Array.isArray(j.layout.tabs)) recibirTabs(j.layout);
+      });
     }).catch(function(){ return ponerTabs(true); });
   }
   if(shaTabs && /^lan-/.test(shaTabs)){ delete cuerpo.sha; }
@@ -2132,6 +2364,7 @@ function abrirTab(tema){
   tema = tema === AUTO ? AUTO : normTema(tema);
   if(!esTema(tema) && tema !== AUTO){ sistema("tema desconocido: " + tema, "error"); return; }
   if(tabs.indexOf(tema) < 0) tabs.push(tema);
+  marcarTabAbierta(tema);
   activo = tema;
   // 2149 {pestana}: el toque pinta YA, con lo que hay en memoria (los nodos de esa pestaña siguen armados en
   // `nodoCache`, asi que es colgarlos de nuevo). el fetch de la charla va fuera del gesto.
@@ -2280,9 +2513,10 @@ function clonPendFlush(){
 clonPendProgramar();   // lo que quedo encolado en una sesion anterior sigue vivo
 function clonesPedir(){
   return clonPedir("/clones").then(function(j){
-    CLONES = (j && j.clones) || [];
+    if(j && Array.isArray(j.clones)) CLONES = j.clones;
     if(j && j.info) CLON_INFO = j.info;
-    clonVisPoner(j && j.visibles, j && j.info);
+    if(j && (j.visibles || j.info)) clonVisPoner(j.visibles, j.info);
+    asegurarPestanasEnCurso();
     return CLONES;
   }).catch(function(){ return CLONES; });
 }
@@ -2523,6 +2757,8 @@ function renombrarTab(viejo, nuevo){
   if(viejo === nuevo || tabs.indexOf(viejo) < 0) return;
   if(tabs.indexOf(nuevo) >= 0) tabs.splice(tabs.indexOf(viejo), 1);
   else tabs[tabs.indexOf(viejo)] = nuevo;
+  marcarTabCerrada(viejo);
+  marcarTabAbierta(nuevo);
   if(activo === viejo) activo = nuevo;
   pintarTabs(); render(true); irDonde(true);
 }
@@ -2531,6 +2767,7 @@ function cerrarTab(tema){
   var j = tabs.indexOf(tema);
   if(j < 0) return;
   tabs.splice(j, 1);
+  marcarTabCerrada(tema);
   var reemplazo = tabs[Math.min(j, tabs.length - 1)];
   if(activo === tema) activo = reemplazo;
   pintarTabs(); render(true); irDonde(true);
@@ -6414,9 +6651,11 @@ function sincronizar(primera){
       else if(ruidoso(e)) pintarWidgets(null, e.message);
     }),
     (lan.base && !primera) ? Promise.resolve() : cargarVotaciones().catch(function(){}),
+    (lan.base || clonStub) ? clonesPedir().catch(function(){}) : Promise.resolve(),
     suave(cargarTabs()),
     cfgMotor ? Promise.resolve(cfgMotor) : cargarCfgMotor().catch(function(){})
   ]).then(function(){
+    asegurarPestanasEnCurso();
     if(chatPendiente() || primera){ mezclar(); render(); }
     if(primera) irDonde(); else restaurarVistas();
     pintarSync(null);
@@ -6453,15 +6692,30 @@ document.addEventListener("visibilitychange", function(){
   reprogramar();
   // el borrador viaja en los dos sentidos: al irme publico lo que escribi, al volver releo el del otro
   if(document.hidden) soltarBorrador();   // publica el borrador y la vista antes de irse
-  else{ alVolver(); pushVisto(); }
+  else{
+    etagTabs = null;
+    alVolver();
+    Promise.resolve(tabsLecturaEnVuelo || syncEnVuelo).then(function(){ pushVisto(); }, function(){ pushVisto(); });
+  }
 });
-// cerrar la pestaña / bloquear el telefono no puede perder lo escrito: el PUT va con `keepalive`
+// cerrar la pestaña / cambiar de ventana / bloquear el telefono no puede perder las pestañas ni lo escrito:
+// se vuelca el cache y el layout pendiente y el PUT sale en el acto con `keepalive`
 function soltarBorrador(){
+  guardarCacheYa();
+  if(!aplicando && firmaLayout(layoutActual()) !== layoutFirma){
+    layoutTs = Math.max(Date.now(), layoutTs + 1);
+    guardarCache();
+    tabsPendiente = tabsPendiente || 1;
+  }
   guardarBorrador(temaCaja || temaActivo(), txt.value, true);
   guardarVista(true);
   guardarPosicion();   // 1770: el pixel exacto para este dispositivo
   if(tabsPendiente){ clearTimeout(tabsPendiente); tabsPendiente = null; ponerTabs(false); }
 }
+window.addEventListener("blur", function(){
+  if(!aplicando && firmaLayout(layoutActual()) !== layoutFirma) guardarLayout();
+  if(tabsPendiente){ clearTimeout(tabsPendiente); tabsPendiente = null; ponerTabs(false); }
+});
 window.addEventListener("pagehide", soltarBorrador);
 window.addEventListener("beforeunload", soltarBorrador);
 
@@ -15775,7 +16029,10 @@ var BOARD = {
   },
   datos: function(clave, v){
     if(v){ widDatos = widDatos || {}; widDatos[clave] = clave === "igcola" ? limpiarIgCola(v) : v; }
-    if((clave === "agente" || clave === "agent") && !renderando && typeof refrescarCajas === "function") refrescarCajas();
+    if(clave === "agente" || clave === "agent"){
+      asegurarPestanasEnCurso();
+      if(!renderando && typeof refrescarCajas === "function") refrescarCajas();
+    }
   },
   anclado: function(fn){ anclaClavar(); try{ return fn(); } finally{ anclaSoltar(); } },
   // el chat es del shell: un widget que manda un comando lo manda por aca (sin burbuja, como el switch)
@@ -16029,6 +16286,7 @@ function cargarWidgets(fresco){
     }
     selDesdeWidgets(r.json);   // 1407: respaldo del modal y del boton `votar` sin lan
     pintarWidgets(r.json);
+    asegurarPestanasEnCurso();
   });
 }
 
@@ -18511,8 +18769,12 @@ window.__agente = {
   estado: function(){ return {tabs: tabs, activo: activo, ts: layoutTs,
                               sync: tabsSync, dispositivo: DISPOSITIVO}; },
   aplicarLayout: aplicarLayout, sanearLayout: sanearLayout, recibirTabs: recibirTabs,
+  pestanasEnCurso: pestanasEnCurso, asegurarPestanasEnCurso: asegurarPestanasEnCurso,
   guardarLayout: guardarLayout, layoutRemoto: function(){
-    var L = layoutActual(); L.v = 1; L.ts = layoutTs; L.origen = DISPOSITIVO;
+    var L = layoutActual(); L.v = 1; L.ts = layoutTs; L.visto_ts = layoutBaseTs || layoutTs; L.origen = DISPOSITIVO;
+    var abL = abiertasLimpias(), ceL = cerradasLimpias();
+    if(abL) L.abiertas = abL;
+    if(ceL) L.cerradas = ceL;
     L.borradores = borradoresLimpios(); L.vistas = vistasLimpias(); L.split = splitLimpio();
     L.wsets = wsetsLimpias(); L.orden_widgets = ordenLimpio(); L.llegadas = llegadasLimpias();
     var opcL = opcRemotasLimpias(); if(opcL) L.opciones_cajas = opcL;
