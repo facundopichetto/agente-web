@@ -1855,8 +1855,7 @@
     },
     "modelos": {
       "motor": "agy",
-      "modelo": "gemini-4-argon",
-      "effort": "low"
+      "modelo": "agy"
     },
     "personal": {
       "motor": "claude",
