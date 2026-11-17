@@ -1838,8 +1838,8 @@
       "effort": "high"
     },
     "flos": {
-      "motor": "claude",
-      "modelo": "cadena"
+      "motor": "agy",
+      "modelo": "agy"
     },
     "flos#2": {
       "motor": "agy",
