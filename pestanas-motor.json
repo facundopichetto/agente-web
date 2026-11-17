@@ -1804,8 +1804,7 @@
   "ultimos": {
     "awtomic": {
       "motor": "claude",
-      "modelo": "sonnet",
-      "effort": "high"
+      "modelo": "sonnet"
     },
     "awtomic#100": {
       "motor": "claude",
@@ -1838,8 +1837,8 @@
       "effort": "high"
     },
     "flos": {
-      "motor": "agy",
-      "modelo": "agy"
+      "motor": "claude",
+      "modelo": "fable"
     },
     "flos#2": {
       "motor": "agy",
@@ -1859,7 +1858,7 @@
     },
     "personal": {
       "motor": "claude",
-      "modelo": "sonnet"
+      "modelo": "sin modelo"
     },
     "plata": {
       "motor": "claude",

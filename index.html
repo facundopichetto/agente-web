@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.637">
-<link rel="manifest" href="manifest.json?v=4.637">
+<meta name="agente-web-version" content="4.638">
+<link rel="manifest" href="manifest.json?v=4.638">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.637">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.638">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.607">
 <style id="css-dock-mac">
 /* {board-dock-fullscreen} (facundo, 2026-11-16): en la mac a pantalla completa el dock asoma al empujar el puntero
@@ -3218,6 +3218,30 @@ function costos(l){
 // markdown-lite en color (facundo, 2026-09-11: "mas color"): `code` cian, **negrita** amarilla,
 // ## titulos magenta, tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde,
 // ORDEN:/PROPUESTA: amarillo. el texto ya viene escapado: aca solo se agregan spans.
+var RE_LINK_FILE_WEB = /`?\[([^\]\n]*)\]\(\s*file:\/\/([^)\s]+)\s*\)`?/gi;
+var RE_URL_FILE_WEB = /`?file:\/\/(\/[^\s)>\]`"&]+)`?/gi;
+function nombreCortoArchivoWeb(ruta){
+  var limpia = String(ruta || "").split("#")[0].split("?")[0].replace(/\/+$/, "");
+  var partes = limpia.split("/");
+  return partes[partes.length - 1] || String(ruta || "").trim();
+}
+function limpiarLinksArchivoLineaWeb(l){
+  var s = String(l || "");
+  if(s.indexOf("file://") < 0) return s;
+  s = s.replace(RE_LINK_FILE_WEB, function(m0, etq, ruta, off, str){
+    if(off > 0 && str.charAt(off - 1) === "!") return m0;
+    var etqLimpia = String(etq || "").trim().replace(/^`+|`+$/g, "").trim()
+      .replace(/(?:#L\d+(?:-L?\d+)?|:\d+(?:-\d+)?)$/i, "").trim();
+    var corto = nombreCortoArchivoWeb(ruta);
+    var elegido = (etqLimpia.length >= 2 && etqLimpia.indexOf("/") < 0 &&
+                   etqLimpia.toLowerCase().indexOf("file:") < 0 && !/\s/.test(etqLimpia)) ? etqLimpia : corto;
+    return elegido ? "`" + elegido + "`" : m0;
+  });
+  return s.replace(RE_URL_FILE_WEB, function(m0, ruta){
+    var corto = nombreCortoArchivoWeb(ruta);
+    return corto ? "`" + corto + "`" : m0;
+  });
+}
 function enCodigo(l, f){  // saca los `code` antes de tocar el resto y los devuelve al final
   var trozos = [];
   l = l.replace(/`+([^`]+)`+/g, function(m0, c){
@@ -3228,7 +3252,7 @@ function enCodigo(l, f){  // saca los `code` antes de tocar el resto y los devue
   return l.replace(/\u0001(\d+)\u0001/g, function(m0, i){ return trozos[+i]; });
 }
 function enLinea(l){
-  return enCodigo(l, function(x){
+  return enCodigo(limpiarLinksArchivoLineaWeb(l), function(x){
     x = costos(x);
     x = x.replace(/\*\*([^*]+)\*\*/g, function(m0, c){ return '<span class="neg">' + c + "</span>"; });
     return enlaces(x);      // lo ultimo: las urls quedan enteras y clickeables (nunca a mano)
@@ -4079,8 +4103,12 @@ function nodoMsg(m){
   var textoSinAcc = acc && acc.cuerpo !== null ? acc.cuerpo : m.texto;
   var ops = m.clase === "agente" ? cajasDe({texto: textoSinAcc, opciones: m.opciones}) : null;
   var cuerpoOps = ops && ops.cuerpo !== null ? (ops.despues ? ops.antes : ops.cuerpo) : null;   // 3752: sin la prosa de abajo
-  var dr = draftsDe(cuerpoOps !== null ? cuerpoOps : textoSinAcc);
-  var cuerpoTxt = m.clase === "agente" && dr.bloques.length ? dr.cuerpo : (cuerpoOps !== null ? cuerpoOps : (m.clase === "yo" ? sinMarcaMal(sinDictado(m.texto)) : textoSinAcc));
+  var dr = m.clase === "agente" ? draftsDe(cuerpoOps !== null ? cuerpoOps : textoSinAcc) : {cuerpo: "", bloques: []};
+  if(ops && ops.lista.length && ops.lista.every(esCajaEscupir)){
+    var lnsEsc = String(dr.cuerpo || "").split("\n");
+    if(!_hayDraftEnJuegoWeb(lnsEsc, _fueraDeBloquesWeb(lnsEsc), false, esInformeTareaWeb(textoSinAcc))) dr.bloques = [];
+  }
+  var cuerpoTxt = m.clase === "agente" ? dr.cuerpo : (m.clase === "yo" ? sinMarcaMal(sinDictado(m.texto)) : textoSinAcc);
   var finalCuerpo = cuerpoTxt || m.texto || "";
   var hilo = null;
   if(m.clase === "agente" && m.tramos && m.tramos.length){
@@ -4307,10 +4335,220 @@ function purgarOpc(ahora){
 }
 // 1240: un draft de comment/slack/fix va en un bloque ```. lo de adentro no son cajas, y la web lo saca del
 // cuerpo y lo pinta abajo de las cajas como bloque copiable (`draftsDe`).
+// 6473 + 6479 {solucion-integral-e-investigacion}: en pantalla se cortan de raiz los bloques ``` de rastro crudo de
+// comandos/salidas/verificacion ("la caja loca de python"), las cajas huerfanas `[escupir] rehacer el draft` cuando no
+// hay ningun draft en juego, los avisos `GUARD DE ESCRITURA:` sin draft, el texto/bloques colados abajo de `[escupir]`
+// y la informacion interna redundante de los mensajes de cierre (`integrado: rama ...`, `pediste:`/`quedo hecho:`/`dos lados:`/`no quedo: nada`).
 var RE_CERCO = /^\s*(```|~~~)/;
+var RE_NOTA_VERIFICADOR_WEB = /\[agy codigo:\s*(?:`([^`\n]+)`\s+la verifico:\s*`([^`\n]+)`[\s\S]*?tanteo\s+\d+\/\d+|[^\]]*?\(([a-z0-9_-]+):\s*(pasa|falla)\))\]/gi;
+var RE_ENCABEZADO_INFORME_WEB = /^\s*(?:\[[^\]\n]+\]\s+)?(?:termin[oó]|fall[oó]|listo\s*\(|`[^`\n]+`\s+(?:corri[oó]\s+pero\s+no\s+cierra|espera\s+a))\b/im;
+var RE_CIERRE_COMPLETAS_WEB = /^\s*(?:[-*•]\s*)?(?:\*\*|`)*(?:pediste|qued[oó]\s+hecho|no\s+qued[oó]|dos\s+lados)(?:\*\*|`)*\s*:/im;
+var RE_TXT_REHACER_DRAFT_WEB = /^(?:\[escupir(?:\s+[0-9a-f]{8})?\]\s*)?(?:(?:CX|MVP|SD|SUP)-\d+\s*:\s*)?rehacer\s+el\s+draft\s+con\s+lo\s+que\s+marc[oó]\s+el\s+guard\b/i;
+var RE_CAJA_REHACER_LINEA_WEB = /^\s*(?:[-*]\s+)?\**OPCI[OÓ]N\s+[A-P]\**\s*[:)\.]\**\s*(?:\[escupir(?:\s+[0-9a-f]{8})?\]\s*)?(?:(?:CX|MVP|SD|SUP)-\d+\s*:\s*)?rehacer\s+el\s+draft\s+con\s+lo\s+que\s+marc[oó]\s+el\s+guard\b/i;
+var RE_OFRECE_DRAFT_WEB = /\b(?:postear|posteo|subir|publicar|mandar|enviar|responder|contestar)\b([^\n.;:!?]{0,55}?)\b(?:comment|comentario|mensaje|draft|borrador|slack|reply|respuesta)\b/gi;
+var RE_NIEGA_DRAFT_WEB = /\b(?:sin|no|ni|nunca|jam[aá]s|tampoco|ning[uú]n|ningun[ao]s?|nada|evit(?:ar|ando|a|o|e)|antes\s+de|en\s+vez\s+de|en\s+lugar\s+de|salvo|excepto|cancelar|descartar|suspender|frenar|pendientes?\s+de|falta\s+de|filtro\s+de|regla\s+de|error\s+al|problema\s+al)\b/i;
+var RE_ANUNCIA_DRAFT_WEB = /\b(?:comment|comentario|draft(?:-[a-z0-9_-]+)?|borrador|mensaje|texto|respuesta|reply|cambio\s+ser[ií]a|saldr[ií]a\s+si\s+eleg[ií]s|abr[ií]\s+este\s+link|va\s+a\s+tocar|comando\s+listo|correr[ií]a|ejecutar[ií]a)\b[^\n]{0,140}:\s*$/i;
+var RE_ANUNCIA_RASTRO_WEB = /\bsalida\s+de\b|\bresultado\s+de\s+`?(?:python|sh\s|\.\/|scripts\/|curl|git)\b|\bcorrida\s+(?:real|en\s+vivo)\b|\bevidencia\s+(?:real|en\s+vivo)\b|\bcomandos?\s+(?:corridos?|ejecutados?)\b|\bse\s+evalu[oó]\s+con\b/i;
+var RE_INTRO_SOLO_RASTRO_WEB = /^\s*(?:[-*•]\s*)?(?:salida(?:\s+de\s+[^\n:]{1,100})?|evidencia(?:\s+(?:real|en\s+vivo))?|comandos?\s+(?:corridos?|ejecutados?)|transcripci[oó]n(?:\s+cruda)?|rastro(?:\s+crudo)?)\s*:\s*$/i;
+var RE_LINEA_CMD_RASTRO_WEB = /^(?:\$\s+\S|(?:CLAUDE_CONFIG_DIR|PYTHONPATH|AGENTE_\w+|NODE_ENV|HOME|PATH)=\S+\s+\S|(?:python3?\s+(?:-m\s+|[\w./-]+\.py\b)|(?:\.\/|sh\s+|bash\s+)?scripts\/(?:verde|prueba_corta)\b|pytest\b|git\s+(?:status|diff|log|show|rev-parse|worktree)\b|curl\s+-|cd\s+[~\/\w.-]+\s*$))/;
+var RE_SALIDA_RASTRO_WEB = /(?:^|\n)(?:verde:\s+\d+\s+pruebas\b|VERDE:\s+\d+\s+fallas\b|[^\n]*\b--probar:\s*(?:ok|OK|\d+\s+fallas)\b|\s*(?:ok|ROJA)\s+prueba_\w+\s+rc=\d+|JUEZ_EVALUACION:|Traceback \(most recent call last\):|rc=\d+\s*$|\s*\{(?:\s*"[^"]+"\s*:){2,}.*\}\s*$|cuenta:\s+\S+\n\s*dir:\s+\/home\/|[^\n]*\ben cola del juez:\s*\d+|[^\n]*\bfaltan claves:\s*\w+)/;
+var LENGUAJES_RASTRO_WEB = {text:1, txt:1, console:1, bash:1, sh:1, shell:1, zsh:1, json:1, jsonl:1, log:1, python:1, py:1, diff:1, stdout:1, stderr:1, output:1};
+
+function _fueraDeBloquesWeb(lineas){
+  var dentro = false, out = [];
+  for(var i = 0; i < lineas.length; i++){
+    if(RE_CERCO.test(lineas[i])){ dentro = !dentro; continue; }
+    if(!dentro) out.push(i);
+  }
+  return out;
+}
+function _bloquesConLineasWeb(lineas){
+  var out = [], ini = -1, lang = "";
+  for(var i = 0; i < lineas.length; i++){
+    if(!RE_CERCO.test(lineas[i])) continue;
+    if(ini < 0){
+      ini = i;
+      lang = lineas[i].trim().replace(/^(?:```|~~~)\s*/, "").trim().toLowerCase();
+    } else {
+      out.push({ini: ini, fin: i, lang: lang, cuerpo: lineas.slice(ini + 1, i)});
+      ini = -1; lang = "";
+    }
+  }
+  return out;
+}
+function _cajaOfreceDraftWeb(txt){
+  var t = String(txt || "").trim();
+  if(!t || /^\[escupir/i.test(t) || /\[escupir(?:\s+[0-9a-f]{8})?\]\s*$/i.test(t) || RE_TXT_REHACER_DRAFT_WEB.test(t)) return false;
+  RE_OFRECE_DRAFT_WEB.lastIndex = 0;
+  var m;
+  while((m = RE_OFRECE_DRAFT_WEB.exec(t)) !== null){
+    if(RE_NIEGA_DRAFT_WEB.test(m[1] || "")) continue;
+    var antes = t.slice(0, m.index).split(/[.;:!?\n,]/).pop() || "";
+    if(RE_NIEGA_DRAFT_WEB.test(antes)) continue;
+    var despues = t.slice(m.index + m[0].length, m.index + m[0].length + 25);
+    if(/^\s*\b(?:ning[uú]n|ningun[ao]s?|nada)\b/i.test(despues)) continue;
+    return true;
+  }
+  return false;
+}
+function _lineaAnunciaDraftWeb(l){
+  var s = String(l || "").trim();
+  if(!s || /^GUARD DE ESCRITURA:/i.test(s) || RE_OPCION.test(s) || RE_ANUNCIA_RASTRO_WEB.test(s)) return false;
+  return RE_ANUNCIA_DRAFT_WEB.test(s);
+}
+function esBloqueRastroWeb(lang, cuerpoLineas, anunciaDraft, cajaUsaBloque, esInf){
+  var nv = (cuerpoLineas || []).map(function(c){ return String(c || "").trim(); }).filter(Boolean);
+  if(!nv.length || anunciaDraft || cajaUsaBloque) return false;
+  if(nv.length === 1 && /^https?:\/\/\S+$/i.test(nv[0])) return false;
+  if(nv.some(function(c){ return RE_LINEA_CMD_RASTRO_WEB.test(c); })) return true;
+  if(RE_SALIDA_RASTRO_WEB.test(nv.join("\n"))) return true;
+  return !!(esInf && LENGUAJES_RASTRO_WEB[String(lang || "").trim().toLowerCase()]);
+}
+function esInformeTareaWeb(texto){
+  var t = String(texto || "");
+  RE_NOTA_VERIFICADOR_WEB.lastIndex = 0;
+  return RE_NOTA_VERIFICADOR_WEB.test(t) || RE_ENCABEZADO_INFORME_WEB.test(t) || RE_CIERRE_COMPLETAS_WEB.test(t);
+}
+function _hayDraftEnJuegoWeb(lineas, libres, ofrece, esInf){
+  if(ofrece) return true;
+  var libSet = {};
+  (libres || []).forEach(function(i){ libSet[i] = 1; });
+  for(var i = 0; i < (libres || []).length; i++){
+    var l = lineas[libres[i]];
+    if(/^\s*(?:\[freno guard:[^\n]*(?:comment|draft|borrador|mensaje)|la regla comment-entero)/i.test(l)) return true;
+  }
+  var blqs = _bloquesConLineasWeb(lineas);
+  for(var b = 0; b < blqs.length; b++){
+    var bl = blqs[b], nv = bl.cuerpo.map(function(c){ return String(c || "").trim(); }).filter(Boolean);
+    if(!nv.length || (nv.length === 1 && /^https?:\/\/\S+$/i.test(nv[0]))) continue;
+    var prev = "";
+    for(var kp = bl.ini - 1; kp >= 0; kp--){ if(lineas[kp].trim()){ prev = lineas[kp].trim(); break; } }
+    if(!esBloqueRastroWeb(bl.lang, bl.cuerpo, _lineaAnunciaDraftWeb(prev), false, esInf)) return true;
+  }
+  for(var k = 0; k < (libres || []).length; k++){
+    var idx = libres[k];
+    if(lineas[idx].trim().charAt(0) === ">") return true;
+    if(_lineaAnunciaDraftWeb(lineas[idx])) return true;
+  }
+  return false;
+}
+function sanearTextoAgenteWeb(texto, opsExternas){
+  var orig = String(texto || "");
+  if(!orig) return orig;
+  RE_NOTA_VERIFICADOR_WEB.lastIndex = 0;
+  var esInf = esInformeTareaWeb(orig);
+  RE_NOTA_VERIFICADOR_WEB.lastIndex = 0;
+  var t = orig.replace(RE_NOTA_VERIFICADOR_WEB, function(m0, m1, m2, m3, m4){
+    return "Verificó `" + (m1 || m3) + "` (`" + (m2 || m4) + "`).";
+  });
+  var lineas = t.split("\n");
+  var libres = _fueraDeBloquesWeb(lineas), libMap = {};
+  libres.forEach(function(i){ libMap[i] = 1; });
+  for(var i = 0; i < libres.length; i++){
+    var li = libres[i];
+    if(lineas[li].indexOf("file://") >= 0) lineas[li] = limpiarLinksArchivoLineaWeb(lineas[li]);
+  }
+  var cajasLineas = [], cajasTxt = [];
+  libres.forEach(function(idx){
+    var m = RE_OPCION.exec(lineas[idx]);
+    if(m){
+      cajasLineas.push({idx: idx, raw: m[2]});
+      if(!RE_CAJA_REHACER_LINEA_WEB.test(lineas[idx])) cajasTxt.push(m[2]);
+    }
+  });
+  if(cajasLineas.length && cajasLineas.every(function(c){
+    var r = c.raw.replace(/\*\*$/, "").trim();
+    return /^\[escupir(?:\s+[0-9a-f]{8})?\]\s*/i.test(r) || /\s*\[escupir(?:\s+[0-9a-f]{8})?\]$/i.test(r);
+  })){
+    var ultEsc = cajasLineas[cajasLineas.length - 1].idx;
+    if(ultEsc + 1 < lineas.length){
+      var cons = lineas.slice(ultEsc + 1).filter(function(l, k){
+        return libMap[ultEsc + 1 + k] && /!\[[^\]]*\]\([^)]+\)|\[audio\]\(audio\/[^)]+\)/.test(l);
+      });
+      lineas = lineas.slice(0, ultEsc + 1).concat(cons);
+      libres = _fueraDeBloquesWeb(lineas); libMap = {};
+      libres.forEach(function(idx){ libMap[idx] = 1; });
+    }
+  }
+  (opsExternas || []).forEach(function(ox){
+    var tx = String((ox && ox.texto) || "").trim();
+    if(tx && !RE_TXT_REHACER_DRAFT_WEB.test(tx)) cajasTxt.push(tx);
+  });
+  var hayOferta = cajasTxt.some(_cajaOfreceDraftWeb);
+  var hayCajaUsaBloque = hayOferta || cajasTxt.some(function(c){
+    return /\b(?:del\s+bloque|en\s+el\s+bloque|este\s+bloque|ese\s+comando|este\s+comando)\b/i.test(c);
+  });
+  var quitar = {};
+  _bloquesConLineasWeb(lineas).forEach(function(bl){
+    var kPrev = -1;
+    for(var k = bl.ini - 1; k >= 0; k--){ if(lineas[k].trim()){ kPrev = k; break; } }
+    var prev = kPrev >= 0 ? lineas[kPrev].trim() : "";
+    if(!esBloqueRastroWeb(bl.lang, bl.cuerpo, _lineaAnunciaDraftWeb(prev), hayCajaUsaBloque, esInf)) return;
+    for(var z = bl.ini; z <= bl.fin; z++) quitar[z] = 1;
+    if(kPrev >= 0 && libMap[kPrev]){
+      if(RE_INTRO_SOLO_RASTRO_WEB.test(lineas[kPrev])) quitar[kPrev] = 1;
+      else if(/:\s*$/.test(lineas[kPrev])) lineas[kPrev] = lineas[kPrev].replace(/:\s*$/, ".");
+    }
+  });
+  if(Object.keys(quitar).length){
+    lineas = lineas.filter(function(_, idx){ return !quitar[idx]; });
+    libres = _fueraDeBloquesWeb(lineas); libMap = {};
+    libres.forEach(function(idx){ libMap[idx] = 1; });
+  }
+  var hayDraft = _hayDraftEnJuegoWeb(lineas, libres, hayOferta, esInf);
+  if(!hayDraft){
+    var quitarG = {}, gIdx = 0;
+    while(gIdx < lineas.length){
+      if(libMap[gIdx] && /^\s*GUARD DE ESCRITURA:/i.test(lineas[gIdx])){
+        var j = gIdx + 1, dura = false;
+        while(j < lineas.length && libMap[j] && /^\s+(?:\[[a-z_]+\]\s+linea\s+\d+:|facundo:\s*"|-\s+)/i.test(lineas[j])){
+          if(/^\s+\[(?:circuito|memoria)\]/i.test(lineas[j])) dura = true;
+          j++;
+        }
+        if(!dura){
+          for(var q = gIdx; q < j; q++) quitarG[q] = 1;
+          while(j < lineas.length && !lineas[j].trim()){ quitarG[j] = 1; j++; }
+        }
+        gIdx = j; continue;
+      }
+      if(libMap[gIdx] && RE_CAJA_REHACER_LINEA_WEB.test(lineas[gIdx])) quitarG[gIdx] = 1;
+      gIdx++;
+    }
+    if(Object.keys(quitarG).length){
+      lineas = lineas.filter(function(_, idx){ return !quitarG[idx]; });
+      libres = _fueraDeBloquesWeb(lineas); libMap = {};
+      libres.forEach(function(idx){ libMap[idx] = 1; });
+    }
+  }
+  if(esInf){
+    var RE_RUIDO_INF = /^\s*(?:integrado:\s+rama\s+\S+|Estoy esperando a que termine\b|Esperando (?:a )?que (?:termine|finalice)\b|No tools called\.\s*Waiting for background task\b|I have launched .* in the background and am waiting\b)/i;
+    var prosaReal = 0;
+    libres.forEach(function(idx){
+      var s = lineas[idx].trim();
+      if(!s || RE_OPCION.test(s) || RE_RUIDO_INF.test(s)) return;
+      if(/^(?:\[[^\]\n]+\]\s+)?(?:termin[oó]|fall[oó]|listo\s*\(|Verific[oó]\s+`)/i.test(s)) return;
+      if(/^(?:[-*•]\s*)?(?:\*\*|`)*(?:pediste|qued[oó]\s+hecho|no\s+qued[oó]|dos\s+lados)(?:\*\*|`)*\s*:/i.test(s)) return;
+      if(/^!\[.*\]\(.*\)$/.test(s)) return;
+      prosaReal += s.length;
+    });
+    if(prosaReal >= 30){
+      lineas = lineas.filter(function(l, idx){
+        if(!libMap[idx]) return true;
+        var s = l.trim();
+        if(RE_RUIDO_INF.test(s)) return false;
+        if(/^(?:[-*•]\s*)?(?:\*\*|`)*(?:pediste|qued[oó]\s+hecho|dos\s+lados)(?:\*\*|`)*\s*:/i.test(s)) return false;
+        if(/^(?:[-*•]\s*)?(?:\*\*|`)*no\s+qued[oó](?:\*\*|`)*\s*:\s*(?:nada|ningun[oa]?|nada\s+pendiente)\.?\s*$/i.test(s)) return false;
+        return true;
+      });
+    }
+  }
+  return lineas.join("\n").replace(/\n{3,}/g, "\n\n").replace(/\s+$/, "");
+}
 function opcionesDe(texto){
+  var orig = String(texto || "");
+  var saneado = sanearTextoAgenteWeb(orig);
   var lista = [], fuera = [], vistas = {}, dentro = false, ultOpc = -1;
-  String(texto || "").split("\n").forEach(function(l){
+  saneado.split("\n").forEach(function(l){
     if(RE_CERCO.test(l)){ dentro = !dentro; fuera.push(l); return; }
     var mm = dentro ? null : RE_OPCION.exec(l);
     if(mm && !vistas[mm[1].toUpperCase()]){
@@ -4329,12 +4567,18 @@ function opcionesDe(texto){
     }else fuera.push(l);
   });
   lista.sort(function(a, b){ return a.letra < b.letra ? -1 : 1; });
+  var soloEscupir = lista.length > 0 && lista.every(function(x){ return !!x.escupir; });
+  if(soloEscupir && ultOpc >= 0){
+    var antesEsc = fuera.slice(0, ultOpc);
+    var conservados = fuera.slice(ultOpc).filter(function(l){ return /!\[[^\]]*\]\([^)]+\)|\[audio\]\(audio\/[^)]+\)/.test(l); });
+    fuera = antesEsc.concat(conservados);
+  }
   // 2026-10-15 (orden 3752 {cajas-redisenio-integral}) (facundo: "la explicacion de la diferencia este despues de las
   // cajas"): la prosa que queda DEBAJO de la ultima caja (hasta el primer bloque ```, que sigue siendo draft) sale en
   // `despues` y se pinta abajo de las cajas; `antes` es el cuerpo sin ella. `cuerpo` queda como siempre (todo junto)
-  // para las citas y las comparaciones que lo leen.
+  // para las citas y las comparaciones que lo leen. abajo de `[escupir]` nunca se pinta texto residual.
   var antes = null, despues = "";
-  if(lista.length && ultOpc >= 0){
+  if(lista.length && ultOpc >= 0 && !soloEscupir){
     var cola = fuera.slice(ultOpc), f = cola.findIndex(function(l){ return RE_CERCO.test(l); });
     var crudo = (f < 0 ? cola : cola.slice(0, f)).join("\n");
     var prosa = (typeof RE_AUD !== "undefined" && RE_AUD ? sinMarcaAudio(crudo) : crudo).replace(/^\s+|\s+$/g, "");
@@ -4343,12 +4587,13 @@ function opcionesDe(texto){
       antes = fuera.slice(0, ultOpc).concat(f < 0 ? [] : cola.slice(f)).join("\n").replace(/\s+$/, "");
     }
   }
-  return {lista: lista, cuerpo: lista.length ? fuera.join("\n").replace(/\s+$/, "") : null,
-          antes: antes, despues: despues};
+  var cuerpoFinal = (lista.length || saneado !== orig.replace(/\s+$/, "")) ? fuera.join("\n").replace(/\s+$/, "") : null;
+  return {lista: lista, cuerpo: cuerpoFinal, antes: antes, despues: despues};
 }
 function draftsDe(texto){
+  var saneado = sanearTextoAgenteWeb(texto);
   var fuera = [], bloques = [], cur = null;
-  String(texto || "").split("\n").forEach(function(l){
+  String(saneado || "").split("\n").forEach(function(l){
     if(RE_CERCO.test(l)){
       if(cur){ bloques.push(cur.join("\n")); cur = null; }
       else cur = [];
@@ -4462,8 +4707,19 @@ function nodoAcciones(m, lista_){
 function cajasDe(m){
   var o = opcionesDe(m.texto);
   if(m.opciones && m.opciones.length){
+    var lnsM = String(sanearTextoAgenteWeb(m.texto, m.opciones) || "").split("\n");
+    var libM = _fueraDeBloquesWeb(lnsM);
+    var ofrM = m.opciones.some(function(x){
+      var tx0 = String((x && x.texto) || "").trim();
+      return tx0 && !RE_TXT_REHACER_DRAFT_WEB.test(tx0) && _cajaOfreceDraftWeb(tx0);
+    });
+    var hayDrM = _hayDraftEnJuegoWeb(lnsM, libM, ofrM, esInformeTareaWeb(m.texto));
     // 2026-10-06 (harness2 {cajas}): `orden` lo pone el server (la caja que DISPARA una orden), la web no lo adivina; 3685: `escupir` pasa al comandante
-    o.lista = m.opciones.filter(function(x){ return x && /^[A-P]$/i.test(x.letra || ""); })
+    o.lista = m.opciones.filter(function(x){
+        if(!(x && /^[A-P]$/i.test(x.letra || ""))) return false;
+        if(!hayDrM && RE_TXT_REHACER_DRAFT_WEB.test(String(x.texto || "").trim())) return false;
+        return true;
+      })
       .map(function(x){
         var tx = String(x.texto || "");
         var esc = x.escupir === true || x.tipo === "escupir" || /^\[escupir(?:\s+[0-9a-f]{8})?\]\s*/i.test(tx) || /\s*\[escupir(?:\s+[0-9a-f]{8})?\]$/i.test(tx);
@@ -4471,6 +4727,7 @@ function cajasDe(m){
         var ordCmd = !esc && (RE_TAG_MODELO.test(tx) || /\[\s*toca:[^\]]*\]/i.test(tx));
         return {letra: String(x.letra).toUpperCase(), texto: tx, orden: x.orden === true || ordCmd, escupir: esc, slug: x.slug || ""};
       });
+    if(o.lista.length && o.lista.every(function(x){ return !!x.escupir; })){ o.despues = ""; o.antes = null; }
   } else if(o.lista.length){
     o.lista.forEach(function(x){
       if(!x.escupir && (x.slug || RE_TAG_MODELO.test(x.texto) || /\[\s*(?:toca:|paralelo|serie|depende de)/i.test(x.texto))) x.orden = true;
