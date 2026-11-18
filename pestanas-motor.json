@@ -1803,8 +1803,9 @@
   },
   "ultimos": {
     "awtomic": {
-      "motor": "claude",
-      "modelo": "sonnet"
+      "motor": "agy",
+      "modelo": "gemini-3.8-flash",
+      "effort": "high"
     },
     "awtomic#100": {
       "motor": "claude",
@@ -1837,8 +1838,8 @@
       "effort": "high"
     },
     "flos": {
-      "motor": "agy",
-      "modelo": "agy"
+      "motor": "claude",
+      "modelo": "fable"
     },
     "flos#2": {
       "motor": "agy",
