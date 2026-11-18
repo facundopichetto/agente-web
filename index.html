@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.640">
-<link rel="manifest" href="manifest.json?v=4.640">
+<meta name="agente-web-version" content="4.641">
+<link rel="manifest" href="manifest.json?v=4.641">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.640">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.641">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.607">
 <style id="css-dock-mac">
 /* {board-dock-fullscreen} (facundo, 2026-11-16): en la mac a pantalla completa el dock asoma al empujar el puntero
@@ -5074,6 +5074,12 @@ function pestanaDeFilaCola(f){
   var mp = /\[pestana\s+([\w\/#-]+)\]/i.exec(c) || /(?:^|\s)tema\s+([\w\/#-]+)\s*:/i.exec(c);
   return normTema((mp && mp[1]) || (f && f.tema) || "");
 }
+// {caja-marcada-heredada}: el texto de una orden mandada y el de una caja, sin la llave del slug ni diferencias de espacio
+function textoCajaIgual(a, b){
+  function n(t){ return String(t || "").replace(/(?:^|\s)\{[a-z0-9][a-z0-9-]{0,39}\}(?=\s|$)/ig, " ").replace(/\s+/g, " ").trim().toLowerCase(); }
+  a = n(a); b = n(b);
+  return !!a && !!b && (a === b || a.indexOf(b) >= 0);
+}
 function estadoDeducido(m){
   var i = msgs.indexOf(m), est = {l: "", ts: 0, h: {}};
   if(i < 0) return est;
@@ -5094,7 +5100,10 @@ function estadoDeducido(m){
         if(!esCajaOrden(op)) return false;
         var sl = slugCajaOrden(m, op);
         if(sl && (oc.slug === sl || (oc.slugs && oc.slugs.indexOf(sl) >= 0))) return true;
-        return oc.tipo === "encolar" && oc.texto && op.texto && oc.texto.indexOf(op.texto.trim().slice(0, 60)) >= 0;
+        // {caja-marcada-heredada}: con slug en la orden manda el slug; por texto solo una orden SIN slug, y entero (los
+        // primeros 60 chars son `[modelo] [toca] [hilo]`, iguales en dos ordenes distintas de la misma pestaña)
+        if(oc.slug || (oc.slugs && oc.slugs.length)) return false;
+        return oc.tipo === "encolar" && textoCajaIgual(oc.texto, op.texto);
       });
       if(opsO.length){
         if(oc.tipo === "frenar"){
