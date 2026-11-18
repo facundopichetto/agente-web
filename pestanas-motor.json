@@ -1838,8 +1838,8 @@
       "effort": "high"
     },
     "flos": {
-      "motor": "claude",
-      "modelo": "cadena"
+      "motor": "agy",
+      "modelo": "agy"
     },
     "flos#2": {
       "motor": "agy",
@@ -1858,8 +1858,9 @@
       "modelo": "agy"
     },
     "personal": {
-      "motor": "claude",
-      "modelo": "sin modelo"
+      "motor": "agy",
+      "modelo": "gemini-4-argon",
+      "effort": "low"
     },
     "plata": {
       "motor": "claude",
