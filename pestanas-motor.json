@@ -1838,8 +1838,8 @@
       "effort": "high"
     },
     "flos": {
-      "motor": "agy",
-      "modelo": "agy"
+      "motor": "claude",
+      "modelo": "sonnet"
     },
     "flos#2": {
       "motor": "agy",
