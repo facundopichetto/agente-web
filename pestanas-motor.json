@@ -1859,8 +1859,8 @@
     },
     "personal": {
       "motor": "agy",
-      "modelo": "gemini-4-argon",
-      "effort": "low"
+      "modelo": "gemini-3.8-flash",
+      "effort": "high"
     },
     "plata": {
       "motor": "claude",
