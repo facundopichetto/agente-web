@@ -1808,9 +1808,8 @@
   },
   "ultimos": {
     "awtomic": {
-      "motor": "agy",
-      "modelo": "gemini-4-argon",
-      "effort": "low"
+      "motor": "claude",
+      "modelo": "sonnet"
     },
     "awtomic#100": {
       "motor": "claude",
