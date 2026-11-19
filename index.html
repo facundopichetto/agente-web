@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.649">
-<link rel="manifest" href="manifest.json?v=4.649">
+<meta name="agente-web-version" content="4.650">
+<link rel="manifest" href="manifest.json?v=4.650">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.649">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.650">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.607">
 <style id="css-dock-mac">
 /* {board-dock-fullscreen} (facundo, 2026-11-16): en la mac a pantalla completa el dock asoma al empujar el puntero
@@ -4249,7 +4249,9 @@ function opcRemotasLimpias(){
   var out = {};
   ks.slice(0, OPC_REM_TOPE).forEach(function(k){
     var v = opcRemoto[k];
-    out[k] = {l: v.l, ts: +v.ts || 0, g: +v.g || +v.ts || ahora, h: limpiarHoras(v.l, v.h)};
+    var it = {l: v.l, ts: +v.ts || 0, g: +v.g || +v.ts || ahora, h: limpiarHoras(v.l, v.h)};
+    if(v.oid && /^[a-z0-9]{4}$/i.test(String(v.oid))) it.oid = String(v.oid).toLowerCase();
+    out[k] = it;
   });
   return out;
 }
@@ -4258,8 +4260,9 @@ function registrarOpcRemota(k, reg){
   opcRemoto[k] = reg;
   var m = cajaMsg[k];
   if(m){
-    if(m.opc_id) opcRemoto["id:" + String(m.opc_id).toLowerCase()] = reg;
-    if(m.texto) opcRemoto["h:" + llaveLlegada(m)] = reg;
+    var oidR = m.opc_id ? String(m.opc_id).toLowerCase() : "";
+    if(oidR) opcRemoto["id:" + oidR] = reg;
+    if(m.texto) opcRemoto["h:" + llaveLlegada(m)] = oidR ? Object.assign({}, reg, {oid: oidR}) : reg;
   }
   guardarCachePronto(100);
   publicarTabs(true);
@@ -4274,7 +4277,9 @@ function recibirOpcRemotas(rem){
     if(!tsR || ahora - (+r.g || tsR) > OPC_VIDA_MS) return;
     var mio = opcRemoto[k];
     if(!mio || tsR > (+mio.ts || 0)){
-      opcRemoto[k] = {l: r.l, ts: tsR, g: +r.g || tsR, h: limpiarHoras(r.l, r.h)};
+      var regR = {l: r.l, ts: tsR, g: +r.g || tsR, h: limpiarHoras(r.l, r.h)};
+      if(r.oid && /^[a-z0-9]{4}$/i.test(String(r.oid))) regR.oid = String(r.oid).toLowerCase();
+      opcRemoto[k] = regR;
       tome = true;
     } else if((+mio.ts || 0) > tsR){
       tengo = true;
@@ -5084,16 +5089,26 @@ function ordenCajaLinea(m, o, tema){
 }
 function idFrenarCajaOrden(m, o){
   var slug = slugCajaOrden(m, o);
-  var ag = (typeof widDatos !== "undefined" && widDatos && widDatos.agent) || null;
-  var filas = ag ? (ag.tabla || []).concat(ag.programadas || []) : [];
-  var frag = String((o && o.texto) || "").trim().slice(0, 60);
+  var ag = (typeof widDatos !== "undefined" && widDatos && (widDatos.agente || widDatos.agent)) || null;
+  var filas = ag ? (ag.tabla || []).concat(ag.corriendo || [], ag.programadas || []) : [];
+  var temaM = (m && (m.filaTema || m.tema)) || temaActivo();
   for(var i = 0; i < filas.length; i++){
     var f = filas[i];
-    if(!f || (f.estado !== "corriendo" && f.estado !== "cola")) continue;
-    var nom = String(f.nombre || "").trim().toLowerCase();
+    if(!f || (f.estado !== "corriendo" && f.estado !== "cola" && f.estado !== "corre")) continue;
+    if(!mismaPestana(pestanaDeFilaCola(f), temaM)) continue;
+    var nom = String(f.nombre || f.slug || "").trim().toLowerCase();
     if(nom && nom === slug && /^[a-z0-9][a-z0-9-]{0,39}$/.test(nom)) return nom;
-    var comp = String(f.completo || f.texto || "");
-    if(frag.length >= 16 && comp.indexOf(frag) >= 0 && /^[a-z0-9][a-z0-9-]{0,39}$/.test(nom)) return nom;
+  }
+  // {corregir-estado-y-tablero}: fallback por texto entero normalizado (nunca primeros 60 chars) y solo si la caja no tiene slug propio
+  if(!(o && o.slug)){
+    for(var j = 0; j < filas.length; j++){
+      var f2 = filas[j];
+      if(!f2 || (f2.estado !== "corriendo" && f2.estado !== "cola" && f2.estado !== "corre")) continue;
+      if(!mismaPestana(pestanaDeFilaCola(f2), temaM)) continue;
+      var nom2 = String(f2.nombre || f2.slug || "").trim().toLowerCase();
+      var comp = String(f2.completo || f2.texto || "");
+      if(nom2 && /^[a-z0-9][a-z0-9-]{0,39}$/.test(nom2) && textoCajaIgual(comp, o && o.texto)) return nom2;
+    }
   }
   return slug;
 }
@@ -5290,7 +5305,7 @@ function cajaPrevia(j, tema){
 function cajaAlMandar(j, tema, t){
   for(var i = j - 1; i >= 0; i--){
     var x = msgs[i];
-    if(x.clase !== "agente" || !deEstaTab(x.tema, tema) || !tieneCajas(x)) continue;
+    if(x.clase !== "agente" || !mismaPestana(x.filaTema || x.tema, tema) || !tieneCajas(x)) continue;
     var tx = fecha(x.iso);
     if(!t || !tx || tx <= t) return x;
   }
@@ -5324,11 +5339,33 @@ function textoCajaIgual(a, b){
   a = n(a); b = n(b);
   return !!a && !!b && (a === b || a.indexOf(b) >= 0);
 }
+// {corregir-estado-y-tablero}: filtra letras contra las opciones reales de la caja para que nunca quede un fantasma
+function letrasEnLista(letras, lista){
+  if(!letras || !lista || !lista.length) return "";
+  var ok = {};
+  lista.forEach(function(op){ if(op && op.letra) ok[op.letra] = 1; });
+  return letrasDe(letras).split("").filter(function(l){ return !!ok[l]; }).join("");
+}
 function estadoDeducido(m){
   var i = msgs.indexOf(m), est = {l: "", ts: 0, h: {}};
   if(i < 0) return est;
-  var tema = m.tema || temaActivo(), o = cajasDe(m), tsM = fecha(m.iso);
+  var tema = m.filaTema || m.tema || temaActivo(), o = cajasDe(m), tsM = fecha(m.iso);
   var frenadasSlug = {};
+  function hayOtraCajaSlug(desde, hasta, sl, tsMax){
+    if(!sl) return false;
+    for(var kk = desde; kk < hasta; kk++){
+      var m2 = msgs[kk];
+      if(!m2 || m2.clase !== "agente" || !tieneCajas(m2)) continue;
+      if(!mismaPestana(m2.filaTema || m2.tema, tema)) continue;
+      if(tsMax){
+        var t2 = fecha(m2.iso);
+        if(t2 && t2 > tsMax) continue;
+      }
+      var o2 = cajasDe(m2);
+      if(o2.lista.some(function(op2){ return esCajaOrden(op2) && slugCajaOrden(m2, op2) === sl; })) return true;
+    }
+    return false;
+  }
   var jIni = Math.max(0, i - 6);
   for(var j = jIni; j < msgs.length; j++){
     if(j === i) continue;
@@ -5336,14 +5373,22 @@ function estadoDeducido(m){
     if(x.clase !== "yo") continue;
     var oc = ordenCajaMsg(x.texto);
     if(oc){
-      // 6256: una orden mandada para otra pestaña o sub (o desde otra) nunca marca la caja de esta
-      if(!mismaPestana(oc.tema || x.tema, tema)) continue;
+      // 6256 + {corregir-estado-y-tablero}: una orden de otra pestaña o sub (o previa a esta caja) nunca la marca
+      if(!mismaPestana(oc.tema || x.filaTema || x.tema, tema)) continue;
       var tsO = fecha(x.iso) || j;
-      if(j < i && (!tsM || !tsO || Math.abs(tsO - tsM) > 300000)) continue;
+      if(j < i && (!tsM || !tsO || (tsM - tsO) > 30000 || (tsO - tsM) > 300000)) continue;
+      var mLetO = /facundo toc[oó] la caja ([A-P])\b/i.exec(oc.texto || "");
       var opsO = o.lista.filter(function(op){
         if(!esCajaOrden(op)) return false;
+        if(mLetO && mLetO[1].toUpperCase() !== op.letra) return false;
         var sl = slugCajaOrden(m, op);
-        if(sl && (oc.slug === sl || (oc.slugs && oc.slugs.indexOf(sl) >= 0))) return true;
+        if(sl && (oc.slug === sl || (oc.slugs && oc.slugs.indexOf(sl) >= 0))){
+          if(oc.tipo === "encolar"){
+            if(j < i && hayOtraCajaSlug(0, i, sl, tsO + 5000)) return false;
+            if(j > i && hayOtraCajaSlug(i + 1, j, sl, tsO + 5000)) return false;
+          }
+          return true;
+        }
         // {caja-marcada-heredada}: con slug en la orden manda el slug; por texto solo una orden SIN slug, y entero (los
         // primeros 60 chars son `[modelo] [toca] [hilo]`, iguales en dos ordenes distintas de la misma pestaña)
         if(oc.slug || (oc.slugs && oc.slugs.length)) return false;
@@ -5365,7 +5410,6 @@ function estadoDeducido(m){
       }
       continue;
     }
-    if(!deEstaTab(x.tema, tema)) continue;
     var pc = partirCita(x.texto), ts = fecha(x.iso) || j, mm;
     // 2096 {codigocaja}: si el mensaje es un codigo, el id dice de que caja es y no se adivina nada
     var cc = codigoCaja(x.texto);
@@ -5375,10 +5419,12 @@ function estadoDeducido(m){
         var qd = est.l.replace(new RegExp("[" + cc.letras + "]", "g"), "");
         est = {l: qd, ts: ts, h: conHoras(est, qd, ts)};
       }else{
-        est = {l: cc.letras, ts: ts, h: conHoras(est, cc.letras, ts)};
+        var lcc = letrasEnLista(cc.letras, o.lista);
+        if(lcc) est = {l: lcc, ts: ts, h: conHoras(est, lcc, ts)};
       }
       continue;
     }
+    if(!mismaPestana(x.filaTema || x.tema, tema)) continue;
     if(j < i) continue;
     // 3901 {escupir-sin-burbuja}: un toque de caja `escupir` nunca marca una caja posterior de `orden` del Comandante
     if(esMensajeEscupir(x.texto) && !o.lista.some(esCajaEscupir)) continue;
@@ -5394,8 +5440,8 @@ function estadoDeducido(m){
     }
     if(!mia) continue;
     if((mm = RE_ELEGIDAS.exec(pc.cuerpo))){
-      var ls = letrasDe(mm[1]);
-      est = {l: ls, ts: ts, h: conHoras(est, ls, ts)};
+      var ls = letrasEnLista(mm[1], o.lista);
+      if(ls) est = {l: ls, ts: ts, h: conHoras(est, ls, ts)};
       continue;
     }
     var cmds = o.lista.filter(function(op){
@@ -5421,6 +5467,7 @@ function estadoDeducido(m){
           for(var k2 = i + 1; k2 < msgs.length; k2++){
             var m2 = msgs[k2];
             if(m2.clase !== "agente" || !tieneCajas(m2)) continue;
+            if(!mismaPestana(m2.filaTema || m2.tema, tema)) continue;
             var o2 = cajasDe(m2);
             if(o2.lista.some(function(op2){ return esCajaOrden(op2) && slugCajaOrden(m2, op2) === sl; })){
               tProxMismoSlug = fecha(m2.iso) || 1;
@@ -5438,7 +5485,8 @@ function estadoDeducido(m){
             var mLet = /facundo toc[oó] la caja ([A-P])\b/i.exec(compF);
             if(mLet && mLet[1].toUpperCase() !== op.letra) continue;
             var tsPed = fecha(f.pedida_ts || f.iniciada_ts || "");
-            if(tsM && tsPed && tsPed < tsM - 180000) continue;
+            if(tsM && tsPed && tsPed < tsM - 30000) continue;
+            if(tsM && tsPed && tsPed < tsM + 5000 && hayOtraCajaSlug(0, i, sl, tsPed + 5000)) continue;
             if(tProxMismoSlug && (!tsPed || (tProxMismoSlug > 1 && tsPed >= tProxMismoSlug - 5000))) continue;
             if(frenadasSlug[sl] && (!tsPed || frenadasSlug[sl] >= tsPed)) continue;
             var lCola = letrasDe((est.l || "") + op.letra);
@@ -5458,20 +5506,28 @@ function estadoCaja(m){
       opcHecho = {}; opcRemoto = {}; opcLsActivo = false;
     }
   }catch(x){}
-  var k = claveCajas(m), loc = opcHecho[k], ded = estadoDeducido(m);
+  var k = claveCajas(m), loc = opcHecho[k], ded = estadoDeducido(m), tsM = fecha(m && m.iso);
   if(typeof loc === "string") loc = {l: loc === "-" ? "" : loc, ts: 1};   // formato viejo (una letra)
   var cands = [ded];
   if(loc) cands.push(loc);
   if(opcRemoto){
     if(opcRemoto[k]) cands.push(opcRemoto[k]);
-    if(m && m.opc_id && opcRemoto["id:" + String(m.opc_id).toLowerCase()]) cands.push(opcRemoto["id:" + String(m.opc_id).toLowerCase()]);
-    if(m && m.texto && opcRemoto["h:" + llaveLlegada(m)]) cands.push(opcRemoto["h:" + llaveLlegada(m)]);
+    var oidM = m && m.opc_id ? String(m.opc_id).toLowerCase() : "";
+    if(oidM && opcRemoto["id:" + oidM]) cands.push(opcRemoto["id:" + oidM]);
+    var rH = m && m.texto ? opcRemoto["h:" + llaveLlegada(m)] : null;
+    if(rH){
+      var oidOk = !oidM || !rH.oid || String(rH.oid).toLowerCase() === oidM;
+      var tsOk = !tsM || (+rH.ts || 0) >= tsM - 60000;
+      if(oidOk && tsOk) cands.push(rH);
+    }
   }
   var gana = cands[0];
   for(var ci = 1; ci < cands.length; ci++){
     if((+cands[ci].ts || 0) >= (+gana.ts || 0)) gana = cands[ci];
   }
-  return {l: gana.l || "", ts: +gana.ts || 0, h: limpiarHoras(gana.l, gana.h)};      // 1203: horas del que gano
+  var oM = m ? cajasDe(m) : null;
+  var lOk = oM && oM.lista && oM.lista.length ? letrasEnLista(gana.l || "", oM.lista) : (gana.l || "");
+  return {l: lOk, ts: +gana.ts || 0, h: limpiarHoras(lOk, gana.h)};      // 1203: horas del que gano
 }
 // guarda letras + hora de cada una. al desmarcar (revertir) la hora de esa letra se va con ella.
 function guardarOpc(k, letras, horas){
