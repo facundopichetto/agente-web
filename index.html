@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.648">
-<link rel="manifest" href="manifest.json?v=4.648">
+<meta name="agente-web-version" content="4.649">
+<link rel="manifest" href="manifest.json?v=4.649">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.648">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.649">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.607">
 <style id="css-dock-mac">
 /* {board-dock-fullscreen} (facundo, 2026-11-16): en la mac a pantalla completa el dock asoma al empujar el puntero
@@ -4501,7 +4501,7 @@ function _esLineaEstructuralCierreWeb(lineas, idx, libMap){
   if(!libMap[idx]) return true;
   var raw = lineas[idx], s = raw.trim();
   if(!s || RE_CERCO.test(raw)) return true;
-  if(idx === 0 && /^(?:\[[^\]\n]+\]\s+)?(?:termin[oó]|fall[oó]|listo\s*\(|`[^`\n]+`\s+(?:corri[oó]\s+pero\s+no\s+cierra|espera\s+a))\b/i.test(s)) return true;
+  if(idx === 0 && /^(?:\[[^\]\n]+\]\s+)?(?:termin[oó]\s|fall[oó]\s|listo\s*\(|`[^`\n]+`\s+(?:corri[oó]\s+pero\s+no\s+cierra|espera\s+a))/i.test(s)) return true;
   if(/^Verific[oó]\s+`[^`\n]+`/.test(s)) return true;
   if(RE_OPCION.test(raw) || /^\s*[-*]\s+opci[oó]n\s+[a-p]\s*\(frenada\)\s*:/i.test(raw) || /^\s*[-*]\s+si\s+el\s+draft\s+estuviera\s+a\s+la\s+vista\s*:/i.test(raw)) return true;
   if(/^\s*(?:GUARD DE ESCRITURA:|\[freno guard:|la regla comment-entero)/i.test(raw)) return true;
