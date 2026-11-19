@@ -5496,6 +5496,308 @@
      "#f97316"
     ]
    ]
+  },
+  {
+   "id": "cortocircuito-seco",
+   "nombre": "cortocircuito seco",
+   "frames": [
+    "╎",
+    "╳",
+    "╋",
+    "━",
+    "╱",
+    "┼",
+    "█",
+    "·",
+    " "
+   ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#00a0c0",
+    "#0077cc",
+    "#3355dd",
+    "#7733cc",
+    "#cc33aa",
+    "#ff6600",
+    "#ffaa00",
+    "#cc8800",
+    "#888888"
+   ]
+  },
+  {
+   "id": "ascua-respira",
+   "nombre": "ascua que respira",
+   "frames": [
+    "·",
+    "°",
+    "*",
+    "#",
+    "%",
+    "#",
+    "*",
+    "°"
+   ],
+   "intervalo": 60,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#cc6600",
+    "#ee8800",
+    "#ff9900",
+    "#ff6600",
+    "#dd2200",
+    "#ff6600",
+    "#ff9900",
+    "#ee8800"
+   ]
+  },
+  {
+   "id": "braille-estruendo",
+   "nombre": "estruendo braille",
+   "frames": [
+    "⠄",
+    "⠤",
+    "⠶",
+    "⡷",
+    "⣿",
+    "⣷",
+    "⠿",
+    "⠛",
+    "⠉",
+    "⠁",
+    " "
+   ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#ddaa00",
+    "#ffbb00",
+    "#ff9900",
+    "#ff7700",
+    "#ff4400",
+    "#ee2200",
+    "#cc3300",
+    "#aa4400",
+    "#886600",
+    "#666633",
+    "#555555"
+   ]
+  },
+  {
+   "id": "glitch-persiana",
+   "nombre": "glitch persiana",
+   "frames": [
+    "▌",
+    "▐",
+    "█",
+    "░",
+    "▐",
+    "▌",
+    "▒",
+    " ",
+    "▓",
+    "·"
+   ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#22bb55",
+    "#00aacc",
+    "#aa33dd",
+    "#dd2255",
+    "#ff8800",
+    "#33bb99",
+    "#7744ee",
+    "#cc1144",
+    "#22aa66",
+    "#999900"
+   ]
+  },
+  {
+   "id": "nucleo-geo-colapsa",
+   "nombre": "nucleo que colapsa",
+   "frames": [
+    "·",
+    "◒",
+    "○",
+    "◓",
+    "◉",
+    "█",
+    "●",
+    "◐",
+    "°",
+    " "
+   ],
+   "intervalo": 55,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#3366dd",
+    "#2299cc",
+    "#22ccaa",
+    "#99dd33",
+    "#ffcc00",
+    "#ff8800",
+    "#ff4400",
+    "#cc2211",
+    "#883322",
+    "#555555"
+   ]
+  },
+  {
+   "id": "taladro-bisel",
+   "nombre": "taladro bisel",
+   "frames": [
+    "╱",
+    "┼",
+    "╲",
+    "┬",
+    "╳",
+    "┤",
+    "╋",
+    "├"
+   ],
+   "intervalo": 55,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#00cc66",
+    "#22dd88",
+    "#00bbaa",
+    "#0099cc",
+    "#44cc44",
+    "#88dd22",
+    "#ccbb00",
+    "#22bb77"
+   ]
+  },
+  {
+   "id": "esquirla-fugaz",
+   "nombre": "esquirla fugaz",
+   "frames": [
+    "'",
+    ":",
+    ";",
+    "·",
+    "°",
+    " ",
+    "`",
+    ",",
+    "·",
+    " "
+   ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#ffcc22",
+    "#ffaa00",
+    "#ff7711",
+    "#ee4400",
+    "#cc5500",
+    "#996600",
+    "#ffbb33",
+    "#ff8822",
+    "#dd3300",
+    "#777755"
+   ]
+  },
+  {
+   "id": "estrobo-tono",
+   "nombre": "estrobo de tono",
+   "frames": [
+    "░",
+    "█",
+    "▒",
+    " ",
+    "▓",
+    "·",
+    "█",
+    "░",
+    " ",
+    "▒"
+   ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#00bb99",
+    "#ffdd00",
+    "#cc33cc",
+    "#444466",
+    "#ff5500",
+    "#22aadd",
+    "#ee0044",
+    "#55cc33",
+    "#333355",
+    "#9933ff"
+   ]
+  },
+  {
+   "id": "caos-doce",
+   "nombre": "caos de doce",
+   "frames": [
+    "=",
+    "~",
+    "#",
+    "<",
+    "&",
+    "^",
+    "@",
+    "*",
+    "$",
+    "%",
+    "!",
+    "+"
+   ],
+   "intervalo": 50,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#22cc88",
+    "#00aacc",
+    "#7755ee",
+    "#cc33bb",
+    "#ee2255",
+    "#ff6600",
+    "#ffaa00",
+    "#ccdd00",
+    "#55cc22",
+    "#00bbaa",
+    "#3377ee",
+    "#aa44dd"
+   ]
+  },
+  {
+   "id": "pulso-braille-seco",
+   "nombre": "pulso braille seco",
+   "frames": [
+    "⠁",
+    "⠉",
+    "⠛",
+    "⠿",
+    "⣿",
+    "⠿",
+    "⠛",
+    "⠉"
+   ],
+   "intervalo": 55,
+   "alta": "2026-11-14",
+   "origen": "aprendida",
+   "colores": [
+    "#886644",
+    "#cc9900",
+    "#ffbb00",
+    "#ff8800",
+    "#ff3300",
+    "#ff8800",
+    "#ffbb00",
+    "#cc9900"
+   ]
   }
  ]
 }
