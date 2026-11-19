@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.647">
-<link rel="manifest" href="manifest.json?v=4.647">
+<meta name="agente-web-version" content="4.648">
+<link rel="manifest" href="manifest.json?v=4.648">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.647">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.648">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.607">
 <style id="css-dock-mac">
 /* {board-dock-fullscreen} (facundo, 2026-11-16): en la mac a pantalla completa el dock asoma al empujar el puntero
@@ -4341,7 +4341,7 @@ function purgarOpc(ahora){
 // y la informacion interna redundante de los mensajes de cierre (`integrado: rama ...`, `pediste:`/`quedo hecho:`/`dos lados:`/`no quedo: nada`).
 var RE_CERCO = /^\s*(```|~~~)\s*([a-z0-9_-]{0,20})\s*$/i;
 var RE_NOTA_VERIFICADOR_WEB = /\[agy codigo:\s*(?:`([^`\n]+)`\s+la verifico:\s*`([^`\n]+)`[\s\S]*?tanteo\s+\d+\/\d+|[^\]]*?\(([a-z0-9_-]+):\s*(pasa|falla)\))\]/gi;
-var RE_ENCABEZADO_INFORME_WEB = /^\s*(?:\[[^\]\n]+\]\s+)?(?:termin[oó]|fall[oó]|listo\s*\(|`[^`\n]+`\s+(?:corri[oó]\s+pero\s+no\s+cierra|espera\s+a))\b/im;
+var RE_ENCABEZADO_INFORME_WEB = /^\s*(?:\[[^\]\n]+\]\s+)?(?:termin[oó]\s+`?[\w#-]+|fall[oó]\s+`?[\w#-]+|listo\s*\(|`[^`\n]+`\s+(?:corri[oó]\s+pero\s+no\s+cierra|espera\s+a))/im;
 var RE_CIERRE_COMPLETAS_WEB = /^\s*(?:[-*•]\s*)?(?:\*\*|`)*(?:pediste|qued[oó]\s+hecho|no\s+qued[oó]|dos\s+lados)(?:\*\*|`)*\s*:/im;
 var RE_SENAL_INFORME_CUERPO_WEB = /(?:^\s*(?:Ronda\s+hecha\s*:|Rele[ií]\s+hoy\s+en\s+Jira\b|Jira\s+le[ií]do\s+hoy\s+por\s+REST\b|Le[ií]\s+los\s+\d+\s+tickets\b|Borrad?o?r?\s+el\s+form\s+de\s+prueba\b|Cerr[eé]\s+el\s+bastion\b)|(?:\bdej[eé]\s+la\s+entrada\s+en\s+`?ESTADO\.md`?|\banot[eé]\s+la\s+corrida\s+en\s+`?ESTADO\.md`?))/im;
 var RE_TXT_REHACER_DRAFT_WEB = /^(?:\[escupir(?:\s+[0-9a-f]{8})?\]\s*)?(?:(?:CX|MVP|SD|SUP)-\d+\s*:\s*)?rehacer\s+el\s+draft\s+con\s+lo\s+que\s+marc[oó]\s+el\s+guard\b/i;
@@ -4349,14 +4349,14 @@ var RE_CAJA_REHACER_LINEA_WEB = /^\s*(?:[-*]\s+)?\**OPCI[OÓ]N\s+[A-P]\**\s*[:)\
 var RE_OFRECE_DRAFT_WEB = /\b(?:postear|posteo|subir|publicar|mandar|enviar|responder|contestar)\b([^\n.;:!?]{0,55}?)\b(?:comment|comentario|mensaje|draft|borrador|slack|reply|respuesta)\b/gi;
 var RE_NIEGA_DRAFT_WEB = /\b(?:sin|no|ni|nunca|jam[aá]s|tampoco|ning[uú]n|ningun[ao]s?|nada|evit(?:ar|ando|a|o|e)|antes\s+de|en\s+vez\s+de|en\s+lugar\s+de|salvo|excepto|cancelar|descartar|suspender|frenar|pendientes?\s+de|falta\s+de|filtro\s+de|regla\s+de|error\s+al|problema\s+al)\b/i;
 var RE_ANUNCIA_DRAFT_WEB = /(?:^\s*(?:el\s+|este\s+es\s+el\s+|ac[aá]\s+(?:va|est[aá]|ten[eé]s|queda)\s+el\s+|te\s+dejo\s+el\s+|borrador\s+del\s+|texto\s+del\s+)?(?:comment|comentario|draft(?:-[a-z0-9_-]+)?|borrador|mensaje\s+(?:de\s+slack|para\s+\w+)|reply)\b[^\n]{0,90}:\s*$|\b(?:comment|comentario|draft(?:-[a-z0-9_-]+)?|borrador)\s+(?:qued[aó]|quedar[ií]a|ser[ií]a|dice|es(?:\s+este)?|listo|propuesto|entero(?:\s+ac[aá]\s+abajo)?(?:\s+para\s+copiarlo)?|para\s+(?:copiar(?:lo)?|postear(?:lo)?|mandar(?:lo)?|subir(?:lo)?))\b[^\n]{0,80}:\s*$|\b(?:abr[ií]\s+este\s+link)\b[^\n]{0,80}:\s*$)/i;
-var RE_NO_ANUNCIA_DRAFT_WEB = /\b(?:sin\s+verificar|sin\s+probar|pendientes?|faltan?\s+verificar|quedan?\s+\d+\s+tickets?|respuesta\s+nueva\s+de\s+un\s+dev|esto\s+lo\s+dej[eé])\b/i;
+var RE_NO_ANUNCIA_DRAFT_WEB = /(?:^|\s)(?:sin\s+verificar|sin\s+probar|pendientes?|faltan?\s+verificar|quedan?\s+\d+\s+tickets?|respuesta\s+nueva\s+de\s+un\s+dev|esto\s+lo\s+dej[eé])(?=\s|[.,;:!?)]|$)/i;
 var RE_ANUNCIA_RASTRO_WEB = /\bsalida\s+de\b|\bresultado\s+de\s+`?(?:python|sh\s|\.\/|scripts\/|curl|git)\b|\bcorrida\s+(?:real|en\s+vivo)\b|\bevidencia\s+(?:real|en\s+vivo)\b|\bcomandos?\s+(?:corridos?|ejecutados?)\b|\bse\s+evalu[oó]\s+con\b/i;
 var RE_INTRO_SOLO_RASTRO_WEB = /^\s*(?:[-*•]\s*)?(?:salida(?:\s+de\s+[^\n:]{1,100})?|evidencia(?:\s+(?:real|en\s+vivo))?|comandos?\s+(?:corridos?|ejecutados?)|transcripci[oó]n(?:\s+cruda)?|rastro(?:\s+crudo)?|lo\s+que\s+saldr[ií]a\s+si\s+eleg[ií]s\s+[a-p]|si\s+eleg[ií]s\s+[a-p],?\s+el\s+cambio\s+ser[ií]a|el\s+cambio\s+ser[ií]a)\s*:\s*$/i;
 var RE_LINEA_CMD_RASTRO_WEB = /^(?:\$\s+\S|(?:CLAUDE_CONFIG_DIR|PYTHONPATH|AGENTE_\w+|NODE_ENV|HOME|PATH|TABLE_NAME)=\S+\s+\S|(?:python3?\s+(?:-m\s+|[\w./-]+\.py\b)|node\s+[\w./-]+\.js\b|(?:\.\/|sh\s+|bash\s+)?scripts\/(?:verde|prueba_corta)\b|pytest\b|git\s+(?:status|diff|log|show|rev-parse|worktree)\b|curl\s+-|cd\s+[~\/\w.-]+\s*$))/;
 var RE_SALIDA_RASTRO_WEB = /(?:^|\n)(?:verde:\s+\d+\s+pruebas\b|VERDE:\s+\d+\s+fallas\b|[^\n]*\b--probar:\s*(?:ok|OK|\d+\s+fallas)\b|\s*(?:ok|ROJA)\s+prueba_\w+\s+rc=\d+|JUEZ_EVALUACION:|Traceback \(most recent call last\):|rc=\d+\s*$|\s*\{(?:\s*"[^"]+"\s*:){2,}.*\}\s*$|cuenta:\s+\S+\n\s*dir:\s+\/home\/|[^\n]*\ben cola del juez:\s*\d+|[^\n]*\bfaltan claves:\s*\w+)/;
 var RE_BLOQUE_SPEC_O_META_WEB = /^(?:sub:\s*gid:\/\/|contract:\s*gid:\/\/|line:\s*gid:\/\/|shopify\s+[\w.,\s]+:|dynamo\s+[\w.,\s]+:|store:\s*\S+.*theme\b|archivos?:\s*\S+|[\w.[\]-]+\s*:\s*\S+.*(?:->|\bsin\s+cambio\b|\bgid:\/\/))/i;
 var RE_CAB_DRAFT_BLOQUE_WEB = /^\s*(?:(?:ticket\s*:\s*)?(?:CX|MVP|SD|SUP)-\d+\b[^\n]*|comment(?:ario)?(?:\s+p[uú]blico|\s+interno|\s+para\s+\w+)?\s*(?:\([^\n]*\))?\s*:?|slack(?:\s+dm)?\b[^\n]*|canal\s*:\s*#\S+)\s*$/i;
-var RE_PROSA_INFORME_ES_WEB = /(?:\b(?:est[aá]n?|qued[oó]|dej[eé]|prob[eé]|rele[ií]|corr[ií]|borr[eé]|cerr[eé]|anot[eé]|todav[ií]a|tambi[eé]n|adem[aá]s|seg[uú]n|despu[eé]s|ning[uú]n|ninguna|p[aá]gina|bot[oó]n|pesta[ñn]as?|c[oó]digo|[oó]rdenes|suscripci[oó]n|suscripciones|vi[ñn]etas|necesita\s+password|campo\s+de\s+respaldo|esta\s+orden\s+ya|caja\s+ofrecida|ESTADO\.md)\b|^\s*[-*•]\s*\*\*[^*\n]+\*\*)/im;
+var RE_PROSA_INFORME_ES_WEB = /(?:(?:^|[\s(])(?:est[aá]n?|qued[oó]|dej[eé]|prob[eé]|rele[ií]|corr[ií]|borr[eé]|cerr[eé]|anot[eé]|todav[ií]a|tambi[eé]n|adem[aá]s|seg[uú]n|despu[eé]s|ning[uú]n|ninguna|p[aá]gina|bot[oó]n|pesta[ñn]as?|c[oó]digo|[oó]rdenes|suscripci[oó]n|suscripciones|vi[ñn]etas|necesita\s+password|campo\s+de\s+respaldo|esta\s+orden\s+ya|caja\s+ofrecida|ESTADO\.md)(?=[\s.,;:!?)]|$)|^\s*[-*•]\s*\*\*[^*\n]+\*\*)/im;
 var RE_INTRO_SOLO_TABLA_WEB = /^\s*(?:hoy\s+shopify\b[^\n]*coinciden|las\s+tres\s+tiendas\s+con\s+m[aá]s\s+subs[^\n]*|los\s+\d+\s+de\s+`?not-changed\.csv`?[^\n]*|prob[eé]\s+en\s+la\s+p[aá]gina\s+real[^\n]*|queda\s+armado\s+el\s+cambio\s+del\s+flag\s+con\s+tabla[^\n]*)\s*:?\s*$/i;
 var RE_TITULO_SECCION_WEB = /^\s*(?:#{1,6}\s+\S.*|\*\*[^*\n]{2,80}\*\*\s*(?:\([^)\n]{1,60}\))?\s*:?\s*)$/;
 var RE_SEPARADOR_INFORME_WEB = /^\s*(?:-{3,}|\*{3,}|_{3,}|[─═]{3,})\s*$/;
@@ -4463,8 +4463,7 @@ function esInformeTareaWeb(texto){
   return RE_NOTA_VERIFICADOR_WEB.test(t)
     || RE_ENCABEZADO_INFORME_WEB.test(t)
     || RE_CIERRE_COMPLETAS_WEB.test(t)
-    || RE_SENAL_INFORME_CUERPO_WEB.test(t)
-    || _tieneTablaFueraDeBloquesWeb(t);
+    || RE_SENAL_INFORME_CUERPO_WEB.test(t);
 }
 function _hayDraftEnJuegoWeb(lineas, libres, ofrece, esInf){
   if(ofrece) return true;
