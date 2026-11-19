@@ -17,6 +17,7 @@
         "claude-opus-5-5",
         "claude-sonnet-5-5",
         "gpt-oss-120b",
+        "gemini-4-neon",
         "gemini-4-carbon",
         "gemini-4-hydrogen",
         "geminiargon"
@@ -47,6 +48,7 @@
         "claude-opus-5-5",
         "claude-sonnet-5-5",
         "gpt-oss-120b",
+        "gemini-4-neon",
         "gemini-4-carbon",
         "gemini-4-hydrogen",
         "geminipro",
@@ -78,6 +80,7 @@
         "claude-opus-5-5",
         "claude-sonnet-5-5",
         "gpt-oss-120b",
+        "gemini-4-neon",
         "gemini-4-carbon",
         "gemini-4-hydrogen",
         "geminipro",
@@ -110,6 +113,7 @@
         "claude-opus-5-5",
         "claude-sonnet-5-5",
         "gpt-oss-120b",
+        "gemini-4-neon",
         "gemini-4-carbon",
         "gemini-4-hydrogen",
         "geminipro",
@@ -142,6 +146,7 @@
         "claude-opus-5-5",
         "claude-sonnet-5-5",
         "gpt-oss-120b",
+        "gemini-4-neon",
         "gemini-4-carbon",
         "gemini-4-hydrogen",
         "geminipro",
@@ -1838,8 +1843,8 @@
       "effort": "high"
     },
     "flos": {
-      "motor": "claude",
-      "modelo": "sonnet"
+      "motor": "gemini-3.8-flash",
+      "modelo": "gemini-3.8-flash"
     },
     "flos#2": {
       "motor": "agy",
@@ -1847,20 +1852,20 @@
     },
     "juegos": {
       "motor": "agy",
-      "modelo": "agy"
+      "modelo": "gemini-4-argon",
+      "effort": "low"
     },
     "juegos#2": {
       "motor": "claude",
       "modelo": "sin modelo"
     },
     "modelos": {
-      "motor": "agy",
-      "modelo": "agy"
+      "motor": "claude",
+      "modelo": "sonnet"
     },
     "personal": {
-      "motor": "agy",
-      "modelo": "gemini-3.8-flash",
-      "effort": "high"
+      "motor": "claude",
+      "modelo": "sonnet"
     },
     "plata": {
       "motor": "claude",
@@ -1921,6 +1926,12 @@
     ],
     "gpt-oss-120b": [
       "medium"
+    ],
+    "gemini-4-neon": [
+      "xhigh",
+      "high",
+      "medium",
+      "low"
     ],
     "gemini-4-carbon": [
       "high",

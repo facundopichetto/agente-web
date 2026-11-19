@@ -200,7 +200,8 @@
       USAGE_BARRAS.forEach(function(k){
         var b = bs.filter(function(x){ return x.clave === k[0] || x.nombre === k[1]; })[0];
         if(!b || b.oculta || numPct(b.pct) === null) return;
-        out.push({et: k[1], pct: numPct(b.pct), nivel: b.nivel, linea: b.linea, t: b.falta_txt ? cortoTxt(b.falta_txt) : cortoSeg(b.falta_s)});
+        out.push({et: k[1], pct: numPct(b.pct), nivel: b.nivel, linea: b.linea, t: b.falta_txt ? cortoTxt(b.falta_txt) : cortoSeg(b.falta_s),
+          txt: b.linea !== null && b.linea !== undefined ? "ritmo: " + Math.round(b.linea) + "% de su ventana ya paso" : ""});
       });
       if(!bs.length){
         if(numPct(l.pct) !== null) out.push({et: "week", pct: numPct(l.pct), nivel: l.nivel, linea: l.linea, t: ""});
@@ -211,9 +212,12 @@
       Object.keys(l.pozos).forEach(function(k){
         var p = l.pozos[k] || {};
         // {widget-models-agy} (facundo, 2026-10-17: "falta la linea de gemini para abajo"): el pozo `gemini` es la ventana de 5 h y el
-        // server ya manda su ritmo en `l.linea`; `terceros` renueva en dias y el server no dice de que largo es la ventana: sin tick, la
-        // web no inventa uno.
-        if(numPct(p.pct) !== null) out.push({et: k, pct: numPct(p.pct), nivel: nivelPozo(p.pct), linea: k === "gemini" ? l.linea : null, t: cortoIso(p.reset)});
+        // server ya manda su ritmo en `l.linea`. {widget-usage-proyeccion-terceros} (2026-11-18): `terceros` tambien lo trae, en
+        // `p.linea` (su ventana es semanal). un pozo `sin_arrancar` (0% de uso) no tiene renovacion real -- agy devuelve ahora + 5 h --:
+        // dice `libre` (el modal explica: sin uso) en vez de una cuenta regresiva inventada, y sin tick.
+        if(numPct(p.pct) !== null) out.push({et: k, pct: numPct(p.pct), nivel: nivelPozo(p.pct),
+          linea: k === "gemini" ? l.linea : (p.sin_arrancar ? null : (p.linea !== undefined ? p.linea : null)),
+          t: p.sin_arrancar ? "libre" : cortoIso(p.reset), txt: p.linea_txt});
       });
       return out;
     }
@@ -240,7 +244,8 @@
     // {sinpie}: el tooltip no lleva plata. el `%` de cada limite (que ya no se pinta suelto) vive aca, junto a su tiempo;
     // el ritmo SI vuelve (1625 {tick}: `linea_txt` es `%` puro) y las apis dicen de donde sale su cuota (`sec`, `extra`)
     var tit = nombreVisto(l.nombre) + lim.map(function(q){
-      return "\n" + q.et + " " + Math.round(q.pct) + "%" + (q.t ? " · renueva en " + q.t : "");
+      return "\n" + q.et + " " + Math.round(q.pct) + "%" + (q.t === "sin uso" ? " · sin uso: la ventana arranca con el primer uso" : (q.t ? " · renueva en " + q.t : "")) +
+        (q.txt ? "\n   " + sinPlata(q.txt) : "");
     }).join("") + (l.linea_txt ? "\n" + sinPlata(l.linea_txt) : "") +
       (l.tipo !== "claude" && l.cinco && l.cinco.linea_txt ? "\n" + sinPlata(l.cinco.linea_txt) : "") +
       (l.tipo !== "claude" ? (l.sec ? "\n" + sinPlata(l.sec) : "") + (l.extra ? "\n" + sinPlata(l.extra) : "") : "") +
@@ -275,7 +280,8 @@
     }
     var html = '<div class="cmod">' + f("plan", '<span class="c">' + esc(plan) + "</span>") +
       (l.pozos && l.pozos.gemini ? "\n" + f("pozo gemini", esc(l.pozos.gemini.pct_txt || "?") + (l.pozos.gemini.resetea ? ' <span class="g">resetea ' + esc(l.pozos.gemini.resetea) + "</span>" : "")) : "") +
-      (l.pozos && l.pozos.terceros ? "\n" + f("pozo terceros", esc(l.pozos.terceros.pct_txt || "?") + (l.pozos.terceros.resetea ? ' <span class="g">resetea ' + esc(l.pozos.terceros.resetea) + "</span>" : "")) : "") +
+      (l.pozos && l.pozos.terceros ? "\n" + f("pozo terceros", esc(l.pozos.terceros.pct_txt || "?") + (l.pozos.terceros.sin_arrancar ? ' <span class="g">sin uso: la ventana arranca con el primer uso</span>' : (l.pozos.terceros.resetea ? ' <span class="g">resetea ' + esc(l.pozos.terceros.resetea) + "</span>" : "")) +
+        (l.pozos.terceros.linea_txt ? '\n<span class="g">' + esc(l.pozos.terceros.linea_txt) + "</span>" : "")) : "") +
       "\n" + f("tokens del mes", esc((l.tok || 0).toLocaleString("es-AR")) +
                 ' <span class="g">en ' + (l.llamadas || 0) + " llamadas</span>") +
       (l.tpd ? "\n" + f("hoy", esc(sinPlata(l.sec))) : "") +
