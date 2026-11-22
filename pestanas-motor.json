@@ -1,5 +1,37 @@
 {
   "filas": {
+    "flos/sos": {
+      "modelos": [
+        "gemini-4-argon",
+        "opus",
+        "sonnet",
+        "claude",
+        "geminiargon",
+        "geminiflash",
+        "geminipro",
+        "cadena",
+        "gemini-3.8-flash",
+        "gemini-3.7-flash",
+        "gemini-3.6-flash",
+        "gemini-3.1-pro",
+        "claude-opus-5-5",
+        "claude-sonnet-5-5",
+        "gpt-oss-120b",
+        "gemini-4-neon",
+        "gemini-4-carbon",
+        "gemini-4-hydrogen"
+      ],
+      "modelo_default": "gemini-4-argon",
+      "efforts": [
+        "ultracode",
+        "max",
+        "xhigh",
+        "high",
+        "medium",
+        "low"
+      ],
+      "effort_default": "high"
+    },
     "flos": {
       "modelos": [
         "claude",
@@ -1076,6 +1108,28 @@
         }
       ]
     },
+    "flos/sos": {
+      "pestana": "flos/sos",
+      "tema": null,
+      "fila": "flos/sos",
+      "motor": "agy",
+      "modelo": "gemini-4-argon",
+      "effort": "high",
+      "cuenta": "personal",
+      "origen_motor": "del_modelo (guardado `cadena` no va con `gemini-4-argon`)",
+      "origen_modelo": "default_fila",
+      "origen_effort": "default_fila",
+      "flags": [
+        "--model",
+        "gemini-4-argon",
+        "--effort",
+        "high"
+      ],
+      "flags_effort": [
+        "--effort",
+        "high"
+      ]
+    },
     "juegos": {
       "pestana": "juegos",
       "tema": null,
@@ -1843,8 +1897,8 @@
       "effort": "high"
     },
     "flos": {
-      "motor": "agy",
-      "modelo": "agy"
+      "motor": "claude",
+      "modelo": "sonnet"
     },
     "flos#2": {
       "motor": "agy",
@@ -1865,7 +1919,8 @@
     },
     "personal": {
       "motor": "claude",
-      "modelo": "sonnet"
+      "modelo": "sonnet",
+      "effort": "high"
     },
     "plata": {
       "motor": "claude",

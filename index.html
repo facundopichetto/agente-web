@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.650">
-<link rel="manifest" href="manifest.json?v=4.650">
+<meta name="agente-web-version" content="4.651">
+<link rel="manifest" href="manifest.json?v=4.651">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.650">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.651">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.607">
 <style id="css-dock-mac">
 /* {board-dock-fullscreen} (facundo, 2026-11-16): en la mac a pantalla completa el dock asoma al empujar el puntero
@@ -551,12 +551,12 @@ var alfinal = $("alfinal"), envoltorio = $("envoltorio");
 // una copia GENERADA de esa receta: se actualiza con `python3 -m recetas.clasificar_tema --sync-web`
 // y `recetas/prueba_web` falla si quedo vieja. no editarla a mano.
 /* TEMAS-JS: generado por `python3 -m recetas.clasificar_tema --sync-web`, no editar a mano */
-var TEMAS = ["flos", "awtomic", "awtomic/qa", "flabs", "fuzzer", "juegos", "plata", "server", "personal", "podcast", "mesa", "flaudio", "tinder", "board", "modelos", "claude", "gemini", "groq", "groq-tandas"];
+var TEMAS = ["flos", "flos/sos", "awtomic", "awtomic/qa", "flabs", "fuzzer", "juegos", "plata", "server", "personal", "podcast", "mesa", "flaudio", "tinder", "board", "modelos", "claude", "gemini", "groq", "groq-tandas"];
 var PRIORIDAD = ["awtomic/qa", "flabs", "podcast", "mesa", "tinder", "board", "modelos", "server", "juegos", "plata", "fuzzer", "awtomic", "flaudio", "flos"];
 var MODOS_TAB = [];
 var PROVEEDORES_TAB = ["gemini", "groq", "groq-tandas"];
-var PESTANAS_TAB = [["awtomic", "awtomic"], ["awtomic/qa", "awtomic/qa"], ["board", "board"], ["claude", "claude"], ["flabs", "flabs"], ["flaudio", "flaudio"], ["flos", "flos"], ["fuzzer", "fuzzer"], ["gemini", "gemini"], ["juegos", "juegos"], ["mesa", "mesa"], ["modelos", "modelos"], ["personal", "personal"], ["plata", "plata"], ["podcast", "podcast"], ["server", "server"], ["tinder", "tinder"]];
-var ALIAS = {"awtomic-qa": "awtomic/qa", "claudio": "flaudio", "consejo": "mesa", "tools": "flos"};
+var PESTANAS_TAB = [["awtomic", "awtomic"], ["awtomic/qa", "awtomic/qa"], ["board", "board"], ["claude", "claude"], ["flabs", "flabs"], ["flaudio", "flaudio"], ["flos", "flos"], ["flos/sos", "flos/sos"], ["fuzzer", "fuzzer"], ["gemini", "gemini"], ["juegos", "juegos"], ["mesa", "mesa"], ["modelos", "modelos"], ["personal", "personal"], ["plata", "plata"], ["podcast", "podcast"], ["server", "server"], ["tinder", "tinder"]];
+var ALIAS = {"awtomic-qa": "awtomic/qa", "claudio": "flaudio", "consejo": "mesa", "flos-sos": "flos/sos", "tools-sos": "flos/sos", "tools/sos": "flos/sos", "tools": "flos"};
 var RE_CORTE_SRC = "(\\n+)|([.;!?]\\s+)|(^|[\\s,;:])(?:y\\s+otra\\s+cosa|otra\\s+cosa|aparte|adem[a\u00e1]s|tambi[e\u00e9]n)(?!\\w)";
 var PALABRAS = {
   "awtomic/qa": ["verificador", "awtomic[- ]?qa", "qa", "tanda de tickets", "revisor de tanda", "loop verificador", "capturas del ticket"],
@@ -1934,6 +1934,9 @@ function temaActivo(){ return activo; }
 // un motor (`awtomic/qa`) cae ademas en la pestaña de su tema padre (`awtomic`): comparten la charla.
 // al reves no: la pestaña del motor muestra solo lo suyo (es el filtro por motor).
 function deEstaTab(tm, tab){
+  var nTm = typeof normTema === "function" ? normTema(tm) : tm;
+  var nTab = typeof normTema === "function" ? normTema(tab) : tab;
+  if(nTm === "flos/sos" || nTab === "flos/sos") return nTm === nTab;
   if(tab === AUTO) return tm === AUTO || (tabs.indexOf(tm) < 0 && tabs.indexOf(padreTema(tm)) < 0);
   return tm === tab || padreTema(tm) === tab;
 }
@@ -2044,8 +2047,17 @@ function cargarCfgMotor(){
 
 function filaDeTab(tAct){
   if(!tAct) return null;
-  var base = tAct.split(/[#/]/)[0].toLowerCase();
-  var act = tAct.toLowerCase();
+  var act = (typeof normTema === "function" ? normTema(tAct) : tAct).toLowerCase();
+  var base = act.split(/[#/]/)[0].toLowerCase();
+  if(act === "flos/sos"){
+    if(cfgMotor && cfgMotor.filas && cfgMotor.filas["flos/sos"]) return cfgMotor.filas["flos/sos"];
+    return {
+      modelos: ["gemini-4-argon", "opus", "sonnet", "claude", "agy", "geminiargon", "geminiflash", "geminipro", "cadena"],
+      modelo_default: "gemini-4-argon",
+      efforts: ["high", "medium", "low"],
+      effort_default: "high"
+    };
+  }
   if(cfgMotor && cfgMotor.filas){
     if(cfgMotor.filas[act]) return cfgMotor.filas[act];
     if(cfgMotor.filas[base]) return cfgMotor.filas[base];
@@ -2090,8 +2102,13 @@ function filaDeTab(tAct){
 
 function elegidoDeTab(tAct){
   if(!tAct) return null;
-  var act = tAct.toLowerCase();
+  var act = (typeof normTema === "function" ? normTema(tAct) : tAct).toLowerCase();
   var base = act.split(/[#/]/)[0];
+  if(act === "flos/sos"){
+    if(cfgMotor && cfgMotor.elegidos && cfgMotor.elegidos["flos/sos"]) return cfgMotor.elegidos["flos/sos"];
+    if(cfgMotor && cfgMotor.resueltos && cfgMotor.resueltos["flos/sos"]) return cfgMotor.resueltos["flos/sos"];
+    return {motor: "agy", modelo: "gemini-4-argon", effort: "high"};
+  }
   if(cfgMotor && cfgMotor.elegidos){
     if(cfgMotor.elegidos[act]) return cfgMotor.elegidos[act];
     if(cfgMotor.elegidos[base]) return cfgMotor.elegidos[base];
@@ -2147,25 +2164,33 @@ function pintarFilaMotor(){
     filaMotor.style.display = "none";
     return;
   }
-  // 3801 {chat-cadena-fija}: se quitan de la vista el selector superior y el pie inferior de cada pestaña
+  var actNorm = (typeof normTema === "function" ? normTema(tAct) : tAct).toLowerCase();
+  var esSos = (actNorm === "flos/sos");
+  // 3801 {chat-cadena-fija} + 6614 {sos-argon-con-selector}: oculto en pestañas comunes, visible en flos/sos
   filaMotor.innerHTML = "";
-  filaMotor.className = "tab-motor-fila oculta";
-  filaMotor.style.display = "none";
-  filaMotor.setAttribute("aria-hidden", "true");
+  if(esSos){
+    filaMotor.className = "tab-motor-fila";
+    filaMotor.style.display = "flex";
+    filaMotor.removeAttribute("aria-hidden");
+  } else {
+    filaMotor.className = "tab-motor-fila oculta";
+    filaMotor.style.display = "none";
+    filaMotor.setAttribute("aria-hidden", "true");
+  }
 
   var controles = document.createElement("div");
   controles.className = "tab-motor-controles";
-  controles.style.display = "none";
+  controles.style.display = esSos ? "flex" : "none";
   filaMotor.appendChild(controles);
 
   var fil = filaDeTab(tAct);
   var el = elegidoDeTab(tAct);
 
-  // Nivel 1: Motor (3617 {opcion-cadena}: incluye 'cadena')
+  // Nivel 1: Motor (3617 {opcion-cadena}: incluye 'cadena'; 6614: en flos/sos agy por defecto y cambio a claude/opus)
   var selMot = document.createElement("select");
   selMot.className = "sel-motor";
   selMot.title = "motor de " + tAct;
-  var motores = ["claude", "agy", "cadena"];
+  var motores = esSos ? ["agy", "claude"] : ["claude", "agy", "cadena"];
 
   // 3341: lo guardado en el server manda; lo que recuerda el navegador es solo para cuando el server no llego
   var motGuardado = (el && el.motor) || null;
@@ -2175,7 +2200,8 @@ function pintarFilaMotor(){
     else if(el.modelo === "agy" || el.modelo.indexOf("gemini") >= 0) motGuardado = "agy";
     else motGuardado = "claude";
   }
-  if(!motGuardado) motGuardado = "claude";
+  if(!motGuardado) motGuardado = esSos ? "agy" : "claude";
+  if(esSos && motGuardado === "cadena") motGuardado = "agy";
 
   motores.forEach(function(m){
     var opt = document.createElement("option");
@@ -2198,6 +2224,9 @@ function pintarFilaMotor(){
   controles.appendChild(selEff);
 
   function modelosDisponibles(mot){
+    if(esSos){
+      return ["gemini-4-argon", "opus", "sonnet", "gemini-3.8-flash"];
+    }
     if(mot === "cadena") return ["cadena"];
     var permitidos = (fil && fil.modelos) ? fil.modelos.slice() : [];
     if(mot === "agy"){
@@ -2235,6 +2264,7 @@ function pintarFilaMotor(){
   }
 
   function defaultModeloDe(mot){
+    if(esSos) return mot === "claude" ? "opus" : "gemini-4-argon";
     if(mot === "cadena") return "cadena";
     var disp = modelosDisponibles(mot);
     if(mot === "agy"){
@@ -2249,6 +2279,7 @@ function pintarFilaMotor(){
   }
 
   function effortsDisponibles(mot){
+    if(esSos) return ["high", "medium", "low"];
     if(mot === "cadena") return ["low", "medium", "high"];
     var permitidos = (fil && fil.efforts) ? fil.efforts.slice() : ["max", "xhigh", "high", "medium", "low"];
     permitidos = permitidos.filter(function(e){ return e !== "standard"; });
@@ -2267,6 +2298,7 @@ function pintarFilaMotor(){
   }
 
   function defaultEffortDe(mot){
+    if(esSos) return "high";
     if(mot === "cadena") return "low";
     var disp = effortsDisponibles(mot);
     if(mot === "agy") return (disp.indexOf("medium") >= 0) ? "medium" : disp[0];
@@ -2275,14 +2307,17 @@ function pintarFilaMotor(){
     return disp[0] || "medium";
   }
 
-  function refrescarModelos(){
+  function refrescarModelos(forzarDefPorMotor){
     var mot = selMot.value;
     var listaMods = modelosDisponibles(mot);
     var defMod = defaultModeloDe(mot);
-    var modGuardado = (el && el.modelo) || null;
-    if(!modGuardado && !cfgMotor && typeof localStorage !== "undefined") modGuardado = localStorage.getItem("flos_motor_modelo_" + tAct);
+    var modGuardado = forzarDefPorMotor ? null : ((el && el.modelo) || null);
+    if(!modGuardado && !forzarDefPorMotor && !cfgMotor && typeof localStorage !== "undefined") modGuardado = localStorage.getItem("flos_motor_modelo_" + tAct);
     if(mot === "cadena") modGuardado = "cadena";
     else if(!modGuardado || modGuardado === "agy" || modGuardado === "cadena" || listaMods.indexOf(modGuardado) < 0) modGuardado = defMod;
+    if(esSos && forzarDefPorMotor){
+      modGuardado = (mot === "claude") ? "opus" : "gemini-4-argon";
+    }
     selMod.innerHTML = "";
     listaMods.forEach(function(mod){
       var opt = document.createElement("option");
@@ -2308,24 +2343,34 @@ function pintarFilaMotor(){
     });
   }
 
-  refrescarModelos();
+  refrescarModelos(false);
   refrescarEfforts();
 
   var ultimoDiv = document.createElement("div");
   ultimoDiv.className = "tab-motor-ultimo";
-  ultimoDiv.style.display = "none";
+  ultimoDiv.style.display = esSos ? "" : "none";
   ultimoDiv.title = "lo que corrio en la ultima respuesta";
   ultimoDiv.textContent = textoCorrido(ultimoCorridoDeTab(tAct));
   filaMotor.appendChild(ultimoDiv);
 
-  selMot.onchange = function(){
-    if(typeof localStorage !== "undefined") localStorage.setItem("flos_motor_motor_" + tAct, selMot.value);
-    refrescarModelos();
-    refrescarEfforts();
+  function guardarElegidoLocal(motVal, modVal, effVal){
     if(typeof localStorage !== "undefined"){
-      localStorage.setItem("flos_motor_modelo_" + tAct, selMod.value);
-      localStorage.setItem("flos_motor_effort_" + tAct, selEff.value);
+      localStorage.setItem("flos_motor_motor_" + tAct, motVal);
+      localStorage.setItem("flos_motor_modelo_" + tAct, modVal);
+      localStorage.setItem("flos_motor_effort_" + tAct, effVal);
     }
+    if(cfgMotor){
+      if(!cfgMotor.elegidos) cfgMotor.elegidos = {};
+      if(!cfgMotor.resueltos) cfgMotor.resueltos = {};
+      cfgMotor.elegidos[actNorm] = {motor: motVal, modelo: modVal, effort: effVal};
+      cfgMotor.resueltos[actNorm] = {motor: motVal, modelo: modVal, effort: effVal, fuente: "selector"};
+    }
+  }
+
+  selMot.onchange = function(){
+    refrescarModelos(true);
+    refrescarEfforts();
+    guardarElegidoLocal(selMot.value, selMod.value, selEff.value);
     mandarAparte = true;
     try{
       mandar("motor " + tAct + " " + selMot.value + " " + selMod.value, tAct, false);
@@ -2336,22 +2381,29 @@ function pintarFilaMotor(){
   selMod.onchange = function(){
     if(selMod.value === "cadena" && selMot.value !== "cadena"){
       selMot.value = "cadena";
-      if(typeof localStorage !== "undefined") localStorage.setItem("flos_motor_motor_" + tAct, "cadena");
-      refrescarModelos();
+      refrescarModelos(false);
+    } else if(esSos){
+      var nuevoMot = (selMod.value === "opus" || selMod.value === "sonnet" || selMod.value === "claude") ? "claude" : "agy";
+      if(selMot.value !== nuevoMot) selMot.value = nuevoMot;
     }
-    if(typeof localStorage !== "undefined") localStorage.setItem("flos_motor_modelo_" + tAct, selMod.value);
     refrescarEfforts();
+    guardarElegidoLocal(selMot.value, selMod.value, selEff.value);
     mandarAparte = true;
     try{
-      mandar("motor " + tAct + " " + selMod.value, tAct, false);
-      if(selMot.value === "agy" || selMot.value === "cadena"){
+      if(esSos){
+        mandar("motor " + tAct + " " + selMot.value + " " + selMod.value, tAct, false);
         mandar("effort " + tAct + " " + selEff.value, tAct, false);
+      } else {
+        mandar("motor " + tAct + " " + selMod.value, tAct, false);
+        if(selMot.value === "agy" || selMot.value === "cadena"){
+          mandar("effort " + tAct + " " + selEff.value, tAct, false);
+        }
       }
     }finally{ mandarAparte = false; }
   };
 
   selEff.onchange = function(){
-    if(typeof localStorage !== "undefined") localStorage.setItem("flos_motor_effort_" + tAct, selEff.value);
+    guardarElegidoLocal(selMot.value, selMod.value, selEff.value);
     mandarAparte = true;
     try{
       mandar("effort " + tAct + " " + selEff.value, tAct, false);
@@ -6863,6 +6915,15 @@ function mezclarSiFalta(){ if(!chatPendiente()) return false; mezclar(); return 
 function recibirChat(tema, d){
   chatSello++;
   var t = normTema(tema), filas = ((d && d.filas) || []).slice(), out = [], resp = {};
+  if(t === "flos/sos" || t === "flos"){
+    filas = filas.filter(function(f){
+      if(!f) return false;
+      var ft = f.tema ? normTema(f.tema) : "";
+      var rLow = String(f.respuesta || "").trim().toLowerCase();
+      var esFilaSos = (ft === "flos/sos" || String(f.motor || "").toLowerCase() === "sos" || rLow.indexOf("[flos/sos]") === 0 || rLow.indexOf("[flos-sos]") === 0);
+      return t === "flos/sos" ? esFilaSos : !esFilaSos;
+    });
+  }
   // por la hora de ENVIO (1191): el daemon ya las publica ordenadas asi, esto cubre los archivos viejos
   filas.sort(function(a, b){ return fecha(a.ts) - fecha(b.ts); });
   filas.forEach(function(f, i){
@@ -12509,7 +12570,7 @@ function mirarUnVuelo(v){
     vueloTerminar(v.tema); return;
   }
   if(!token && !apiStub) return;
-  if(lan.base && (v.tema === "flos" || v.tema.indexOf("flos#") === 0)) {
+  if(lan.base && (v.tema === "flos" || v.tema === "flos/sos" || v.tema.indexOf("flos#") === 0 || v.tema.indexOf("flos/sos#") === 0)) {
     var sSeq = v.subprocesoSeq || 0;
     var desdeT = Math.max(0, Math.floor((v.t - 2000) / 1000));
     lanFetch(lan.base + "/subproceso/buffer?pestana=" + encodeURIComponent(v.tema) + "&desde=" + sSeq + "&desde_t=" + desdeT, {headers: {"authorization": "Bearer " + token}})
@@ -12720,7 +12781,7 @@ function mandar(texto, tema, crudo, tsEnvio){
   // la llamo (una caja de decision, una caja `dale`) sabe si el mensaje salio de verdad o si se cayo por el
   // camino. `via` es `post` (entro al buzon), `espera` (quedo en `salida` y sale solo) o `hook` (una prueba).
   if(!texto) return envioNo("el mensaje estaba vacio");
-  if(enviando) return envioNo("hay otro mensaje saliendo");     // hay uno saliendo: este enter no cuenta
+  if(enviando && !aparte) return envioNo("hay otro mensaje saliendo");     // hay uno saliendo: este enter no cuenta
   if(texto === ultimoTexto && Date.now() - ultimoTs < REPE_MS) return envioNo("repetido, esperá un segundo");
   tema = tema || temaActivo();
   tsEnvio = tsEnvio || Date.now();
