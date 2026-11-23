@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.653">
-<link rel="manifest" href="manifest.json?v=4.653">
+<meta name="agente-web-version" content="4.654">
+<link rel="manifest" href="manifest.json?v=4.654">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.653">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.654">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.607">
 <style id="css-dock-mac">
 /* {board-dock-fullscreen} (facundo, 2026-11-16): en la mac a pantalla completa el dock asoma al empujar el puntero
@@ -9222,7 +9222,8 @@ function tjPedirFoto(c, esHD){
   votLan().then(function(base){
     if(!base) throw new Error("sin lan");
     var q = esHD ? "?hd=1" : "";
-    return lanFetch(base + "/ig/foto/" + encodeURIComponent(c.id) + q, {method: "GET", cache: "no-store",
+    var fotoId = String(c.id || "").replace(/^@+/, "") || String(c.cuenta || "").replace(/^@+/, "");
+    return lanFetch(base + "/ig/foto/" + encodeURIComponent(fotoId) + q, {method: "GET", cache: "no-store",
       headers: {"authorization": "Bearer " + token}})
       .then(function(r){ if(!r || !r.ok) throw new Error("http " + (r && r.status)); return r.json(); });
   }).then(function(j){
@@ -10668,24 +10669,30 @@ function lisPintar(){
   lis.scroll = 0;
   if(y) try{ c.scrollTop = y; }catch(x){}
 }
-// ---------- 2224 {follow}: el follow a un arroba suelto desde la home de `instatinder` ----------
-// facundo (2026-09-27 11:29 pm): "quiero yo tambien poder hacerlo sin tener que venir a avisarte". un campo `@` y un
-// boton `follow`: el server (`POST /ig/follow`, `ig_cola.follow_arroba`) da el alta minima sin leer el perfil y
-// encola el follow con el ritmo normal de la cola de instagram; la respuesta dice el arroba y la hora estimada, o
-// por que no (ya la seguis, ya estaba en la cola, arroba invalido). el arroba va con o sin `@`. el estado vive en
-// `lisArr` para que un repintado (el poll de las listas) no borre lo que se acaba de contestar.
+// ---------- 2224 {follow} + 6632 {buscador-perfil-instatinder}: buscador de usuario en la home de `instatinder` ----------
+// al ingresar una cuenta (`@usuario`, `usuario` o link al perfil) abre su ficha de perfil en el votador con las
+// acciones correspondientes a la lista a la que pertenece, o con las acciones de `candidata` si no figura en ninguna.
 var lisArr = {texto: "", cl: "", valor: "", mandando: false};
+function lisLimpiarUsuario(raw){
+  var s = String(raw || "").trim();
+  var m = s.match(/(?:https?:\/\/)?(?:www\.)?instagram\.com\/([A-Za-z0-9._]{1,30})(?:[/?#]|$)/i);
+  if(m) return m[1].toLowerCase();
+  var u = s.replace(/^@+/, "").trim().toLowerCase();
+  return /^[a-z0-9._]{1,30}$/.test(u) ? u : "";
+}
 function lisArroba(){
   var w = document.createElement("div"); w.className = "lisarroba";
   var fila = document.createElement("div"); fila.className = "lisarrfila";
   var at = document.createElement("span"); at.className = "lisarrat"; at.textContent = "@";
   var inp = document.createElement("input"); inp.type = "text"; inp.className = "lisarrinp"; inp.id = "lisarrinp";
   inp.placeholder = "usuario de instagram"; inp.autocomplete = "off"; inp.autocapitalize = "none"; inp.spellcheck = false;
-  inp.value = lisArr.valor; inp.setAttribute("aria-label", "usuario de instagram al que mandarle follow");
+  inp.value = lisArr.valor; inp.setAttribute("aria-label", "usuario de instagram para abrir su perfil");
   inp.addEventListener("input", function(){ lisArr.valor = inp.value; });
-  inp.addEventListener("keydown", function(e){ if(e.key === "Enter" && !esTactil()){ e.preventDefault(); lisArrMandar(); } });   // {enter}: solo teclado fisico
-  var b = document.createElement("button"); b.type = "button"; b.className = "lisarrbtn"; b.textContent = "follow";
-  b.title = "mandarle follow a ese arroba (entra a la cola de instagram con el ritmo normal)";
+  inp.addEventListener("keydown", function(e){
+    if(e.key === "Enter" && !e.isComposing && e.keyCode !== 229){ e.preventDefault(); lisArrMandar(); }
+  });
+  var b = document.createElement("button"); b.type = "button"; b.className = "lisarrbtn"; b.textContent = "abrir";
+  b.title = "abrir el perfil de ese usuario con las acciones de su lista (o de candidata si no está en ninguna)";
   b.disabled = !!lisArr.mandando;
   b.addEventListener("click", lisArrMandar);
   fila.appendChild(at); fila.appendChild(inp); fila.appendChild(b);
@@ -10701,22 +10708,27 @@ function lisArrPintar(texto, cl){
   var b = document.querySelector("#sellistas .lisarrbtn"); if(b) b.disabled = !!lisArr.mandando;
 }
 function lisArrMandar(){
-  var u = String(lisArr.valor || "").trim().replace(/^@+/, "").toLowerCase();
-  if(!u){ lisArrPintar("escribí el arroba primero", "lisarrmal"); return; }
-  if(lisArr.mandando) return;
+  var raw = String(lisArr.valor || "").trim();
+  if(!raw){ lisArrPintar("escribí el arroba primero", "lisarrmal"); return Promise.resolve(false); }
+  var u = lisLimpiarUsuario(raw);
+  if(!u){ lisArrPintar("`" + raw + "` no es un usuario de instagram", "lisarrmal"); return Promise.resolve(false); }
+  if(lisArr.mandando) return Promise.resolve(false);
   lisArr.mandando = true;
-  lisArrPintar("encolando el follow a @" + u + "…", "");
-  return docsPedir("/ig/follow", {method: "POST", headers: {"content-type": "application/json"},
-                                  body: JSON.stringify({usuario: u})}).then(function(j){
+  lisArrPintar("abriendo @" + u + "…", "");
+  return lisAbrirCuenta(u).then(function(ok){
     lisArr.mandando = false;
-    if(!j || !j.estado){ lisArrPintar("no entendí la respuesta del server", "lisarrmal"); return; }
-    var ok = j.estado === "encolada" || j.estado === "ya_en_cola";
-    if(j.estado === "encolada"){ lisArr.valor = ""; var i = $("lisarrinp"); if(i) i.value = ""; }
-    lisArrPintar(j.texto || (ok ? "encolado" : "no se pudo"), ok ? "lisarrok" : "lisarrmal");
-    if(ok) lisBajar(true).then(function(){ if(lis.sub === "listas") lisPintar(); });   // la persona nueva ya cuenta en `interesan`
+    if(ok){
+      lisArr.valor = "";
+      var i = $("lisarrinp"); if(i) i.value = "";
+      lisArrPintar("", "");
+    } else {
+      lisArrPintar("no se pudo abrir @" + u, "lisarrmal");
+    }
+    return ok;
   }).catch(function(e){
     lisArr.mandando = false;
-    lisArrPintar("no llegó al server (" + ((e && e.message) || "sin lan") + "): probá de nuevo", "lisarrmal");
+    lisArrPintar("no se pudo abrir @" + u + (e && e.message ? " (" + e.message + ")" : ""), "lisarrmal");
+    return false;
   });
 }
 // 1605 {vista} paso 3: cuantas tarjetas tiene AHORA el votador de esa lista, con el mismo codigo que la apertura
@@ -11135,25 +11147,28 @@ function lisVolver(){
 function tjDePersona(p, f){
   if(!p) return null;
   var fch = p.ficha || {};
-  var foto = p.foto || fch.foto || "";
-  var bio = fch.bio || "";
+  var foto = p.foto || fch.foto || ((p.fotos || [])[0] || "");
+  var bio = p.bio || fch.bio || "";
   var lista = (f && f.clave) || p.lista || fch.lista || "";
   var sup = p.sup || fch.sup || (f && f.clave === "super_candidatas" ? {puesto: 0} : null);
   var virt = p.virt || fch.virt || (f && f.clave ? [f.clave] : []);
+  var fotos = (p.fotos && p.fotos.length) ? p.fotos.slice() : (foto ? [foto] : []);
   return {
     id: String(p.id),
-    titulo: p.nombre || p.cuenta || fch.nombre || fch.cuenta || String(p.id),
+    titulo: p.nombre || p.titulo || p.cuenta || fch.nombre || fch.cuenta || String(p.id),
     cuenta: p.cuenta || fch.cuenta || "",
     nombre: p.nombre || fch.nombre || "",
     foto: foto,
-    fotos: foto ? [foto] : [],
+    fotos: fotos,
     sin_foto: false,
-    foto_pendiente: !foto,
+    foto_pendiente: !fotos.length,
     _inyectada: true,
     privada: !!(fch.privada || p.privada),
     datos: (p.datos && p.datos.length) ? p.datos : (fch.datos || []),
     bio: bio,
-    detalle: limpiarTextoSinDms(p.porque || fch.porque || ""),
+    detalle: limpiarTextoSinDms(p.porque || p.detalle || fch.porque || ""),
+    desde: p.desde || fch.desde || "",
+    historial: (fch.historial && fch.historial.length) ? fch.historial : (p.historial || []),
     lista: lista,
     sup: sup,
     virt: virt,
@@ -11162,32 +11177,58 @@ function tjDePersona(p, f){
 }
 function tjInyectarPersona(col, p, f){
   if(!col || !p) return null;
-  if(f && f.botones && f.botones.length) pieGuardar(col, f.clave, f);
-  if(lisEnFila(col, p.id)) return null;
+  var listaClave = (f && f.clave) || sel.filtro || "";
+  if(f && f.botones && f.botones.length) pieGuardar(col, listaClave, f);
   var c = tjDePersona(p, f);
   if(!c) return null;
-  var listaClave = (f && f.clave) || sel.filtro || "";
+  var prevCache = cacheTraer(col, listaClave);
+  var existente = prevCache.filter(function(x){ return x && String(x.id) === String(c.id); })[0];
   var e = (sel.abiertas || []).filter(function(a){ return a.coleccion === col; })[0];
+  if(!existente && e && e.candidatas){
+    existente = e.candidatas.filter(function(x){ return x && String(x.id) === String(c.id); })[0];
+  }
+  if(existente){
+    var fotosMerge = (c.fotos && c.fotos.length) ? c.fotos : (existente.fotos || []);
+    c = Object.assign({}, existente, c, {
+      fotos: fotosMerge,
+      foto: c.foto || existente.foto || (fotosMerge[0] || ""),
+      foto_pendiente: !fotosMerge.length,
+      datos: (c.datos && c.datos.length) ? c.datos : (existente.datos || []),
+      bio: c.bio || existente.bio || "",
+      historial: (c.historial && c.historial.length) ? c.historial : (existente.historial || []),
+      _inyectada: true
+    });
+  }
   if(!e){
     e = {
       coleccion: col,
       titulo: (f && (f.proceso_titulo || f.titulo)) || col,
       modo: "tarjetas",
       continua: true,
-      circular: true,
+      circular: tjListaCircular(listaClave),
+      lista: listaClave || null,
       abierta: true,
       candidatas: [],
       pendientes: 1
     };
     if(f && f.botones){ e.botones = f.botones; e.extras = f.extras || []; e.mover = f.mover || null; }
     sel.abiertas = (sel.abiertas || []).concat([e]);
-  } else if(!e.botones && f && f.botones){
+  } else if(f && f.botones && (!e.botones || !e.lista || String(e.lista) === String(listaClave))){
     e.botones = f.botones; e.extras = f.extras || []; e.mover = f.mover || null;
   }
   if(listaClave) delete salioSet(col, listaClave)[c.id];
-  e.candidatas = e.candidatas || [];
-  e.candidatas.unshift(c);
-  cacheGuardar(e, listaClave);
+  var fv = selLeer("fila", {});
+  if(fv[col] && fv[col][c.id]){ delete fv[col][c.id]; selEscribir("fila", fv); }
+  var mv = movDe(c.id);
+  if(mv && mv.enviado && listaClave && String(mv.destino || "") !== String(listaClave)) movSacar(c.id);
+  e.candidatas = [c].concat((e.candidatas || []).filter(function(x){ return x && String(x.id) !== String(c.id); }));
+  var restoCache = prevCache.filter(function(x){ return x && String(x.id) !== String(c.id); });
+  var kCache = cacheClave(col, listaClave), fuera = salioSet(col, listaClave);
+  var csCache = [c].concat(restoCache).filter(function(x){ return x && !fuera[x.id]; });
+  filaCache[kCache] = csCache;
+  var mCache = selLeer("cache", {});
+  mCache[kCache] = csCache.slice(0, FILA_CACHE_TOPE);
+  selEscribir("cache", mCache);
   return c;
 }
 // `desde` (2113): `"home"` si el votador lo abrio el toque en la tarjeta de la lista, `"una"` (el default) si lo
@@ -11212,31 +11253,134 @@ function lisVotar(f, p, desde){
   // 2095 paso 5: el votador se abre FILTRADO a esta lista (`f.clave`): la fila del proceso mezcla varias
   return tinderAbrirCol(col, p && p.id, carta, f ? f.clave : "", f ? (f.titulo || f.clave) : "");
 }
-// {votador} (facundo, 2026-10-11, caja A): el arroba de un widget (`IG FOLLOW`) abre el votador de SU lista, parado en
-// esa persona y con los botones de esa lista. cada persona esta en UNA lista, asi que los botones no se mezclan.
-// primero se busca en las listas que el board ya tiene (cero pedidos); si no esta (las listas grandes no mandan su
-// gente), el server la ubica (`listas/@<arroba>.json`, `ig_listas.de_cuenta`). el camino al votador es `lisVotar`.
+var LIS_BOTONES_CANDIDATA = [
+  {q: "ignorar", tipo: "bajar", texto: "ignore"},
+  {q: "maybe", tipo: "maybe", texto: "move to maybe"},
+  {q: "queda", tipo: "subir", texto: "move up to interested"}
+];
+var LIS_EXTRAS_CANDIDATA = [
+  {q: "follow_ya", tipo: "follow", texto: "follow + move to follow request sent"}
+];
+var LIS_BOTONES_IGNORADA = [
+  {q: "igual", tipo: "igual", texto: "keep in ignored"},
+  {q: "mover_maybe", tipo: "maybe", texto: "move to maybe"},
+  {q: "mover_interesan", tipo: "subir", texto: "move up to interested"}
+];
+var LIS_EXTRAS_IGNORADA = [
+  {q: "mover_candidata", tipo: "subir", texto: "move up to candidates"}
+];
+function lisAbrirHallada(f, p){
+  if(!f || !p) return false;
+  var fila = Object.assign({}, f);
+  if(!fila.proceso) fila.proceso = "ig-embudo";
+  if(!fila.botones || !fila.botones.length){
+    var pi = pieTraer(fila.proceso, fila.clave);
+    if(pi && pi.botones && pi.botones.length){
+      fila.botones = pi.botones;
+      if(!fila.extras || !fila.extras.length) fila.extras = pi.extras || [];
+      if(!fila.mover) fila.mover = pi.mover || null;
+    } else if(fila.clave === "ignorada"){
+      fila.botones = LIS_BOTONES_IGNORADA.slice();
+      fila.extras = LIS_EXTRAS_IGNORADA.slice();
+    } else {
+      fila.botones = LIS_BOTONES_CANDIDATA.slice();
+      fila.extras = LIS_EXTRAS_CANDIDATA.slice();
+    }
+  }
+  return lisVotar(fila, p, "home");
+}
+function lisBuscarEnCache(cu, d){
+  var filas = (((d || {}).listas) || []), hallada = null;
+  filas.forEach(function(f){
+    if(hallada || f.virtual || !f.proceso) return;
+    var cs = cacheTraer(f.proceso, f.clave);
+    for(var i = 0; i < cs.length; i++){
+      if(cs[i] && String(cs[i].cuenta || "").replace(/^@/, "").toLowerCase() === cu){
+        hallada = {f: f, p: cs[i]};
+        break;
+      }
+    }
+  });
+  return hallada;
+}
+function lisAbrirCandidataFallback(cu, d){
+  var enCache = lisBuscarEnCache(cu, d);
+  if(enCache) return lisAbrirHallada(enCache.f, enCache.p);
+  var filas = (((d || {}).listas) || []);
+  var fBase = filas.filter(function(x){ return x && x.clave === "candidata"; })[0] || {};
+  var pi = pieTraer("ig-embudo", "candidata");
+  var fCand = Object.assign({
+    clave: "candidata",
+    lista: "candidata",
+    sub: "",
+    titulo: "candidates",
+    proceso: "ig-embudo",
+    proceso_titulo: "candidatas"
+  }, fBase, {
+    proceso: fBase.proceso || "ig-embudo",
+    botones: (fBase.botones && fBase.botones.length) ? fBase.botones : ((pi && pi.botones && pi.botones.length) ? pi.botones : LIS_BOTONES_CANDIDATA.slice()),
+    extras: (fBase.extras && fBase.extras.length) ? fBase.extras : ((pi && pi.extras && pi.extras.length) ? pi.extras : LIS_EXTRAS_CANDIDATA.slice())
+  });
+  var pq = fCand.porque || "follows one of the source accounts and was in no list: still to be voted in the tinder";
+  var link = "https://www.instagram.com/" + cu + "/";
+  var pCand = {
+    id: "@" + cu,
+    cuenta: cu,
+    nombre: cu,
+    foto: "",
+    datos: [],
+    porque: pq,
+    lista: "candidata",
+    sub: "",
+    link: link,
+    ficha: {
+      id: "@" + cu,
+      cuenta: cu,
+      nombre: cu,
+      foto: "",
+      chips: ["pública"],
+      datos: [],
+      bio: "",
+      porque: pq,
+      lista: "candidata",
+      sub: "",
+      titulo_lista: fCand.titulo || "candidates",
+      historial: [],
+      link: link
+    }
+  };
+  return lisAbrirHallada(fCand, pCand);
+}
+// {votador} (facundo, 2026-10-11, caja A) + 6632 {buscador-perfil-instatinder} (2026-11-23): el buscador de la home
+// y el arroba de un widget (`IG FOLLOW`) abren el votador de SU lista, parado en esa persona y con los botones de esa
+// lista, o con los botones de `candidata` si no figura en ninguna. primero se busca en las listas que el board ya
+// tiene (cero pedidos); si no esta (las listas grandes no mandan su gente, o es una cuenta nueva), el server la ubica
+// (`listas/@<arroba>.json`, `ig_listas.de_cuenta`), y si no hay lan cae al fallback de `candidata`.
 function lisAbrirCuenta(cuenta){
-  var cu = String(cuenta || "").replace(/^@/, "").toLowerCase();
+  var cu = lisLimpiarUsuario(cuenta);
   if(!cu) return Promise.resolve(false);
-  var d = lisCacheLeer(), hallada = null;
+  var d = movVista(lisCacheLeer()), hallada = null;
   (((d || {}).listas) || []).forEach(function(f){
     if(hallada || f.virtual) return;
     (f.gente || []).forEach(function(p){
       if(!hallada && String(p.cuenta || "").replace(/^@/, "").toLowerCase() === cu) hallada = {f: f, p: p};
     });
   });
-  if(hallada){
-    if(!hallada.f.proceso) hallada.f.proceso = "ig-embudo";
-    return Promise.resolve(lisVotar(hallada.f, hallada.p, "home"));
-  }
-  return api("GET", "/repos/" + REPO + "/contents/listas/" + encodeURIComponent("@" + cu) + ".json", null, null,
-             "application/vnd.github.raw+json").then(function(r){
+  if(hallada) return Promise.resolve(lisAbrirHallada(hallada.f, hallada.p));
+  var pedir = function(){
+    return api("GET", "/repos/" + REPO + "/contents/listas/" + encodeURIComponent("@" + cu) + ".json", null, null,
+               "application/vnd.github.raw+json");
+  };
+  return (!lan.base && !apiStub ? votLan().catch(function(){}) : Promise.resolve()).then(pedir).then(function(r){
     var j = r && r.json;
-    if(!j || !j.ok || !j.fila || !j.persona) return false;
-    if(!j.fila.proceso) j.fila.proceso = "ig-embudo";
-    return lisVotar(j.fila, j.persona, "home");
-  }).catch(function(){ return false; });
+    if(j && j.ok && j.fila && j.persona){
+      if(j.nueva) lisBajar(true).then(function(){ if(lis.sub === "listas") lisPintar(); });
+      return lisAbrirHallada(j.fila, limpiarPersonaSinDms(j.persona));
+    }
+    return lisAbrirCandidataFallback(cu, d);
+  }).catch(function(){
+    return lisAbrirCandidataFallback(cu, d);
+  });
 }
 // 2325 {votador}: hay al menos UNA tarjeta de esa lista en la fila que ya esta cargada para el proceso? es lo que
 // decide si el votador puede abrirse con lo que hay o si primero hay que pedirle al server la fila de la lista.

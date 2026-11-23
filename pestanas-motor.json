@@ -1922,9 +1922,8 @@
       "modelo": "sonnet"
     },
     "personal": {
-      "motor": "agy",
-      "modelo": "gemini-3.8-flash",
-      "effort": "high"
+      "motor": "claude",
+      "modelo": "sonnet"
     },
     "plata": {
       "motor": "claude",
@@ -1945,7 +1944,8 @@
     },
     "tinder": {
       "motor": "agy",
-      "modelo": "agy"
+      "modelo": "gemini-3.8-flash",
+      "effort": "high"
     }
   },
   "modelos_agy": {
