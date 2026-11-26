@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.660">
-<link rel="manifest" href="manifest.json?v=4.660">
+<meta name="agente-web-version" content="4.661">
+<link rel="manifest" href="manifest.json?v=4.661">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.660">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.661">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.607">
 <style id="css-dock-mac">
 /* {board-dock-fullscreen} (facundo, 2026-11-16): en la mac a pantalla completa el dock asoma al empujar el puntero
@@ -8650,11 +8650,21 @@ function selSinFila(col){ return !!selSinFilas[col]; }
 // lo ultimo que dejo el poll del PROCESO (`sel.abiertas`), que viene con el pie de 3 botones; el pie de la lista
 // recien llegaba con la respuesta siguiente. ahora la apertura usa el pie que esa lista ya mostro.
 var LIS_LISTAS_CUATRO = ["candidata", "candidatais", "super", "maybe", "interesan", "follow_request_sent", "following", "limbo2", "ignorada"];
+function normalizarBotonesFollow(bs){
+  if(!Array.isArray(bs)) return bs;
+  return bs.map(function(b){
+    if(!b) return b;
+    var out = Object.assign({}, b);
+    if(out.texto === "follow + move to follow request sent") out.texto = "follow";
+    if(out.aria === "follow + move to follow request sent") out.aria = "follow";
+    return out;
+  });
+}
 function pieClave(col, lista){ return (lista || "") + "|" + col; }
 function pieGuardar(col, lista, j){
   if(!j || !j.botones || !j.botones.length) return;
   var m = selLeer("pie", {});
-  m[pieClave(col, lista)] = {botones: j.botones, extras: [], mover: j.mover || null};
+  m[pieClave(col, lista)] = {botones: normalizarBotonesFollow(j.botones), extras: [], mover: j.mover || null};
   selEscribir("pie", m);
 }
 function pieTraer(col, lista){
@@ -8664,6 +8674,7 @@ function pieTraer(col, lista){
       var bsDef = lisBotonesPorLista(lista);
       if(bsDef && bsDef.length) p.botones = bsDef;
     }
+    p.botones = normalizarBotonesFollow(p.botones);
     p.extras = [];
   }
   return p;
@@ -8889,7 +8900,7 @@ var TJ_PROCS = {
   "ig-seguir": {nombre: "start following", botones: [
     {q: "bajar", tipo: "bajar", aria: "move down to maybe"},
     {q: "igual", tipo: "igual", aria: "keep in interested"},
-    {q: "subir", tipo: "subir", aria: "follow + move to follow request sent"}]},
+    {q: "subir", tipo: "subir", aria: "follow"}]},
   // 2247 {botones}: el tercero (`3 minimo para TODAS`), la `✕` roja: la ignoro sin dejar de seguirla
   "ig-dejar": {nombre: "unfollow", botones: [
     {q: "bajar", tipo: "bajar", aria: "unfollow + move down to maybe"},
@@ -8954,7 +8965,7 @@ var TJ_SVG = {
 // `botones` del json de la votacion): la web no redacta ninguna. `TJ_PROCS` queda como red de abajo para un json
 // viejo o una coleccion que el server todavia no describe.
 function tjBotonesSpec(e){
-  var s = e && e.botones;
+  var s = normalizarBotonesFollow(e && e.botones);
   if(s && s.length) return s.map(function(b){ return {q: b.q, tipo: b.tipo || b.q, texto: b.texto || "", aria: b.texto || b.aria || b.q}; });
   return tjProc(e && e.coleccion).botones.map(function(b){ return {q: b.q, tipo: b.tipo, texto: "", aria: b.aria}; });
 }
@@ -11430,12 +11441,12 @@ function lisVotar(f, p, desde){
   // 2095 paso 5: el votador se abre FILTRADO a esta lista (`f.clave`): la fila del proceso mezcla varias
   return tinderAbrirCol(col, p && p.id, carta, f ? f.clave : "", f ? (f.titulo || f.clave) : "");
 }
-// 6730 {sin-boton-chico-nunca}: todas las acciones de una lista viven en el pie como botones grandes; `extras` es siempre `[]`.
+// 6730 {sin-boton-chico-nunca} + 6736 {follow-simple-y-mueve-solo}: todas las acciones de una lista viven en el pie como botones grandes y el follow dice solo `follow`.
 var LIS_BOTONES_CANDIDATA = [
   {q: "ignorar", tipo: "bajar", texto: "ignore"},
   {q: "maybe", tipo: "maybe", texto: "move to maybe"},
   {q: "queda", tipo: "subir", texto: "move up to interested"},
-  {q: "follow_ya", tipo: "follow", texto: "follow + move to follow request sent"}
+  {q: "follow_ya", tipo: "follow", texto: "follow"}
 ];
 var LIS_EXTRAS_CANDIDATA = [];
 var LIS_BOTONES_SUPER = [
@@ -11448,14 +11459,14 @@ var LIS_BOTONES_MAYBE = [
   {q: "bajar", tipo: "bajar", texto: "ignore"},
   {q: "igual", tipo: "igual", texto: "keep in maybe"},
   {q: "subir", tipo: "subir", texto: "move up to interested"},
-  {q: "follow_ya", tipo: "follow", texto: "follow + move to follow request sent"}
+  {q: "follow_ya", tipo: "follow", texto: "follow"}
 ];
 var LIS_EXTRAS_MAYBE = [];
 var LIS_BOTONES_INTERESAN = [
   {q: "ignorar", tipo: "no", texto: "ignore"},
   {q: "bajar", tipo: "bajar", texto: "move down to maybe"},
   {q: "igual", tipo: "igual", texto: "keep in interested"},
-  {q: "subir", tipo: "subir", texto: "follow + move to follow request sent"}
+  {q: "subir", tipo: "subir", texto: "follow"}
 ];
 var LIS_EXTRAS_INTERESAN = [];
 var LIS_BOTONES_FOLLOW_REQUEST_SENT = [
@@ -11520,6 +11531,7 @@ function lisCompletarFilaBotones(f){
       fila.botones = lisBotonesPorLista(cl) || LIS_BOTONES_CANDIDATA.slice();
     }
   }
+  fila.botones = normalizarBotonesFollow(fila.botones);
   fila.extras = [];
   return fila;
 }

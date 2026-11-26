@@ -1945,8 +1945,7 @@
     },
     "tinder": {
       "motor": "agy",
-      "modelo": "gemini-4-argon",
-      "effort": "low"
+      "modelo": "agy"
     }
   },
   "modelos_agy": {
