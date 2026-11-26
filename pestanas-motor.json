@@ -1923,8 +1923,9 @@
       "modelo": "sonnet"
     },
     "personal": {
-      "motor": "claude",
-      "modelo": "sonnet"
+      "motor": "agy",
+      "modelo": "gemini-4-argon",
+      "effort": "low"
     },
     "plata": {
       "motor": "claude",
