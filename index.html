@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.654">
-<link rel="manifest" href="manifest.json?v=4.654">
+<meta name="agente-web-version" content="4.655">
+<link rel="manifest" href="manifest.json?v=4.655">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.654">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.655">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.607">
 <style id="css-dock-mac">
 /* {board-dock-fullscreen} (facundo, 2026-11-16): en la mac a pantalla completa el dock asoma al empujar el puntero
@@ -8052,12 +8052,69 @@ function tjEsCircular(e, filtro){
   if(l && !e.lista) return tjListaCircular(l);
   return !!e.circular;
 }
+var TJ_DESTINOS_EXTRA = {
+  follow_ya: "follow_request_sent",
+  ignorar: "ignorada",
+  unfollow_ignorar: "ignorada",
+  ignorar_unfollow: "ignorada",
+  cancelar_ignorar: "ignorada",
+  a_activar: "activar",
+  a_active: "activa",
+  a_limbo: "limbo",
+  a_limbo2: "limbo2",
+  a_candidatas: "candidata",
+  mover_interesan: "interesan",
+  mover_limbo: "limbo",
+  mover_new: "new",
+  mover_maybe: "maybe",
+  mover_activar: "activar",
+  mover_activa: "activa",
+  mover_ignorada: "ignorada",
+  mover_limbo2: "limbo2",
+  mover_following: "following",
+  mover_follow_request_sent: "follow_request_sent",
+  mover_candidata: "candidata"
+};
+var TJ_COLAS_EXTRA = {
+  follow_ya: "follow",
+  unfollow_ignorar: "unfollow",
+  ignorar_unfollow: "unfollow",
+  cancelar_ignorar: "unfollow"
+};
+function tjDestinoDe(e, q){
+  if(e && e.destinos && Object.prototype.hasOwnProperty.call(e.destinos, q)) return e.destinos[q];
+  if(Object.prototype.hasOwnProperty.call(TJ_DESTINOS_EXTRA, q)) return TJ_DESTINOS_EXTRA[q];
+  var col = (e && e.coleccion) || "";
+  if(col === "ig-seguir"){
+    if(q === "subir") return "follow_request_sent";
+    if(q === "bajar") return "maybe";
+  } else if(col === "ig-maybe"){
+    if(q === "subir") return "interesan";
+    if(q === "bajar") return "ignorada";
+  } else if(col === "ig-embudo"){
+    if(q === "queda") return "interesan";
+    if(q === "maybe") return "maybe";
+    if(q === "ignorar") return "ignorada";
+  } else if(col === "ig-arrepentir"){
+    if(q === "bajar" || q === "cortar") return "ignorada";
+  }
+  return null;
+}
+function tjColaDe(e, q){
+  if(e && e.colas && Object.prototype.hasOwnProperty.call(e.colas, q)) return e.colas[q] || "";
+  if(Object.prototype.hasOwnProperty.call(TJ_COLAS_EXTRA, q)) return TJ_COLAS_EXTRA[q];
+  var col = (e && e.coleccion) || "";
+  if(col === "ig-seguir" && q === "subir") return "follow";
+  if(col === "ig-arrepentir" && q === "cortar") return "unfollow";
+  if(col === "ig-dejar" && q === "bajar") return "unfollow";
+  return "";
+}
 // el voto `q` deja a la persona en la lista que se esta votando? `destinos` lo manda el server (`seleccion.destinos_col`)
 function tjSigueEnLista(e, q){
   if(!e || !sel.filtro || !tjEsCircular(e, sel.filtro)) return true;
   if(q === "igual") return true;
-  var d = (e.destinos || {})[q];
-  if(!d) return q !== "bajar" && q !== "cortar" && q !== "ignorar" && q !== "subir";
+  var d = tjDestinoDe(e, q);
+  if(!d) return q !== "bajar" && q !== "cortar" && q !== "ignorar" && q !== "subir" && q !== "follow_ya";
   return String(d) === String(sel.filtro);
 }
 // ---------- {gracia} (facundo, 2026-09-20): la capa local de movimientos, encima de `listas.json` ----------
@@ -8089,10 +8146,10 @@ function movTodos(){ var m = movLeer(); return Object.keys(m).map(function(k){ r
 function movDe(id){ return movLeer()[String(id)] || null; }
 // el voto acaba de pasar: la persona se mueve YA. `destino` (y si el voto dispara follow/unfollow) lo dijo el server
 function movPoner(e, c, q){
-  var destino = (e.destinos || {})[q], accion = (e.colas || {})[q] || "";
+  var destino = tjDestinoDe(e, q), accion = tjColaDe(e, q);
   var desde = c.lista || sel.filtro || "";
   if(!destino || (String(destino) === String(desde) && !accion)) return null;   // `igual`: no se mueve de lista ni dispara accion, no hay nada que pintar
-  var gracia = accion ? Math.max(0, e.gracia_ms || 0) : 0;   // {gracia}: solo lo que toca instagram tiene ventana
+  var gracia = accion ? Math.max(0, (e && e.gracia_ms !== undefined) ? e.gracia_ms : 60000) : 0;   // {gracia}: solo lo que toca instagram tiene ventana
   var m = {id: String(c.id), cuenta: c.cuenta || "", nombre: c.nombre || c.cuenta || "", foto: (c.fotos || [])[0] || "",
            col: e.coleccion, q: q, desde: String(desde || ""), destino: String(destino), accion: accion,
            ts: Date.now(), hasta: Date.now() + gracia, enviado: 0, ses: sel.sesion || ""};
@@ -8498,7 +8555,14 @@ function pieGuardar(col, lista, j){
   m[pieClave(col, lista)] = {botones: j.botones, extras: j.extras || [], mover: j.mover || null};
   selEscribir("pie", m);
 }
-function pieTraer(col, lista){ return selLeer("pie", {})[pieClave(col, lista)] || null; }
+function pieTraer(col, lista){
+  var p = selLeer("pie", {})[pieClave(col, lista)] || null;
+  if(p && (!p.extras || !p.extras.length) && typeof lisExtrasPorLista === "function"){
+    var exDef = lisExtrasPorLista(lista);
+    if(exDef) p.extras = exDef;
+  }
+  return p;
+}
 // 2174 {cuentas} paso 1: que lista esta abierta para esta coleccion. con el votador a la vista es `sel.filtro`;
 // si ya se cerro, la ultima que sirvio esa fila (`sel.filaDe`), asi los votos que se suben despues viajan igual
 // con su lista. `""`/null = el proceso entero, que es una respuesta valida solo para el proceso entero.
@@ -10318,7 +10382,12 @@ function limpiarPersonaSinDms(p){
 function limpiarListasSinDms(d){
   if(!d || !Array.isArray(d.listas)) return d;
   d.listas.forEach(function(f){
-    if(f && Array.isArray(f.gente)) f.gente.forEach(limpiarPersonaSinDms);
+    if(!f) return;
+    if((f.clave === "maybe" || f.clave === "interesan") && (!f.extras || !f.extras.length) && typeof lisExtrasPorLista === "function"){
+      var exDef = lisExtrasPorLista(f.clave);
+      if(exDef) f.extras = exDef;
+    }
+    if(Array.isArray(f.gente)) f.gente.forEach(limpiarPersonaSinDms);
   });
   return d;
 }
@@ -10943,7 +11012,8 @@ function lisFilaDe(p){
       if(String(gente[j].id) === String(p.id) || (p.cuenta && gente[j].cuenta === p.cuenta)) return filas[i];
     }
   }
-  return cl ? {clave: cl, titulo: cl, proceso: "ig-embudo"} : {clave: "candidata", titulo: "candidata", proceso: "ig-embudo"};
+  var colDef = (typeof LIS_PROCESOS_LISTA === "object" && LIS_PROCESOS_LISTA[cl]) || "ig-embudo";
+  return cl ? {clave: cl, lista: cl, titulo: cl, proceso: colDef} : {clave: "candidata", lista: "candidata", titulo: "candidata", proceso: "ig-embudo"};
 }
 // caso 21 {votador} (2026-10-11): VOTADOR UNICO. tocar una persona entra SIEMPRE al votador de su lista, parado en
 // ella (1729). la cartita de la 1948 (`lisFicha`, el modal lateral con la ficha y sus acciones) y el modal de la
@@ -10957,7 +11027,7 @@ var LIS_PROCESO_DEFAULT = "ig-embudo";
 function lisCartita(p){
   if(!p) return false;
   p = movPersona(p);   // {gracia}: la ficha dice la lista NUEVA, no la que trae el json viejo del server
-  var f = lisFilaDe(p);
+  var f = lisCompletarFilaBotones(lisFilaDe(p));
   // una lista que el server no vota (sin `proceso`) se vota igual: copia, nunca se toca la fila cacheada
   if(!f.proceso) f = Object.assign({}, f, {proceso: LIS_PROCESO_DEFAULT});
   return lisVotar(f, p, "una");
@@ -11213,8 +11283,9 @@ function tjInyectarPersona(col, p, f){
     };
     if(f && f.botones){ e.botones = f.botones; e.extras = f.extras || []; e.mover = f.mover || null; }
     sel.abiertas = (sel.abiertas || []).concat([e]);
-  } else if(f && f.botones && (!e.botones || !e.lista || String(e.lista) === String(listaClave))){
+  } else if(f && f.botones){
     e.botones = f.botones; e.extras = f.extras || []; e.mover = f.mover || null;
+    if(listaClave) e.lista = listaClave;
   }
   if(listaClave) delete salioSet(col, listaClave)[c.id];
   var fv = selLeer("fila", {});
@@ -11235,6 +11306,9 @@ function tjInyectarPersona(col, p, f){
 // abrio el boton `votar esta lista` de la grilla de gente. es lo que decide a donde vuelve el back del final.
 function lisVotar(f, p, desde){
   try{ lis.scroll = $("sellistas").scrollTop; }catch(x){ lis.scroll = 0; }
+  if(f && (f.clave === "maybe" || f.clave === "interesan") && (!f.extras || !f.extras.length)){
+    f = lisCompletarFilaBotones(f);
+  }
   var col = f && f.proceso;
   // paso 4: de donde salio el votador, para que el back grande vuelva a ESA lista en la misma posicion de scroll
   lis.origen = col ? {col: col, lista: f ? f.clave : "", scroll: lis.unaScroll || lis.scroll,
@@ -11261,6 +11335,22 @@ var LIS_BOTONES_CANDIDATA = [
 var LIS_EXTRAS_CANDIDATA = [
   {q: "follow_ya", tipo: "follow", texto: "follow + move to follow request sent"}
 ];
+var LIS_BOTONES_MAYBE = [
+  {q: "bajar", tipo: "bajar", texto: "ignore"},
+  {q: "igual", tipo: "igual", texto: "keep in maybe"},
+  {q: "subir", tipo: "subir", texto: "move up to interested"}
+];
+var LIS_EXTRAS_MAYBE = [
+  {q: "follow_ya", tipo: "follow", texto: "follow + move to follow request sent"}
+];
+var LIS_BOTONES_INTERESAN = [
+  {q: "bajar", tipo: "bajar", texto: "move down to maybe"},
+  {q: "igual", tipo: "igual", texto: "keep in interested"},
+  {q: "subir", tipo: "subir", texto: "follow + move to follow request sent"}
+];
+var LIS_EXTRAS_INTERESAN = [
+  {q: "ignorar", tipo: "bajar", texto: "ignore"}
+];
 var LIS_BOTONES_IGNORADA = [
   {q: "igual", tipo: "igual", texto: "keep in ignored"},
   {q: "mover_maybe", tipo: "maybe", texto: "move to maybe"},
@@ -11269,24 +11359,59 @@ var LIS_BOTONES_IGNORADA = [
 var LIS_EXTRAS_IGNORADA = [
   {q: "mover_candidata", tipo: "subir", texto: "move up to candidates"}
 ];
-function lisAbrirHallada(f, p){
-  if(!f || !p) return false;
+var LIS_PROCESOS_LISTA = {
+  candidata: "ig-embudo",
+  super: "ig-embudo",
+  candidatais: "ig-embudo",
+  interesan: "ig-seguir",
+  maybe: "ig-maybe",
+  new: "ig-maybe",
+  limbo: "ig-maybe",
+  limbo2: "ig-maybe",
+  follow_request_sent: "ig-arrepentir",
+  following: "ig-arrepentir",
+  activar: "ig-arrepentir",
+  following_not_followers: "ig-arrepentir",
+  etiquetar_genero: "ig-genero"
+};
+function lisBotonesPorLista(clave){
+  if(clave === "ignorada") return LIS_BOTONES_IGNORADA.slice();
+  if(clave === "maybe") return LIS_BOTONES_MAYBE.slice();
+  if(clave === "interesan") return LIS_BOTONES_INTERESAN.slice();
+  if(clave === "candidata") return LIS_BOTONES_CANDIDATA.slice();
+  return null;
+}
+function lisExtrasPorLista(clave){
+  if(clave === "ignorada") return LIS_EXTRAS_IGNORADA.slice();
+  if(clave === "maybe") return LIS_EXTRAS_MAYBE.slice();
+  if(clave === "interesan") return LIS_EXTRAS_INTERESAN.slice();
+  if(clave === "candidata") return LIS_EXTRAS_CANDIDATA.slice();
+  return null;
+}
+function lisCompletarFilaBotones(f){
+  if(!f) return f;
   var fila = Object.assign({}, f);
-  if(!fila.proceso) fila.proceso = "ig-embudo";
+  var cl = fila.clave || fila.lista || "";
+  if(!fila.proceso && cl && LIS_PROCESOS_LISTA[cl]) fila.proceso = LIS_PROCESOS_LISTA[cl];
+  var pi = fila.proceso ? pieTraer(fila.proceso, cl) : null;
   if(!fila.botones || !fila.botones.length){
-    var pi = pieTraer(fila.proceso, fila.clave);
     if(pi && pi.botones && pi.botones.length){
       fila.botones = pi.botones;
-      if(!fila.extras || !fila.extras.length) fila.extras = pi.extras || [];
       if(!fila.mover) fila.mover = pi.mover || null;
-    } else if(fila.clave === "ignorada"){
-      fila.botones = LIS_BOTONES_IGNORADA.slice();
-      fila.extras = LIS_EXTRAS_IGNORADA.slice();
     } else {
-      fila.botones = LIS_BOTONES_CANDIDATA.slice();
-      fila.extras = LIS_EXTRAS_CANDIDATA.slice();
+      fila.botones = lisBotonesPorLista(cl) || LIS_BOTONES_CANDIDATA.slice();
     }
   }
+  if(!fila.extras || !fila.extras.length){
+    if(pi && pi.extras && pi.extras.length) fila.extras = pi.extras;
+    else fila.extras = lisExtrasPorLista(cl) || [];
+  }
+  return fila;
+}
+function lisAbrirHallada(f, p){
+  if(!f || !p) return false;
+  var fila = lisCompletarFilaBotones(f);
+  if(!fila.proceso) fila.proceso = LIS_PROCESOS_LISTA[fila.clave] || "ig-embudo";
   return lisVotar(fila, p, "home");
 }
 function lisBuscarEnCache(cu, d){
