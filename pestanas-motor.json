@@ -1920,11 +1920,12 @@
     },
     "modelos": {
       "motor": "claude",
-      "modelo": "sonnet"
+      "modelo": "fable"
     },
     "personal": {
-      "motor": "claude",
-      "modelo": "sonnet"
+      "motor": "agy",
+      "modelo": "gemini-4-argon",
+      "effort": "low"
     },
     "plata": {
       "motor": "claude",

@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.661">
-<link rel="manifest" href="manifest.json?v=4.661">
+<meta name="agente-web-version" content="4.662">
+<link rel="manifest" href="manifest.json?v=4.662">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.661">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.662">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.607">
 <style id="css-dock-mac">
 /* {board-dock-fullscreen} (facundo, 2026-11-16): en la mac a pantalla completa el dock asoma al empujar el puntero
@@ -3946,8 +3946,17 @@ function esEstadoTransitorio(m){
 // pestañas abiertas la misma fila llegaba en `msgsHist.awtomic` y en `msgsHist["awtomic/qa"]`, con otro `id` y
 // otra `clave`, y la pestaña del padre pintaba la tira entera dos veces. la identidad de una fila es la del
 // jsonl (hora de envio + pregunta + respuesta), no la de la pestaña que la bajo, y se pinta UNA copia.
-function filaId(f){
-  return "f:" + (f.ts || "") + "|" + hashTexto(String(f.pregunta || "") + "\n" + String(f.respuesta || ""));
+// {pestanas-sin-vaiven}: la identidad lleva el DUEÑO DEL LOG (`logDe`). una sub de ticket (`awtomic#130`) hereda copias de
+// filas de `awtomic` a proposito (`heredado_de`): son de logs distintos y las dos pestañas las muestran. sin el dueño la
+// copia de la sub le ganaba a la original (`duenosFila`) y el mensaje se iba de `awtomic` y volvia segun que pestaña
+// habia cargado primero. solo comparten dueño un tema y su motor (`awtomic` y `awtomic/qa`), que si son UN jsonl.
+function logDe(t){
+  var n = normTema(t || ""), m = /#\d+$/.exec(n);
+  return n.split("#")[0].split("/")[0] + (m ? m[0] : "");
+}
+function filaId(f, t){
+  return "f:" + (f.ts || "") + "|" + hashTexto(String(f.pregunta || "") + "\n" + String(f.respuesta || "")) +
+         (t ? "@" + logDe(t) : "");
 }
 // que copia gana: la de la lista del tema propio de la fila (`tema` del jsonl), si no la del padre, si no la
 // primera. dentro de una misma lista, la primera vez que aparece.
@@ -7010,6 +7019,30 @@ function chatPendiente(){ return chatSello !== chatMezclado; }
 // mezcla SOLO si hay algo bajado sin mezclar: en el caso normal no cuesta nada (2149 {pestana}: el toque
 // de una pestaña no puede pagar una pasada por la charla entera al pedo)
 function mezclarSiFalta(){ if(!chatPendiente()) return false; mezclar(); return true; }
+// {pestanas-sin-vaiven} (facundo, 2026-11-26: "los mensajes siguen desapareciendo y apareciendo en algunas pestañas"): la
+// lan sirve hasta 300 mensajes por pestaña (`TOPE_CHAT_WEB`) y el buzon de github solo 20 (`buzon.CHAT_TOPE_MSJ`), y el
+// buzon ademas llega DESPUES que la lan. `recibirChat` reemplazaba `msgsHist[t]` entero por lo que traia la fuente de
+// ese momento: cada cambio de camino (lan <-> buzon), o un buzon atrasado, borraba de la pestaña lo que la otra fuente
+// ya habia mostrado, y volvia al reconectar. ahora la fuente manda SOLO dentro de su propio rango de horas (ahi si
+// puede haber filas que se fueron o cambiaron); lo mas viejo que su primera fila y lo mas nuevo que su ultima se
+// conserva. una fuente vacia no borra nada.
+var CHAT_CONSERVA = 600;   // tope de filas conservadas fuera del rango de la fuente
+function conservarFuera(previas, out, filas){
+  previas = previas || [];
+  if(!previas.length) return out;
+  var ini = filas.length ? fecha(filas[0].ts) : 0, fin = filas.length ? fecha(filas[filas.length - 1].ts) : Infinity;
+  var nuevas = {};
+  out.forEach(function(m){ nuevas[m.fila || m.id] = true; });
+  var quedan = previas.filter(function(m){
+    if(!m.fila || nuevas[m.fila]) return false;
+    var te = fecha(m.ts_envio || m.iso);
+    return !filas.length || te < ini || te > fin;
+  });
+  if(!quedan.length) return out;
+  quedan = quedan.slice(-CHAT_CONSERVA);
+  return quedan.concat(out).map(function(m, i){ return [fecha(m.iso), i, m]; })
+               .sort(function(a, b){ return a[0] - b[0] || a[1] - b[1]; }).map(function(x){ return x[2]; });
+}
 function recibirChat(tema, d){
   chatSello++;
   var t = normTema(tema), filas = ((d && d.filas) || []).slice(), out = [], resp = {};
@@ -7025,16 +7058,17 @@ function recibirChat(tema, d){
   // por la hora de ENVIO (1191): el daemon ya las publica ordenadas asi, esto cubre los archivos viejos
   filas.sort(function(a, b){ return fecha(a.ts) - fecha(b.ts); });
   filas.forEach(function(f, i){
-    var base = t + "-" + i;
+    // {pestanas-sin-vaiven}: el `id` sale de la identidad de la fila (`filaId`), nunca de su posicion: con la posicion, la misma
+    // fila tenia otro `id` en cada ventana de la charla (lan 300 / buzon 20) y el reproductor abierto o el nodo del DOM se perdian
     // 4042 {duplicados-chat-board}: la fila del jsonl, sin la pestaña que la bajo (`filaId`)
-    var fila = filaId(f), filaTema = f.tema ? normTema(f.tema) : null;
+    var fila = filaId(f, t), filaTema = f.tema ? normTema(f.tema) : null;
     audSegsPoner(f.audios_seg);   // 2086: la duracion de cada audio de la fila, medida por el server
     // `(aviso de claudio)`, `(tarea 12: ...)`, `(menu de claudio)`: filas que escribe el agente solo, no son de f
     // 1237: el fin de tarea ahora dice `(tarea <nombre>: ...)` y trae `fuente: tarea`; la linea queda en el jsonl
     // como contexto del chat pero no se pinta como mensaje de f
     var propia = f.fuente === "tarea" || f.fuente === "menu" ||
         /^\((aviso de [fc]laudio|menu de [fc]laudio|turno nocturno|tarea [^:()\s]+:)/.test(String(f.pregunta || ""));
-    if(f.pregunta && !propia) out.push({id: "h:" + base + ":q", fila: fila + ":q", filaTema: filaTema,
+    if(f.pregunta && !propia) out.push({id: "h:" + fila + ":q", fila: fila + ":q", filaTema: filaTema,
                              clase: "yo", quien: QUIEN_F, texto: f.pregunta,
                              iso: f.ts, tema: t, explicito: true, disp: dispDe(f.desde) || null,
                              modo: modoDe(f.desde) || null});
@@ -7066,7 +7100,7 @@ function recibirChat(tema, d){
       // nodo, modelo y mini estado solo en las filas que los traen (las viejas no tienen `nodo`: no se pinta nada)
       // la pregunta se pinta con la hora de envio; la respuesta, con la que llego al cliente (1553, `horaLlegada`
       // en `mezclar`), y si nadie la dibujo fresca con la que se escribio (`ts_llegada`). la clave no cambia
-      out.push({id: "h:" + base + ":r", fila: fila + ":r", filaTema: filaTema,
+      out.push({id: "h:" + fila + ":r", fila: fila + ":r", filaTema: filaTema,
                 clase: "agente", quien: QUIEN_AGENTE, texto: r, iso: f.ts_llegada || f.ts,
                 srv: fecha(f.ts_llegada || f.ts),
                 clave: "r:" + tFila + "|" + (f.ts_llegada || f.ts || "") + "|" + hashTexto(r),   // 1211: no por posicion
@@ -7080,6 +7114,7 @@ function recibirChat(tema, d){
                 tardes: Array.isArray(f.tardes) && f.tardes.length ? f.tardes : null});   // 2563: los `entendí` de despues del corte
     }
   });
+  out = conservarFuera(msgsHist[t], out, filas);
   msgsHist[t] = out;
   if(t === temaActivo() && $("tab-motor-fila")) refrescarUltimoCorrido(t);
   if(notiPush) setTimeout(refrescarNotiPush, 0);   // 1350: llego la fila de la tarea del modal abierto
