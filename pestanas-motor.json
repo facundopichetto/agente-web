@@ -1903,7 +1903,7 @@
     },
     "flos": {
       "motor": "claude",
-      "modelo": "fable"
+      "modelo": "cadena"
     },
     "flos#2": {
       "motor": "agy",
