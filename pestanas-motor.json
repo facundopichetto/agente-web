@@ -1919,8 +1919,9 @@
       "modelo": "sin modelo"
     },
     "modelos": {
-      "motor": "claude",
-      "modelo": "fable"
+      "motor": "agy",
+      "modelo": "gemini-4-argon",
+      "effort": "low"
     },
     "personal": {
       "motor": "agy",

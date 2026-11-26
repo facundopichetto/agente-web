@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.662">
-<link rel="manifest" href="manifest.json?v=4.662">
+<meta name="agente-web-version" content="4.663">
+<link rel="manifest" href="manifest.json?v=4.663">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.662">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.663">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.607">
 <style id="css-dock-mac">
 /* {board-dock-fullscreen} (facundo, 2026-11-16): en la mac a pantalla completa el dock asoma al empujar el puntero
@@ -4507,8 +4507,18 @@ function esBloqueDraftRealWeb(lang, cuerpoLineas, anunciaDraft, hayOferta, esInf
     || (cuerpoLns.join(" ").split(/\s+/).length >= 5 && Boolean(anunciaDraft || hayOferta));
   return Boolean(tieneOracion);
 }
+// facundo (2026-11-26, "PERO MOSTRAME EL TEXTO"): un bloque ```text con prosa que el chat devuelve para copiar (un texto
+// corregido, una traduccion) nunca se borra como rastro: fuera de un informe de tarea, solo comandos, salidas y tablas lo son.
+var LENGUAJES_TEXTO_COPIABLE_WEB = {"": 1, text: 1, txt: 1, md: 1, markdown: 1};
+function esTextoCopiableWeb(lang, cuerpoLineas, esInf){
+  if(esInf || !LENGUAJES_TEXTO_COPIABLE_WEB[String(lang || "").trim().toLowerCase()]) return false;
+  var nv = (cuerpoLineas || []).map(function(c){ return String(c || "").trim(); }).filter(Boolean);
+  if(!nv.length || nv.join(" ").split(/\s+/).length < 5) return false;
+  if(nv.some(function(c){ return esFila(c) || esSepFila(c) || RE_LINEA_CMD_RASTRO_WEB.test(c) || RE_BLOQUE_SPEC_O_META_WEB.test(c); })) return false;
+  return !RE_SALIDA_RASTRO_WEB.test(nv.join("\n"));
+}
 function clasificarBloqueInformeWeb(lang, cuerpoLineas, anunciaDraft, hayOferta, esInf){
-  if(esBloqueDraftRealWeb(lang, cuerpoLineas, anunciaDraft, hayOferta, esInf)) return "draft";
+  if(esBloqueDraftRealWeb(lang, cuerpoLineas, anunciaDraft, hayOferta, esInf) || esTextoCopiableWeb(lang, cuerpoLineas, esInf)) return "draft";
   var nv = (cuerpoLineas || []).map(function(c){ return String(c || "").trim(); }).filter(Boolean);
   if(!nv.length) return "rastro";
   var cuerpoLns = nv.slice();
