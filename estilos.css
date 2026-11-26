@@ -2465,7 +2465,7 @@
   #mfondo.oculta,#modal.oculta{display:none}
   #modal{
     position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:30;
-    width:min(560px,calc(100vw - 20px));max-height:82dvh;overflow-y:auto;border-radius:6px;box-shadow:var(--modal-sombra);
+    width:min(560px,calc(100vw - 20px));max-height:calc(100dvh - 20px);overflow-y:auto;border-radius:6px;box-shadow:var(--modal-sombra);
     -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
   }
   #modal .mtit{
@@ -2727,6 +2727,18 @@ body #dd .ddtoggle{flex:0 0 auto;height:auto;min-width:40px;padding:0 10px;font-
 body #dd .ddhijos{display:flex;flex-direction:row;flex-wrap:wrap;align-items:stretch;gap:5px;padding:0 0 0 10px;margin:0 0 0 8px;border-left:1px solid var(--linea);white-space:normal;flex:0 0 auto}
 body #dd .ddsubop{flex:0 1 auto;max-width:100%;overflow:hidden;text-overflow:ellipsis;padding:7px 10px}
 body #dd .ddgrupo.colapsado .ddhijos{display:none}
+/* 4150 {modal-ubicacion-y-alto} (facundo, 2026-11-26): el dropdown de pestaña nueva estaba pegado abajo (`bottom:72px`),
+   con `max-height:60dvh` y scroll interno aunque sobrara pantalla. ahora es un modal del molde: centrado, ancho
+   propio y el alto que haga falta hasta el borde (10 px de aire). centro optico como `.capa` (1642): si la caja mide
+   hasta el 80% del alto, `dd()` le pone `.optico` y el 10% libre abajo la sube al 45%; si no, centro real y el
+   scroll aparece SOLO cuando de verdad no entra. el `body` adelante gana a los `#dd` de `tema-facu.css` y `tema-nuevo.css`. */
+body #dd{
+  top:calc(10px + env(safe-area-inset-top));left:0;right:0;bottom:calc(10px + env(safe-area-inset-bottom));
+  margin:auto;width:min(560px,calc(100vw - 20px));max-width:none;
+  height:fit-content;max-height:calc(100dvh - 20px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  box-sizing:border-box;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+}
+body #dd.optico{bottom:calc(10px + 10dvh + env(safe-area-inset-bottom))}
 body #tabs .barrabtn{height:auto}
 body #cabecera #nodos{gap:14px}
 @media (max-width:420px){

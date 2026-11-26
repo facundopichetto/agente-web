@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.655">
-<link rel="manifest" href="manifest.json?v=4.655">
+<meta name="agente-web-version" content="4.656">
+<link rel="manifest" href="manifest.json?v=4.656">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.655">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.656">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.607">
 <style id="css-dock-mac">
 /* {board-dock-fullscreen} (facundo, 2026-11-16): en la mac a pantalla completa el dock asoma al empujar el puntero
@@ -2936,6 +2936,7 @@ function dd(titulo, opciones, alElegir){
         e.preventDefault();
         var col = grp.classList.toggle("colapsado");
         tog.textContent = col ? "▸" : "▾";
+        ddOptico();
       });
       fila.appendChild(tog);
       grp.appendChild(fila);
@@ -2960,9 +2961,19 @@ function dd(titulo, opciones, alElegir){
   });
   d.classList.remove("oculta");
   $("ddfondo").classList.remove("oculta");
+  ddOptico();
 }
+// 4150 {modal-ubicacion-y-alto}: mismo criterio que `capaOptico` (1642): `.optico` solo si la caja mide hasta el 80% del alto
+function ddOptico(){
+  var d = $("dd");
+  if(!d || d.classList.contains("oculta")) return;
+  d.classList.remove("optico");
+  var h = d.getBoundingClientRect().height;
+  d.classList.toggle("optico", h > 0 && h <= window.innerHeight * CAPA_OPTICO_MAX);
+}
+window.addEventListener("resize", ddOptico);
 function cerrarDd(){
-  $("dd").classList.add("oculta"); $("dd").innerHTML = "";
+  $("dd").classList.add("oculta"); $("dd").innerHTML = ""; $("dd").classList.remove("optico");
   $("ddfondo").classList.add("oculta");
 }
 
@@ -6452,6 +6463,10 @@ var NUBE_URL = "https://138-201-172-113.sslip.io", NUBE_PROBE_MS = 3000;
 var LAN_DEFAULT = [{via: "tailscale", url: "https://claudio.taile8a6a7.ts.net"}, {via: "nube", url: NUBE_URL, ms: NUBE_PROBE_MS}];
 var RE_LAN_MARCA = /\n?<!--lan:([\w-]{6,40})(?: atendido:[\w-]+)?-->/;
 var lan = {base: null, via: "buzón", ult: 0, probando: null};
+// {chat-celu-instantaneo} (facundo, 2026-11-26): el server avisa por long-poll (`GET /chat/novedades`) apenas entra un
+// mensaje por `/msg` o cambia una charla; el board lo pinta en el acto en vez de esperar al tick de 30 s o a que el
+// mensaje suba al buzon (que ocurria DESPUES de la respuesta). `lidsPropios` = lo que mande yo: ya esta pintado.
+var nov = {seq: null, sello: null, ctl: null, on: false, gen: 0, falla: 0, apagadoHasta: 0}, lidsPropios = {};
 var lanMsgs = {};          // lid -> true: salio por la lan, su copia del buzon no se pinta dos veces
 var lanStub = null;        // `prueba_web_tabs` simula el endpoint vivo o caido
 function lanFetch(url, opts){
@@ -6500,6 +6515,8 @@ function lanPoner(x){
     Object.keys(vuelos).forEach(function(k){ if(vuelos[k]) vuelos[k].etag = null; });
     lan.sinGithub = false;
   }
+  if(antes !== lan.base){ novedadesParar(); nov.seq = null; nov.sello = null; }
+  if(lan.base) novedadesArrancar();
   pintarVia();
   // 2265 {clon}: la lista de clones vive en el server. en cuanto hay endpoint se pide una vez, asi el menu
   // del `MAS` y `sanearLayout` ven las pestañas que se crearon desde el celu o desde otra maquina.
@@ -6536,6 +6553,78 @@ function probarLan(){
                             function(){ lan.probando = null; return null; });
   return lan.probando;
 }
+// ---------- {chat-celu-instantaneo}: el server avisa, el board pinta en el acto ----------
+function novedadesArrancar(){
+  if(nov.on || !lan.base || document.hidden || (!token && !lanStub)) return;
+  if(Date.now() < nov.apagadoHasta) return;   // un server viejo sin `/chat/novedades`: se vuelve a probar en 10 min
+  nov.on = true;
+  novedadesVuelta(++nov.gen);
+}
+function novedadesParar(){
+  nov.gen++; nov.on = false;
+  if(nov.ctl){ try{ nov.ctl.abort(); }catch(x){} nov.ctl = null; }
+}
+function novedadesVuelta(gen){
+  if(gen !== nov.gen) return;
+  if(!lan.base || document.hidden){ nov.on = false; return; }
+  var q = "?espera=25";
+  if(nov.seq !== null) q += "&desde=" + nov.seq + (nov.sello ? "&sello=" + encodeURIComponent(nov.sello) : "");
+  var ctl = typeof AbortController !== "undefined" ? new AbortController() : null, tmo = null, t0 = Date.now(), mal = false;
+  nov.ctl = ctl;
+  if(ctl) tmo = setTimeout(function(){ ctl.abort(); }, 40000);
+  lanFetch(lan.base + "/chat/novedades" + q, {headers: {"authorization": "Bearer " + token}, cache: "no-store",
+                                              signal: ctl ? ctl.signal : undefined})
+    .then(function(r){
+      if(r.status === 404 || r.status === 501){ nov.apagadoHasta = Date.now() + 600000; throw new Error("sin novedades"); }
+      if(r.status === 401){ nov.apagadoHasta = Date.now() + 30000; throw new Error("401"); }   // token rechazado: el tick reabre cuando haya uno bueno
+      // un server que todavia no tiene la ruta (daemon sin reiniciar) la contesta con un error: no se insiste cada 15 s
+      if(!r.ok && nov.seq === null){ nov.apagadoHasta = Date.now() + 600000; throw new Error("http " + r.status); }
+      if(!r.ok) throw new Error("http " + r.status);
+      return r.json();
+    })
+    .then(function(j){
+      if(gen !== nov.gen) return;
+      // algo que contesta sin `seq` no es el endpoint de novedades (otro server, un proxy): no se gira sobre eso
+      if(!j || typeof j.seq !== "number"){ nov.apagadoHasta = Date.now() + 600000; throw new Error("respuesta sin seq"); }
+      nov.falla = 0; novedadesAplicar(j);
+    })
+    .catch(function(e){ mal = true; nov.error = (e && e.message) || String(e); })
+    .then(function(){
+      if(tmo) clearTimeout(tmo);
+      if(gen !== nov.gen) return;
+      nov.ctl = null;
+      if(mal) nov.falla++;
+      if(nov.falla >= 8){ nov.apagadoHasta = Date.now() + 120000; nov.falla = 0; }   // el server no contesta: el polling de siempre sigue y se reintenta en 2 min
+      if(Date.now() < nov.apagadoHasta){ nov.on = false; return; }
+      // sin falla vuelve ya (el server espera por nosotros); con falla, backoff; nunca mas de 3 vueltas por segundo
+      var ms = mal ? Math.min(1000 * Math.pow(2, nov.falla - 1), 15000) : Math.max(0, 300 - (Date.now() - t0));
+      setTimeout(function(){ novedadesVuelta(gen); }, ms);
+    });
+}
+function novedadesAplicar(j){
+  if(!j || typeof j.seq !== "number") return;
+  var cambio = nov.sello !== null && j.sello !== nov.sello;
+  nov.seq = j.seq; nov.sello = j.sello;
+  var nuevos = 0, pego = seguirAlFinal();
+  (j.msgs || []).forEach(function(m){
+    if(!m || !m.lid || lanMsgs[m.lid] || lidsPropios[m.lid]) return;   // lo mande yo, o ya lo trajo el buzon
+    lanMsgs[m.lid] = true;                                              // y el comentario del buzon no lo repite
+    agregar({id: "lan-" + m.lid, body: m.body, created_at: m.iso}, false);
+    nuevos++;
+  });
+  function pintar(){
+    if(!nuevos && !chatPendiente()) return;
+    mezclar(); render();
+    if(pego) alFinal(); else restaurarVistas();   // {pelado}: subio a mano -> se queda donde esta
+    if(!vueloDe(temaActivo())) vueloHidratarSiFalta();
+  }
+  if(nuevos) pintar();
+  if(cambio){   // cambio una charla: la baja ya (el etag la hace un 304 si no era la de esta pestaña)
+    chatUlt = Date.now();
+    cargarChat().then(function(){ pego = seguirAlFinal(); pintar(); }).catch(function(e){ fallaRed("chat", e); });
+  }
+}
+
 // ---------- audio en curso: el daemon no reinicia mientras grabo o sube (facundo, 2026-09-14) ----------
 // un reinicio del daemon a mitad de un audio te come el mensaje (y el microfono queda abierto del otro lado).
 // mientras el micro esta abierto (`grabando`) o el m4a viaja (`subiendo`) se avisa al endpoint de la lan y se
@@ -6569,6 +6658,7 @@ function apiLan(metodo, ruta, cuerpo, etag, accept){
   function caido(motivo){ var e = new Error("lan: " + motivo); e.lanCaido = true; e.lid = lid; return e; }
   if(metodo === "POST"){
     lid = lidNuevo();
+    lidsPropios[lid] = true;   // {chat-celu-instantaneo}: el aviso del server no lo repinta en este board
     url = lan.base + "/msg";
     h["content-type"] = "application/json";
     opts.body = JSON.stringify({body: cuerpo.body, lid: lid});
@@ -6777,6 +6867,7 @@ function cargarComentarios(reemplazar){
       var ld = RE_LAN_MARCA.exec(c.body || "");
       if(ld && lanMsgs[ld[1]]){ vistos[c.id] = true; ultimoIso = c.created_at; return; }   // ya se pinto al salir por la lan
       agregar(c, false);
+      if(ld) lanMsgs[ld[1]] = true;   // {chat-celu-instantaneo}: el aviso del server no lo vuelve a pintar
       ultimoIso = c.created_at;
       nuevos++;
     });
@@ -7198,11 +7289,12 @@ function tick(){
   Promise.all([cargarEstado(), cargarComentarios(false)])
     .catch(function(e){ fallaRed("estado", e); });   // 4214: nunca en el chat
   if(!vueloDe(temaActivo())) vueloHidratarSiFalta();
+  novedadesArrancar();   // {chat-celu-instantaneo}: si la pagina arranco oculta o el aviso se corto, el tick lo reabre (no hace nada si ya corre)
   // los widgets y las pestañas van a 30 s a la vista y 120 s en background (facundo, 2026-09-13):
   // el daemon publica `widgets.json` cada 60 s (`widgets_web`), pedir cada 10 s traia el mismo archivo.
   // al abrir o volver al foco se sincroniza aparte, asi que el celu no ve datos viejos por esto.
   var cada = document.hidden ? 120000 : 30000;
-  var cadaChat = hayVuelos() ? 5000 : cada;   // {chat-render-instantaneo}: con un vuelo la charla se baja seguido, a la vista o no
+  var cadaChat = hayVuelos() ? 5000 : (!document.hidden && !nov.on ? Math.min(cada, 10000) : cada);   // {chat-render-instantaneo}: con un vuelo la charla se baja seguido, a la vista o no
   if(Date.now() - widUlt > cada){
     cargarWidgets().catch(function(e){
       if(errRed(e) || sinRed()) fallaRed("widgets", e);   // 4218: sin red la caja no dice `Failed to fetch` en rojo
@@ -7296,6 +7388,7 @@ function sincronizar(primera){
 // volver al foco: sincroniza ya. con un piso corto para que alt-tab no dispare una bajada por segundo.
 function alVolver(){
   if(document.hidden || !token) return;
+  novedadesArrancar();   // {chat-celu-instantaneo}: de vuelta del segundo plano el aviso del server se reengancha
   colaReanudar();   // 3814 {cola-sin-desfase}: la cola se confirma ya, sin esperar el golpe de 2 s ni un backoff viejo
   if(selTxViva()){ selTxSync = true; return; }   // 1622: volver al foco no le apaga la seleccion a facundo
   if(Date.now() - syncUlt < 1200) return;
@@ -7317,6 +7410,7 @@ function reprogramar(){
 }
 document.addEventListener("visibilitychange", function(){
   reprogramar();
+  if(document.hidden) novedadesParar();   // en segundo plano el navegador congela el fetch: se corta limpio y se reabre al volver
   // el borrador viaja en los dos sentidos: al irme publico lo que escribi, al volver releo el del otro
   if(document.hidden) soltarBorrador();   // publica el borrador y la vista antes de irse
   else{
@@ -8149,7 +8243,7 @@ function movPoner(e, c, q){
   var destino = tjDestinoDe(e, q), accion = tjColaDe(e, q);
   var desde = c.lista || sel.filtro || "";
   if(!destino || (String(destino) === String(desde) && !accion)) return null;   // `igual`: no se mueve de lista ni dispara accion, no hay nada que pintar
-  var gracia = accion ? Math.max(0, (e && e.gracia_ms !== undefined) ? e.gracia_ms : 60000) : 0;   // {gracia}: solo lo que toca instagram tiene ventana
+  var gracia = accion ? Math.max(0, e.gracia_ms || 0) : 0;   // {gracia}: solo lo que toca instagram tiene ventana
   var m = {id: String(c.id), cuenta: c.cuenta || "", nombre: c.nombre || c.cuenta || "", foto: (c.fotos || [])[0] || "",
            col: e.coleccion, q: q, desde: String(desde || ""), destino: String(destino), accion: accion,
            ts: Date.now(), hasta: Date.now() + gracia, enviado: 0, ses: sel.sesion || ""};
@@ -20031,6 +20125,7 @@ window.__agente = {
   ticUlt: function(v){ ticUlt = +v || 0; ticFresco = null; return ticUlt; },
   // lan primero (prueba_web_tabs simula el endpoint vivo y caido)
   stubLan: function(f){ lanStub = f || null; }, probarLan: probarLan, lanPoner: lanPoner, lanCandidatos: lanCandidatos,
+  novedades: function(){ return {seq: nov.seq, sello: nov.sello, on: nov.on, falla: nov.falla, apagadoHasta: nov.apagadoHasta, error: nov.error || null}; },   // {chat-celu-instantaneo}
   // la prueba corre sin login: un token de mentira solo mientras se arma el PUT (el stub de la lan no lo mira)
   ponerTabs: function(){ var t0 = token; token = token || "t-prueba"; tabsListo = true; tabsSync = true;
                          frenoHasta = 0; var p = ponerTabs(false); token = t0; return p; },

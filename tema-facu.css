@@ -2467,7 +2467,7 @@
   #mfondo.oculta,#modal.oculta{display:none}
   #modal{
     position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:30;
-    width:min(560px,calc(100vw - 20px));max-height:82dvh;overflow-y:auto;border-radius:6px;box-shadow:var(--modal-sombra);
+    width:min(560px,calc(100vw - 20px));max-height:calc(100dvh - 20px);overflow-y:auto;border-radius:6px;box-shadow:var(--modal-sombra);
     -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
   }
   #modal .mtit{
