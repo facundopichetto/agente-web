@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.663">
-<link rel="manifest" href="manifest.json?v=4.663">
+<meta name="agente-web-version" content="4.664">
+<link rel="manifest" href="manifest.json?v=4.664">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.663">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.664">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.607">
 <style id="css-dock-mac">
 /* {board-dock-fullscreen} (facundo, 2026-11-16): en la mac a pantalla completa el dock asoma al empujar el puntero
@@ -4175,13 +4175,14 @@ function nodoMsg(m){
   var textoSinAcc = acc && acc.cuerpo !== null ? acc.cuerpo : m.texto;
   var ops = m.clase === "agente" ? cajasDe({texto: textoSinAcc, opciones: m.opciones}) : null;
   var cuerpoOps = ops && ops.cuerpo !== null ? (ops.despues ? ops.antes : ops.cuerpo) : null;   // 3752: sin la prosa de abajo
-  var dr = m.clase === "agente" ? draftsDe(cuerpoOps !== null ? cuerpoOps : textoSinAcc) : {cuerpo: "", bloques: []};
-  if(ops && ops.lista.length && ops.lista.every(esCajaEscupir)){
+  var dr = m.clase === "agente" ? draftsDe(cuerpoOps !== null ? cuerpoOps : textoSinAcc) : {cuerpo: "", bloques: [], antes: null, despues: ""};
+  if(ops && ops.lista.length && ops.lista.every(esCajaEscupir) && !dr.bloques.length){
     var lnsEsc = String(dr.cuerpo || "").split("\n");
     if(!_hayDraftEnJuegoWeb(lnsEsc, _fueraDeBloquesWeb(lnsEsc), false, esInformeTareaWeb(textoSinAcc))) dr.bloques = [];
   }
-  var cuerpoTxt = m.clase === "agente" ? dr.cuerpo : (m.clase === "yo" ? sinMarcaMal(sinDictado(m.texto)) : textoSinAcc);
-  var finalCuerpo = cuerpoTxt || m.texto || "";
+  var tieneDespuesDraft = Boolean(m.clase === "agente" && dr.bloques.length && dr.despues);
+  var cuerpoTxt = m.clase === "agente" ? (tieneDespuesDraft ? (dr.antes || "") : dr.cuerpo) : (m.clase === "yo" ? sinMarcaMal(sinDictado(m.texto)) : textoSinAcc);
+  var finalCuerpo = (m.clase === "agente" ? dr.cuerpo : cuerpoTxt) || m.texto || "";
   var hilo = null;
   if(m.clase === "agente" && m.tramos && m.tramos.length){
     var trs = tramosSinFinal(m.tramos, finalCuerpo) || [];
@@ -4190,6 +4191,7 @@ function nodoMsg(m){
       var s = String(t.texto || "").trim();
       if(!s) return false;
       if(t.tipo === "texto" && (RE_OPCION.test(s) || s.indexOf("OPCION ") >= 0 || s.indexOf("OPCIÓN ") >= 0)) return false;
+      if(t.tipo === "texto" && dr.bloques.length && /^\s*(?:```|~~~)/m.test(s)) return false;
       return true;
     });
     if(tt.length){
@@ -4228,13 +4230,28 @@ function nodoMsg(m){
   }
   var b = document.createElement("div");
   b.className = "cuerpo";
-  b.innerHTML = resaltar(auds.length ? sinMarcaAudio(cuerpoTxt) : cuerpoTxt);
+  var textoCuerpo1 = tieneDespuesDraft && !String(cuerpoTxt || "").trim() ? dr.despues : cuerpoTxt;
+  b.innerHTML = resaltar(auds.length ? sinMarcaAudio(textoCuerpo1) : textoCuerpo1);
   // 2336 {cambios} + 3767 {audio} (facundo, 2026-10-15: "el audio al final de todo", "mover el audio después de las
   // cajas y la comparación, y actualizar la regla 2336 y sus pruebas"): el orden de un mensaje es SIEMPRE
   // texto -> cajas (`nodoAcciones` + `nodoCajas`) -> comparación (`despues-cajas`) -> tardes -> drafts -> audio.
-  // el audio llega en un poll posterior al texto, asi que al repintarse el mensaje se ubica abajo de las cajas y la
-  // comparacion, cerrando el mensaje al final de todo.
-  div.appendChild(cab); if(hilo) div.appendChild(hilo); div.appendChild(b);
+  // 6770 {no-borrar-bloques-texto-chat}: si despues del bloque ``` sigue la explicacion de los cambios (`dr.despues`),
+  // el bloque `.drafts` se pinta entero arriba de esa explicacion (`cuerpo` -> `drafts` -> `cuerpo despues-draft` -> `opciones`).
+  div.appendChild(cab); if(hilo) div.appendChild(hilo);
+  if(tieneDespuesDraft && !String(cuerpoTxt || "").trim()){
+    div.appendChild(nodoDrafts(dr.bloques));
+    div.appendChild(b);
+  } else {
+    div.appendChild(b);
+    if(tieneDespuesDraft){
+      div.appendChild(nodoDrafts(dr.bloques));
+      var bDesp = document.createElement("div");
+      bDesp.className = "cuerpo despues-draft";
+      bDesp.innerHTML = resaltar(auds.length ? sinMarcaAudio(dr.despues) : dr.despues);
+      div.appendChild(bDesp);
+      if(m.clase === "agente") ponerCopiar(bDesp);
+    }
+  }
   // 2561 {hacerlo}: el pie `lo entendiste mal` (2417) ya no se pinta, y desde la 2566 tampoco la caja `ninguna,
   // entendieron mal`: el voto es el puntaje 0-5, y escribir cierra la ronda sin voto. `nodoAccMsg` queda para el revert.
   if(acc && acc.lista.length) div.appendChild(nodoAcciones(m, acc.lista));
@@ -4248,7 +4265,7 @@ function nodoMsg(m){
     if(m.clase === "agente") ponerCopiar(dpc);
   }
   if(m.clase === "agente" && m.tardes && m.tardes.length) div.appendChild(nodoTardes(m.tardes));
-  if(m.clase === "agente" && dr.bloques.length) div.appendChild(nodoDrafts(dr.bloques));
+  if(m.clase === "agente" && dr.bloques.length && !tieneDespuesDraft) div.appendChild(nodoDrafts(dr.bloques));
   // el reproductor completo, uno por audio (2044: en todas las pestañas), al FINAL DE TODO: despues de las cajas,
   // de la comparacion (`despues-cajas`) y de los drafts (2336 + 3767). 3779 {audio-cabecera}: en las respuestas de
   // flaudio el reproductor va OCULTO (`display:none`) y lo despliega el `▶` de la cabecera (`.audtog`, junto al `mini`);
@@ -4425,7 +4442,9 @@ var RE_TXT_REHACER_DRAFT_WEB = /^(?:\[escupir(?:\s+[0-9a-f]{8})?\]\s*)?(?:(?:CX|
 var RE_CAJA_REHACER_LINEA_WEB = /^\s*(?:[-*]\s+)?\**OPCI[OÓ]N\s+[A-P]\**\s*[:)\.]\**\s*(?:\[escupir(?:\s+[0-9a-f]{8})?\]\s*)?(?:(?:CX|MVP|SD|SUP)-\d+\s*:\s*)?rehacer\s+el\s+draft\s+con\s+lo\s+que\s+marc[oó]\s+el\s+guard\b/i;
 var RE_OFRECE_DRAFT_WEB = /\b(?:postear|posteo|subir|publicar|mandar|enviar|responder|contestar)\b([^\n.;:!?]{0,55}?)\b(?:comment|comentario|mensaje|draft|borrador|slack|reply|respuesta)\b/gi;
 var RE_NIEGA_DRAFT_WEB = /\b(?:sin|no|ni|nunca|jam[aá]s|tampoco|ning[uú]n|ningun[ao]s?|nada|evit(?:ar|ando|a|o|e)|antes\s+de|en\s+vez\s+de|en\s+lugar\s+de|salvo|excepto|cancelar|descartar|suspender|frenar|pendientes?\s+de|falta\s+de|filtro\s+de|regla\s+de|error\s+al|problema\s+al)\b/i;
-var RE_ANUNCIA_DRAFT_WEB = /(?:^\s*(?:el\s+|este\s+es\s+el\s+|ac[aá]\s+(?:va|est[aá]|ten[eé]s|queda)\s+el\s+|te\s+dejo\s+el\s+|borrador\s+del\s+|texto\s+del\s+)?(?:comment|comentario|draft(?:-[a-z0-9_-]+)?|borrador|mensaje\s+(?:de\s+slack|para\s+\w+)|reply)\b[^\n]{0,90}:\s*$|\b(?:comment|comentario|draft(?:-[a-z0-9_-]+)?|borrador)\s+(?:qued[aó]|quedar[ií]a|ser[ií]a|dice|es(?:\s+este)?|listo|propuesto|entero(?:\s+ac[aá]\s+abajo)?(?:\s+para\s+copiarlo)?|para\s+(?:copiar(?:lo)?|postear(?:lo)?|mandar(?:lo)?|subir(?:lo)?))\b[^\n]{0,80}:\s*$|\b(?:abr[ií]\s+este\s+link)\b[^\n]{0,80}:\s*$)/i;
+var RE_ANUNCIA_DRAFT_WEB = /(?:^\s*(?:el\s+|este\s+es\s+el\s+|esta\s+es\s+la\s+|ac[aá]\s+(?:va|est[aá]|ten[eé]s|queda)\s+(?:el\s+|la\s+|tu\s+)?|te\s+dejo\s+(?:el\s+|la\s+)?|borrador\s+del\s+|texto\s+del\s+)?(?:comment|comentario|draft(?:-[a-z0-9_-]+)?|borrador|mensaje\s+(?:de\s+slack|para\s+\w+)|reply|texto|respuesta|versi[oó]n|traducci[oó]n|correcci[oó]n)\b[^\n]{0,140}:\s*$|\b(?:comment|comentario|draft(?:-[a-z0-9_-]+)?|borrador|texto|respuesta|versi[oó]n|traducci[oó]n)\s+(?:qued[aó]|quedar[ií]a|ser[ií]a|dice|es(?:\s+este)?|listo|propuesto|corregid[oa]|traducid[oa]|entero(?:\s+ac[aá]\s+abajo)?(?:\s+para\s+copiarlo)?|para\s+(?:copiar(?:lo)?|postear(?:lo)?|mandar(?:lo)?|subir(?:lo)?))\b[^\n]{0,120}:\s*$|\b(?:abr[ií]\s+este\s+link)\b[^\n]{0,80}:\s*$)/i;
+var RE_ANUNCIA_TEXTO_COPIABLE_WEB = /(?:\b(?:texto|respuesta|versi[oó]n|p[aá]rrafo|mensaje|borrador|draft|traducci[oó]n|correcci[oó]n)\b[^\n]{0,160}?\b(?:corregid[oa]s?|traducid[oa]s?|entero|completo|listo|en\s+ingl[eé]s|en\s+espa[ñn]ol|en\s+castellano|para\s+copiar)\b|\b(?:ac[aá]\s+(?:va|ten[eé]s|est[aá]|queda|te\s+dejo)|te\s+dejo|este\s+es|esta\s+es)\s+(?:el\s+|la\s+|tu\s+)?(?:texto|respuesta|versi[oó]n|traducci[oó]n|correcci[oó]n|borrador|draft|comment|comentario|mensaje)\b)/i;
+var RE_MARCA_INFORME_TAREA_ES_WEB = /(?:ESTADO\.md|^\s*[-*•]\s*\*\*[^*\n]+\*\*|\b(?:necesita\s+password|campo\s+de\s+respaldo|esta\s+orden\s+ya|caja\s+ofrecida|prob[eé]|rele[ií]|corr[ií]|borr[eé]|cerr[eé]|anot[eé])\b)/im;
 var RE_NO_ANUNCIA_DRAFT_WEB = /(?:^|\s)(?:sin\s+verificar|sin\s+probar|pendientes?|faltan?\s+verificar|quedan?\s+\d+\s+tickets?|respuesta\s+nueva\s+de\s+un\s+dev|esto\s+lo\s+dej[eé])(?=\s|[.,;:!?)]|$)/i;
 var RE_ANUNCIA_RASTRO_WEB = /\bsalida\s+de\b|\bresultado\s+de\s+`?(?:python|sh\s|\.\/|scripts\/|curl|git)\b|\bcorrida\s+(?:real|en\s+vivo)\b|\bevidencia\s+(?:real|en\s+vivo)\b|\bcomandos?\s+(?:corridos?|ejecutados?)\b|\bse\s+evalu[oó]\s+con\b/i;
 var RE_INTRO_SOLO_RASTRO_WEB = /^\s*(?:[-*•]\s*)?(?:salida(?:\s+de\s+[^\n:]{1,100})?|evidencia(?:\s+(?:real|en\s+vivo))?|comandos?\s+(?:corridos?|ejecutados?)|transcripci[oó]n(?:\s+cruda)?|rastro(?:\s+crudo)?|lo\s+que\s+saldr[ií]a\s+si\s+eleg[ií]s\s+[a-p]|si\s+eleg[ií]s\s+[a-p],?\s+el\s+cambio\s+ser[ií]a|el\s+cambio\s+ser[ií]a)\s*:\s*$/i;
@@ -4438,7 +4457,8 @@ var RE_INTRO_SOLO_TABLA_WEB = /^\s*(?:hoy\s+shopify\b[^\n]*coinciden|las\s+tres\
 var RE_TITULO_SECCION_WEB = /^\s*(?:#{1,6}\s+\S.*|\*\*[^*\n]{2,80}\*\*\s*(?:\([^)\n]{1,60}\))?\s*:?\s*)$/;
 var RE_SEPARADOR_INFORME_WEB = /^\s*(?:-{3,}|\*{3,}|_{3,}|[─═]{3,})\s*$/;
 var RE_HOUSEKEEPING_INFORME_WEB = /^\s*(?:[-*•]\s*)?(?:borr[eé]\s+el\s+form\s+de\s+prueba\b.*dej[eé]\s+la\s+entrada\s+en\b.*|(?:tambi[eé]n\s+)?(?:dej[eé]|anot[eé])\s+(?:la\s+entrada|el\s+detalle|la\s+l[ií]nea|el\s+resultado|la\s+corrida)\s+en\b[^\n]*ESTADO\.md[^\n]*|cerr[eé]\s+el\s+bastion\s+y\s+no\s+qued[oó]\s+nada\s+abierto\.?\s*$|(?:\s*este\s+es\s+el\s+|\s*el\s+)?comment(?:\s+en\s+ingl[eé]s)?,?\s*sin\s+postear\s*:\s*$)/i;
-var LENGUAJES_RASTRO_WEB = {text:1, txt:1, console:1, bash:1, sh:1, shell:1, zsh:1, json:1, jsonl:1, log:1, python:1, py:1, diff:1, stdout:1, stderr:1, output:1, sql:1, yaml:1, yml:1, html:1, css:1, js:1, javascript:1, ts:1};
+var LENGUAJES_RASTRO_WEB = {console:1, bash:1, sh:1, shell:1, zsh:1, json:1, jsonl:1, log:1, python:1, py:1, diff:1, stdout:1, stderr:1, output:1, sql:1, yaml:1, yml:1, html:1, css:1, js:1, javascript:1, ts:1};
+var LENGUAJES_TEXTO_COPIABLE_WEB = {"": 1, text: 1, txt: 1, md: 1, markdown: 1, plaintext: 1, plain: 1};
 var TOPE_LINEAS_PROSA_CIERRE_WEB = 6;
 var TOPE_CHARS_PROSA_CIERRE_WEB = 1350;
 
@@ -4485,16 +4505,21 @@ function _cajaOfreceDraftWeb(txt){
 }
 function _lineaAnunciaDraftWeb(l){
   var s = String(l || "").trim();
-  if(!s || /^GUARD DE ESCRITURA:/i.test(s) || RE_OPCION.test(s) || RE_ANUNCIA_RASTRO_WEB.test(s) || !/:\s*$/.test(s)) return false;
+  if(!s || /^GUARD DE ESCRITURA:/i.test(s) || RE_OPCION.test(s) || RE_ANUNCIA_RASTRO_WEB.test(s)) return false;
   if(RE_NO_ANUNCIA_DRAFT_WEB.test(s)) return false;
+  if(RE_ANUNCIA_TEXTO_COPIABLE_WEB.test(s)) return true;
+  if(!/:\s*$/.test(s)) return false;
   return RE_ANUNCIA_DRAFT_WEB.test(s);
 }
-function esBloqueDraftRealWeb(lang, cuerpoLineas, anunciaDraft, hayOferta, esInf){
+// 6770 {no-borrar-bloques-texto-chat} (facundo, 2026-11-26, "PERO MOSTRAME EL TEXTO"): un bloque ``` o ```text con texto
+// corregido, traducciones o borradores se preserva siempre aunque venga etiquetado como texto plano o no tenga botones de posteo.
+function esBloqueDraftRealWeb(lang, cuerpoLineas, anunciaDraft, hayOferta, esInf, anunciaRastro){
   var lg = String(lang || "").trim().toLowerCase();
-  if(LENGUAJES_RASTRO_WEB[lg]) return false;
+  if(LENGUAJES_RASTRO_WEB[lg] || (lg && !LENGUAJES_TEXTO_COPIABLE_WEB[lg])) return false;
   var nv = (cuerpoLineas || []).map(function(c){ return String(c || "").trim(); }).filter(Boolean);
   if(!nv.length) return false;
-  if(nv.length === 1 && /^https?:\/\/\S+$/i.test(nv[0])) return true;
+  if(nv.length === 1 && (/^https?:\/\/\S+$/i.test(nv[0]) || nv[0].indexOf("ver-chrome.sh") >= 0)) return true;
+  if(anunciaRastro && !anunciaDraft && !hayOferta) return false;
   if(nv.some(function(c){ return esFila(c) || esSepFila(c); })) return false;
   var cuerpoLns = nv.slice();
   while(cuerpoLns.length > 1 && RE_CAB_DRAFT_BLOQUE_WEB.test(cuerpoLns[0])) cuerpoLns.shift();
@@ -4502,23 +4527,18 @@ function esBloqueDraftRealWeb(lang, cuerpoLineas, anunciaDraft, hayOferta, esInf
   if(cuerpoLns.some(function(c){ return RE_LINEA_CMD_RASTRO_WEB.test(c) || c.indexOf("#") === 0 || c.indexOf("//") === 0; })) return false;
   if(RE_SALIDA_RASTRO_WEB.test(unido)) return false;
   if(cuerpoLns.some(function(c){ return RE_BLOQUE_SPEC_O_META_WEB.test(c); })) return false;
-  if(RE_PROSA_INFORME_ES_WEB.test(unido)) return false;
-  var tieneOracion = cuerpoLns.some(function(c){ return c.split(/\s+/).length >= 5 && /[.?!:)]\s*$/.test(c); })
-    || (cuerpoLns.join(" ").split(/\s+/).length >= 5 && Boolean(anunciaDraft || hayOferta));
-  return Boolean(tieneOracion);
+  if(cuerpoLns.length === 1 && /^(?:CX|MVP|SD|SUP)-\d+\s*->\s*[\w\s.-]+$/i.test(cuerpoLns[0])) return false;
+  if(RE_PROSA_INFORME_ES_WEB.test(unido)){
+    if(anunciaDraft && !RE_MARCA_INFORME_TAREA_ES_WEB.test(unido)) return true;
+    if(esInf !== false) return false;
+  }
+  return true;
 }
-// facundo (2026-11-26, "PERO MOSTRAME EL TEXTO"): un bloque ```text con prosa que el chat devuelve para copiar (un texto
-// corregido, una traduccion) nunca se borra como rastro: fuera de un informe de tarea, solo comandos, salidas y tablas lo son.
-var LENGUAJES_TEXTO_COPIABLE_WEB = {"": 1, text: 1, txt: 1, md: 1, markdown: 1};
 function esTextoCopiableWeb(lang, cuerpoLineas, esInf){
-  if(esInf || !LENGUAJES_TEXTO_COPIABLE_WEB[String(lang || "").trim().toLowerCase()]) return false;
-  var nv = (cuerpoLineas || []).map(function(c){ return String(c || "").trim(); }).filter(Boolean);
-  if(!nv.length || nv.join(" ").split(/\s+/).length < 5) return false;
-  if(nv.some(function(c){ return esFila(c) || esSepFila(c) || RE_LINEA_CMD_RASTRO_WEB.test(c) || RE_BLOQUE_SPEC_O_META_WEB.test(c); })) return false;
-  return !RE_SALIDA_RASTRO_WEB.test(nv.join("\n"));
+  return esBloqueDraftRealWeb(lang, cuerpoLineas, false, false, Boolean(esInf), false);
 }
-function clasificarBloqueInformeWeb(lang, cuerpoLineas, anunciaDraft, hayOferta, esInf){
-  if(esBloqueDraftRealWeb(lang, cuerpoLineas, anunciaDraft, hayOferta, esInf) || esTextoCopiableWeb(lang, cuerpoLineas, esInf)) return "draft";
+function clasificarBloqueInformeWeb(lang, cuerpoLineas, anunciaDraft, hayOferta, esInf, anunciaRastro){
+  if(esBloqueDraftRealWeb(lang, cuerpoLineas, anunciaDraft, hayOferta, esInf, anunciaRastro)) return "draft";
   var nv = (cuerpoLineas || []).map(function(c){ return String(c || "").trim(); }).filter(Boolean);
   if(!nv.length) return "rastro";
   var cuerpoLns = nv.slice();
@@ -4743,6 +4763,7 @@ function sanearTextoAgenteWeb(texto, opsExternas){
   var t = orig.replace(RE_NOTA_VERIFICADOR_WEB, function(m0, m1, m2, m3, m4){
     return "Verificó `" + (m1 || m3) + "` (`" + (m2 || m4) + "`).";
   });
+  t = t.replace(/^(\s*(?:(?:vos|flaudio|claudio)\s*:\s*)?(?:\[[\w\/#-]+\]\s*)+|\s*(?:vos|flaudio|claudio)\s*:\s*)((?:```|~~~)\s*[a-z0-9_-]{0,20}\s*)$/gim, "$1\n$2");
   var lineas = t.split("\n");
   var libres = _fueraDeBloquesWeb(lineas), libMap = {};
   libres.forEach(function(i){ libMap[i] = 1; });
@@ -4788,7 +4809,8 @@ function sanearTextoAgenteWeb(texto, opsExternas){
     var kPrev = -1;
     for(var k = bl.ini - 1; k >= 0; k--){ if(lineas[k].trim()){ kPrev = k; break; } }
     var prev = kPrev >= 0 ? lineas[kPrev].trim() : "";
-    var clase = clasificarBloqueInformeWeb(bl.lang, bl.cuerpo, _lineaAnunciaDraftWeb(prev), Boolean(hayOferta || hayCajaUsaBloque), esInf);
+    var anunciaRastro = Boolean(prev && (RE_ANUNCIA_RASTRO_WEB.test(prev) || RE_INTRO_SOLO_RASTRO_WEB.test(prev)));
+    var clase = clasificarBloqueInformeWeb(bl.lang, bl.cuerpo, _lineaAnunciaDraftWeb(prev), Boolean(hayOferta || hayCajaUsaBloque), esInf, anunciaRastro);
     if(clase === "draft") return;
     if(clase === "desenvolver"){
       quitar[bl.ini] = 1; quitar[bl.fin] = 1;
@@ -4913,17 +4935,26 @@ function opcionesDe(texto){
 function draftsDe(texto){
   var esInf = esInformeTareaWeb(texto);
   var saneado = sanearTextoAgenteWeb(texto);
-  var fuera = [], bloques = [], cur = null, curLang = "";
+  var fuera = [], bloques = [], cur = null, curLang = "", curPrev = "", idxUltimoDraft = -1;
   String(saneado || "").split("\n").forEach(function(l){
     var m = RE_CERCO.exec(l);
     if(m){
       if(cur !== null){
-        var clase = clasificarBloqueInformeWeb(curLang, cur, true, true, esInf);
-        if(clase === "draft") bloques.push(cur.join("\n"));
-        else if(clase === "desenvolver"){ for(var k = 0; k < cur.length; k++) fuera.push(cur[k]); }
-        cur = null; curLang = "";
+        var anunciaRastro = Boolean(curPrev && (RE_ANUNCIA_RASTRO_WEB.test(curPrev) || RE_INTRO_SOLO_RASTRO_WEB.test(curPrev)));
+        var clase = clasificarBloqueInformeWeb(curLang, cur, _lineaAnunciaDraftWeb(curPrev), true, esInf, anunciaRastro);
+        if(clase === "draft"){
+          bloques.push(cur.join("\n"));
+          idxUltimoDraft = fuera.length;
+        } else if(clase === "desenvolver"){
+          for(var k = 0; k < cur.length; k++) fuera.push(cur[k]);
+        }
+        cur = null; curLang = ""; curPrev = "";
       } else {
         cur = []; curLang = String(m[2] || "").trim().toLowerCase();
+        curPrev = "";
+        for(var kp = fuera.length - 1; kp >= 0; kp--){
+          if(String(fuera[kp] || "").trim()){ curPrev = String(fuera[kp]).trim(); break; }
+        }
       }
       return;
     }
@@ -4933,7 +4964,17 @@ function draftsDe(texto){
   if(cur !== null){
     for(var u = 0; u < cur.length; u++) fuera.push(cur[u]);
   }
-  return {cuerpo: fuera.join("\n").replace(/\n{3,}/g, "\n\n").replace(/\s+$/, ""), bloques: bloques};
+  var cuerpo = fuera.join("\n").replace(/\n{3,}/g, "\n\n").replace(/\s+$/, "");
+  var antes = null, despues = "";
+  if(bloques.length && idxUltimoDraft >= 0 && idxUltimoDraft < fuera.length){
+    var despRaw = fuera.slice(idxUltimoDraft).join("\n").replace(/\n{3,}/g, "\n\n");
+    var despLimpia = (typeof RE_AUD !== "undefined" && RE_AUD ? sinMarcaAudio(despRaw) : despRaw).replace(/^\s+|\s+$/g, "");
+    if(despLimpia){
+      antes = fuera.slice(0, idxUltimoDraft).join("\n").replace(/\n{3,}/g, "\n\n").replace(/\s+$/, "");
+      despues = despRaw.replace(/^\s+|\s+$/g, "");
+    }
+  }
+  return {cuerpo: cuerpo, bloques: bloques, antes: antes, despues: despues};
 }
 function nodoDrafts(bloques){
   var w = document.createElement("div");
@@ -13919,9 +13960,16 @@ function pintarNotiPush(){
   cu.innerHTML = "";
   var tx = document.createElement("div");
   tx.className = "nmtexto";
-  tx.innerHTML = resaltar(dr.cuerpo);   // el mismo render del chat: negritas, `code`, tablas y links
-  cu.appendChild(tx);
+  var tieneDespNm = Boolean(dr.bloques.length && dr.despues);
+  tx.innerHTML = resaltar(tieneDespNm ? (dr.antes || "") : dr.cuerpo);   // el mismo render del chat: negritas, `code`, tablas y links
+  if(!tieneDespNm || String(dr.antes || "").trim()) cu.appendChild(tx);
   if(dr.bloques.length) cu.appendChild(nodoDrafts(dr.bloques));
+  if(tieneDespNm){
+    var txd = document.createElement("div");
+    txd.className = "nmtexto";
+    txd.innerHTML = resaltar(dr.despues);
+    cu.appendChild(txd);
+  }
   if(o.lista.length){
     var w = document.createElement("div");
     w.className = "nmopc";

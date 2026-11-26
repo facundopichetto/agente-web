@@ -1909,6 +1909,10 @@
       "motor": "agy",
       "modelo": "agy"
     },
+    "flos/sos": {
+      "motor": "claude",
+      "modelo": "opus"
+    },
     "juegos": {
       "motor": "agy",
       "modelo": "gemini-4-argon",
