@@ -13,8 +13,8 @@
 <meta http-equiv="expires" content="0">
 <meta name="referrer" content="no-referrer">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="agente-web-version" content="4.657">
-<link rel="manifest" href="manifest.json?v=4.657">
+<meta name="agente-web-version" content="4.658">
+<link rel="manifest" href="manifest.json?v=4.658">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,7 +27,7 @@
      el texto del chat va en la paleta fluo (resaltar()): **negrita** amarilla, `code` cian, ## magenta,
      tablas con cabecera y filas alternadas, --- verde tenue, [tag] verde, ORDEN:/PROPUESTA: amarillo.
      lo chequea `python3 -m recetas.prueba_web_color` (va adentro de prueba_web). -->
-<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.657">
+<link id="cssppal" rel="stylesheet" href="estilos.css?v=4.658">
 <link id="csstema" rel="stylesheet" href="tema-facu.css?v=4.607">
 <style id="css-dock-mac">
 /* {board-dock-fullscreen} (facundo, 2026-11-16): en la mac a pantalla completa el dock asoma al empujar el puntero
@@ -8658,9 +8658,14 @@ function pieGuardar(col, lista, j){
 }
 function pieTraer(col, lista){
   var p = selLeer("pie", {})[pieClave(col, lista)] || null;
-  if(p && (!p.extras || !p.extras.length) && typeof lisExtrasPorLista === "function"){
+  if(p && (lista === "maybe" || lista === "interesan")){
+    if(Array.isArray(p.botones) && p.botones.length < 4 && typeof lisBotonesPorLista === "function"){
+      p.botones = lisBotonesPorLista(lista);
+    }
+    p.extras = [];
+  } else if(p && (!p.extras || !p.extras.length) && typeof lisExtrasPorLista === "function"){
     var exDef = lisExtrasPorLista(lista);
-    if(exDef) p.extras = exDef;
+    if(exDef && exDef.length) p.extras = exDef;
   }
   return p;
 }
@@ -10484,9 +10489,11 @@ function limpiarListasSinDms(d){
   if(!d || !Array.isArray(d.listas)) return d;
   d.listas.forEach(function(f){
     if(!f) return;
-    if((f.clave === "maybe" || f.clave === "interesan") && (!f.extras || !f.extras.length) && typeof lisExtrasPorLista === "function"){
-      var exDef = lisExtrasPorLista(f.clave);
-      if(exDef) f.extras = exDef;
+    if(f.clave === "maybe" || f.clave === "interesan"){
+      if(Array.isArray(f.botones) && f.botones.length < 4 && typeof lisBotonesPorLista === "function"){
+        f.botones = lisBotonesPorLista(f.clave);
+      }
+      if(Array.isArray(f.extras) && f.extras.length) f.extras = [];
     }
     if(Array.isArray(f.gente)) f.gente.forEach(limpiarPersonaSinDms);
   });
@@ -11407,8 +11414,12 @@ function tjInyectarPersona(col, p, f){
 // abrio el boton `votar esta lista` de la grilla de gente. es lo que decide a donde vuelve el back del final.
 function lisVotar(f, p, desde){
   try{ lis.scroll = $("sellistas").scrollTop; }catch(x){ lis.scroll = 0; }
-  if(f && (f.clave === "maybe" || f.clave === "interesan") && (!f.extras || !f.extras.length)){
-    f = lisCompletarFilaBotones(f);
+  if(f && (f.clave === "maybe" || f.clave === "interesan")){
+    if(Array.isArray(f.botones) && f.botones.length < 4 && typeof lisBotonesPorLista === "function"){
+      f = Object.assign({}, f, {botones: lisBotonesPorLista(f.clave), extras: []});
+    } else if(Array.isArray(f.extras) && f.extras.length){
+      f = Object.assign({}, f, {extras: []});
+    }
   }
   var col = f && f.proceso;
   // paso 4: de donde salio el votador, para que el back grande vuelva a ESA lista en la misma posicion de scroll
@@ -11439,19 +11450,17 @@ var LIS_EXTRAS_CANDIDATA = [
 var LIS_BOTONES_MAYBE = [
   {q: "bajar", tipo: "bajar", texto: "ignore"},
   {q: "igual", tipo: "igual", texto: "keep in maybe"},
-  {q: "subir", tipo: "subir", texto: "move up to interested"}
-];
-var LIS_EXTRAS_MAYBE = [
+  {q: "subir", tipo: "subir", texto: "move up to interested"},
   {q: "follow_ya", tipo: "follow", texto: "follow + move to follow request sent"}
 ];
+var LIS_EXTRAS_MAYBE = [];
 var LIS_BOTONES_INTERESAN = [
+  {q: "ignorar", tipo: "no", texto: "ignore"},
   {q: "bajar", tipo: "bajar", texto: "move down to maybe"},
   {q: "igual", tipo: "igual", texto: "keep in interested"},
   {q: "subir", tipo: "subir", texto: "follow + move to follow request sent"}
 ];
-var LIS_EXTRAS_INTERESAN = [
-  {q: "ignorar", tipo: "bajar", texto: "ignore"}
-];
+var LIS_EXTRAS_INTERESAN = [];
 var LIS_BOTONES_IGNORADA = [
   {q: "igual", tipo: "igual", texto: "keep in ignored"},
   {q: "mover_maybe", tipo: "maybe", texto: "move to maybe"},
@@ -11495,15 +11504,18 @@ function lisCompletarFilaBotones(f){
   var cl = fila.clave || fila.lista || "";
   if(!fila.proceso && cl && LIS_PROCESOS_LISTA[cl]) fila.proceso = LIS_PROCESOS_LISTA[cl];
   var pi = fila.proceso ? pieTraer(fila.proceso, cl) : null;
-  if(!fila.botones || !fila.botones.length){
-    if(pi && pi.botones && pi.botones.length){
+  var faltaCuatro = (cl === "maybe" || cl === "interesan") && fila.botones && fila.botones.length < 4;
+  if(!fila.botones || !fila.botones.length || faltaCuatro){
+    if(pi && pi.botones && pi.botones.length && !((cl === "maybe" || cl === "interesan") && pi.botones.length < 4)){
       fila.botones = pi.botones;
       if(!fila.mover) fila.mover = pi.mover || null;
     } else {
       fila.botones = lisBotonesPorLista(cl) || LIS_BOTONES_CANDIDATA.slice();
     }
   }
-  if(!fila.extras || !fila.extras.length){
+  if(cl === "maybe" || cl === "interesan"){
+    fila.extras = [];
+  } else if(!fila.extras || !fila.extras.length){
     if(pi && pi.extras && pi.extras.length) fila.extras = pi.extras;
     else fila.extras = lisExtrasPorLista(cl) || [];
   }
